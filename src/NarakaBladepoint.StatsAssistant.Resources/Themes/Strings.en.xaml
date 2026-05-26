@@ -94,8 +94,8 @@
     <system:String x:Key="Settings.Save">Save</system:String>
     <system:String x:Key="Settings.Cancel">Cancel</system:String>
     <system:String x:Key="Settings.DefaultPathHint">Default: user folder</system:String>
-    <system:String x:Key="Settings.Category.General">Data Storage</system:String>
-    <system:String x:Key="Settings.Category.Cache">Cache</system:String>
+    <system:String x:Key="Settings.Category.General">Data Storage Path</system:String>
+    <system:String x:Key="Settings.Category.Cache">Cache File Path</system:String>
     <system:String x:Key="Settings.Category.Language">Language</system:String>
     <system:String x:Key="Settings.BrowseDataPath">Select data save path</system:String>
     <system:String x:Key="Settings.BrowseCachePath">Select cache path</system:String>
@@ -125,6 +125,7 @@
     <system:String x:Key="Settings.CachePath">Cache Path</system:String>
     <system:String x:Key="Settings.CacheSize">Cache Size:</system:String>
     <system:String x:Key="Settings.ClearCache">Clear Cache</system:String>
+    <system:String x:Key="TitleBar.Back">Go Back</system:String>
 
     <system:String x:Key="TitleBar.Minimize">Minimize</system:String>
     <system:String x:Key="TitleBar.Maximize">Maximize</system:String>

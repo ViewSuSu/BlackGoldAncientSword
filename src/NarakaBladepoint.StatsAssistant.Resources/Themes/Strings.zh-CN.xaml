@@ -94,8 +94,8 @@
     <system:String x:Key="Settings.Save">保存</system:String>
     <system:String x:Key="Settings.Cancel">取消</system:String>
     <system:String x:Key="Settings.DefaultPathHint">默认: 用户文件夹下</system:String>
-    <system:String x:Key="Settings.Category.General">数据存储</system:String>
-    <system:String x:Key="Settings.Category.Cache">缓存</system:String>
+    <system:String x:Key="Settings.Category.General">数据存储路径</system:String>
+    <system:String x:Key="Settings.Category.Cache">缓存文件路径</system:String>
     <system:String x:Key="Settings.Category.Language">语言</system:String>
     <system:String x:Key="Settings.BrowseDataPath">选择数据保存路径</system:String>
     <system:String x:Key="Settings.BrowseCachePath">选择缓存路径</system:String>
@@ -125,6 +125,7 @@
     <system:String x:Key="Settings.CachePath">缓存路径</system:String>
     <system:String x:Key="Settings.CacheSize">缓存大小：</system:String>
     <system:String x:Key="Settings.ClearCache">清除缓存</system:String>
+    <system:String x:Key="TitleBar.Back">返回</system:String>
 
     <system:String x:Key="TitleBar.Minimize">最小化</system:String>
     <system:String x:Key="TitleBar.Maximize">最大化</system:String>

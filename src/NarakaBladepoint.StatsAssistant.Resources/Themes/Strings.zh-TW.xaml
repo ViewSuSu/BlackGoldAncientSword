@@ -94,8 +94,8 @@
     <system:String x:Key="Settings.Save">儲存</system:String>
     <system:String x:Key="Settings.Cancel">取消</system:String>
     <system:String x:Key="Settings.DefaultPathHint">預設：使用者資料夾</system:String>
-    <system:String x:Key="Settings.Category.General">資料儲存</system:String>
-    <system:String x:Key="Settings.Category.Cache">快取</system:String>
+    <system:String x:Key="Settings.Category.General">資料儲存路徑</system:String>
+    <system:String x:Key="Settings.Category.Cache">快取檔案路徑</system:String>
     <system:String x:Key="Settings.Category.Language">語言</system:String>
     <system:String x:Key="Settings.BrowseDataPath">選擇資料儲存路徑</system:String>
     <system:String x:Key="Settings.BrowseCachePath">選擇快取路徑</system:String>
@@ -125,6 +125,7 @@
     <system:String x:Key="Settings.CachePath">快取路徑</system:String>
     <system:String x:Key="Settings.CacheSize">快取大小：</system:String>
     <system:String x:Key="Settings.ClearCache">清除快取</system:String>
+    <system:String x:Key="TitleBar.Back">返回</system:String>
 
     <system:String x:Key="TitleBar.Minimize">最小化</system:String>
     <system:String x:Key="TitleBar.Maximize">最大化</system:String>

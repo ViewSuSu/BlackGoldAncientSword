@@ -69,8 +69,7 @@
                     MinWidth="80"
                     Height="32"
                     Margin="8,0,0,0"
-                    Command="{Binding SearchCommand}"
-                    Content="{DynamicResource Search.Button}" />
+                    Command="{Binding SearchCommand}" ToolTip="{DynamicResource Search.Button}" Content="{DynamicResource Search.Button}" />
             </Grid>
         </Border>
 
@@ -128,8 +127,7 @@
                                     BorderBrush="LightGray"
                                     BorderThickness="1"
                                     Command="{Binding DataContext.CopyCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                    CommandParameter="{Binding}"
-                                    Content="{DynamicResource Search.Copy}"
+                                    CommandParameter="{Binding}" ToolTip="{DynamicResource Search.Copy}" Content="{DynamicResource Search.Copy}"
                                     FontSize="11"
                                     Foreground="Gray" />
                                 <Button
@@ -141,8 +139,7 @@
                                     BorderBrush="LightGray"
                                     BorderThickness="1"
                                     Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                    CommandParameter="{Binding}"
-                                    Content="{DynamicResource Search.Delete}"
+                                    CommandParameter="{Binding}" ToolTip="{DynamicResource Search.Delete}" Content="{DynamicResource Search.Delete}"
                                     FontSize="11"
                                     Foreground="Gray" />
                             </Grid>
