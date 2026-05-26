@@ -59,6 +59,7 @@
                     <Button.Style>
                         <Style TargetType="Button">
                             <Setter Property="Opacity" Value="1" />
+                            <Setter Property="ToolTip" Value="{DynamicResource TitleBar.Back}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding CanGoBack}" Value="False">
                                     <Setter Property="Opacity" Value="0.5" />
