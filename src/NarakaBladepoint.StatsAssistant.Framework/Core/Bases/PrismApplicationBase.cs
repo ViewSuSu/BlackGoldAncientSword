@@ -10,6 +10,6 @@
 
         protected abstract System.Windows.Window CreateShellExecute();
 
-        internal static IContainerProvider ContainerProvider { get; private set; } = null!;
+        public static IContainerProvider ContainerProvider { get; private set; } = null!;
     }
 }

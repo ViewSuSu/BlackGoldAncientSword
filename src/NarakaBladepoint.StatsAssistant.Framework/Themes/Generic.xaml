@@ -58,4 +58,6 @@
         <ext:EnumEqualityConverter x:Key="EnumEqualityConverter" />
     <ext:EnumToLocalizedStringConverter x:Key="EnumToLocalizedStringConverter" />
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+    <ext:ResourceKeyToStringConverter x:Key="ResourceKeyToStringConverter" />
 </ResourceDictionary>

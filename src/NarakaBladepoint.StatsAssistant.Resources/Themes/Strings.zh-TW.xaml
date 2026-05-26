@@ -130,4 +130,29 @@
     <system:String x:Key="TitleBar.Maximize">最大化</system:String>
     <system:String x:Key="TitleBar.Restore">還原</system:String>
     <system:String x:Key="TitleBar.Close">關閉</system:String>
+
+    <!--  Update  -->
+    <system:String x:Key="Settings.CheckForUpdates">檢查更新</system:String>
+    <system:String x:Key="Settings.UpdateChecking">正在檢查更新...</system:String>
+    <system:String x:Key="Settings.NoUpdateAvailable">目前已是最新版本</system:String>
+    <system:String x:Key="Settings.UpdateAvailable">發現新版本</system:String>
+    <system:String x:Key="Settings.UpdateCheckFailed">檢查更新失敗，請稍後重試</system:String>
+    <system:String x:Key="Settings.UpdateError">更新錯誤: {0}</system:String>
+    <system:String x:Key="Settings.UpdateDownloading">正在下載更新...</system:String>
+    <system:String x:Key="Settings.CurrentVersion">目前版本: {0}</system:String>
+    <!--  Close Prompt  -->
+    <system:String x:Key="ClosePrompt.Title">關閉確認</system:String>
+    <system:String x:Key="ClosePrompt.Message">您點擊了關閉按鈕，請選擇關閉按鈕的預設行為：</system:String>
+    <system:String x:Key="ClosePrompt.RememberChoice">記住我的選擇</system:String>
+    <system:String x:Key="ClosePrompt.MinimizeToTaskbar">最小化到工作列</system:String>
+        <system:String x:Key="ClosePrompt.MinimizeToTray">最小化到系統托盤</system:String>
+    <system:String x:Key="ClosePrompt.ExitDirectly">直接退出</system:String>
+
+    <!--  Settings - Close Behavior  -->
+    <system:String x:Key="Settings.Category.CloseBehavior">關閉行為</system:String>
+    <system:String x:Key="Settings.CloseBehavior.Description">設定點擊關閉按鈕時的預設行為</system:String>
+    <system:String x:Key="Settings.CloseBehavior.Ask">每次詢問</system:String>
+    <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到工作列</system:String>
+    <system:String x:Key="Settings.CloseBehavior.ExitDirectly">直接退出</system:String>
+    <system:String x:Key="Settings.CloseBehavior.RememberChoice">記住選項</system:String>
 </ResourceDictionary>

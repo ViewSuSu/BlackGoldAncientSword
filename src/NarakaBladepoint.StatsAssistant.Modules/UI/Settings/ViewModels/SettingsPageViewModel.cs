@@ -19,6 +19,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
         private readonly ILocalizationService _localization;
         private readonly IMainContentNavigationService _navigation;
         private readonly IImageCacheService _cacheService;
+        private readonly IUpdateService _updateService;
 
         private string _dataPath = string.Empty;
         public string DataPath
@@ -58,6 +59,8 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
         public string DefaultPath => Framework.Services.AppSettings.GetDefaultPath();
         public string DefaultCachePath => Framework.Services.AppSettings.GetDefaultCachePath();
 
+        public string CurrentVersionText => string.Format(L("Settings.CurrentVersion", "Current version: {0}"), _updateService.CurrentVersion);
+
         public ObservableCollection<LanguageOption> LanguageOptions => _localization.AvailableLanguages;
 
         public string SelectedLanguage
@@ -69,6 +72,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                 _localization.ApplyLanguage(Application.Current.Resources, value);
                 _settings.Current.Language = value;
                 _ = System.Threading.Tasks.Task.Run(() => _settings.SaveAsync());
+                CloseBehaviorOptions.ResetBindings();
             }
         }
 
@@ -80,20 +84,107 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                 SelectedLanguage = code;
             });
 
+        private DelegateCommand? _checkForUpdatesCommand;
+        public DelegateCommand CheckForUpdatesCommand =>
+            _checkForUpdatesCommand ??= new DelegateCommand(async () =>
+            {
+                await _updateService.CheckForUpdatesAsync();
+            });
+
+        
+        public System.ComponentModel.BindingList<CloseBehaviorOption> CloseBehaviorOptions { get; } = new()
+        {
+            new CloseBehaviorOption { Value = "Ask", DisplayNameResourceKey = "Settings.CloseBehavior.Ask" },
+            new CloseBehaviorOption { Value = "MinimizeToTaskbar", DisplayNameResourceKey = "Settings.CloseBehavior.MinimizeToTaskbar" },
+            new CloseBehaviorOption { Value = "ExitDirectly", DisplayNameResourceKey = "Settings.CloseBehavior.ExitDirectly" },
+        };
+
+        public string SelectedCloseBehavior
+        {
+            get => _settings.Current.CloseBehavior;
+            set
+            {
+                _settings.Current.CloseBehavior = value;
+                RaisePropertyChanged();
+                RaisePropertyChanged(nameof(RememberCloseBehavior));
+            // Sync language from settings to localization service
+            if (_settings.Current.Language != _localization.CurrentLanguage)
+            {
+                _localization.CurrentLanguage = _settings.Current.Language;
+                _localization.ApplyLanguage(Application.Current.Resources, _settings.Current.Language);
+            }
+            RaisePropertyChanged(nameof(SelectedLanguage));
+            }
+        }
+
+        private DelegateCommand<string>? _selectCloseBehaviorCommand;
+        public DelegateCommand<string> SelectCloseBehaviorCommand =>
+            _selectCloseBehaviorCommand ??= new DelegateCommand<string>(value =>
+            {
+                if (string.IsNullOrEmpty(value)) return;
+                SelectedCloseBehavior = value;
+            });
+
+        public bool RememberCloseBehavior
+        {
+            get => _settings.Current.CloseBehaviorRemembered;
+            set
+            {
+                _settings.Current.CloseBehaviorRemembered = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private DelegateCommand? _saveCloseBehaviorCommand;
+        public DelegateCommand SaveCloseBehaviorCommand =>
+            _saveCloseBehaviorCommand ??= new DelegateCommand(async () =>
+            {
+                await _settings.SaveAsync();
+                eventAggregator.GetEvent<TipMessageEvent>()
+                    .Publish(new TipMessageWithHighlightArgs(L("Settings.SaveSuccess", "保存成功")));
+            });
+
         public SettingsPageViewModel(
             ISettingsService settings,
             ILocalizationService localization,
             IMainContentNavigationService navigation,
-            IImageCacheService cacheService)
+            IImageCacheService cacheService,
+            IUpdateService updateService)
         {
             _settings = settings;
             _localization = localization;
             _navigation = navigation;
             _cacheService = cacheService;
+            _updateService = updateService;
             _dataPath = string.IsNullOrWhiteSpace(settings.Current.DataSavePath) ? DefaultPath : settings.Current.DataSavePath;
             _cachePath = string.IsNullOrWhiteSpace(settings.Current.CachePath) ? DefaultCachePath : settings.Current.CachePath;
             _originalDataPath = _dataPath;
             _originalCachePath = _cachePath;
+            _ = System.Threading.Tasks.Task.Run(RefreshCacheSizeAsync);
+        }
+
+        protected override void OnNavigatedToExecute(NavigationContext navigationContext)
+        {
+            base.OnNavigatedToExecute(navigationContext);
+            // Reload from settings.json to ensure latest data
+            _settings.Load();
+            _dataPath = string.IsNullOrWhiteSpace(_settings.Current.DataSavePath) ? DefaultPath : _settings.Current.DataSavePath;
+            _cachePath = string.IsNullOrWhiteSpace(_settings.Current.CachePath) ? DefaultCachePath : _settings.Current.CachePath;
+            _originalDataPath = _dataPath;
+            _originalCachePath = _cachePath;
+            RaisePropertyChanged(nameof(DataPath));
+            RaisePropertyChanged(nameof(CachePath));
+            RaisePropertyChanged(nameof(HasChanges));
+            RaisePropertyChanged(nameof(SelectedCloseBehavior));
+            RaisePropertyChanged(nameof(RememberCloseBehavior));
+            // Sync language from settings to localization service
+            if (_settings.Current.Language != _localization.CurrentLanguage)
+            {
+                _localization.CurrentLanguage = _settings.Current.Language;
+                _localization.ApplyLanguage(Application.Current.Resources, _settings.Current.Language);
+            }
+            RaisePropertyChanged(nameof(SelectedLanguage));
+            CloseBehaviorOptions.ResetBindings();
             _ = System.Threading.Tasks.Task.Run(RefreshCacheSizeAsync);
         }
 
@@ -236,5 +327,13 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                 catch { }
             });
         }
+    }
+
+    public class CloseBehaviorOption
+    {
+        public string Value { get; set; } = string.Empty;
+        public string DisplayNameResourceKey { get; set; } = string.Empty;
+        public string DisplayName =>
+            System.Windows.Application.Current?.TryFindResource(DisplayNameResourceKey) as string ?? DisplayNameResourceKey;
     }
 }

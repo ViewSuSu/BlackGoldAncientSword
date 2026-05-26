@@ -7,6 +7,11 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using System.Windows.Forms;
+using Forms = System.Windows.Forms;
+using Prism.Modularity;
+using Prism.Regions;
+using NarakaBladepoint.StatsAssistant.Framework.Core.Bases;
 
 namespace NarakaBladepoint.StatsAssistant.App.Shell
 {
@@ -33,6 +38,8 @@ namespace NarakaBladepoint.StatsAssistant.App.Shell
         private static extern int GetDpiForWindow(IntPtr hwnd);
 
         private IntPtr _hwnd;
+        private NotifyIcon? _trayIcon;
+        private bool _isExiting;
 
         static MainWindow()
         {
@@ -45,6 +52,79 @@ namespace NarakaBladepoint.StatsAssistant.App.Shell
         {
             InitializeComponent();
             SourceInitialized += OnSourceInitialized;
+            StateChanged += OnWindowStateChanged;
+            Closing += OnWindowClosing;
+        }
+
+        private void InitTrayIcon()
+        {
+            if (_trayIcon != null) return;
+
+            var iconStream = System.Windows.Application.GetResourceStream(
+                new Uri("pack://application:,,,/NarakaBladepoint.StatsAssistant.Resources;component/Images/app.ico"))
+                ?.Stream;
+            var icon = iconStream != null ? new System.Drawing.Icon(iconStream) : System.Drawing.SystemIcons.Application;
+
+            _trayIcon = new NotifyIcon
+            {
+                Icon = icon,
+                Text = (System.Windows.Application.Current.TryFindResource("App.Title") as string) ?? "NarakaBladepoint Stats Assistant",
+                Visible = false
+            };
+
+            _trayIcon.DoubleClick += (_, _) => RestoreFromTray();
+
+            var contextMenu = new Forms.ContextMenuStrip();
+            contextMenu.Items.Add(
+                (System.Windows.Application.Current.TryFindResource("App.Title") as string) ?? "Show",
+                null, (_, _) => RestoreFromTray());
+            contextMenu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add(
+                System.Windows.Application.Current.TryFindResource("TitleBar.Close") as string ?? "Exit",
+                null, (_, _) =>
+                {
+                    _isExiting = true;
+                    _trayIcon.Visible = false;
+                    _trayIcon.Dispose();
+                    _trayIcon = null;
+                    Close();
+                });
+
+            _trayIcon.ContextMenuStrip = contextMenu;
+        }
+
+        public void MinimizeToTray()
+        {
+            InitTrayIcon();
+            if (_trayIcon != null)
+            {
+                _trayIcon.Visible = true;
+                Hide();
+            }
+        }
+
+        private void RestoreFromTray()
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+            if (_trayIcon != null)
+                _trayIcon.Visible = false;
+        }
+
+        private void OnWindowStateChanged(object? sender, EventArgs e)
+        {
+            // Not used for tray minimize - we use explicit Hide() instead
+        }
+
+        private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (!_isExiting && _trayIcon != null)
+            {
+                _trayIcon.Visible = false;
+                _trayIcon.Dispose();
+                _trayIcon = null;
+            }
         }
 
         private void OnSourceInitialized(object? sender, EventArgs e)
@@ -147,7 +227,38 @@ namespace NarakaBladepoint.StatsAssistant.App.Shell
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            Close();
+            try
+            {
+                var settings = NarakaBladepoint.StatsAssistant.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<Framework.Services.Abstractions.ISettingsService>();
+                var moduleManager = NarakaBladepoint.StatsAssistant.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<IModuleManager>();
+                var regionManager = NarakaBladepoint.StatsAssistant.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<IRegionManager>();
+
+                // If remembered, perform saved action directly
+                if (settings.Current.CloseBehaviorRemembered)
+                {
+                    switch (settings.Current.CloseBehavior)
+                    {
+                        case "MinimizeToTaskbar":
+                            WindowState = WindowState.Minimized;
+                            return;
+                        case "ExitDirectly":
+                            Close();
+                            return;
+                    }
+                }
+
+                // Show close prompt overlay
+                var moduleName = "ClosePromptModule";
+                try { moduleManager.LoadModule(moduleName); } catch { }
+                regionManager.RequestNavigate(
+                    Framework.Core.Consts.GlobalConstant.ClosePromptRegion,
+                    Framework.Core.Consts.PageNames.ClosePromptPage);
+            }
+            catch
+            {
+                // Fallback: just close if anything goes wrong
+                Close();
+            }
         }
 
         private void ToastItemBorder_Loaded(object sender, RoutedEventArgs e)

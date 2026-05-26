@@ -7,10 +7,16 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Background="Transparent"
     mc:Ignorable="d">
-    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#80000000">
+    <Grid
+        x:Name="OverlayGrid"
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Stretch"
+        Background="#80000000"
+        KeyDown="Grid_KeyDown"
+        Focusable="True">
         <Border
-            MaxWidth="720"
-            Padding="32"
+            MaxWidth="1080"
+            Padding="10"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Background="White"
@@ -22,12 +28,34 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <TextBlock
-                    Grid.Row="0"
-                    Margin="0,0,0,16"
-                    FontSize="18"
-                    FontWeight="Bold"
-                    Text="{DynamicResource Nav.Announcement}" />
+                <!--  Title row with close button  -->
+                <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        Grid.Column="0"
+                        FontSize="18"
+                        FontWeight="Bold"
+                        Text="{DynamicResource Nav.Announcement}" />
+                    <Button
+                        Grid.Column="1"
+                        Width="24"
+                        Height="24"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Command="{Binding DismissCommand}"
+                        Cursor="Hand"
+                        ToolTip="{DynamicResource TitleBar.Close}">
+                        <Image
+                            Width="15"
+                            Height="15"
+                            Source="/NarakaBladepoint.StatsAssistant.Resources;component/Images/close.png"
+                            Stretch="Uniform" />
+                    </Button>
+                </Grid>
 
                 <ScrollViewer Grid.Row="1" Margin="0,0,0,16">
                     <StackPanel>

@@ -6,6 +6,7 @@ using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 using System.Windows;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Events;
 using System.Collections.Generic;
+using NarakaBladepoint.StatsAssistant.Modules.Services.Abstractions;
 
 
 namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
@@ -16,9 +17,10 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
         private CancellationTokenSource? _loadAllCts;
         private CancellationTokenSource? _loadStatsCts;
 
-        public StatsPageViewModel(IPlayerPrefsService playerPrefsService)
+        public StatsPageViewModel(IPlayerPrefsService playerPrefsService, ILocalizationService localizationService)
         {
             _playerPrefsService = playerPrefsService;
+            localizationService.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(localizationService.CurrentLanguage)) { TeamSizes.ResetBindings(); Categories.ResetBindings(); } };
             Seasons = new ObservableCollection<SeasonInfo>();
             DetailStats = new ObservableCollection<StatEntryItem>();
             RecentBattles = new ObservableCollection<RecentBattleDisplayItem>();
@@ -189,16 +191,16 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
         }
 
 
-        private DelegateCommand<object>? _selectTeamSizeCommand;
-        public DelegateCommand<object> SelectTeamSizeCommand =>
-            _selectTeamSizeCommand ??= new DelegateCommand<object>(param => { if (param is TeamSize size) SelectedTeamSize = size; });
+        private DelegateCommand<TeamSizeOption>? _selectTeamSizeCommand;
+        public DelegateCommand<TeamSizeOption> SelectTeamSizeCommand =>
+            _selectTeamSizeCommand ??= new DelegateCommand<TeamSizeOption>(param => { if (param != null) SelectedTeamSize = param.Value; });
 
-        private DelegateCommand<object>? _selectCategoryCommand;
-        public DelegateCommand<object> SelectCategoryCommand =>
-            _selectCategoryCommand ??= new DelegateCommand<object>(param => { if (param is GameModeCategory cat) SelectedCategory = cat; });
+        private DelegateCommand<GameModeCategoryOption>? _selectCategoryCommand;
+        public DelegateCommand<GameModeCategoryOption> SelectCategoryCommand =>
+            _selectCategoryCommand ??= new DelegateCommand<GameModeCategoryOption>(param => { if (param != null) SelectedCategory = param.Value; });
 
-        public static IReadOnlyList<TeamSize> TeamSizes { get; } = new[] { TeamSize.Trio, TeamSize.Duo, TeamSize.Solo };
-        public static IReadOnlyList<GameModeCategory> Categories { get; } = new[] { GameModeCategory.Rank, GameModeCategory.Match, GameModeCategory.Tianren };
+        public static System.ComponentModel.BindingList<TeamSizeOption> TeamSizes { get; } = new(new[] { new TeamSizeOption(TeamSize.Trio), new TeamSizeOption(TeamSize.Duo), new TeamSizeOption(TeamSize.Solo) });
+        public static System.ComponentModel.BindingList<GameModeCategoryOption> Categories { get; } = new(new[] { new GameModeCategoryOption(GameModeCategory.Rank), new GameModeCategoryOption(GameModeCategory.Match), new GameModeCategoryOption(GameModeCategory.Tianren) });
 
         private static readonly Dictionary<string, string> StatKeyToResourceKey = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -722,5 +724,20 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
         public string Name { get; set; } = string.Empty;
         public string Desc { get; set; } = string.Empty;
     }
-}
 
+    public class TeamSizeOption
+    {
+        public TeamSize Value { get; }
+        public TeamSizeOption(TeamSize value) => Value = value;
+        public string DisplayName =>
+            System.Windows.Application.Current?.TryFindResource("GameMode." + Value.ToString()) as string ?? Value.ToString();
+    }
+
+    public class GameModeCategoryOption
+    {
+        public GameModeCategory Value { get; }
+        public GameModeCategoryOption(GameModeCategory value) => Value = value;
+        public string DisplayName =>
+            System.Windows.Application.Current?.TryFindResource("GameMode." + Value.ToString()) as string ?? Value.ToString();
+    }
+}
