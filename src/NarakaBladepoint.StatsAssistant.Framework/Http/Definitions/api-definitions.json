@@ -1,0 +1,601 @@
+﻿{
+  "$schema": "./api-definitions.schema.json",
+  "baseUrl": "https://naraka.drivod.top",
+  "defaultHeaders": {
+    "Accept": "application/json",
+    "X-Requested-With": "XMLHttpRequest"
+  },
+  "enumTypeNames": ["GameMode", "GameModeCategory", "TeamSize", "DataSource"],
+  "apis": [
+    {
+      "id": "SearchRecord",
+      "description": "搜索玩家记录，支持昵称或角色ID",
+      "method": "GET",
+      "path": "/api/record/search",
+      "queryParameters": { "name": "string" },
+      "responseBody": {
+        "type": "SearchRecordResponse",
+        "properties": {
+          "code": { "type": "int" },
+          "msg": { "type": "string" },
+          "data": { "type": "SearchRecordData" }
+        },
+        "nestedTypes": {
+          "SearchRecordData": {
+            "type": "SearchRecordData",
+            "properties": {
+              "roleId": { "type": "string" },
+              "roleIdMiniProgram": { "type": "string" },
+              "roleIdSimple": { "type": "string" },
+              "roleName": { "type": "string" },
+              "avatar": { "type": "string" },
+              "dataSource": { "type": "string" },
+              "roleLevel": { "type": "int" },
+              "levelName": { "type": "string" },
+              "levelImg": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "GetUserInfo",
+      "description": "查询玩家基础信息（昵称、头像、等级、各模式段位、当前赛季）",
+      "method": "GET",
+      "path": "/api/record/mini-program/user/{roleId}",
+      "pathParameters": { "roleId": "string" },
+      "responseBody": {
+        "type": "GetUserInfoResponse",
+        "properties": {
+          "code": { "type": "int" },
+          "msg": { "type": "string" },
+          "data": { "type": "UserInfoData" }
+        },
+        "nestedTypes": {
+          "UserInfoData": {
+            "type": "UserInfoData",
+            "properties": {
+              "id": { "type": "int" },
+              "userId": { "type": "int" },
+              "nickName": { "type": "string" },
+              "avatarUrl": { "type": "string" },
+              "role": { "type": "UserRoleInfo" },
+              "surviveSingleGrade": { "type": "int" },
+              "surviveDoubleGrade": { "type": "int" },
+              "surviveTriplexGrade": { "type": "int" },
+              "currentSeasonId": { "type": "int" }
+            },
+            "nestedTypes": {
+              "UserRoleInfo": {
+                "type": "UserRoleInfo",
+                "properties": {
+                  "uid": { "type": "string" },
+                  "roleId": { "type": "string" },
+                  "roleName": { "type": "string" },
+                  "roleLevel": { "type": "int" },
+                  "headIcon": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "GetPlayerStats",
+      "description": "查询玩家指定赛季指定模式的战绩（段位+16项数据）",
+      "method": "GET",
+      "path": "/api/record/mini-program/stats",
+      "queryParameters": {
+        "roleId": "string",
+        "seasonId": "int",
+        "gameMode": "GameMode"
+      },
+      "responseBody": {
+        "type": "GetPlayerStatsResponse",
+        "properties": {
+          "code": { "type": "int" },
+          "msg": { "type": "string" },
+          "data": { "type": "PlayerStatsData" }
+        },
+        "nestedTypes": {
+          "PlayerStatsData": {
+            "type": "PlayerStatsData",
+            "properties": {
+              "grade": { "type": "GradeInfo" },
+              "dragonKill": { "type": "int" },
+              "stats": { "type": "List<StatEntry>" }
+            },
+            "nestedTypes": {
+              "GradeInfo": {
+                "type": "GradeInfo",
+                "properties": {
+                  "gradeId": { "type": "int" },
+                  "gradeName": { "type": "string" },
+                  "gradeIcon": { "type": "string" },
+                  "gradeLevel": { "type": "string" },
+                  "gradeScore": { "type": "int" }
+                }
+              },
+              "StatEntry": {
+                "type": "StatEntry",
+                "properties": {
+                  "name": { "type": "string" },
+                  "key": { "type": "string" },
+                  "value": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "QuerySeasons",
+      "description": "查询赛季列表",
+      "method": "GET",
+      "path": "/api/record/seasons",
+      "responseBody": {
+        "type": "QuerySeasonsResponse",
+        "properties": {
+          "code": { "type": "int" },
+          "msg": { "type": "string" },
+          "data": { "type": "List<SeasonInfo>" }
+        },
+        "nestedTypes": {
+          "SeasonInfo": {
+            "type": "SeasonInfo",
+            "properties": {
+              "code": { "type": "int" },
+              "name": { "type": "string" },
+              "heyBoxSeasonName": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "GetGameModes",
+      "description": "查询游戏模式列表（天选/匹配/天人 单双三排）",
+      "method": "GET",
+      "path": "/api/record/game-modes",
+      "responseBody": {
+        "type": "GetGameModesResponse",
+        "properties": {
+          "code": { "type": "int" },
+          "msg": { "type": "string" },
+          "data": { "type": "List<GameModeInfo>" }
+        },
+        "nestedTypes": {
+          "GameModeInfo": {
+            "type": "GameModeInfo",
+            "properties": {
+              "name": { "type": "string" },
+              "code": { "type": "int" },
+              "dataSource": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "GetRecentBattles",
+      "description": "查询玩家最近对局列表（最多10条）",
+      "method": "GET",
+      "path": "/api/record/mini-program/battle/recent",
+      "queryParameters": {
+        "roleId": "string",
+        "gameMode": "GameMode"
+      },
+      "responseBody": {
+        "type": "GetRecentBattlesResponse",
+        "properties": {
+          "code": { "type": "int" },
+          "msg": { "type": "string" },
+          "data": { "type": "RecentBattleListData" }
+        },
+        "nestedTypes": {
+          "RecentBattleListData": {
+            "type": "RecentBattleListData",
+            "properties": {
+              "reachLimit": { "type": "bool" },
+              "list": { "type": "List<RecentBattleItem>" }
+            },
+            "nestedTypes": {
+              "RecentBattleItem": {
+                "type": "RecentBattleItem",
+                "properties": {
+                  "battleId": { "type": "int" },
+                  "rank": { "type": "int" },
+                  "hero": { "type": "HeroInfo" },
+                  "battleEndTime": { "type": "long" },
+                  "gameMode": { "type": "int" },
+                  "kill": { "type": "int" },
+                  "damage": { "type": "int" },
+                  "beginRankScore": { "type": "int" },
+                  "roundRankScore": { "type": "int" },
+                  "rating": { "type": "string" },
+                  "win": { "type": "bool" },
+                  "dragonKillSuccess": { "type": "bool" },
+                  "jinwuKillSuccess": { "type": "bool" },
+                  "honorTitles": { "type": "List<HonorTitleInfo>" }
+                },
+                "nestedTypes": {
+                  "HonorTitleInfo": {
+                    "type": "HonorTitleInfo",
+                    "properties": {
+                      "honorId": { "type": "int" },
+                      "honorName": { "type": "string" },
+                      "honorIcon": { "type": "string" },
+                      "honorDesc": { "type": "string" }
+                    }
+                  },
+                  "HeroInfo": {
+                    "type": "HeroInfo",
+                    "properties": {
+                      "heroId": { "type": "int" },
+                      "heroName": { "type": "string" },
+                      "heroIcon": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "GetTop5BattleDetail",
+      "description": "查看对局前五名详情",
+      "method": "GET",
+      "path": "/api/record/mini-program/battle/detail/top5",
+      "queryParameters": {
+        "roleId": "string",
+        "battleId": "string"
+      },
+      "responseBody": {
+        "type": "GetTop5BattleDetailResponse",
+        "properties": {
+          "code": { "type": "int" },
+          "msg": { "type": "string" },
+          "data": { "type": "Top5BattleDetailData" }
+        },
+        "nestedTypes": {
+          "Top5BattleDetailData": {
+            "type": "Top5BattleDetailData",
+            "properties": {
+              "gameMode": { "type": "int" },
+              "rank": { "type": "int" },
+              "win": { "type": "bool" },
+              "dragonKillSuccess": { "type": "bool" },
+              "jinwuKillSuccess": { "type": "bool" },
+                  "honorTitles": { "type": "List<HonorTitleInfo>" },
+              "top5": { "type": "List<Top5Entry>" }
+            },
+            "nestedTypes": {
+              "Top5Entry": {
+                "type": "Top5Entry",
+                "properties": {
+                  "rank": { "type": "int" },
+                  "members": { "type": "List<Top5Member>" }
+                },
+                "nestedTypes": {
+                  "Top5Member": {
+                    "type": "Top5Member",
+                    "properties": {
+                      "hero": { "type": "HeroInfo" },
+                      "role": { "type": "RoleBriefInfo" },
+                      "isMe": { "type": "bool" },
+                      "armor": { "type": "ArmorInfo" },
+                      "dataList": { "type": "List<StatItem>" },
+                      "weapons": { "type": "List<WeaponInfo>" },
+                      "soulItems": { "type": "List<SoulItemInfo>" },
+                      "honorTitles": { "type": "List<HonorTitleInfo>" }
+                    },
+                    "nestedTypes": {
+                      "HeroInfo": {
+                        "type": "HeroInfo",
+                        "properties": {
+                          "heroId": { "type": "int" },
+                          "heroName": { "type": "string" },
+                          "heroIcon": { "type": "string" }
+                        }
+                      },
+                      "RoleBriefInfo": {
+                        "type": "RoleBriefInfo",
+                        "properties": {
+                          "roleId": { "type": "string" },
+                          "roleName": { "type": "string" },
+                          "roleLevel": { "type": "int" },
+                          "headIcon": { "type": "string" }
+                        }
+                      },
+                      "ArmorInfo": {
+                        "type": "ArmorInfo",
+                        "properties": {
+                          "armorId": { "type": "int" },
+                          "armorLevel": { "type": "int" },
+                          "armorIcon": { "type": "string" }
+                        }
+                      },
+                      "StatItem": {
+                        "type": "StatItem",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "key": { "type": "string" },
+                          "value": { "type": "string" }
+                        }
+                      },
+                      "WeaponInfo": {
+                        "type": "WeaponInfo",
+                        "properties": {
+                          "weaponId": { "type": "int" },
+                          "weaponName": { "type": "string" },
+                          "weaponIcon": { "type": "string" },
+                          "weaponLevel": { "type": "int" },
+                          "kill": { "type": "int" },
+                          "damage": { "type": "int" },
+                          "percent": { "type": "float" }
+                        }
+                      },
+                      "SoulItemInfo": {
+                        "type": "SoulItemInfo",
+                        "properties": {
+                          "soulItemId": { "type": "int" },
+                          "soulItemName": { "type": "string" },
+                          "soulItemIcon": { "type": "string" },
+                          "soulItemLevel": { "type": "int" }
+                        }
+                      },
+                      "HonorTitleInfo": {
+                        "type": "HonorTitleInfo",
+                        "properties": {
+                          "honorId": { "type": "int" },
+                          "honorName": { "type": "string" },
+                          "honorIcon": { "type": "string" },
+                          "honorDesc": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "GetBattleDetail",
+      "description": "查看对局详情（个人数据）",
+      "method": "GET",
+      "path": "/api/record/mini-program/battle/detail/person",
+      "queryParameters": {
+        "roleId": "string",
+        "battleId": "string"
+      },
+      "responseBody": {
+        "type": "GetBattleDetailResponse",
+        "properties": {
+          "code": { "type": "int" },
+          "msg": { "type": "string" },
+          "data": { "type": "BattleDetailData" }
+        },
+        "nestedTypes": {
+          "BattleDetailData": {
+            "type": "BattleDetailData",
+            "properties": {
+              "hero": { "type": "HeroInfo" },
+              "role": { "type": "RoleBriefInfo" },
+              "beginRankScore": { "type": "int" },
+              "roundRankScore": { "type": "int" },
+              "rank": { "type": "int" },
+              "rating": { "type": "string" },
+              "win": { "type": "bool" },
+              "battleEndTime": { "type": "long" },
+              "gameMode": { "type": "int" },
+              "dragonKillSuccess": { "type": "bool" },
+              "jinwuKillSuccess": { "type": "bool" },
+                  "honorTitles": { "type": "List<HonorTitleInfo>" },
+              "armor": { "type": "ArmorInfo" },
+              "dataList": { "type": "List<StatItem>" },
+              "weapons": { "type": "List<WeaponInfo>" },
+              "soulItems": { "type": "List<SoulItemInfo>" },
+              "honorTitles": { "type": "List<HonorTitleInfo>" }
+            },
+            "nestedTypes": {
+              "HeroInfo": {
+                "type": "HeroInfo",
+                "properties": {
+                  "heroId": { "type": "int" },
+                  "heroName": { "type": "string" },
+                  "heroIcon": { "type": "string" }
+                }
+              },
+              "RoleBriefInfo": {
+                "type": "RoleBriefInfo",
+                "properties": {
+                  "roleId": { "type": "string" },
+                  "roleName": { "type": "string" },
+                  "roleLevel": { "type": "int" },
+                  "headIcon": { "type": "string" }
+                }
+              },
+              "ArmorInfo": {
+                "type": "ArmorInfo",
+                "properties": {
+                  "armorId": { "type": "int" },
+                  "armorLevel": { "type": "int" },
+                  "armorIcon": { "type": "string" }
+                }
+              },
+              "StatItem": {
+                "type": "StatItem",
+                "properties": {
+                  "name": { "type": "string" },
+                  "key": { "type": "string" },
+                  "value": { "type": "string" }
+                }
+              },
+              "WeaponInfo": {
+                "type": "WeaponInfo",
+                "properties": {
+                  "weaponId": { "type": "int" },
+                  "weaponName": { "type": "string" },
+                  "weaponIcon": { "type": "string" },
+                  "weaponLevel": { "type": "int" },
+                  "kill": { "type": "int" },
+                  "damage": { "type": "int" },
+                  "percent": { "type": "float" }
+                }
+              },
+              "SoulItemInfo": {
+                "type": "SoulItemInfo",
+                "properties": {
+                  "soulItemId": { "type": "int" },
+                  "soulItemName": { "type": "string" },
+                  "soulItemIcon": { "type": "string" },
+                  "soulItemLevel": { "type": "int" }
+                }
+              },
+              "HonorTitleInfo": {
+                "type": "HonorTitleInfo",
+                "properties": {
+                  "honorId": { "type": "int" },
+                  "honorName": { "type": "string" },
+                  "honorIcon": { "type": "string" },
+                  "honorDesc": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "GetTeamBattleDetail",
+      "description": "查看对局详情（队伍表现）",
+      "method": "GET",
+      "path": "/api/record/mini-program/battle/detail/team",
+      "queryParameters": {
+        "roleId": "string",
+        "battleId": "string"
+      },
+      "responseBody": {
+        "type": "GetTeamBattleDetailResponse",
+        "properties": {
+          "code": { "type": "int" },
+          "msg": { "type": "string" },
+          "data": { "type": "TeamBattleDetailData" }
+        },
+        "nestedTypes": {
+          "TeamBattleDetailData": {
+            "type": "TeamBattleDetailData",
+            "properties": {
+              "gameMode": { "type": "int" },
+              "battleEndTime": { "type": "long" },
+              "rank": { "type": "int" },
+              "win": { "type": "bool" },
+              "rating": { "type": "string" },
+              "dragonKillSuccess": { "type": "bool" },
+              "jinwuKillSuccess": { "type": "bool" },
+                  "honorTitles": { "type": "List<HonorTitleInfo>" },
+              "kill": { "type": "int" },
+              "teammates": { "type": "List<TeammateInfo>" }
+            },
+            "nestedTypes": {
+              "TeammateInfo": {
+                "type": "TeammateInfo",
+                "properties": {
+                  "hero": { "type": "HeroInfo" },
+                  "role": { "type": "RoleBriefInfo" },
+                  "isMe": { "type": "bool" },
+                  "armor": { "type": "ArmorInfo" },
+                  "dataList": { "type": "List<StatItem>" },
+                  "weapons": { "type": "List<WeaponInfo>" },
+                  "soulItems": { "type": "List<SoulItemInfo>" },
+                  "honorTitles": { "type": "List<HonorTitleInfo>" }
+                },
+                "nestedTypes": {
+                  "HonorTitleInfo": {
+                    "type": "HonorTitleInfo",
+                    "properties": {
+                      "honorId": { "type": "int" },
+                      "honorName": { "type": "string" },
+                      "honorIcon": { "type": "string" },
+                      "honorDesc": { "type": "string" }
+                    }
+                  },
+                  "HeroInfo": {
+                    "type": "HeroInfo",
+                    "properties": {
+                      "heroId": { "type": "int" },
+                      "heroName": { "type": "string" },
+                      "heroIcon": { "type": "string" }
+                    }
+                  },
+                  "RoleBriefInfo": {
+                    "type": "RoleBriefInfo",
+                    "properties": {
+                      "roleId": { "type": "string" },
+                      "roleName": { "type": "string" },
+                      "roleLevel": { "type": "int" },
+                      "headIcon": { "type": "string" }
+                    }
+                  },
+                  "ArmorInfo": {
+                    "type": "ArmorInfo",
+                    "properties": {
+                      "armorId": { "type": "int" },
+                      "armorLevel": { "type": "int" },
+                      "armorIcon": { "type": "string" }
+                    }
+                  },
+                  "StatItem": {
+                    "type": "StatItem",
+                    "properties": {
+                      "name": { "type": "string" },
+                      "key": { "type": "string" },
+                      "value": { "type": "string" }
+                    }
+                  },
+                  "WeaponInfo": {
+                    "type": "WeaponInfo",
+                    "properties": {
+                      "weaponId": { "type": "int" },
+                      "weaponName": { "type": "string" },
+                      "weaponIcon": { "type": "string" },
+                      "weaponLevel": { "type": "int" },
+                      "kill": { "type": "int" },
+                      "damage": { "type": "int" },
+                      "percent": { "type": "float" }
+                    }
+                  },
+                  "SoulItemInfo": {
+                    "type": "SoulItemInfo",
+                    "properties": {
+                      "soulItemId": { "type": "int" },
+                      "soulItemName": { "type": "string" },
+                      "soulItemIcon": { "type": "string" },
+                      "soulItemLevel": { "type": "int" }
+                    }
+                  },
+                  "HonorTitleInfo": {
+                    "type": "HonorTitleInfo",
+                    "properties": {
+                      "honorId": { "type": "int" },
+                      "honorName": { "type": "string" },
+                      "honorIcon": { "type": "string" },
+                      "honorDesc": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

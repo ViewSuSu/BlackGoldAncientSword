@@ -1,0 +1,14 @@
+﻿<base:PrismApplicationBase
+    x:Class="NarakaBladepoint.StatsAssistant.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:base="clr-namespace:NarakaBladepoint.StatsAssistant.Framework.Core.Bases;assembly=NarakaBladepoint.StatsAssistant.Framework">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/NarakaBladepoint.StatsAssistant.Framework;component/Themes/Generic.xaml" />
+                <ResourceDictionary Source="/NarakaBladepoint.StatsAssistant.Resources;component/Themes/Strings.zh-CN.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</base:PrismApplicationBase>
