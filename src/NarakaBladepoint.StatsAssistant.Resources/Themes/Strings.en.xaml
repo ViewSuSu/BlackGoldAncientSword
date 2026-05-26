@@ -130,4 +130,30 @@
     <system:String x:Key="TitleBar.Maximize">Maximize</system:String>
     <system:String x:Key="TitleBar.Restore">Restore</system:String>
     <system:String x:Key="TitleBar.Close">Close</system:String>
+
+
+    <!--  Update  -->
+    <system:String x:Key="Settings.CheckForUpdates">Check for Updates</system:String>
+    <system:String x:Key="Settings.UpdateChecking">Checking for updates...</system:String>
+    <system:String x:Key="Settings.NoUpdateAvailable">You are running the latest version.</system:String>
+    <system:String x:Key="Settings.UpdateAvailable">New version available</system:String>
+    <system:String x:Key="Settings.UpdateCheckFailed">Failed to check for updates. Please try again later.</system:String>
+    <system:String x:Key="Settings.UpdateError">Update error: {0}</system:String>
+    <system:String x:Key="Settings.UpdateDownloading">Downloading update...</system:String>
+    <system:String x:Key="Settings.CurrentVersion">Current version: {0}</system:String>
+    <!--  Close Prompt  -->
+    <system:String x:Key="ClosePrompt.Title">Close Confirmation</system:String>
+    <system:String x:Key="ClosePrompt.Message">You clicked the close button. Please choose the default close behavior:</system:String>
+    <system:String x:Key="ClosePrompt.RememberChoice">Remember my choice</system:String>
+    <system:String x:Key="ClosePrompt.MinimizeToTaskbar">Minimize to taskbar</system:String>
+        <system:String x:Key="ClosePrompt.MinimizeToTray">Minimize to System Tray</system:String>
+    <system:String x:Key="ClosePrompt.ExitDirectly">Exit directly</system:String>
+
+    <!--  Settings - Close Behavior  -->
+    <system:String x:Key="Settings.Category.CloseBehavior">Close Behavior</system:String>
+    <system:String x:Key="Settings.CloseBehavior.Description">Set the default behavior when clicking the close button</system:String>
+    <system:String x:Key="Settings.CloseBehavior.Ask">Ask every time</system:String>
+    <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">Minimize to taskbar</system:String>
+    <system:String x:Key="Settings.CloseBehavior.ExitDirectly">Exit directly</system:String>
+    <system:String x:Key="Settings.CloseBehavior.RememberChoice">Remember choice</system:String>
 </ResourceDictionary>

@@ -4,6 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <NoWarn>$(NoWarn);CS8601;CS8603;CA1416;CS8618</NoWarn>
@@ -28,5 +29,16 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
+
+  <!--  Post-build: print version from Nerdbank.GitVersioning  -->
+  <Target Name="PrintBuildVersion" AfterTargets="AfterBuild">
+    <Message Importance="high" Text="========================================" />
+    <Message Importance="high" Text="  Build Version       : $(BuildVersion)" />
+    <Message Importance="high" Text="  Simple Version      : $(BuildVersionSimple)" />
+    <Message Importance="high" Text="  Informational Ver   : $(AssemblyInformationalVersion)" />
+    <Message Importance="high" Text="  Git Tag             : $(GitVersionTag)" />
+    <Message Importance="high" Text="  Git Height          : $(GitVersionHeight)" />
+    <Message Importance="high" Text="========================================" />
+  </Target>
 
 </Project>

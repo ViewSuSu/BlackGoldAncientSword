@@ -1,10 +1,11 @@
-<bases:UserControlBase
+﻿<bases:UserControlBase
     x:Class="NarakaBladepoint.StatsAssistant.Modules.UI.Settings.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:bases="clr-namespace:NarakaBladepoint.StatsAssistant.Framework.Core.Bases.Views;assembly=NarakaBladepoint.StatsAssistant.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:hc="https://handyorg.github.io/handycontrol"
     d:DesignHeight="400"
     d:DesignWidth="600"
     Background="WhiteSmoke"
@@ -146,16 +147,80 @@
                     </StackPanel>
                 </GroupBox>
 
+
+                <!--  Close Behavior  -->
+                <GroupBox Margin="0,12,0,0" Style="{x:Null}">
+                    <GroupBox.Header>
+                        <TextBlock
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Text="{DynamicResource Settings.Category.CloseBehavior}" />
+                    </GroupBox.Header>
+                    <StackPanel>
+                        <TextBlock
+                            Margin="0,0,0,8"
+                            FontSize="12"
+                            Foreground="Gray"
+                            Text="{DynamicResource Settings.CloseBehavior.Description}" />
+                        <ItemsControl VerticalAlignment="Center" ItemsSource="{Binding CloseBehaviorOptions}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <RadioButton
+                                        Margin="0,0,20,0"
+                                        Padding="0"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding DataContext.SelectCloseBehaviorCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Value}"
+                                        Content="{Binding DisplayName}"
+                                        GroupName="CloseBehavior">
+                                        <RadioButton.IsChecked>
+                                            <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
+                                                <Binding Path="Value" />
+                                                <Binding Path="DataContext.SelectedCloseBehavior" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                            </MultiBinding>
+                                        </RadioButton.IsChecked>
+                                    </RadioButton>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <CheckBox
+                            Margin="0,12,0,8"
+                            Content="{DynamicResource Settings.CloseBehavior.RememberChoice}"
+                            IsChecked="{Binding RememberCloseBehavior}" />
+                    </StackPanel>
+                </GroupBox>
+
             </StackPanel>
         </ScrollViewer>
 
-        <StackPanel
-            Grid.Row="2"
-            Margin="0,16,0,0"
-            HorizontalAlignment="Right"
-            Orientation="Horizontal">
-            <Button MinWidth="80" Height="32" Margin="0,0,8,0" Command="{Binding SaveCommand}" Content="{DynamicResource Settings.Save}" />
-        </StackPanel>
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button
+                Grid.Column="0"
+                Height="28"
+                MinWidth="90"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Style="{StaticResource ButtonInfo}"
+                Command="{Binding CheckForUpdatesCommand}"
+                Content="{DynamicResource Settings.CheckForUpdates}" />
+
+            <StackPanel
+                Grid.Column="1"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal">
+                <Button MinWidth="80" Height="32" Margin="0,0,8,0" Command="{Binding SaveCommand}" Content="{DynamicResource Settings.Save}" />
+            </StackPanel>
+        </Grid>
     </Grid>
 </bases:UserControlBase>
 

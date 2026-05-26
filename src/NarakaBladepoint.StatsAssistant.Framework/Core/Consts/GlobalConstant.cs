@@ -9,5 +9,6 @@
         public const string AutoHomePageRegion = nameof(AutoHomePageRegion);
         public const string MainContentRegion = nameof(MainContentRegion);
         public const string AnnouncementRegion = nameof(AnnouncementRegion);
+        public const string ClosePromptRegion = nameof(ClosePromptRegion);
     }
 }

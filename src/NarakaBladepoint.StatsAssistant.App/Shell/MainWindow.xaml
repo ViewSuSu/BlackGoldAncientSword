@@ -1,4 +1,4 @@
-<Window
+﻿<Window
     x:Class="NarakaBladepoint.StatsAssistant.App.Shell.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -473,6 +473,15 @@
                 VerticalContentAlignment="Stretch"
                 Panel.ZIndex="900"
                 prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.AnnouncementRegion}" />
+            <!--  Close prompt overlay (covers entire window, above announcement)  -->
+            <ContentControl
+                Grid.RowSpan="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                VerticalContentAlignment="Stretch"
+                Panel.ZIndex="950"
+                prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.ClosePromptRegion}" />
 
             <!--  Stacked toast notifications (topmost)  -->
             <ItemsControl

@@ -15,8 +15,4 @@
     <ProjectReference Include="..\NarakaBladepoint.StatsAssistant.Resources\NarakaBladepoint.StatsAssistant.Resources.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="HandyControl" Version="3.5.1" />
-  </ItemGroup>
-
 </Project>

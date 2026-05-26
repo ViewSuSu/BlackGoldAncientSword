@@ -21,6 +21,14 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Announcement.ViewModels
             _regionManager = regionManager;
         }
 
+        private DelegateCommand? _dismissCommand;
+        public DelegateCommand DismissCommand =>
+            _dismissCommand ??= new DelegateCommand(() =>
+            {
+                var region = _regionManager.Regions[GlobalConstant.AnnouncementRegion];
+                region.RemoveAll();
+            });
+
         private DelegateCommand? _confirmCommand;
         public DelegateCommand ConfirmCommand =>
             _confirmCommand ??= new DelegateCommand(() =>

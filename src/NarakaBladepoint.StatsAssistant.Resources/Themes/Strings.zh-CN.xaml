@@ -130,4 +130,28 @@
     <system:String x:Key="TitleBar.Maximize">最大化</system:String>
     <system:String x:Key="TitleBar.Restore">还原</system:String>
     <system:String x:Key="TitleBar.Close">关闭</system:String>
-</ResourceDictionary>
+
+    <!--  Close Prompt  -->
+    <system:String x:Key="ClosePrompt.Title">关闭确认</system:String>
+    <system:String x:Key="ClosePrompt.Message">您点击了关闭按钮，请选择关闭按钮的默认行为：</system:String>
+    <system:String x:Key="ClosePrompt.RememberChoice">记住我的选择</system:String>
+    <system:String x:Key="ClosePrompt.MinimizeToTaskbar">最小化到任务栏</system:String>
+        <system:String x:Key="ClosePrompt.MinimizeToTray">最小化到系统托盘</system:String>
+    <system:String x:Key="ClosePrompt.ExitDirectly">直接退出</system:String>
+
+    <!--  Settings - Close Behavior  -->
+    <system:String x:Key="Settings.Category.CloseBehavior">关闭行为</system:String>
+    <system:String x:Key="Settings.CloseBehavior.Description">设置点击关闭按钮时的默认行为</system:String>
+    <system:String x:Key="Settings.CloseBehavior.Ask">每次询问</system:String>
+    <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到任务栏</system:String><system:String x:Key="Settings.CloseBehavior.ExitDirectly">直接退出</system:String>
+    <system:String x:Key="Settings.CloseBehavior.RememberChoice">记住选项</system:String>
+
+    <!--  Update  -->
+    <system:String x:Key="Settings.CheckForUpdates">检查更新</system:String>
+    <system:String x:Key="Settings.UpdateChecking">正在检查更新...</system:String>
+    <system:String x:Key="Settings.NoUpdateAvailable">当前已是最新版本</system:String>
+    <system:String x:Key="Settings.UpdateAvailable">发现新版本</system:String>
+    <system:String x:Key="Settings.UpdateCheckFailed">检查更新失败，请稍后重试</system:String>
+    <system:String x:Key="Settings.UpdateError">更新错误: {0}</system:String>
+    <system:String x:Key="Settings.UpdateDownloading">正在下载更新...</system:String>
+    <system:String x:Key="Settings.CurrentVersion">当前版本: {0}</system:String></ResourceDictionary>
