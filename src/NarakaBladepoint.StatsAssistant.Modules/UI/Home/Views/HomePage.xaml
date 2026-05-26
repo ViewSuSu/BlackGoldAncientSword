@@ -1,0 +1,228 @@
+﻿<bases:UserControlBase
+    x:Class="NarakaBladepoint.StatsAssistant.Modules.UI.Home.Views.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:bases="clr-namespace:NarakaBladepoint.StatsAssistant.Framework.Core.Bases.Views;assembly=NarakaBladepoint.StatsAssistant.Framework"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:viewmodels="clr-namespace:NarakaBladepoint.StatsAssistant.Modules.UI.Home.ViewModels" d:DataContext="{d:DesignInstance Type=viewmodels:HomePageViewModel}"
+    d:DesignHeight="600"
+    d:DesignWidth="960"
+    FontFamily="Segoe UI"
+    mc:Ignorable="d">
+
+    <Grid>
+        <!-- ===== LOADING STATE ===== -->
+        <StackPanel
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock
+                FontSize="16"
+                Foreground="Gray"
+                Text="Loading player data..." />
+            <TextBlock
+                Margin="0,8,0,0"
+                FontSize="13"
+                Foreground="DarkGray"
+                Text="Fetching from server..." />
+        </StackPanel>
+
+        <!-- ===== ERROR STATE ===== -->
+        <Border
+            Margin="40"
+            Padding="32"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            BorderBrush="LightGray"
+            BorderThickness="1"
+            Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}" CornerRadius="2">
+            <StackPanel>
+                <TextBlock
+                    FontSize="20"
+                    FontWeight="Bold"
+                    Foreground="Red"
+                    Text="Unable to Load Data" />
+                <TextBlock
+                    Margin="0,12,0,0"
+                    FontSize="14"
+                    Foreground="Gray"
+                    Text="{Binding ErrorMessage}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Margin="0,16,0,0"
+                    FontSize="13"
+                    Foreground="DarkGray"
+                    Text="Make sure NarakaBladepoint has been launched at least once on this PC and you have an active network connection." />
+            </StackPanel>
+        </Border>
+
+        <!-- ===== DATA STATE ===== -->
+        <ScrollViewer
+            VerticalScrollBarVisibility="Auto"
+            Visibility="{Binding IsDataLoaded, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Margin="32,24">
+
+                <!-- === HERO SECTION === -->
+                <Border Padding="28,20,28,24" Margin="0,0,0,16" BorderBrush="LightGray" BorderThickness="1" CornerRadius="2">
+                    <StackPanel>
+
+                        <!-- Avatar - centered at top -->
+                        <Border
+                            Width="72"
+                            Height="72"
+                            Margin="0,20,0,16"
+                            HorizontalAlignment="Center"
+                            BorderBrush="LightGray"
+                            BorderThickness="1"
+                            ClipToBounds="True" CornerRadius="2">
+                            <Image
+                                Width="72"
+                                Height="72"
+                                Source="{Binding AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
+                                Stretch="UniformToFill" />
+                        </Border>
+
+                        <!-- Name + Level -->
+                        <StackPanel HorizontalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock
+                                    FontSize="28"
+                                    FontWeight="Bold"
+                                    Text="{Binding PlayerName}" />
+                                <Border
+                                    Margin="12,0,0,0"
+                                    Padding="10,3"
+                                    BorderBrush="LightGray"
+                                    BorderThickness="1"
+                                    VerticalAlignment="Center" CornerRadius="2">
+                                    <TextBlock FontSize="13" FontWeight="SemiBold">
+                                        <Run Text="Lv." /><Run Text="{Binding PlayerLevel}" />
+                                    </TextBlock>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- UID + Role + Season row -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+                                <TextBlock FontSize="13" Foreground="Gray" Text="UID:" />
+                                <TextBlock
+                                    Margin="6,0,0,0"
+                                    FontSize="13"
+                                    FontFamily="Consolas"
+                                    Text="{Binding Uid}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+                                <TextBlock FontSize="13" Foreground="Gray" Text="Role:" />
+                                <TextBlock
+                                    Margin="6,0,0,0"
+                                    FontSize="13"
+                                    FontFamily="Consolas"
+                                    Text="{Binding RoleId}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock FontSize="13" Foreground="Gray" Text="Season:" />
+                                <TextBlock
+                                    Margin="6,0,0,0"
+                                    FontSize="13"
+                                    FontWeight="SemiBold"
+                                    Text="{Binding CurrentSeasonId, StringFormat='S{0}'}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+
+                <!-- === RANK SECTION HEADER === -->
+                <TextBlock
+                    Margin="0,8,0,12"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Text="Survive Ranks" />
+
+                <!-- === 3 RANK CARDS === -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Solo -->
+                    <Border Grid.Column="0" Padding="20,16" Margin="0,0,8,0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="2">
+                        <StackPanel>
+                            <TextBlock FontSize="12" Foreground="Gray" Margin="0,0,0,4" Text="Solo" />
+                            <TextBlock FontSize="13" Foreground="Gray" Text="Solo Survival" />
+                            <Border
+                                Margin="0,10,0,0"
+                                Padding="10,6"
+                                BorderBrush="LightGray"
+                                BorderThickness="1"
+                                HorizontalAlignment="Left" CornerRadius="2">
+                                <TextBlock
+                                    FontSize="16"
+                                    FontWeight="Bold"
+                                    Text="{Binding SoloGrade, StringFormat='Grade {0}'}" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Duo -->
+                    <Border Grid.Column="1" Padding="20,16" Margin="4,0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="2">
+                        <StackPanel>
+                            <TextBlock FontSize="12" Foreground="Gray" Margin="0,0,0,4" Text="Duo" />
+                            <TextBlock FontSize="13" Foreground="Gray" Text="Duo Survival" />
+                            <Border
+                                Margin="0,10,0,0"
+                                Padding="10,6"
+                                BorderBrush="LightGray"
+                                BorderThickness="1"
+                                HorizontalAlignment="Left" CornerRadius="2">
+                                <TextBlock
+                                    FontSize="16"
+                                    FontWeight="Bold"
+                                    Text="{Binding DuoGrade, StringFormat='Grade {0}'}" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Trio -->
+                    <Border Grid.Column="2" Padding="20,16" Margin="8,0,0,0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="2">
+                        <StackPanel>
+                            <TextBlock FontSize="12" Foreground="Gray" Margin="0,0,0,4" Text="Trio" />
+                            <TextBlock FontSize="13" Foreground="Gray" Text="Trio Survival" />
+                            <Border
+                                Margin="0,10,0,0"
+                                Padding="10,6"
+                                BorderBrush="LightGray"
+                                BorderThickness="1"
+                                HorizontalAlignment="Left" CornerRadius="2">
+                                <TextBlock
+                                    FontSize="16"
+                                    FontWeight="Bold"
+                                    Text="{Binding TrioGrade, StringFormat='Grade {0}'}" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- === QUICK TIPS === -->
+                <Border Padding="20,16" Margin="0,0,0,8" BorderBrush="LightGray" BorderThickness="1" CornerRadius="2">
+                    <StackPanel>
+                        <TextBlock
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Text="Quick Tips" />
+                        <TextBlock
+                            Margin="0,8,0,0"
+                            FontSize="13"
+                            Foreground="Gray"
+                            TextWrapping="Wrap"
+                            Text="Navigate to Stats for detailed battle records and rankings. Use Search to look up other players by nickname or ID. Announcements keep you up to date with the latest news." />
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</bases:UserControlBase>

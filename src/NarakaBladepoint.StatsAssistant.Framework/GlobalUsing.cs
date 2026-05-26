@@ -1,0 +1,13 @@
+﻿global using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
+global using Prism.Modularity;
+global using NarakaBladepoint.StatsAssistant.Framework.Core.Events;
+global using Prism.Commands;
+global using Prism;
+global using Prism.Events;
+global using Prism.Ioc;
+global using Prism.Mvvm;
+global using Prism.Regions;
+global using NarakaBladepoint.StatsAssistant.Framework.Services;
+global using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
+
+global using Mapster;
