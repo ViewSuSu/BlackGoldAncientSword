@@ -78,7 +78,7 @@
                     <Image Source="/BlackGoldAncientSword.Resources;component/Images/back.png" Stretch="Uniform" />
                 </Button>
                 <Image
-                    Width="28"
+                    Width="20"
                     Margin="20,0,0,0"
                     Source="{Binding Icon, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource WindowIconConverter}}"
                     Stretch="Uniform" />
