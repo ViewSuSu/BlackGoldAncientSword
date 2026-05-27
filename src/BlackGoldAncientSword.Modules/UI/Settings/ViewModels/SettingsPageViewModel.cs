@@ -106,6 +106,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
 
         public System.ComponentModel.BindingList<CloseBehaviorOption> CloseBehaviorOptions { get; } = new()
         {            new CloseBehaviorOption { Value = "MinimizeToTaskbar", DisplayNameResourceKey = "Settings.CloseBehavior.MinimizeToTaskbar" },
+            new CloseBehaviorOption { Value = "MinimizeToTray", DisplayNameResourceKey = "Settings.CloseBehavior.MinimizeToTray" },
             new CloseBehaviorOption { Value = "ExitDirectly", DisplayNameResourceKey = "Settings.CloseBehavior.ExitDirectly" },
         };
 
