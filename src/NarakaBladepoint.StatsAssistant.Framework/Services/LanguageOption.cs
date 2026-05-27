@@ -1,4 +1,4 @@
-﻿namespace NarakaBladepoint.StatsAssistant.Modules.Services
+﻿namespace NarakaBladepoint.StatsAssistant.Framework.Services
 {
     public class LanguageOption
     {

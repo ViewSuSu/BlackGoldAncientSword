@@ -1,4 +1,4 @@
-﻿namespace NarakaBladepoint.StatsAssistant.Framework.Services
+﻿namespace NarakaBladepoint.StatsAssistant.GameMonitor.Models
 {
     public class PlayerPrefsData
     {

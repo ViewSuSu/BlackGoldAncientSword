@@ -1,11 +1,13 @@
-﻿using System.Threading.Tasks;
-
-namespace NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions
+﻿namespace NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions
 {
     public interface ISettingsService
     {
         AppSettings Current { get; }
-        void Load();
+
+        /// <summary>异步加载配置。</summary>
+        Task LoadAsync();
+
+        /// <summary>异步保存配置。</summary>
         Task SaveAsync();
     }
 }

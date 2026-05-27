@@ -1,12 +1,12 @@
-﻿using System.Threading.Tasks;
-using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
-using NarakaBladepoint.StatsAssistant.Framework.Services;
-using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
-
-namespace NarakaBladepoint.StatsAssistant.Modules.Services.Implementation
+﻿namespace NarakaBladepoint.StatsAssistant.GameMonitor.Services.Implementation
 {
+    using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
+
+    /// <summary>
+    /// 玩家偏好数据服务。从永劫无间的 player_prefs.txt 异步读取玩家信息。
+    /// </summary>
     [Component(ComponentLifetime.Singleton)]
-    internal class PlayerPrefsService : IPlayerPrefsService
+    public class PlayerPrefsService : IPlayerPrefsService
     {
         private static readonly string FilePath =
             System.IO.Path.Combine(
@@ -17,17 +17,21 @@ namespace NarakaBladepoint.StatsAssistant.Modules.Services.Implementation
 
         public PlayerPrefsService()
         {
-            Load();
+            // 构造时启动异步加载，不阻塞 UI 线程
+            _ = LoadAsync();
         }
 
-        public void Load()
+        /// <summary>
+        /// 异步加载玩家偏好数据。
+        /// </summary>
+        public async Task LoadAsync()
         {
             try
             {
                 if (!System.IO.File.Exists(FilePath))
                     return;
 
-                var lines = System.IO.File.ReadAllLines(FilePath);
+                var lines = await System.IO.File.ReadAllLinesAsync(FilePath);
                 var result = new PlayerPrefsData();
 
                 foreach (var line in lines)
@@ -74,7 +78,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.Services.Implementation
             }
             catch
             {
-                // silently ignore parse errors
+                // 静默忽略解析错误，不影响主流程
             }
         }
 

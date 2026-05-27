@@ -12,5 +12,7 @@ global using Prism.Mvvm;
 global using Prism.Regions;
 global using NarakaBladepoint.StatsAssistant.Framework.Services;
 global using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
+global using NarakaBladepoint.StatsAssistant.GameMonitor.Models;
+global using NarakaBladepoint.StatsAssistant.GameMonitor.Services.Abstractions;
 
 global using Mapster;

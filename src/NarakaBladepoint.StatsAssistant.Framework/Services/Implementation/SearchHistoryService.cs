@@ -1,5 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
@@ -22,14 +21,15 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
 
         public SearchHistoryService()
         {
-            Load();
+            // 构造时火后忘却异步加载，不阻塞 UI 线程
+            _ = LoadAsync();
         }
 
         public void Add(string query)
         {
             History.Insert(0, new SearchHistoryItem { Query = query, Timestamp = DateTime.Now });
             if (History.Count > 50) History.RemoveAt(History.Count - 1);
-            _ = Task.Run(SaveAsync);
+            _ = SaveAsync();
         }
 
         public async Task DeleteAsync(SearchHistoryItem item)
@@ -38,7 +38,10 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
             await SaveAsync();
         }
 
-        private void Load()
+        /// <summary>
+        /// 异步加载搜索历史文件。
+        /// </summary>
+        private async Task LoadAsync()
         {
             try
             {
@@ -48,7 +51,7 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
 
                 if (System.IO.File.Exists(FilePath))
                 {
-                    var json = System.IO.File.ReadAllText(FilePath);
+                    var json = await System.IO.File.ReadAllTextAsync(FilePath);
                     var items = JsonConvert.DeserializeObject<List<SearchHistoryItem>>(json);
                     if (items != null)
                         foreach (var item in items) History.Add(item);

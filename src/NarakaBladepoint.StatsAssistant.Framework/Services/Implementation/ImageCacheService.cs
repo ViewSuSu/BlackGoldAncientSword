@@ -1,6 +1,5 @@
-锘縰sing System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 
@@ -45,15 +44,21 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
                 if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
                     System.IO.Directory.CreateDirectory(dir);
 
-                await using var fileStream = System.IO.File.Create(filePath);
+                // 使用 FileStream(useAsync: true) 实现真正的异步写入
+                await using var fileStream = new System.IO.FileStream(
+                    filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write,
+                    System.IO.FileShare.None, bufferSize: 4096, useAsync: true);
                 await stream.CopyToAsync(fileStream);
             }
             catch
             {
-                // Cache write failure is non-critical
+                // 缓存写入失败不影响主流程
             }
         }
 
+        /// <summary>
+        /// 获取缓存目录总大小。.NET 8 无原生异步目录遍历，使用 Task.Run 委托后台线程。
+        /// </summary>
         public Task<long> GetCacheSizeBytesAsync()
         {
             return Task.Run(() =>
@@ -63,7 +68,7 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
 
                 try
                 {
-                    return System.IO.Directory.GetFiles(_cachePath, "*", System.IO.SearchOption.AllDirectories)
+                    return System.IO.Directory.EnumerateFiles(_cachePath, "*", System.IO.SearchOption.AllDirectories)
                         .Sum(f => new System.IO.FileInfo(f).Length);
                 }
                 catch
@@ -73,6 +78,9 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
             });
         }
 
+        /// <summary>
+        /// 清空缓存目录。.NET 8 无原生异步 Delete，使用 Task.Run 委托后台线程。
+        /// </summary>
         public Task ClearCacheAsync()
         {
             return Task.Run(() =>
@@ -89,7 +97,7 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
                 }
                 catch
                 {
-                    // Clear failure is non-critical
+                    // 清空失败不影响主流程
                 }
             });
         }

@@ -1,8 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
-using NarakaBladepoint.StatsAssistant.Modules.Services;
+using NarakaBladepoint.StatsAssistant.Framework.Services;
 
-namespace NarakaBladepoint.StatsAssistant.Modules.Services.Abstractions
+namespace NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions
 {
     public interface ILocalizationService : INotifyPropertyChanged
     {

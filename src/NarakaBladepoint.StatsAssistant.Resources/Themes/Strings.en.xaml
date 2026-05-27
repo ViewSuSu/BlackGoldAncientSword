@@ -106,7 +106,7 @@
     <system:String x:Key="Settings.SaveFailed">Save failed: {0}</system:String>
 
     <system:String x:Key="Nav.Detail">Detail</system:String>
-    <system:String x:Key="Nav.Home">Home</system:String>
+    <system:String x:Key="Nav.Home">Launch</system:String>
     <system:String x:Key="Nav.Stats">Stats</system:String>
     <system:String x:Key="Nav.CurrentUser">Current User</system:String>
     <system:String x:Key="Nav.Search">Search</system:String>

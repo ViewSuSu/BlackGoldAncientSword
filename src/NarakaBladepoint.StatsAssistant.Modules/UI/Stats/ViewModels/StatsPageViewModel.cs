@@ -6,7 +6,7 @@ using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 using System.Windows;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Events;
 using System.Collections.Generic;
-using NarakaBladepoint.StatsAssistant.Modules.Services.Abstractions;
+using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 
 
 namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels

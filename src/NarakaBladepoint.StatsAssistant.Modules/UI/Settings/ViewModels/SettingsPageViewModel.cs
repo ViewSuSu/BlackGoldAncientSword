@@ -1,4 +1,4 @@
-ï»¿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Windows;
 using Microsoft.Win32;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Bases.ViewModels;
@@ -6,8 +6,6 @@ using NarakaBladepoint.StatsAssistant.Framework.Core.Consts;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Events;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Infrastructure;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
-using NarakaBladepoint.StatsAssistant.Modules.Services;
-using NarakaBladepoint.StatsAssistant.Modules.Services.Abstractions;
 
 namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
 {
@@ -71,7 +69,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                 _localization.CurrentLanguage = value;
                 _localization.ApplyLanguage(Application.Current.Resources, value);
                 _settings.Current.Language = value;
-                _ = System.Threading.Tasks.Task.Run(() => _settings.SaveAsync());
+                _ = _settings.SaveAsync();
                 CloseBehaviorOptions.ResetBindings();
             }
         }
@@ -141,7 +139,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
             {
                 await _settings.SaveAsync();
                 eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(L("Settings.SaveSuccess", "ä¿å­˜æˆåŠŸ")));
+                    .Publish(new TipMessageWithHighlightArgs(L("Settings.SaveSuccess", "±£´æ³É¹¦")));
             });
 
         public SettingsPageViewModel(
@@ -160,14 +158,14 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
             _cachePath = string.IsNullOrWhiteSpace(settings.Current.CachePath) ? DefaultCachePath : settings.Current.CachePath;
             _originalDataPath = _dataPath;
             _originalCachePath = _cachePath;
-            _ = System.Threading.Tasks.Task.Run(RefreshCacheSizeAsync);
+            _ = RefreshCacheSizeAsync();
         }
 
         protected override void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
             // Reload from settings.json to ensure latest data
-            _settings.Load();
+            _ = _settings.LoadAsync();
             _dataPath = string.IsNullOrWhiteSpace(_settings.Current.DataSavePath) ? DefaultPath : _settings.Current.DataSavePath;
             _cachePath = string.IsNullOrWhiteSpace(_settings.Current.CachePath) ? DefaultCachePath : _settings.Current.CachePath;
             _originalDataPath = _dataPath;
@@ -185,7 +183,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
             }
             RaisePropertyChanged(nameof(SelectedLanguage));
             CloseBehaviorOptions.ResetBindings();
-            _ = System.Threading.Tasks.Task.Run(RefreshCacheSizeAsync);
+            _ = RefreshCacheSizeAsync();
         }
 
         private async System.Threading.Tasks.Task RefreshCacheSizeAsync()
@@ -208,7 +206,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
             {
                 var dialog = new OpenFolderDialog
                 {
-                    Title = L("Settings.BrowseDataPath", "é€‰æ‹©æ•°æ®ä¿å­˜è·¯å¾„"),
+                    Title = L("Settings.BrowseDataPath", "Ñ¡ÔñÊı¾İ±£´æÂ·¾¶"),
                     InitialDirectory = string.IsNullOrWhiteSpace(DataPath) ? DefaultPath : DataPath
                 };
                 if (dialog.ShowDialog() == true)
@@ -223,7 +221,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
             {
                 var dialog = new OpenFolderDialog
                 {
-                    Title = L("Settings.BrowseCachePath", "é€‰æ‹©ç¼“å­˜è·¯å¾„"),
+                    Title = L("Settings.BrowseCachePath", "Ñ¡Ôñ»º´æÂ·¾¶"),
                     InitialDirectory = string.IsNullOrWhiteSpace(CachePath) ? DefaultCachePath : CachePath
                 };
                 if (dialog.ShowDialog() == true)
@@ -239,7 +237,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                 await _cacheService.ClearCacheAsync();
                 await RefreshCacheSizeAsync();
                 eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(L("Settings.CacheCleared", "ç¼“å­˜å·²æ¸…é™¤")));
+                    .Publish(new TipMessageWithHighlightArgs(L("Settings.CacheCleared", "»º´æÒÑÇå³ı")));
             });
 
         private DelegateCommand? _saveCommand;
@@ -257,13 +255,13 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                     if (!string.IsNullOrWhiteSpace(newDataPath) && !System.IO.Directory.Exists(newDataPath))
                     {
                         eventAggregator.GetEvent<TipMessageEvent>()
-                            .Publish(new TipMessageWithHighlightArgs(L("Settings.InvalidDataPath", "æ•°æ®ä¿å­˜è·¯å¾„æ— æ•ˆæˆ–ä¸å­˜åœ¨ï¼Œè¯·æ£€æŸ¥åé‡è¯•"), new List<string> { "Error" }));
+                            .Publish(new TipMessageWithHighlightArgs(L("Settings.InvalidDataPath", "Êı¾İ±£´æÂ·¾¶ÎŞĞ§»ò²»´æÔÚ£¬Çë¼ì²éºóÖØÊÔ"), new List<string> { "Error" }));
                         return;
                     }
                     if (!string.IsNullOrWhiteSpace(newCachePath) && !System.IO.Directory.Exists(newCachePath))
                     {
                         eventAggregator.GetEvent<TipMessageEvent>()
-                            .Publish(new TipMessageWithHighlightArgs(L("Settings.InvalidCachePath", "ç¼“å­˜è·¯å¾„æ— æ•ˆæˆ–ä¸å­˜åœ¨ï¼Œè¯·æ£€æŸ¥åé‡è¯•"), new List<string> { "Error" }));
+                            .Publish(new TipMessageWithHighlightArgs(L("Settings.InvalidCachePath", "»º´æÂ·¾¶ÎŞĞ§»ò²»´æÔÚ£¬Çë¼ì²éºóÖØÊÔ"), new List<string> { "Error" }));
                         return;
                     }
 
@@ -289,12 +287,12 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
 
                     await RefreshCacheSizeAsync();
                     eventAggregator.GetEvent<TipMessageEvent>()
-                        .Publish(new TipMessageWithHighlightArgs(L("Settings.SaveSuccess", "ä¿å­˜æˆåŠŸ")));
+                        .Publish(new TipMessageWithHighlightArgs(L("Settings.SaveSuccess", "±£´æ³É¹¦")));
                 }
                 catch (Exception ex)
                 {
                     eventAggregator.GetEvent<TipMessageEvent>()
-                        .Publish(new TipMessageWithHighlightArgs(string.Format(L("Settings.SaveFailed", "ä¿å­˜å¤±è´¥: {0}"), ex.Message), new List<string> { "Error" }));
+                        .Publish(new TipMessageWithHighlightArgs(string.Format(L("Settings.SaveFailed", "±£´æÊ§°Ü: {0}"), ex.Message), new List<string> { "Error" }));
                 }
             });
 
@@ -308,14 +306,14 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                     if (!System.IO.Directory.Exists(newPath))
                         System.IO.Directory.CreateDirectory(newPath);
 
-                    foreach (var file in System.IO.Directory.GetFiles(oldPath))
+                    foreach (var file in System.IO.Directory.EnumerateFiles(oldPath))
                     {
                         var dest = System.IO.Path.Combine(newPath, System.IO.Path.GetFileName(file));
                         if (System.IO.File.Exists(dest))
                             System.IO.File.Delete(dest);
                         System.IO.File.Move(file, dest);
                     }
-                    foreach (var dir in System.IO.Directory.GetDirectories(oldPath))
+                    foreach (var dir in System.IO.Directory.EnumerateDirectories(oldPath))
                     {
                         var dest = System.IO.Path.Combine(newPath, System.IO.Path.GetFileName(dir));
                         if (System.IO.Directory.Exists(dest))

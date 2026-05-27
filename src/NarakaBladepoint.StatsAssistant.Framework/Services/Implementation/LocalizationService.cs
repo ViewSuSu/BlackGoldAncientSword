@@ -3,10 +3,10 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
-using NarakaBladepoint.StatsAssistant.Modules.Services;
-using NarakaBladepoint.StatsAssistant.Modules.Services.Abstractions;
+using NarakaBladepoint.StatsAssistant.Framework.Services;
+using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 
-namespace NarakaBladepoint.StatsAssistant.Modules.Services.Implementation
+namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
 {
     [Component(ComponentLifetime.Singleton)]
     internal class LocalizationService : ILocalizationService

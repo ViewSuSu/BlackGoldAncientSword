@@ -1,84 +1,48 @@
-﻿using NarakaBladepoint.StatsAssistant.Framework.Core.Infrastructure;
-using NarakaBladepoint.StatsAssistant.Framework.Http;
-using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
+﻿using System;
+using System.Diagnostics;
+using System.Windows.Threading;
+using NarakaBladepoint.StatsAssistant.GameMonitor.Services.Abstractions;
 
 namespace NarakaBladepoint.StatsAssistant.Modules.UI.Home.ViewModels
 {
     public class HomePageViewModel : ViewModelBase
     {
-        private static string L(string key, string fallback) =>
-            System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
-        private readonly HomePageVisualNavigator _homeNavigator;
-        private readonly IPlayerPrefsService _playerPrefsService;
-        private CancellationTokenSource? _cts;
+        private const int PollIntervalMs = 2000;
+        private readonly DispatcherTimer _processTimer;
+        private readonly IGameLogMonitor _gameLogMonitor;
 
-        public HomePageViewModel(HomePageVisualNavigator homeNavigator, IPlayerPrefsService playerPrefsService)
+        public HomePageViewModel(IGameLogMonitor gameLogMonitor)
         {
-            _homeNavigator = homeNavigator;
-            _playerPrefsService = playerPrefsService;
+            _gameLogMonitor = gameLogMonitor;
+            _processTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(PollIntervalMs)
+            };
+            _processTimer.Tick += OnTimerTick;
+
+            StatusText = "等待客户端连接";
+            IsLoading = true;
         }
 
-        private string _playerName = string.Empty;
-        public string PlayerName
+        private string _statusText = string.Empty;
+        public string StatusText
         {
-            get => _playerName;
-            set => SetProperty(ref _playerName, value);
+            get => _statusText;
+            set => SetProperty(ref _statusText, value);
         }
 
-        private int _playerLevel;
-        public int PlayerLevel
+        private string _statusHint = string.Empty;
+        public string StatusHint
         {
-            get => _playerLevel;
-            set => SetProperty(ref _playerLevel, value);
+            get => _statusHint;
+            set => SetProperty(ref _statusHint, value);
         }
 
-        private string _uid = string.Empty;
-        public string Uid
+        private bool _isGameRunning;
+        public bool IsGameRunning
         {
-            get => _uid;
-            set => SetProperty(ref _uid, value);
-        }
-
-        private string _roleId = string.Empty;
-        public string RoleId
-        {
-            get => _roleId;
-            set => SetProperty(ref _roleId, value);
-        }
-
-        private string _avatarUrl = string.Empty;
-        public string AvatarUrl
-        {
-            get => _avatarUrl;
-            set => SetProperty(ref _avatarUrl, value);
-        }
-
-        private int _soloGrade;
-        public int SoloGrade
-        {
-            get => _soloGrade;
-            set => SetProperty(ref _soloGrade, value);
-        }
-
-        private int _duoGrade;
-        public int DuoGrade
-        {
-            get => _duoGrade;
-            set => SetProperty(ref _duoGrade, value);
-        }
-
-        private int _trioGrade;
-        public int TrioGrade
-        {
-            get => _trioGrade;
-            set => SetProperty(ref _trioGrade, value);
-        }
-
-        private int _currentSeasonId;
-        public int CurrentSeasonId
-        {
-            get => _currentSeasonId;
-            set => SetProperty(ref _currentSeasonId, value);
+            get => _isGameRunning;
+            set => SetProperty(ref _isGameRunning, value);
         }
 
         private bool _isLoading;
@@ -88,122 +52,71 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Home.ViewModels
             set => SetProperty(ref _isLoading, value);
         }
 
-        private bool _hasError;
-        public bool HasError
+        private bool _monitorStarted;
+        private void OnTimerTick(object? sender, EventArgs e)
         {
-            get => _hasError;
-            set => SetProperty(ref _hasError, value);
+            var found = IsNarakaProcessRunning();
+            if (found && !IsGameRunning)
+            {
+                IsGameRunning = true;
+                IsLoading = false;
+                StatusText = "游戏启动成功";
+                StatusHint = "永劫无间进程已检测到";
+                if (!_monitorStarted)
+                {
+                    _monitorStarted = true;
+                    _ = _gameLogMonitor.StartAsync();
+                }
+            }
+            else if (!found && IsGameRunning)
+            {
+                IsGameRunning = false;
+                IsLoading = true;
+                StatusText = "等待客户端连接";
+                StatusHint = string.Empty;
+                if (_monitorStarted)
+                {
+                    _monitorStarted = false;
+                    _gameLogMonitor.Stop();
+                }
+            }
         }
 
-        private string _errorMessage = string.Empty;
-        public string ErrorMessage
+        private static bool IsNarakaProcessRunning()
         {
-            get => _errorMessage;
-            set => SetProperty(ref _errorMessage, value);
-        }
-
-        private bool _isDataLoaded;
-        public bool IsDataLoaded
-        {
-            get => _isDataLoaded;
-            set => SetProperty(ref _isDataLoaded, value);
+            try
+            {
+                var processes = Process.GetProcesses();
+                foreach (var proc in processes)
+                {
+                    try
+                    {
+                        if (proc.ProcessName.Equals("NarakaBladepoint", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return false;
         }
 
         protected override void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
-            CancelAndDisposeCts();
-            _cts = new CancellationTokenSource();
-            _ = LoadUserDataAsync(_cts.Token);
+            _processTimer.Start();
         }
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
-            CancelAndDisposeCts();
-            ClearImageBindings();
+            _processTimer.Stop();
             base.OnNavigatedFromExecute(navigationContext);
-        }
-
-        private void CancelAndDisposeCts()
-        {
-            if (_cts == null) return;
-            try { _cts.Cancel(); } catch (ObjectDisposedException) { }
-            try { _cts.Dispose(); } catch (ObjectDisposedException) { }
-            _cts = null;
-        }
-
-        private void ClearImageBindings()
-        {
-            AvatarUrl = string.Empty;
-        }
-
-        private async System.Threading.Tasks.Task LoadUserDataAsync(CancellationToken ct)
-        {
-            var localName = _playerPrefsService.Current.PlayerName;
-            if (string.IsNullOrEmpty(localName))
-            {
-                IsLoading = false;
-                HasError = true;
-                ErrorMessage = L("Home.NoLocalData", "No local player data found. Launch NarakaBladepoint first.");
-                return;
-            }
-
-            IsLoading = true;
-            HasError = false;
-            IsDataLoaded = false;
-
-            try
-            {
-                var searchResult = await NarakaApiClient.SearchRecordAsync(localName, ct);
-                if (searchResult?.Code != 200 || searchResult.Data == null)
-                {
-                    HasError = true;
-                    ErrorMessage = searchResult?.Msg ?? L("Home.PlayerNotFound", "Player not found on server.");
-                    return;
-                }
-
-                var miniRoleId = searchResult.Data.RoleIdMiniProgram;
-                if (string.IsNullOrEmpty(miniRoleId))
-                {
-                    HasError = true;
-                    ErrorMessage = L("Home.RoleIdNotAvailable", "Player role ID not available.");
-                    return;
-                }
-
-                var userInfo = await NarakaApiClient.GetUserInfoAsync(miniRoleId, ct);
-                if (userInfo?.Code != 200 || userInfo.Data == null)
-                {
-                    HasError = true;
-                    ErrorMessage = userInfo?.Msg ?? L("Home.LoadUserInfoFailed", "Failed to load user info.");
-                    return;
-                }
-
-                var data = userInfo.Data;
-                PlayerName = data.Role?.RoleName ?? data.NickName ?? localName;
-                PlayerLevel = data.Role?.RoleLevel ?? 0;
-                Uid = data.Role?.Uid ?? searchResult.Data.RoleId ?? string.Empty;
-                RoleId = data.Role?.RoleId ?? miniRoleId;
-                AvatarUrl = data.Role?.HeadIcon ?? data.AvatarUrl ?? string.Empty;
-                SoloGrade = data.SurviveSingleGrade;
-                DuoGrade = data.SurviveDoubleGrade;
-                TrioGrade = data.SurviveTriplexGrade;
-                CurrentSeasonId = data.CurrentSeasonId;
-
-                IsDataLoaded = true;
-            }
-            catch (OperationCanceledException)
-            {
-                // Navigation away — deliberately cancelled, not an error
-            }
-            catch (Exception ex)
-            {
-                HasError = true;
-                ErrorMessage = string.Format(L("Home.NetworkError", "Network error: {0}"), ex.Message);
-            }
-            finally
-            {
-                IsLoading = false;
-            }
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
@@ -9,6 +8,7 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Core.Extensions
     [ValueConversion(typeof(string), typeof(BitmapImage))]
     public class UrlToImageSourceConverter : IValueConverter
     {
+        private static readonly System.Net.Http.HttpClient _httpClient = new();
         private static IImageCacheService? _cacheService;
 
         public static void SetCacheService(IImageCacheService cacheService)
@@ -50,10 +50,7 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Core.Extensions
                         if (bitmap.CanFreeze)
                             bitmap.Freeze();
 
-                        if (_cacheService != null)
-                        {
-                            Task.Run(() => CacheImageAsync(capturedUrl));
-                        }
+                        _ = CacheImageAsync(capturedUrl);
                     };
                 }
                 else
@@ -70,12 +67,14 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Core.Extensions
             }
         }
 
+        /// <summary>
+        /// 异步下载图片并写入缓存。使用共享 HttpClient 实例避免 socket 耗尽。
+        /// </summary>
         private static async Task CacheImageAsync(string url)
         {
             try
             {
-                using var client = new System.Net.Http.HttpClient();
-                var response = await client.GetAsync(url).ConfigureAwait(false);
+                var response = await _httpClient.GetAsync(url).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
                     await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
