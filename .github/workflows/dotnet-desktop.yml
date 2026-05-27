@@ -33,18 +33,6 @@ jobs:
         Write-Host "Release version: $ver"
         echo "new_version=$ver" >> $env:GITHUB_OUTPUT
 
-    - name: Read project metadata
-      id: meta
-      shell: powershell
-      run: |
-        [xml]$csproj = Get-Content src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj
-        $authors = $csproj.Project.PropertyGroup.Authors
-        $url = $csproj.Project.PropertyGroup.PackageProjectUrl
-        Write-Host "Authors: $authors"
-        Write-Host "URL: $url"
-        echo "authors=$authors" >> $env:GITHUB_OUTPUT
-        echo "url=$url" >> $env:GITHUB_OUTPUT
-
     - name: Build (separate DLLs)
       shell: powershell
       run: |
@@ -82,13 +70,14 @@ jobs:
     - name: Build Installer
       shell: powershell
       run: |
+        [xml]$csproj = Get-Content src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj
+        $authors = $csproj.Project.PropertyGroup.Authors
+        $url = $csproj.Project.PropertyGroup.PackageProjectUrl
         $ver = '${{ steps.version.outputs.new_version }}'
-        $authors = '${{ steps.meta.outputs.authors }}'
-        $url = '${{ steps.meta.outputs.url }}'
         $content = Get-Content setup.iss
         $content = $content -replace '#define MyAppVersion "0.0.0"', "#define MyAppVersion `"$ver`""
         $content = $content -replace '#define MyAppPublisher "Unknown"', "#define MyAppPublisher `"$authors`""
-        $content = $content -replace '#define MyAppURL ".*"', "#define MyAppURL `"$url`""
+        $content = $content -replace '#define MyAppURL "https?://.*"', "#define MyAppURL `"$url`""
         [System.IO.File]::WriteAllText("setup.iss", ($content -join "`r`n"), [System.Text.UTF8Encoding]::new($true))
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
 
