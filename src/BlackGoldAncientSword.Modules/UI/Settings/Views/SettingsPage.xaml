@@ -252,16 +252,6 @@
 
             </StackPanel>
         </ScrollViewer>
-
-        <Grid Grid.Row="2" Margin="0,16,0,0">
-            <Button
-                Height="28"
-                MinWidth="90"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                Style="{StaticResource ButtonInfo}"
-                Command="{Binding CheckForUpdatesCommand}" ToolTip="{DynamicResource Settings.CheckForUpdates}" Content="{DynamicResource Settings.CheckForUpdates}" />
-        </Grid>
     </Grid>
 </bases:UserControlBase>
 
