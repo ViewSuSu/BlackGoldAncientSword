@@ -33,14 +33,25 @@ jobs:
         Write-Host "Release version: $ver"
         echo "new_version=$ver" >> $env:GITHUB_OUTPUT
 
-    - name: Publish
+    - name: Publish (no single-file)
       shell: powershell
       run: |
         dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj `
           -c Release `
           -r win-x64 `
           --self-contained `
+          /p:PublishSingleFile=false `
           -o publish/Release
+
+    - name: Install Inno Setup
+      shell: powershell
+      run: |
+        choco install innosetup -y
+
+    - name: Build Installer
+      shell: cmd
+      run: |
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=${{ steps.version.outputs.new_version }} setup.iss
 
     - name: Tag
       shell: powershell
@@ -57,6 +68,6 @@ jobs:
         tag_name: v${{ steps.version.outputs.new_version }}
         name: v${{ steps.version.outputs.new_version }}
         files: |
-          publish/Release/BlackGoldAncientSword.App.exe
+          output/*.exe
         draft: false
         prerelease: false
