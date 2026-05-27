@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Diagnostics;
 using System.Windows.Threading;
 using NarakaBladepoint.StatsAssistant.GameMonitor.Services.Abstractions;
@@ -20,7 +20,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Home.ViewModels
             };
             _processTimer.Tick += OnTimerTick;
 
-            StatusText = "ç­‰å¾…å®¢æˆ·ç«¯è¿æ¥";
+            StatusText = "µÈ´ıÓÎÏ·Æô¶¯";
             IsLoading = true;
         }
 
@@ -60,8 +60,8 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Home.ViewModels
             {
                 IsGameRunning = true;
                 IsLoading = false;
-                StatusText = "æ¸¸æˆå¯åŠ¨æˆåŠŸ";
-                StatusHint = "æ°¸åŠ«æ— é—´è¿›ç¨‹å·²æ£€æµ‹åˆ°";
+                StatusText = "ÓÎÏ·Æô¶¯³É¹¦";
+                StatusHint = "ÓÀ½ÙÎŞ¼ä½ø³ÌÒÑ¼ì²âµ½";
                 if (!_monitorStarted)
                 {
                     _monitorStarted = true;
@@ -72,7 +72,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Home.ViewModels
             {
                 IsGameRunning = false;
                 IsLoading = true;
-                StatusText = "ç­‰å¾…å®¢æˆ·ç«¯è¿æ¥";
+                StatusText = "µÈ´ıÓÎÏ·Æô¶¯";
                 StatusHint = string.Empty;
                 if (_monitorStarted)
                 {

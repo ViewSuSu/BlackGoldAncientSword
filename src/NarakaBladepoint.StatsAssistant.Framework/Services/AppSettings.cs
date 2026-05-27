@@ -8,14 +8,19 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services
         public string Language { get; set; } = "zh-CN";
 
         /// <summary>
-        /// "Ask" | "MinimizeToTaskbar" | "ExitDirectly"
+        /// "MinimizeToTaskbar" | "MinimizeToTaskbar" | "ExitDirectly"
         /// </summary>
-        public string CloseBehavior { get; set; } = "Ask";
+        public string CloseBehavior { get; set; } = "MinimizeToTaskbar";
 
         /// <summary>
         /// When true, CloseBehavior is used directly without showing the prompt dialog.
         /// </summary>
         public bool CloseBehaviorRemembered { get; set; } = false;
+
+        /// <summary>
+        /// 是否在程序启动时自动检测更新。
+        /// </summary>
+        public bool AutoCheckUpdates { get; set; } = false;
 
         public static string GetDefaultCachePath()
         {
