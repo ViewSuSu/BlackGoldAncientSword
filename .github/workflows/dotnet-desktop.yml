@@ -25,12 +25,13 @@ jobs:
     - name: Install NBGV
       run: dotnet tool install -g nbgv
 
-    - name: Get version
+    - name: Bump version & get new version
       id: version
       shell: powershell
       run: |
-        $ver = nbgv get-version -v Version
-        Write-Host "Build version: $ver"
+        nbgv prepare-release --versionIncrement patch
+        $ver = nbgv get-version -v SimpleVersion
+        Write-Host "Release version: $ver"
         echo "new_version=$ver" >> $env:GITHUB_OUTPUT
 
     - name: Build (separate DLLs)
@@ -66,14 +67,17 @@ jobs:
       run: |
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
 
-    - name: Tag
+    - name: Commit bump, Tag & Push
       shell: powershell
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        $tag = "v${{ steps.version.outputs.new_version }}"
-        git tag $tag
-        git push origin $tag
+        $ver = '${{ steps.version.outputs.new_version }}'
+        git add version.json
+        git commit -m "chore: bump version to $ver [skip ci]"
+        git tag "v$ver"
+        git push origin HEAD:release
+        git push origin "v$ver"
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
