@@ -1,3 +1,0 @@
-﻿paddlepaddle>=3.0.0
-paddleocr>=2.9.0
-opencv-python>=4.8.0

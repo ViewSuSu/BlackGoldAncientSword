@@ -4,4 +4,4 @@ global using System.IO;
 global using System.Linq;
 global using System.Threading.Tasks;
 global using Prism.Ioc;
-global using Python.Runtime;
+// (Python.NET removed — using PaddleOCR-json.exe subprocess instead)
