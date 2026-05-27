@@ -52,15 +52,9 @@ jobs:
     - name: Merge outputs
       shell: powershell
       run: |
-        Get-ChildItem build/Release -Filter *.dll | ForEach-Object {
-          $dest = "publish/Release/$($_.Name)"
-          if (-not (Test-Path $dest)) {
-            Copy-Item $_.FullName $dest
-          }
-        }
-        Copy-Item src\BlackGoldAncientSword.Resources\Images\app.png publish/Release/app.png -Force
-        Write-Host "Publish folder contents:"
-        Get-ChildItem publish/Release | Select-Object Name, Length | Format-Table -AutoSize
+        Copy-Item publish/Release/* build/Release/ -Recurse -Force
+        Write-Host "Combined build folder contents:"
+        Get-ChildItem build/Release | Select-Object Name, Length | Format-Table -AutoSize
 
     - name: Install Inno Setup
       shell: powershell
