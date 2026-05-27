@@ -33,6 +33,18 @@ jobs:
         Write-Host "Release version: $ver"
         echo "new_version=$ver" >> $env:GITHUB_OUTPUT
 
+    - name: Read project metadata
+      id: meta
+      shell: powershell
+      run: |
+        [xml]$csproj = Get-Content src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj
+        $authors = $csproj.Project.PropertyGroup.Authors
+        $url = $csproj.Project.PropertyGroup.PackageProjectUrl
+        Write-Host "Authors: $authors"
+        Write-Host "URL: $url"
+        echo "authors=$authors" >> $env:GITHUB_OUTPUT
+        echo "url=$url" >> $env:GITHUB_OUTPUT
+
     - name: Publish (no single-file)
       shell: powershell
       run: |
@@ -51,7 +63,7 @@ jobs:
     - name: Build Installer
       shell: cmd
       run: |
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=${{ steps.version.outputs.new_version }} setup.iss
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=${{ steps.version.outputs.new_version }} /DMyAppPublisher=${{ steps.meta.outputs.authors }} /DMyAppURL=${{ steps.meta.outputs.url }} setup.iss
 
     - name: Tag
       shell: powershell
