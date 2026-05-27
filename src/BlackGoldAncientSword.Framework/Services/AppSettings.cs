@@ -1,4 +1,4 @@
-namespace BlackGoldAncientSword.Framework.Services
+﻿namespace BlackGoldAncientSword.Framework.Services
 {
     public class AppSettings
     {
@@ -18,7 +18,7 @@ namespace BlackGoldAncientSword.Framework.Services
         public bool CloseBehaviorRemembered { get; set; } = false;
 
         /// <summary>
-        是否在程序启动时自动检查更新。
+        // 是否在程序启动时自动检查更新。
         /// </summary>
         public bool AutoCheckUpdates { get; set; } = false;
 

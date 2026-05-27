@@ -52,12 +52,7 @@
         </Setter>
     </Style>
     <ext:UrlToImageSourceConverter x:Key="UrlToImageSourceConverter" />
-        <ext:EnumToBoolConverter x:Key="EnumToBoolConverter" />
-        <ext:EnumDescriptionConverter x:Key="EnumDescriptionConverter" />
-        <ext:ScoreDiffToColorConverter x:Key="ScoreDiffToColorConverter" />
-        <ext:EnumEqualityConverter x:Key="EnumEqualityConverter" />
-    <ext:EnumToLocalizedStringConverter x:Key="EnumToLocalizedStringConverter" />
+    <ext:ScoreDiffToColorConverter x:Key="ScoreDiffToColorConverter" />
+    <ext:EnumEqualityConverter x:Key="EnumEqualityConverter" />
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-
-    <ext:ResourceKeyToStringConverter x:Key="ResourceKeyToStringConverter" />
 </ResourceDictionary>
