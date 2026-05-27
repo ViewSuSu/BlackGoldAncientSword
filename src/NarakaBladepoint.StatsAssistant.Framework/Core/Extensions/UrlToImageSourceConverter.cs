@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
+using NarakaBladepoint.StatsAssistant.Framework.Core.Extensions;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 
 namespace NarakaBladepoint.StatsAssistant.Framework.Core.Extensions
@@ -50,7 +51,7 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Core.Extensions
                         if (bitmap.CanFreeze)
                             bitmap.Freeze();
 
-                        _ = CacheImageAsync(capturedUrl);
+                        CacheImageAsync(capturedUrl).SafeFireAndForget("UrlToImageSourceConverter.CacheImage");
                     };
                 }
                 else

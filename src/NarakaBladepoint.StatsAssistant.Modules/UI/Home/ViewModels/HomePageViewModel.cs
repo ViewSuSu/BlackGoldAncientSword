@@ -1,4 +1,4 @@
-using System;
+锘縰sing System;
 using System.Diagnostics;
 using System.Windows.Threading;
 using NarakaBladepoint.StatsAssistant.GameMonitor.Services.Abstractions;
@@ -20,7 +20,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Home.ViewModels
             };
             _processTimer.Tick += OnTimerTick;
 
-            StatusText = "等待游戏启动";
+            StatusText = "绛夊緟娓告垙鍚姩";
             IsLoading = true;
         }
 
@@ -53,26 +53,26 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Home.ViewModels
         }
 
         private bool _monitorStarted;
-        private void OnTimerTick(object? sender, EventArgs e)
+        private async void OnTimerTick(object? sender, EventArgs e)
         {
             var found = IsNarakaProcessRunning();
             if (found && !IsGameRunning)
             {
                 IsGameRunning = true;
                 IsLoading = false;
-                StatusText = "游戏启动成功";
-                StatusHint = "永劫无间进程已检测到";
+                StatusText = "娓告垙鍚姩鎴愬姛";
+                StatusHint = "姘稿姭鏃犻棿杩涚▼宸叉娴嬪埌";
                 if (!_monitorStarted)
                 {
                     _monitorStarted = true;
-                    _ = _gameLogMonitor.StartAsync();
+                    await _gameLogMonitor.StartAsync();
                 }
             }
             else if (!found && IsGameRunning)
             {
                 IsGameRunning = false;
                 IsLoading = true;
-                StatusText = "等待游戏启动";
+                StatusText = "绛夊緟娓告垙鍚姩";
                 StatusHint = string.Empty;
                 if (_monitorStarted)
                 {

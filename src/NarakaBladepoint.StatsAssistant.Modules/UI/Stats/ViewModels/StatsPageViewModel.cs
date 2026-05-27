@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+Ôªøusing System.Collections.ObjectModel;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Consts;
 using NarakaBladepoint.StatsAssistant.Framework.Http;
 using NarakaBladepoint.StatsAssistant.Framework.Http.Generated;
@@ -61,7 +61,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
             {
                 Clipboard.SetText(UserName);
                 eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "∏¥÷∆≥…π¶"));
+                    .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "Â§çÂà∂ÊàêÂäü"));
             });
 
         private DelegateCommand? _copyUIDCommand;
@@ -70,7 +70,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
             {
                 Clipboard.SetText(UID);
                 eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "∏¥÷∆≥…π¶"));
+                    .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "Â§çÂà∂ÊàêÂäü"));
             });
 
 
@@ -283,12 +283,12 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
 
         private string _roleId = string.Empty;
 
-        protected override void OnNavigatedToExecute(NavigationContext navigationContext)
+        protected override async void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
             CancelAndDispose(ref _loadAllCts);
             _loadAllCts = new CancellationTokenSource();
-            _ = LoadAllAsync(_loadAllCts.Token);
+            await LoadAllAsync(_loadAllCts.Token);
         }
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
@@ -299,11 +299,11 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
             base.OnNavigatedFromExecute(navigationContext);
         }
 
-        private void RefreshStats()
+        private async void RefreshStats()
         {
             CancelAndDispose(ref _loadStatsCts);
             _loadStatsCts = new CancellationTokenSource();
-            _ = LoadStatsAsync(_loadStatsCts.Token);
+            await LoadStatsAsync(_loadStatsCts.Token);
         }
 
         private static void CancelAndDispose(ref CancellationTokenSource? cts)
@@ -377,7 +377,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
                         });
                     }
 
-                    // Launch all 10 detail requests concurrently ‚Ä?don't wait yet
+                    // Launch all 10 detail requests concurrently Èà•?don't wait yet
                     var detailTasks = battleItems
                         .Select((b, index) => FetchAndUpdateHonorTitlesAsync(b.BattleId.ToString(), index, ct))
                         .ToArray();
@@ -413,7 +413,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
             }
             catch (OperationCanceledException)
             {
-                // Navigation away or filter changed ‚Ä?not an error
+                // Navigation away or filter changed Èà•?not an error
             }
             catch (Exception ex)
             {
@@ -486,7 +486,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
                         var value = s.Value ?? "0";
 
                         // Convert survival time from seconds to mm:ss format
-                        if ((s.Key ?? "").Contains("live_time", StringComparison.OrdinalIgnoreCase) || (s.Name ?? "").Contains("…˙¥Ê"))
+                        if ((s.Key ?? "").Contains("live_time", StringComparison.OrdinalIgnoreCase) || (s.Name ?? "").Contains("ÁîüÂ≠ò"))
                         {
                             value = FormatSurvivalTime(value);
                         }
@@ -498,10 +498,10 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
                         });
                     }
                     // Parse specific rank stats from the dynamic list
-                    TotalGames = FindStatValue(data.Stats, "∂‘æ÷", "≥°¥Œ", "game", "battle", "round");
-                    TopOneCount = FindStatValue(data.Stats, "µ⁄“ª", "π⁄æ¸", "≥‘º¶", "champion", "top1", "win");
-                    TopFiveCount = FindStatValue(data.Stats, "«∞ŒÂ", "top5");
-                    AvgDamage = FindStatValue(data.Stats, "≥°æ˘", "≥°æ˘…À∫¶", "…À∫¶", "damage", "avgDamage");
+                    TotalGames = FindStatValue(data.Stats, "ÂØπÂ±Ä", "Âú∫Ê¨°", "game", "battle", "round");
+                    TopOneCount = FindStatValue(data.Stats, "Á¨¨‰∏Ä", "ÂÜ†ÂÜõ", "ÂêÉÈ∏°", "champion", "top1", "win");
+                    TopFiveCount = FindStatValue(data.Stats, "Ââç‰∫î", "top5");
+                    AvgDamage = FindStatValue(data.Stats, "Âú∫Âùá", "Âú∫Âùá‰º§ÂÆ≥", "‰º§ÂÆ≥", "damage", "avgDamage");
                 }
                 else
                 {
@@ -553,8 +553,8 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
             {
                 var minutes = (int)(seconds / 60);
                 var remainSeconds = (int)(seconds % 60);
-                var minUnit = Application.Current?.TryFindResource("Stats.Minute") as string ?? "∑÷";
-                var secUnit = Application.Current?.TryFindResource("Stats.Second") as string ?? "√Î";
+                var minUnit = Application.Current?.TryFindResource("Stats.Minute") as string ?? "ÂàÜ";
+                var secUnit = Application.Current?.TryFindResource("Stats.Second") as string ?? "Áßí";
                 return $"{minutes}{minUnit}{remainSeconds:D2}{secUnit}";
             }
             return secondsStr;
@@ -629,30 +629,30 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
         {
             if (IsTianxuanMode(gameMode))
             {
-                if (score >= 7000) return "Œﬁ¡øËÛÃÏ";
-                if (score >= 6000) return "Œﬁœ‡¡˙Õı";
-                if (score >= 5000) return "ŒﬁÀ´–ﬁ¬ﬁ";
-                if (score >= 4500) return "Œﬁº‰–ﬁ¬ﬁ";
-                if (score >= 4000) return "◊π»’";
-                if (score >= 3500) return " ¥‘¬";
-                if (score >= 3000) return "‘…–«";
-                if (score >= 2500) return "≤¨Ω";
-                if (score >= 2000) return "ª∆Ω";
-                if (score >= 1500) return "∞◊“¯";
-                return "«‡Õ≠";
+                if (score >= 7000) return "Êó†ÈáèÊ¢µÂ§©";
+                if (score >= 6000) return "Êó†Áõ∏ÈæôÁéã";
+                if (score >= 5000) return "Êó†Âèå‰øÆÁΩó";
+                if (score >= 4500) return "Êó†Èó¥‰øÆÁΩó";
+                if (score >= 4000) return "Âù†Êó•";
+                if (score >= 3500) return "ËöÄÊúà";
+                if (score >= 3000) return "Èô®Êòü";
+                if (score >= 2500) return "ÈìÇÈáë";
+                if (score >= 2000) return "ÈªÑÈáë";
+                if (score >= 1500) return "ÁôΩÈì∂";
+                return "ÈùíÈìú";
             }
             else
             {
-                if (score >= 7000) return "Œﬁº‰Ã©∂∑";
-                if (score >= 6500) return "”˘ÃÏ◊’ﬂ";
-                if (score >= 6000) return "ΩŸ–È •÷˜";
-                if (score >= 5500) return "Ò∑≤‘ø˝ ◊";
-                if (score >= 5000) return "»’Í◊√˚Àﬁ";
-                if (score >= 4500) return "–«‘¬◊⁄ ¶";
-                if (score >= 4000) return "‘∆œˆŒ‰ •";
-                if (score >= 3500) return "æ¯∂•∏ﬂ ÷";
-                if (score >= 3000) return "∑≤≥æŒ‰ ¶";
-                return "∑≤≥æŒ‰ ¶";
+                if (score >= 7000) return "Êó†Èó¥Ê≥∞Êñó";
+                if (score >= 6500) return "Âæ°Â§©Â∞äËÄÖ";
+                if (score >= 6000) return "Âä´ËôöÂú£‰∏ª";
+                if (score >= 5500) return "Á©πËãçÈ≠ÅÈ¶ñ";
+                if (score >= 5000) return "Êó•ÊõúÂêçÂÆø";
+                if (score >= 4500) return "ÊòüÊúàÂÆóÂ∏à";
+                if (score >= 4000) return "‰∫ëÈúÑÊ≠¶Âú£";
+                if (score >= 3500) return "ÁªùÈ°∂È´òÊâã";
+                if (score >= 3000) return "Âá°Â∞òÊ≠¶Â∏à";
+                return "Âá°Â∞òÊ≠¶Â∏à";
             }
         }
 
@@ -741,3 +741,4 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Stats.ViewModels
             System.Windows.Application.Current?.TryFindResource("GameMode." + Value.ToString()) as string ?? Value.ToString();
     }
 }
+

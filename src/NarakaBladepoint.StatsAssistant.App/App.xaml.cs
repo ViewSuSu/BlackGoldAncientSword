@@ -1,6 +1,7 @@
 ﻿using System.Windows.Threading;
 using NarakaBladepoint.StatsAssistant.App.Shell;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Events;
+using NarakaBladepoint.StatsAssistant.Framework.Core.Extensions;
 using NarakaBladepoint.StatsAssistant.Framework.Services;
 using NarakaBladepoint.StatsAssistant.GameMonitor;
 using NarakaBladepoint.StatsAssistant.Modules;
@@ -66,7 +67,7 @@ namespace NarakaBladepoint.StatsAssistant.App
                 if (settings.Current.AutoCheckUpdates)
                 {
                     var updater = Container.Resolve<NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions.IUpdateService>();
-                    _ = updater.CheckForUpdatesAsync(showNoUpdateMessage: false);
+                    updater.CheckForUpdatesAsync(showNoUpdateMessage: false).SafeFireAndForget("App.CheckForUpdates");
                 }
             }
             catch { }

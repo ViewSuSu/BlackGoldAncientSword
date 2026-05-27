@@ -1,6 +1,7 @@
 ﻿namespace NarakaBladepoint.StatsAssistant.GameMonitor.Services.Implementation
 {
     using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
+    using NarakaBladepoint.StatsAssistant.Framework.Core.Extensions;
 
     /// <summary>
     /// 玩家偏好数据服务。从永劫无间的 player_prefs.txt 异步读取玩家信息。
@@ -17,8 +18,7 @@
 
         public PlayerPrefsService()
         {
-            // 构造时启动异步加载，不阻塞 UI 线程
-            _ = LoadAsync();
+            LoadAsync().SafeFireAndForget("PlayerPrefsService.LoadAsync");
         }
 
         /// <summary>
