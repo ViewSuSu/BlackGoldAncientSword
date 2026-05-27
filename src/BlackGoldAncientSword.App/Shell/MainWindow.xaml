@@ -8,6 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:prism="http://prismlibrary.com/"
     xmlns:shell="clr-namespace:BlackGoldAncientSword.App.Shell"
+    xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions;assembly=BlackGoldAncientSword.Framework"
     Title="{DynamicResource App.Title}"
     Width="1080"
     Height="761"
@@ -21,6 +22,9 @@
     WindowStartupLocation="CenterScreen"
     WindowStyle="None"
     mc:Ignorable="d">
+    <Window.Resources>
+        <ext:WindowIconConverter x:Key="WindowIconConverter" />
+    </Window.Resources>
     <chrome:WindowChrome.WindowChrome>
         <chrome:WindowChrome
             CaptionHeight="0"
@@ -76,7 +80,7 @@
                 <Image
                     Width="28"
                     Margin="20,0,0,0"
-                    Source="/BlackGoldAncientSword.Resources;component/Images/logo.png"
+                    Source="{Binding Icon, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource WindowIconConverter}}"
                     Stretch="Uniform" />
                 <TextBlock
                     Margin="6,0,0,0"
