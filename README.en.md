@@ -1,6 +1,6 @@
-﻿# NarakaBladepoint-Stats-Assistant
+# BlackGoldAncientSword
 
-Naraka Bladepoint Stats Query Assistant — a helper tool for querying player stats in *NARAKA: BLADEPOINT*.
+BlackGoldAncientSword — a helper tool for querying player stats in *NARAKA: BLADEPOINT*.
 
 ## Features
 

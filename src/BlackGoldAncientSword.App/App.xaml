@@ -1,0 +1,14 @@
+<base:PrismApplicationBase
+    x:Class="BlackGoldAncientSword.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:base="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases;assembly=BlackGoldAncientSword.Framework">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/BlackGoldAncientSword.Framework;component/Themes/Generic.xaml" />
+                <ResourceDictionary Source="/BlackGoldAncientSword.Resources;component/Themes/Strings.zh-CN.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</base:PrismApplicationBase>

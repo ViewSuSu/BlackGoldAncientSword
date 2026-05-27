@@ -1,0 +1,85 @@
+{
+  "$schema": "./enums.schema.json",
+  "description": "语义枚举定义，面向开发者；数值对应 API 请求参数，Description 对应 UI 展示文本",
+  "enums": [
+    {
+      "name": "GameMode",
+      "namespace": "BlackGoldAncientSword.Framework.Core.Consts",
+      "description": "游戏模式（天选/匹配/天人 × 单双三排），值对应 /api/record/mini-program/stats 的 gameMode 参数",
+      "underlyingType": "int",
+      "values": [
+        { "name": "RankSolo",    "value": 1,  "description": "天选单排" },
+        { "name": "RankDuo",     "value": 12, "description": "天选双排" },
+        { "name": "RankTrio",    "value": 2,  "description": "天选三排" },
+        { "name": "MatchSolo",   "value": 6,  "description": "匹配单排" },
+        { "name": "MatchDuo",    "value": 9,  "description": "匹配双排" },
+        { "name": "MatchTrio",   "value": 7,  "description": "匹配三排" },
+        { "name": "TianrenSolo", "value": 4,  "description": "天人单排" },
+        { "name": "TianrenDuo",  "value": 13, "description": "天人双排" },
+        { "name": "TianrenTrio", "value": 5,  "description": "天人三排" }
+      ]
+    },
+    {
+      "name": "GameModeCategory",
+      "namespace": "BlackGoldAncientSword.Framework.Core.Consts",
+      "description": "模式大类（排位/匹配/娱乐/天人），不区分队伍人数。注：娱乐模式当前 API 无独立 gameMode ID，仅前端分类使用",
+      "underlyingType": "int",
+      "values": [
+        { "name": "Rank",     "value": 1, "description": "天选" },
+        { "name": "Match",    "value": 2, "description": "匹配" },
+        { "name": "Tianren",  "value": 3, "description": "天人" }
+      ]
+    },
+    {
+      "name": "TeamSize",
+      "namespace": "BlackGoldAncientSword.Framework.Core.Consts",
+      "description": "队伍人数",
+      "underlyingType": "int",
+      "values": [
+        { "name": "Solo", "value": 1, "description": "单排" },
+        { "name": "Duo",  "value": 2, "description": "双排" },
+        { "name": "Trio", "value": 3, "description": "三排" }
+      ]
+    },
+    {
+      "name": "DataSource",
+      "namespace": "BlackGoldAncientSword.Framework.Core.Consts",
+      "description": "数据来源",
+      "underlyingType": "int",
+      "values": [
+        { "name": "MiniProgram", "value": 1, "description": "小程序数据源" },
+        { "name": "HeyBox",      "value": 2, "description": "小黑盒数据源" }
+      ]
+    }
+  ],
+  "helperMethods": {
+    "GameMode": [
+      {
+        "name": "GetCategory",
+        "returnType": "GameModeCategory",
+        "description": "获取 GameMode 对应的大类（天选/匹配/天人）",
+        "returns": "对应的大类枚举值",
+        "body": "return value switch { GameMode.RankSolo or GameMode.RankDuo or GameMode.RankTrio => GameModeCategory.Rank, GameMode.MatchSolo or GameMode.MatchDuo or GameMode.MatchTrio => GameModeCategory.Match, GameMode.TianrenSolo or GameMode.TianrenDuo or GameMode.TianrenTrio => GameModeCategory.Tianren, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
+      },
+      {
+        "name": "GetTeamSize",
+        "returnType": "TeamSize",
+        "description": "获取 GameMode 对应的队伍人数（单排/双排/三排）",
+        "returns": "队伍人数枚举值",
+        "body": "return value switch { GameMode.RankSolo or GameMode.MatchSolo or GameMode.TianrenSolo => TeamSize.Solo, GameMode.RankDuo or GameMode.MatchDuo or GameMode.TianrenDuo => TeamSize.Duo, GameMode.RankTrio or GameMode.MatchTrio or GameMode.TianrenTrio => TeamSize.Trio, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
+      },
+      {
+        "name": "FromCategoryAndTeamSize",
+        "isStatic": true,
+        "returnType": "GameMode",
+        "parameters": [
+          { "name": "category", "type": "GameModeCategory", "description": "模式大类：天选/匹配/天人" },
+          { "name": "size", "type": "TeamSize", "description": "队伍人数：单排/双排/三排" }
+        ],
+        "description": "通过模式大类与队伍人数组合为具体的 GameMode 枚举值",
+        "returns": "组合后的 GameMode 枚举值，如 RankTrio、MatchSolo 等",
+        "body": "return (category, size) switch { (GameModeCategory.Rank, TeamSize.Solo) => GameMode.RankSolo, (GameModeCategory.Rank, TeamSize.Duo) => GameMode.RankDuo, (GameModeCategory.Rank, TeamSize.Trio) => GameMode.RankTrio, (GameModeCategory.Match, TeamSize.Solo) => GameMode.MatchSolo, (GameModeCategory.Match, TeamSize.Duo) => GameMode.MatchDuo, (GameModeCategory.Match, TeamSize.Trio) => GameMode.MatchTrio, (GameModeCategory.Tianren, TeamSize.Solo) => GameMode.TianrenSolo, (GameModeCategory.Tianren, TeamSize.Duo) => GameMode.TianrenDuo, (GameModeCategory.Tianren, TeamSize.Trio) => GameMode.TianrenTrio, _ => throw new ArgumentException($\"未知组合: {category} + {size}\") };"
+      }
+    ]
+  }
+}

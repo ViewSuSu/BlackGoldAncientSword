@@ -1,0 +1,11 @@
+﻿<Solution>
+  <Project Path="BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
+  <Project Path="BlackGoldAncientSword.GameMonitor\BlackGoldAncientSword.GameMonitor.csproj" />
+  <Project Path="BlackGoldAncientSword.Framework.SourceGenerator\BlackGoldAncientSword.Framework.SourceGenerator.csproj" />
+  <Project Path="BlackGoldAncientSword.Resources\BlackGoldAncientSword.Resources.csproj" />
+  <Project Path="BlackGoldAncientSword.Modules\BlackGoldAncientSword.Modules.csproj" />
+  <Project Path="BlackGoldAncientSword.Ocr\BlackGoldAncientSword.Ocr.csproj" />
+  <Project Path="BlackGoldAncientSword.ScreenCapture\BlackGoldAncientSword.ScreenCapture.csproj" />
+  <Project Path="BlackGoldAncientSword.Tests\BlackGoldAncientSword.Tests.csproj" />
+  <Project Path="BlackGoldAncientSword.App\BlackGoldAncientSword.App.csproj" />
+</Solution>
