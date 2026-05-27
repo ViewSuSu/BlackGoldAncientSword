@@ -71,7 +71,7 @@ jobs:
             Copy-Item $_.FullName $dest
           }
         }
-        Write-Host "Publish folder contents:"
+        Copy-Item src\BlackGoldAncientSword.Resources\Images\app.png publish/Release/app.png -Force; Write-Host "Publish folder contents:"
         Get-ChildItem publish/Release | Select-Object Name, Length | Format-Table -AutoSize
 
     - name: Install Inno Setup
