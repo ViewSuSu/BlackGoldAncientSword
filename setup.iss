@@ -1,13 +1,8 @@
 ﻿#define MyAppName "BlackGoldAncientSword"
-#ifndef MyAppVersion
-#define MyAppVersion "0.0.0"
-#endif
-#ifndef MyAppPublisher
-#define MyAppPublisher "小窗同学"
-#endif
-#ifndef MyAppURL
-#define MyAppURL "https://github.com/ViewSuSu"
-#endif
+#define ExePath "build\Release\BlackGoldAncientSword.App.exe"
+#define MyAppVersion GetFileVersion(ExePath)
+#define MyAppPublisher GetStringFileInfo(ExePath, "CompanyName")
+#define MyAppURL GetStringFileInfo(ExePath, "FileDescription")
 
 [Setup]
 AppId={{B8A1F3E2-9C5D-4A7B-8E6F-1D2C3A4B5F6C}

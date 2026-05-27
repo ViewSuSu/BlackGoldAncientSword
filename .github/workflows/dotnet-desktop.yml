@@ -64,11 +64,7 @@ jobs:
     - name: Build Installer
       shell: powershell
       run: |
-        [xml]$csproj = Get-Content src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -Encoding UTF8
-        $authors = $csproj.Project.PropertyGroup.Authors
-        $url = $csproj.Project.PropertyGroup.PackageProjectUrl
-        $ver = '${{ steps.version.outputs.new_version }}'
-        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$ver" "/DMyAppPublisher=$authors" "/DMyAppURL=$url" setup.iss
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
 
     - name: Tag
       shell: powershell
