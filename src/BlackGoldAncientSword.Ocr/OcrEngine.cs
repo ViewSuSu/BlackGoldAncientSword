@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using BlackGoldAncientSword.Framework.Core.Attributes;
@@ -40,17 +40,7 @@ public class OcrEngine : IOcrService, IDisposable
     /// <inheritdoc />
     public List<OcrResult> Recognize(byte[] imageBytes)
     {
-        var tmpPath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllBytes(tmpPath, imageBytes);
-            return Recognize(tmpPath);
-        }
-        finally
-        {
-            if (File.Exists(tmpPath))
-                File.Delete(tmpPath);
-        }
+        return RecognizeAsync(imageBytes).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc />
@@ -103,24 +93,7 @@ public class OcrEngine : IOcrService, IDisposable
 
     private string InvokeOcr(string imagePath)
     {
-        // PaddleOCR-json.exe 对非 ASCII 路径支持不佳，始终通过临时文件传递
-        string safePath = imagePath;
-        bool useTemp = ContainsNonAscii(imagePath);
-        if (useTemp)
-        {
-            safePath = Path.Combine(Path.GetTempPath(), $"ocr_{Guid.NewGuid():N}.png");
-            File.Copy(imagePath, safePath, overwrite: true);
-        }
-
-        try
-        {
-            return InvokeOcrInternal(safePath);
-        }
-        finally
-        {
-            if (useTemp && File.Exists(safePath))
-                File.Delete(safePath);
-        }
+        return InvokeOcrInternal(imagePath);
     }
 
     private string InvokeOcrInternal(string imagePath)
@@ -187,14 +160,7 @@ public class OcrEngine : IOcrService, IDisposable
         return null;
     }
 
-    private static bool ContainsNonAscii(string path)
-    {
-        foreach (char c in path)
-        {
-            if (c > 127) return true;
-        }
-        return false;
-    }
+
 
     private static List<OcrResult> ParseResults(string rawOutput)
     {
@@ -311,6 +277,5 @@ public class OcrPoint
     public OcrPoint() { }
     public OcrPoint(int x, int y) { X = x; Y = y; }
 }
-
 
 

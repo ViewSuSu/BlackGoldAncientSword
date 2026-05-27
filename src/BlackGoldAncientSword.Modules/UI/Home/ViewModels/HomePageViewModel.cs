@@ -10,10 +10,12 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
         private const int PollIntervalMs = 2000;
         private readonly DispatcherTimer _processTimer;
         private readonly IGameLogMonitor _gameLogMonitor;
+        private readonly IGameStatusMonitor _gameStatusMonitor;
 
-        public HomePageViewModel(IGameLogMonitor gameLogMonitor)
+        public HomePageViewModel(IGameLogMonitor gameLogMonitor, IGameStatusMonitor gameStatusMonitor)
         {
             _gameLogMonitor = gameLogMonitor;
+            _gameStatusMonitor = gameStatusMonitor;
             _processTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(PollIntervalMs)
@@ -66,6 +68,7 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
                 {
                     _monitorStarted = true;
                     await _gameLogMonitor.StartAsync();
+                    _gameStatusMonitor.Start();
                 }
             }
             else if (!found && IsGameRunning)
@@ -78,6 +81,7 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
                 {
                     _monitorStarted = false;
                     _gameLogMonitor.Stop();
+                    _gameStatusMonitor.Stop();
                 }
             }
         }

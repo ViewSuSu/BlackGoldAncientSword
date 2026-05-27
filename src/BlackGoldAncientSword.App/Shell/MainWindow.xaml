@@ -88,6 +88,29 @@
                     FontSize="12"
                     Foreground="#333333"
                     Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" />
+                <TextBlock
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12"
+                    Foreground="#999999"
+                    Text="——">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding GameStatusText}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock
+                    Margin="4,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="12"
+                    Foreground="#666666"
+                    Text="{Binding GameStatusText, Mode=OneWay}" />
             </StackPanel>
 
             <!--  Custom title bar buttons  -->
@@ -463,6 +486,18 @@
                     FontSize="11"
                     Foreground="#888888"
                     Text="{Binding CurrentVersionText}" />
+                <TextBlock
+                    Margin="5,0,0,0"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Cursor="Hand"
+                    Foreground="#5B8DEF"
+                    Text="检测更新"
+                    ToolTip="检查是否有新版本">
+                    <TextBlock.InputBindings>
+                        <MouseBinding MouseAction="LeftClick" Command="{Binding CheckForUpdatesCommand}" />
+                    </TextBlock.InputBindings>
+                </TextBlock>
             </StackPanel>
             <StackPanel
                 Grid.Row="2"

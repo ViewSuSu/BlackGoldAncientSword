@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Authors>小窗同学</Authors>
@@ -22,6 +22,7 @@
     <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.Ocr\BlackGoldAncientSword.Ocr.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.Resources\BlackGoldAncientSword.Resources.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.GameMonitor\BlackGoldAncientSword.GameMonitor.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.Modules\BlackGoldAncientSword.Modules.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.ScreenCapture\BlackGoldAncientSword.ScreenCapture.csproj" />
   </ItemGroup>
