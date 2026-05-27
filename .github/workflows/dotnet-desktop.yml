@@ -74,18 +74,6 @@ jobs:
         Write-Host "Publish folder contents:"
         Get-ChildItem publish/Release | Select-Object Name, Length | Format-Table -AutoSize
 
-    - name: Convert PNG to ICO
-      shell: powershell
-      run: |
-        Add-Type -AssemblyName System.Drawing
-        $bitmap = [System.Drawing.Bitmap]::FromFile("src\BlackGoldAncientSword.Resources\Images\app.png")
-        $icoPath = "publish\Release\app.ico"
-        $stream = [System.IO.File]::OpenWrite($icoPath)
-        $bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Icon)
-        $stream.Close()
-        $bitmap.Dispose()
-        Write-Host "ICO created: $icoPath"
-
     - name: Install Inno Setup
       shell: powershell
       run: |
