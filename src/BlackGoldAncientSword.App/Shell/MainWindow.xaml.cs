@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -7,8 +7,6 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
-using System.Windows.Forms;
-using Forms = System.Windows.Forms;
 using Prism.Modularity;
 using Prism.Regions;
 using BlackGoldAncientSword.Framework.Core.Bases;
@@ -38,7 +36,6 @@ namespace BlackGoldAncientSword.App.Shell
         private static extern int GetDpiForWindow(IntPtr hwnd);
 
         private IntPtr _hwnd;
-        private NotifyIcon? _trayIcon;
         private bool _isExiting;
 
         static MainWindow()
@@ -56,51 +53,9 @@ namespace BlackGoldAncientSword.App.Shell
             Closing += OnWindowClosing;
         }
 
-        private void InitTrayIcon()
-        {
-            if (_trayIcon != null) return;
-
-            var iconStream = System.Windows.Application.GetResourceStream(
-                new Uri("pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/app.ico"))
-                ?.Stream;
-            var icon = iconStream != null ? new System.Drawing.Icon(iconStream) : System.Drawing.SystemIcons.Application;
-
-            _trayIcon = new NotifyIcon
-            {
-                Icon = icon,
-                Text = (System.Windows.Application.Current.TryFindResource("App.Title") as string) ?? "BlackGoldAncientSword",
-                Visible = false
-            };
-
-            _trayIcon.DoubleClick += (_, _) => RestoreFromTray();
-
-            var contextMenu = new Forms.ContextMenuStrip();
-            contextMenu.Items.Add(
-                (System.Windows.Application.Current.TryFindResource("App.Title") as string) ?? "Show",
-                null, (_, _) => RestoreFromTray());
-            contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add(
-                System.Windows.Application.Current.TryFindResource("TitleBar.Close") as string ?? "Exit",
-                null, (_, _) =>
-                {
-                    _isExiting = true;
-                    _trayIcon.Visible = false;
-                    _trayIcon.Dispose();
-                    _trayIcon = null;
-                    Close();
-                });
-
-            _trayIcon.ContextMenuStrip = contextMenu;
-        }
-
         public void MinimizeToTray()
         {
-            InitTrayIcon();
-            if (_trayIcon != null)
-            {
-                _trayIcon.Visible = true;
-                Hide();
-            }
+            Hide();
         }
 
         private void RestoreFromTray()
@@ -108,8 +63,6 @@ namespace BlackGoldAncientSword.App.Shell
             Show();
             WindowState = WindowState.Normal;
             Activate();
-            if (_trayIcon != null)
-                _trayIcon.Visible = false;
         }
 
         private void OnWindowStateChanged(object? sender, EventArgs e)
@@ -119,12 +72,27 @@ namespace BlackGoldAncientSword.App.Shell
 
         private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (!_isExiting && _trayIcon != null)
+            if (_isExiting)
+                return;
+
+            try
             {
-                _trayIcon.Visible = false;
-                _trayIcon.Dispose();
-                _trayIcon = null;
+                var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<Framework.Services.Abstractions.ISettingsService>();
+                switch (settings.Current.CloseBehavior)
+                {
+                    case "MinimizeToTaskbar":
+                        WindowState = WindowState.Minimized;
+                        e.Cancel = true;
+                        return;
+                    case "MinimizeToTray":
+                        e.Cancel = true;
+                        Hide();
+                        return;
+                }
             }
+            catch { }
+
+            _isExiting = true;
         }
 
         private void OnSourceInitialized(object? sender, EventArgs e)
@@ -241,7 +209,11 @@ namespace BlackGoldAncientSword.App.Shell
                         case "MinimizeToTaskbar":
                             WindowState = WindowState.Minimized;
                             return;
+                        case "MinimizeToTray":
+                            Hide();
+                            return;
                         case "ExitDirectly":
+                            _isExiting = true;
                             Close();
                             return;
                     }
@@ -293,6 +265,23 @@ namespace BlackGoldAncientSword.App.Shell
             };
             timer.Start();
         }
+
+        private void TrayIcon_TrayMouseDoubleClick(object sender, RoutedEventArgs e)
+        {
+            RestoreFromTray();
+        }
+
+        private void TrayMenu_Show_Click(object sender, RoutedEventArgs e)
+        {
+            RestoreFromTray();
+        }
+
+        private void TrayMenu_Exit_Click(object sender, RoutedEventArgs e)
+        {
+            _isExiting = true;
+            Close();
+        }
+
 
         private void HideToast(Border border, ToastItem? item)
         {

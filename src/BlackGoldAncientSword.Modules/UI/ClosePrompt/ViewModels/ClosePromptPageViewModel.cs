@@ -26,15 +26,24 @@ namespace BlackGoldAncientSword.Modules.UI.ClosePrompt.ViewModels
         public DelegateCommand MinimizeToTaskbarCommand =>
             _minimizeToTaskbarCommand ??= new DelegateCommand(async () =>
             {
+                _settingsService.Current.CloseBehavior = "MinimizeToTaskbar";
+                _settingsService.Current.CloseBehaviorRemembered = RememberChoice;
                 if (RememberChoice)
-                {
-                    _settingsService.Current.CloseBehavior = "MinimizeToTaskbar";
-                    _settingsService.Current.CloseBehaviorRemembered = true;
                     await _settingsService.SaveAsync();
-                    eventAggregator.GetEvent<SettingsChangedEvent>().Publish();
-                }
                 DismissOverlay();
-                Application.Current.MainWindow!.WindowState = WindowState.Minimized;
+                Application.Current.MainWindow!.Close();
+            });
+
+        private DelegateCommand? _minimizeToTrayCommand;
+        public DelegateCommand MinimizeToTrayCommand =>
+            _minimizeToTrayCommand ??= new DelegateCommand(async () =>
+            {
+                _settingsService.Current.CloseBehavior = "MinimizeToTray";
+                _settingsService.Current.CloseBehaviorRemembered = RememberChoice;
+                if (RememberChoice)
+                    await _settingsService.SaveAsync();
+                DismissOverlay();
+                Application.Current.MainWindow!.Close();
             });
 
         private DelegateCommand? _dismissCommand;
@@ -48,13 +57,10 @@ namespace BlackGoldAncientSword.Modules.UI.ClosePrompt.ViewModels
         public DelegateCommand ExitDirectlyCommand =>
             _exitDirectlyCommand ??= new DelegateCommand(async () =>
             {
+                _settingsService.Current.CloseBehavior = "ExitDirectly";
+                _settingsService.Current.CloseBehaviorRemembered = RememberChoice;
                 if (RememberChoice)
-                {
-                    _settingsService.Current.CloseBehavior = "ExitDirectly";
-                    _settingsService.Current.CloseBehaviorRemembered = true;
                     await _settingsService.SaveAsync();
-                    eventAggregator.GetEvent<SettingsChangedEvent>().Publish();
-                }
                 DismissOverlay();
                 Application.Current.Shutdown();
             });
