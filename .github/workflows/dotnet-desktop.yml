@@ -64,17 +64,16 @@ jobs:
     - name: Merge outputs
       shell: powershell
       run: |
-        # Copy all DLLs from build output to publish (preserve self-contained exe)
         Get-ChildItem build/Release -Filter *.dll | ForEach-Object {
           $dest = "publish/Release/$($_.Name)"
           if (-not (Test-Path $dest)) {
             Copy-Item $_.FullName $dest
           }
         }
-        Copy-Item src\BlackGoldAncientSword.Resources\Images\app.png publish/Release/app.png -Force; Write-Host "Publish folder contents:"
+        Copy-Item src\BlackGoldAncientSword.Resources\Images\app.png publish/Release/app.png -Force
+        Write-Host "Publish folder contents:"
         Get-ChildItem publish/Release | Select-Object Name, Length | Format-Table -AutoSize
 
-    
     - name: Convert PNG to ICO
       shell: powershell
       run: |
@@ -87,7 +86,7 @@ jobs:
         $bitmap.Dispose()
         Write-Host "ICO created: $icoPath"
 
-
+    - name: Install Inno Setup
       shell: powershell
       run: |
         choco install innosetup -y
