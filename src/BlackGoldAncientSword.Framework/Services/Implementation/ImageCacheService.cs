@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
@@ -44,7 +44,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
                     System.IO.Directory.CreateDirectory(dir);
 
-                使用 FileStream(useAsync: true) 实现真正的异步写入
+                // 使用 FileStream(useAsync: true) 实现真正的异步写入
                 await using var fileStream = new System.IO.FileStream(
                     filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write,
                     System.IO.FileShare.None, bufferSize: 4096, useAsync: true);
@@ -52,12 +52,12 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch
             {
-                缓存写入失败不影响主流程
+                // 缓存写入失败不影响主流程
             }
         }
 
         /// <summary>
-        获取缓存目录总大小。.NET 8 无原生异步目录枚举，使用 Task.Run 委托后台线程。
+        // 获取缓存目录总大小。.NET 8 无原生异步目录枚举，使用 Task.Run 委托后台线程。
         /// </summary>
         public Task<long> GetCacheSizeBytesAsync()
         {
@@ -79,7 +79,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         }
 
         /// <summary>
-        清空缓存目录。.NET 8 无原生异步 Delete，使用 Task.Run 委托后台线程。
+        // 清空缓存目录。.NET 8 无原生异步 Delete，使用 Task.Run 委托后台线程。
         /// </summary>
         public Task ClearCacheAsync()
         {
@@ -97,7 +97,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 }
                 catch
                 {
-                    清空失败不影响主流程
+                    // 清空失败不影响主流程
                 }
             });
         }
