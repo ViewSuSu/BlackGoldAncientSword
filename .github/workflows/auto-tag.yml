@@ -10,7 +10,6 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,31 +25,13 @@ jobs:
       - name: Install NBGV
         run: dotnet tool install -g nbgv
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Bump patch version
-        id: bump
+      - name: Get version
+        id: version
         shell: powershell
         run: |
           $ver = nbgv get-version -v SimpleVersion
-          Write-Host "Current version: $ver"
-          $parts = $ver -split '\.'
-          $major = [int]$parts[0]
-          $minor = [int]$parts[1]
-          $patch = [int]$parts[2] + 1
-          $newVer = "$major.$minor.$patch"
-          Write-Host "New version: $newVer"
-
-          $json = Get-Content version.json -Raw | ConvertFrom-Json
-          $json.version = $newVer
-          $json | ConvertTo-Json -Depth 10 | Set-Content version.json -Encoding UTF8
-
-          git add version.json
-          git commit -m "Set version to '$newVer'"
-          echo "new_version=$newVer" >> $env:GITHUB_OUTPUT
+          Write-Host "Release version: $ver"
+          echo "new_version=$ver" >> $env:GITHUB_OUTPUT
 
       - name: Publish Release build
         shell: powershell
@@ -61,33 +42,21 @@ jobs:
             --self-contained `
             -o publish/Release
 
-      - name: Push to release and tag
+      - name: Tag
         shell: powershell
         run: |
-          git push origin release
-          $tag = "v${{ steps.bump.outputs.new_version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          $tag = "v${{ steps.version.outputs.new_version }}"
           git tag $tag
           git push origin $tag
 
-      - name: Create GitHub Release and upload artifacts
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.bump.outputs.new_version }}
-          name: v${{ steps.bump.outputs.new_version }}
+          tag_name: v${{ steps.version.outputs.new_version }}
+          name: v${{ steps.version.outputs.new_version }}
           files: |
             publish/Release/BlackGoldAncientSword.App.exe
           draft: false
           prerelease: false
-
-      - name: Sync version bump to main
-        shell: powershell
-        run: |
-          $newVer = "${{ steps.bump.outputs.new_version }}"
-          git checkout main
-          git merge release --strategy-option theirs -- version.json
-          if ($LASTEXITCODE -ne 0) {
-            git checkout --theirs -- version.json
-            git add version.json
-          }
-          git commit -m "Sync version to '$newVer' from release" --allow-empty
-          git push origin main
