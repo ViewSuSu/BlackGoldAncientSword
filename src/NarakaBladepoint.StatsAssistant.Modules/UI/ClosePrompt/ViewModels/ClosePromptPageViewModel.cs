@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Bases.ViewModels;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Consts;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Events;
@@ -24,13 +24,13 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.ClosePrompt.ViewModels
 
         private DelegateCommand? _minimizeToTaskbarCommand;
         public DelegateCommand MinimizeToTaskbarCommand =>
-            _minimizeToTaskbarCommand ??= new DelegateCommand(() =>
+            _minimizeToTaskbarCommand ??= new DelegateCommand(async () =>
             {
                 if (RememberChoice)
                 {
                     _settingsService.Current.CloseBehavior = "MinimizeToTaskbar";
                     _settingsService.Current.CloseBehaviorRemembered = true;
-                    _ = _settingsService.SaveAsync();
+                    await _settingsService.SaveAsync();
                     eventAggregator.GetEvent<SettingsChangedEvent>().Publish();
                 }
                 DismissOverlay();
@@ -46,13 +46,13 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.ClosePrompt.ViewModels
 
         private DelegateCommand? _exitDirectlyCommand;
         public DelegateCommand ExitDirectlyCommand =>
-            _exitDirectlyCommand ??= new DelegateCommand(() =>
+            _exitDirectlyCommand ??= new DelegateCommand(async () =>
             {
                 if (RememberChoice)
                 {
                     _settingsService.Current.CloseBehavior = "ExitDirectly";
                     _settingsService.Current.CloseBehaviorRemembered = true;
-                    _ = _settingsService.SaveAsync();
+                    await _settingsService.SaveAsync();
                     eventAggregator.GetEvent<SettingsChangedEvent>().Publish();
                 }
                 DismissOverlay();

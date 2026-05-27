@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using Newtonsoft.Json;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
+using NarakaBladepoint.StatsAssistant.Framework.Core.Extensions;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 
 namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
@@ -21,15 +22,14 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
 
         public SearchHistoryService()
         {
-            // 构造时火后忘却异步加载，不阻塞 UI 线程
-            _ = LoadAsync();
+            LoadAsync().SafeFireAndForget("SearchHistoryService.LoadAsync");
         }
 
         public void Add(string query)
         {
             History.Insert(0, new SearchHistoryItem { Query = query, Timestamp = DateTime.Now });
             if (History.Count > 50) History.RemoveAt(History.Count - 1);
-            _ = SaveAsync();
+            SaveAsync().SafeFireAndForget("SearchHistoryService.SaveAsync");
         }
 
         public async Task DeleteAsync(SearchHistoryItem item)

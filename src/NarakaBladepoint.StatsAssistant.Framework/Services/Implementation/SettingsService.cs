@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
+using NarakaBladepoint.StatsAssistant.Framework.Core.Extensions;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 
 namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
@@ -14,8 +15,8 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
 
         public SettingsService()
         {
-            // 构造时触发异步加载，不阻塞 UI
-            _ = LoadAsync();
+            // 构造时触发异步加载，不阻塞 UI。用 SafeFireAndForget 确保异常可追踪。
+            LoadAsync().SafeFireAndForget("SettingsService.LoadAsync");
         }
 
         /// <summary>

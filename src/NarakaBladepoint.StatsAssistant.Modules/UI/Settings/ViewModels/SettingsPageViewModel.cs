@@ -1,9 +1,10 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 using Microsoft.Win32;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Bases.ViewModels;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Consts;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Events;
+using NarakaBladepoint.StatsAssistant.Framework.Core.Extensions;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Infrastructure;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 
@@ -19,6 +20,19 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
         private readonly IImageCacheService _cacheService;
         private readonly IUpdateService _updateService;
 
+        private System.Threading.Timer? _saveTimer;
+        private const int SaveDebounceMs = 300;
+
+        /// <summary>延迟保存，合并短时间内连续修改为一次写盘。</summary>
+        private void DebouncedSave()
+        {
+            _saveTimer?.Dispose();
+            _saveTimer = new System.Threading.Timer(_ =>
+            {
+                _settings.SaveAsync().SafeFireAndForget("Settings.SaveAsync");
+            }, null, SaveDebounceMs, System.Threading.Timeout.Infinite);
+        }
+
         private string _dataPath = string.Empty;
         public string DataPath
         {
@@ -32,7 +46,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                     return;
 
                 _settings.Current.DataSavePath = value;
-                _ = _settings.SaveAsync();
+                DebouncedSave();
             }
         }
 
@@ -50,7 +64,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
 
                 _settings.Current.CachePath = value;
                 _cacheService.CachePath = value;
-                _ = _settings.SaveAsync();
+                DebouncedSave();
             }
         }
 
@@ -76,7 +90,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                 _localization.ApplyLanguage(Application.Current.Resources, value);
                 _localization.CurrentLanguage = value;
                 _settings.Current.Language = value;
-                _ = _settings.SaveAsync();
+                DebouncedSave();
                 CloseBehaviorOptions.ResetBindings();
             }
         }
@@ -109,7 +123,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                 _settings.Current.CloseBehavior = value;
                 RaisePropertyChanged();
                 RaisePropertyChanged(nameof(RememberCloseBehavior));
-                _ = _settings.SaveAsync();
+                DebouncedSave();
             }
         }
 
@@ -128,7 +142,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
             {
                 _settings.Current.CloseBehaviorRemembered = value;
                 RaisePropertyChanged();
-                _ = _settings.SaveAsync();
+                DebouncedSave();
             }
         }
 
@@ -139,7 +153,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
             {
                 _settings.Current.AutoCheckUpdates = value;
                 RaisePropertyChanged();
-                _ = _settings.SaveAsync();
+                DebouncedSave();
             }
         }
 
@@ -158,32 +172,23 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
 
             _dataPath = _settings.Current.DataSavePath;
             _cachePath = _settings.Current.CachePath;
-
-            _ = RefreshCacheSizeAsync();
-
-            eventAggregator.GetEvent<SettingsChangedEvent>().Subscribe(() =>
-            {
-                RaisePropertyChanged(nameof(RememberCloseBehavior));
-                RaisePropertyChanged(nameof(SelectedCloseBehavior));
-            });
+            RefreshCacheSizeAsync().SafeFireAndForget("Settings.RefreshCacheSize");
         }
 
-        protected override void OnNavigatedToExecute(NavigationContext navigationContext)
-        {
-            base.OnNavigatedToExecute(navigationContext);
-            RaisePropertyChanged(nameof(RememberCloseBehavior));
-            RaisePropertyChanged(nameof(SelectedCloseBehavior));
-            _ = RefreshCacheSizeAsync();
-        }
-
-        private async System.Threading.Tasks.Task RefreshCacheSizeAsync()
+        public async System.Threading.Tasks.Task RefreshCacheSizeAsync()
         {
             try
             {
+                var path = _cachePath;
+                if (string.IsNullOrWhiteSpace(path) || !System.IO.Directory.Exists(path))
+                {
+                    CacheSizeText = "0 B";
+                    return;
+                }
+
                 var size = await System.Threading.Tasks.Task.Run(() =>
                 {
-                    var path = _cacheService.CachePath;
-                    if (string.IsNullOrWhiteSpace(path) || !System.IO.Directory.Exists(path))
+                    if (!System.IO.Directory.Exists(path))
                         return 0L;
 
                     long total = 0;
@@ -211,7 +216,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
 
         private DelegateCommand? _browseDataPathCommand;
         public DelegateCommand BrowseDataPathCommand =>
-            _browseDataPathCommand ??= new DelegateCommand(() =>
+            _browseDataPathCommand ??= new DelegateCommand(async () =>
             {
                 var dialog = new OpenFolderDialog
                 {
@@ -224,14 +229,14 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                     DataPath = dialog.FolderName;
                     if (!string.IsNullOrWhiteSpace(oldPath) && !string.Equals(oldPath, DataPath, System.StringComparison.OrdinalIgnoreCase))
                     {
-                        _ = MigrateFolderAsync(oldPath, DataPath);
+                        await MigrateFolderAsync(oldPath, DataPath);
                     }
                 }
             });
 
         private DelegateCommand? _browseCachePathCommand;
         public DelegateCommand BrowseCachePathCommand =>
-            _browseCachePathCommand ??= new DelegateCommand(() =>
+            _browseCachePathCommand ??= new DelegateCommand(async () =>
             {
                 var dialog = new OpenFolderDialog
                 {
@@ -244,7 +249,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
                     CachePath = dialog.FolderName;
                     if (!string.IsNullOrWhiteSpace(oldPath) && !string.Equals(oldPath, CachePath, System.StringComparison.OrdinalIgnoreCase))
                     {
-                        _ = MigrateFolderAsync(oldPath, CachePath);
+                        await MigrateFolderAsync(oldPath, CachePath);
                     }
                 }
             });
@@ -297,3 +302,4 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.Settings.ViewModels
             System.Windows.Application.Current?.TryFindResource(DisplayNameResourceKey) as string ?? DisplayNameResourceKey;
     }
 }
+
