@@ -265,7 +265,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 foreach (var qp in api.QueryParameters)
                     sb.AppendLine($"        /// <param name=\"{qp.Key}\">{GetParamDescription(qp.Key)}</param>");
             if (hasBody)
-                sb.AppendLine($"        /// <param name=\"body\">请求�?/param>");
+                sb.AppendLine($"        /// <param name=\"body\">请求体</param>");
             sb.AppendLine($"        /// <param name=\"ct\">取消令牌</param>");
 
             // Returns

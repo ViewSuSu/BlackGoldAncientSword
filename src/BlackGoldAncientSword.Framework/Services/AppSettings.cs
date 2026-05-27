@@ -18,7 +18,7 @@ namespace BlackGoldAncientSword.Framework.Services
         public bool CloseBehaviorRemembered { get; set; } = false;
 
         /// <summary>
-        /// �Ƿ��ڳ������ʱ�Զ������¡�
+        是否在程序启动时自动检查更新。
         /// </summary>
         public bool AutoCheckUpdates { get; set; } = false;
 
