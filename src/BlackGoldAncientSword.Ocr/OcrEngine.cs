@@ -1,36 +1,34 @@
+﻿using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 
 namespace BlackGoldAncientSword.Ocr;
 
 /// <summary>
-/// PaddleOCR �����װ��ͨ�� Python.NET ���������� PaddleOCR��
-/// ����ʱ�Զ��������������Ŀ¼�е� Python ������
+/// PaddleOCR 引擎封装，通过子进程调用 PaddleOCR-json.exe（C++ 原生引擎）。
+/// 启动时自动查找 ocr_engine 目录中的可执行文件。
 /// </summary>
 [Component(ComponentLifetime.Singleton)]
 public class OcrEngine : IOcrService, IDisposable
 {
-    private readonly string _pythonHome;
-    private readonly string _ocrServiceDir;
-    private dynamic? _ocrInstance;
-    private bool _initialized;
+    private readonly string _engineExe;
+    private readonly string _engineDir;
+    private readonly JobObjectHelper _jobObject;
 
-    /// <param name="pythonHome">Python ��װĿ¼·����������Զ���������档</param>
-    /// <param name="ocrServiceDir">ocr_service �ű�Ŀ¼·����������Զ����ҡ�</param>
-    public OcrEngine(string? pythonHome = null, string? ocrServiceDir = null)
+    /// <param name="engineDir">ocr_engine 目录路径（含 PaddleOCR-json.exe），为空则自动查找。</param>
+    public OcrEngine(string? engineDir = null)
     {
-        _pythonHome = pythonHome ?? ResolvePythonHome();
-        _ocrServiceDir = ocrServiceDir ?? ResolveOcrServiceDir();
+        _engineDir = engineDir ?? ResolveEngineDir();
+        _engineExe = FindEngineExe(_engineDir);
+        _jobObject = new JobObjectHelper();
     }
 
     /// <inheritdoc />
     public List<OcrResult> Recognize(string imagePath)
     {
-        EnsureInitialized();
-        using (Py.GIL())
-        {
-            dynamic result = _ocrInstance!.recognize(imagePath);
-            return ParseResults(result);
-        }
+        var json = InvokeOcr(imagePath);
+        return ParseResults(json);
     }
 
     /// <inheritdoc />
@@ -99,148 +97,197 @@ public class OcrEngine : IOcrService, IDisposable
         return string.Join("\n", results.Select(r => r.Text));
     }
 
-    // �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
-    //  Python.NET ��ʼ��
-    // �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
+    // ═══════════════════════════════════════════════
+    //  子进程调用 PaddleOCR-json.exe
+    // ═══════════════════════════════════════════════
 
-    private void EnsureInitialized()
+    private string InvokeOcr(string imagePath)
     {
-        if (_initialized) return;
-
-        var pythonDll = FindPythonDll(_pythonHome);
-        Runtime.PythonDLL = pythonDll;
-
-        Environment.SetEnvironmentVariable("PYTHONHOME", _pythonHome);
-        Environment.SetEnvironmentVariable("PYTHONPATH", _ocrServiceDir);
-        Environment.SetEnvironmentVariable("PATH",
-            _pythonHome + ";" + Path.Combine(_pythonHome, "Scripts") + ";" +
-            Environment.GetEnvironmentVariable("PATH"));
-
-        PythonEngine.PythonHome = _pythonHome;
-        PythonEngine.Initialize();
-
-        using (Py.GIL())
+        // PaddleOCR-json.exe 对非 ASCII 路径支持不佳，始终通过临时文件传递
+        string safePath = imagePath;
+        bool useTemp = ContainsNonAscii(imagePath);
+        if (useTemp)
         {
-            dynamic sys = Py.Import("sys");
-            sys.path.insert(0, _ocrServiceDir);
-            dynamic ocrModule = Py.Import("ocr_engine");
-            _ocrInstance = ocrModule.get_ocr();
+            safePath = Path.Combine(Path.GetTempPath(), $"ocr_{Guid.NewGuid():N}.png");
+            File.Copy(imagePath, safePath, overwrite: true);
         }
-
-        _initialized = true;
-    }
-
-    /// <summary>
-    /// ���� PaddleOCR ���ص� Python ����Ϊ C# ǿ�����б��
-    /// </summary>
-    private static List<OcrResult> ParseResults(dynamic result)
-    {
-        var items = new List<OcrResult>();
-        if (result == null) return items;
 
         try
         {
-            foreach (var page in result)
-            {
-                if (page == null) continue;
-                foreach (dynamic item in page)
-                {
-                    items.Add(new OcrResult
-                    {
-                        Text = item[1][0].As<string>(),
-                        Confidence = item[1][1].As<double>(),
-                        Box = new OcrBox
-                        {
-                            TopLeft = new OcrPoint(item[0][0][0].As<int>(), item[0][0][1].As<int>()),
-                            TopRight = new OcrPoint(item[0][1][0].As<int>(), item[0][1][1].As<int>()),
-                            BottomRight = new OcrPoint(item[0][2][0].As<int>(), item[0][2][1].As<int>()),
-                            BottomLeft = new OcrPoint(item[0][3][0].As<int>(), item[0][3][1].As<int>()),
-                        }
-                    });
-                }
-            }
+            return InvokeOcrInternal(safePath);
         }
-        catch { }
+        finally
+        {
+            if (useTemp && File.Exists(safePath))
+                File.Delete(safePath);
+        }
+    }
+
+    private string InvokeOcrInternal(string imagePath)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = _engineExe,
+            Arguments = $"-image_path={imagePath}",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            WorkingDirectory = _engineDir,
+        };
+
+        try
+        {
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException("无法启动 PaddleOCR-json.exe");
+
+            _jobObject.AssignProcess(process.Handle);
+
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+
+            if (!process.WaitForExit(30_000))
+            {
+                process.Kill();
+                throw new TimeoutException("PaddleOCR-json.exe 执行超时（30 秒）");
+            }
+
+            var output = outputTask.Result;
+            var error = errorTask.Result;
+
+            if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(output))
+            {
+                throw new InvalidOperationException(
+                    $"OCR 引擎异常退出 (ExitCode={process.ExitCode}): {error}");
+            }
+
+            return output;
+        }
+        catch (Exception ex) when (ex is not InvalidOperationException and not TimeoutException)
+        {
+            throw new InvalidOperationException(
+                $"调用 PaddleOCR-json.exe 失败: {_engineExe}", ex);
+        }
+    }
+
+    /// <summary>
+    /// 将 PaddleOCR-json 返回的 JSON 字符串转换为 OcrResult 列表。
+    /// </summary>
+    private static string? ExtractJsonLine(string rawOutput)
+    {
+        // PaddleOCR-json 输出格式：banner 行 + info 行 + ... + JSON 行
+        // JSON 行以 "{" 开头，直接查找
+        foreach (var line in rawOutput.Split('\n'))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith('{'))
+                return trimmed;
+        }
+        return null;
+    }
+
+    private static bool ContainsNonAscii(string path)
+    {
+        foreach (char c in path)
+        {
+            if (c > 127) return true;
+        }
+        return false;
+    }
+
+    private static List<OcrResult> ParseResults(string rawOutput)
+    {
+        if (string.IsNullOrWhiteSpace(rawOutput))
+            return new List<OcrResult>();
+
+        // PaddleOCR-json stdout 包含 banner 行，需要提取纯 JSON 行
+        var json = ExtractJsonLine(rawOutput);
+        if (json == null)
+            return new List<OcrResult>();
+
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        // PaddleOCR-json 状态码：100=成功, 101=无文字, >=200=错误
+        var code = root.GetProperty("code").GetInt32();
+        if (code != 100)
+            return new List<OcrResult>();
+
+        if (!root.TryGetProperty("data", out var dataElement))
+            return new List<OcrResult>();
+
+        var items = new List<OcrResult>();
+        foreach (var item in dataElement.EnumerateArray())
+        {
+            var box = item.GetProperty("box");
+            var score = item.GetProperty("score").GetDouble();
+            var text = item.GetProperty("text").GetString() ?? "";
+
+            items.Add(new OcrResult
+            {
+                Text = text,
+                Confidence = score,
+                Box = new OcrBox
+                {
+                    TopLeft = new OcrPoint(box[0][0].GetInt32(), box[0][1].GetInt32()),
+                    TopRight = new OcrPoint(box[1][0].GetInt32(), box[1][1].GetInt32()),
+                    BottomRight = new OcrPoint(box[2][0].GetInt32(), box[2][1].GetInt32()),
+                    BottomLeft = new OcrPoint(box[3][0].GetInt32(), box[3][1].GetInt32()),
+                }
+            });
+        }
 
         return items;
     }
 
-    // �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
-    //  �Զ��������� Python �� OCR ����Ŀ¼
-    // �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
+    // ═══════════════════════════════════════════════
+    //  自动查找引擎目录
+    // ═══════════════════════════════════════════════
 
-    private static string FindPythonDll(string pythonHome)
+    private static string FindEngineExe(string engineDir)
     {
-        foreach (var dll in Directory.EnumerateFiles(pythonHome, "python3*.dll"))
-        {
-            return dll;
-        }
+        var exePath = Path.Combine(engineDir, "PaddleOCR-json.exe");
+        if (File.Exists(exePath))
+            return exePath;
 
         throw new InvalidOperationException(
-            $"������ Python Ŀ¼��δ�ҵ� python3*.dll: {pythonHome}�������� setup_python_env.ps1 ���¹�����");
+            $"未找到 PaddleOCR-json.exe，请确保 {engineDir} 目录包含该文件。\n" +
+            "下载地址：https://github.com/hiroi-sora/PaddleOCR-json/releases/latest");
     }
 
-    private static string ResolvePythonHome()
+    private static string ResolveEngineDir()
     {
         var asmDir = AppDomain.CurrentDomain.BaseDirectory;
 
         var candidates = new[]
         {
-            Path.Combine(asmDir, "ocr_service", "python"),
-            Path.GetFullPath(Path.Combine(asmDir, "..", "..", "..", "ocr_service", "python")),
-        };
-
-        foreach (var path in candidates)
-        {
-            if (Directory.Exists(path))
-            {
-                try
-                {
-                    FindPythonDll(path);
-                    return path;
-                }
-                catch { }
-            }
-        }
-
-        throw new InvalidOperationException(
-            "δ�ҵ������ Python �������������� src\\ocr_service\\setup_python_env.ps1 ������");
-    }
-
-    private static string ResolveOcrServiceDir()
-    {
-        var asmDir = AppDomain.CurrentDomain.BaseDirectory;
-
-        var candidates = new[]
-        {
-            Path.Combine(asmDir, "ocr_service"),
-            Path.GetFullPath(Path.Combine(asmDir, "..", "..", "..", "ocr_service")),
+            Path.Combine(asmDir, "ocr_engine"),
+            Path.GetFullPath(Path.Combine(asmDir, "..", "..", "..", "ocr_engine")),
         };
 
         foreach (var candidate in candidates)
         {
-            if (File.Exists(Path.Combine(candidate, "ocr_engine.py")))
+            if (File.Exists(Path.Combine(candidate, "PaddleOCR-json.exe")))
                 return candidate;
         }
 
         throw new InvalidOperationException(
-            "δ�ҵ� ocr_service Ŀ¼����ȷ�� ocr_service\\ �Ѹ��Ƶ����Ŀ¼��");
+            "未找到 ocr_engine 目录。请从 https://github.com/hiroi-sora/PaddleOCR-json/releases/latest " +
+            "下载发行包并解压到 src\\ocr_engine\\ 目录。");
     }
 
     public void Dispose()
     {
-        if (_initialized)
-        {
-            _ocrInstance = null;
-            PythonEngine.Shutdown();
-            _initialized = false;
-        }
+        // JobObject 释放时，JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE 会
+        // 自动终止所有未退出的 PaddleOCR-json.exe 子进程。
+        _jobObject?.Dispose();
     }
 }
 
-// �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
-//  OCR ������ݽṹ
-// �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
+// ═══════════════════════════════════════════════
+//  OCR 结果数据结构
+// ═══════════════════════════════════════════════
 
 public class OcrResult
 {
@@ -264,3 +311,6 @@ public class OcrPoint
     public OcrPoint() { }
     public OcrPoint(int x, int y) { X = x; Y = y; }
 }
+
+
+
