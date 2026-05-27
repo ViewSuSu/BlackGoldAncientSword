@@ -1,12 +1,12 @@
-#define MyAppName "BlackGoldAncientSword"
+Ôªø#define MyAppName "BlackGoldAncientSword"
 #ifndef MyAppVersion
 #define MyAppVersion "0.0.0"
 #endif
 #ifndef MyAppPublisher
-#define MyAppPublisher "Unknown"
+#define MyAppPublisher "Â∞èÁ™óÂêåÂ≠¶"
 #endif
 #ifndef MyAppURL
-#define MyAppURL "https://github.com"
+#define MyAppURL "https://github.com/ViewSuSu"
 #endif
 
 [Setup]
@@ -33,4 +33,4 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"
 
 [Run]
-Filename: "{app}\BlackGoldAncientSword.App.exe"; Description: "∆Ù∂Ø {#MyAppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\BlackGoldAncientSword.App.exe"; Description: "ÂêØÂä® {#MyAppName}"; Flags: nowait postinstall skipifsilent
