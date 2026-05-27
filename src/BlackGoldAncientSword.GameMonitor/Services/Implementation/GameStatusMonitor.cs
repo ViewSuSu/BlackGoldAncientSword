@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Ocr;
@@ -42,6 +42,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         public void Stop()
         {
             IsRunning = false;
+            GameStatusRecognized?.Invoke(this, new GameStatusChangedEventArgs(GameStatus.Unknown));
             try { _cts?.Cancel(); } catch { }
             _cts?.Dispose();
             _cts = null;
