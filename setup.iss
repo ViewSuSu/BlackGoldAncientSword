@@ -1,16 +1,11 @@
 ﻿#define MyAppName "BlackGoldAncientSword"
-#ifndef MyAppVersion
-#define MyAppVersion "0.0.0"
-#endif
-#ifndef MyAppPublisher
-#define MyAppPublisher "Unknown"
-#endif
-#ifndef MyAppURL
-#define MyAppURL "https://github.com"
-#endif
+#define ExePath "build\Release\BlackGoldAncientSword.App.exe"
+#define MyAppVersion GetFileVersion(ExePath)
+#define MyAppPublisher GetStringFileInfo(ExePath, "CompanyName")
+#define MyAppURL GetStringFileInfo(ExePath, "FileDescription")
 
 [Setup]
-AppId={B8A1F3E2-9C5D-4A7B-8E6F-1D2C3A4B5F6C}
+AppId={{B8A1F3E2-9C5D-4A7B-8E6F-1D2C3A4B5F6C}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -24,6 +19,7 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
 SetupIconFile=src\BlackGoldAncientSword.Resources\Images\app.ico
+UninstallDisplayIcon={app}\BlackGoldAncientSword.App.exe
 
 [Files]
 Source: "build\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
