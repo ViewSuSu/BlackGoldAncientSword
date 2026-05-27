@@ -23,14 +23,13 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile=src\BlackGoldAncientSword.Resources\Images\app.ico
 
 [Files]
 Source: "publish\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"; IconFilename: "{app}\BlackGoldAncientSword.Resources\Images\app.ico"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"; IconFilename: "{app}\BlackGoldAncientSword.Resources\Images\app.ico"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"
 
 [Run]
 Filename: "{app}\BlackGoldAncientSword.App.exe"; Description: "启动 {#MyAppName}"; Flags: nowait postinstall skipifsilent
