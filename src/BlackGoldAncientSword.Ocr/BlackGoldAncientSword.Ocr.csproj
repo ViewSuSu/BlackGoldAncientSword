@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Authors>小窗同学</Authors>
+    <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="pythonnet" Version="3.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
+  </ItemGroup>
+
+  <!-- Copy ocr_service (Python scripts + bundled Python) to output directory -->
+  <ItemGroup>
+    <Content Include="..\ocr_service\ocr_engine.py"
+             Link="ocr_service\ocr_engine.py"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\ocr_service\python\**\*"
+             Link="ocr_service\python\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('..\ocr_service\python')" />
+  </ItemGroup>
+
+</Project>

@@ -1,6 +1,6 @@
-﻿# NarakaBladepoint-Stats-Assistant
+# BlackGoldAncientSword
 
-永劫无间查询战绩助手 —— 查询《永劫无间》（NARAKA: BLADEPOINT）玩家战绩数据的辅助工具。
+黑金古刀-永劫助手（BlackGoldAncientSword） —— 查询《永劫无间》（NARAKA: BLADEPOINT）玩家战绩数据的辅助工具。
 
 ## 功能
 
