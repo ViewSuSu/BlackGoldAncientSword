@@ -106,7 +106,7 @@
     <system:String x:Key="Settings.SaveFailed">儲存失敗: {0}</system:String>
 
     <system:String x:Key="Nav.Detail">詳情</system:String>
-    <system:String x:Key="Nav.Home">主頁</system:String>
+    <system:String x:Key="Nav.Home">啟動頁</system:String>
     <system:String x:Key="Nav.Stats">戰績</system:String>
     <system:String x:Key="Nav.CurrentUser">目前使用者</system:String>
     <system:String x:Key="Nav.Search">搜尋</system:String>

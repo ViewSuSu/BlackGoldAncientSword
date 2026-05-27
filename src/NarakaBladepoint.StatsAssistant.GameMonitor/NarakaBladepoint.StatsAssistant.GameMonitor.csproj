@@ -4,7 +4,6 @@
     <Authors>小窗同学</Authors>
     <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);CS8601;CS8603;CA1416;CS8618</NoWarn>
@@ -14,9 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NarakaBladepoint.StatsAssistant.Framework\NarakaBladepoint.StatsAssistant.Framework.csproj" />
-    <ProjectReference Include="..\NarakaBladepoint.StatsAssistant.GameMonitor\NarakaBladepoint.StatsAssistant.GameMonitor.csproj" />
-
-    <ProjectReference Include="..\NarakaBladepoint.StatsAssistant.Resources\NarakaBladepoint.StatsAssistant.Resources.csproj" />
   </ItemGroup>
 
 </Project>

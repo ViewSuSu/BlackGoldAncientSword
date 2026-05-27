@@ -1,8 +1,10 @@
 ﻿using System.Windows.Threading;
 using NarakaBladepoint.StatsAssistant.App.Shell;
-using NarakaBladepoint.StatsAssistant.Modules;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Events;
 using NarakaBladepoint.StatsAssistant.Framework.Services;
+using NarakaBladepoint.StatsAssistant.GameMonitor;
+using NarakaBladepoint.StatsAssistant.Modules;
+using NarakaBladepoint.StatsAssistant.Ocr;
 using Mapster;
 
 namespace NarakaBladepoint.StatsAssistant.App
@@ -16,6 +18,8 @@ namespace NarakaBladepoint.StatsAssistant.App
             containerRegistry.RegisterFrameworkServices();
             containerRegistry.RegisterAppLayer();
             containerRegistry.RegisterModuleLayer();
+            containerRegistry.RegisterGameMonitorLayer();
+            containerRegistry.RegisterOcrLayer();
         }
 
         private void ConfigureTypeAdapterConfig()
@@ -38,7 +42,6 @@ namespace NarakaBladepoint.StatsAssistant.App
         {
             base.OnStartup(e);
 
-            // Wire image cache service to converter
             try
             {
                 var cacheService = Container.Resolve<NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions.IImageCacheService>();
@@ -51,7 +54,6 @@ namespace NarakaBladepoint.StatsAssistant.App
             }
             catch { }
 
-            // Configure online update service
             try
             {
                 var updateService = Container.Resolve<NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions.IUpdateService>();
@@ -94,7 +96,6 @@ namespace NarakaBladepoint.StatsAssistant.App
             }
             catch
             {
-                // Silent fail to avoid recursive error loops
             }
         }
     }

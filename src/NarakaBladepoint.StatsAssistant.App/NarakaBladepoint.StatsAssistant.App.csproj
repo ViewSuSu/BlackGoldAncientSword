@@ -1,8 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Authors>小窗同学</Authors>
+    <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
@@ -10,7 +12,6 @@
     <NoWarn>$(NoWarn);CS8601;CS8603;CA1416;CS8618</NoWarn>
     <LangVersion>latest</LangVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>
@@ -19,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NarakaBladepoint.StatsAssistant.Framework\NarakaBladepoint.StatsAssistant.Framework.csproj" />
+    <ProjectReference Include="..\NarakaBladepoint.StatsAssistant.Ocr\NarakaBladepoint.StatsAssistant.Ocr.csproj" />
     <ProjectReference Include="..\NarakaBladepoint.StatsAssistant.Resources\NarakaBladepoint.StatsAssistant.Resources.csproj" />
     <ProjectReference Include="..\NarakaBladepoint.StatsAssistant.Modules\NarakaBladepoint.StatsAssistant.Modules.csproj" />
   </ItemGroup>
@@ -30,7 +32,7 @@
     </PackageReference>
   </ItemGroup>
 
-  <!--  Post-build: print version from Nerdbank.GitVersioning  -->
+  <!-- Post-build: print version from Nerdbank.GitVersioning -->
   <Target Name="PrintBuildVersion" AfterTargets="AfterBuild">
     <Message Importance="high" Text="========================================" />
     <Message Importance="high" Text="  Build Version       : $(BuildVersion)" />

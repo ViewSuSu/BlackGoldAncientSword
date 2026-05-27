@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Bases.ViewModels;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Consts;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
@@ -29,7 +29,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.ClosePrompt.ViewModels
                 {
                     _settingsService.Current.CloseBehavior = "MinimizeToTaskbar";
                     _settingsService.Current.CloseBehaviorRemembered = true;
-                    _ = System.Threading.Tasks.Task.Run(() => _settingsService.SaveAsync());
+                    _ = _settingsService.SaveAsync();
                 }
                 DismissOverlay();
                 Application.Current.MainWindow!.WindowState = WindowState.Minimized;
@@ -50,7 +50,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.ClosePrompt.ViewModels
                 {
                     _settingsService.Current.CloseBehavior = "ExitDirectly";
                     _settingsService.Current.CloseBehaviorRemembered = true;
-                    _ = System.Threading.Tasks.Task.Run(() => _settingsService.SaveAsync());
+                    _ = _settingsService.SaveAsync();
                 }
                 DismissOverlay();
                 Application.Current.Shutdown();

@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Attributes;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 
@@ -15,10 +14,14 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
 
         public SettingsService()
         {
-            Load();
+            // 构造时触发异步加载，不阻塞 UI
+            _ = LoadAsync();
         }
 
-        public void Load()
+        /// <summary>
+        /// 异步从 settings.json 加载配置。
+        /// </summary>
+        public async Task LoadAsync()
         {
             try
             {
@@ -26,17 +29,14 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
                 if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
                     System.IO.Directory.CreateDirectory(dir);
 
-                // Ensure cache directory exists
-                var cachePath = Current.CachePath;
-                if (string.IsNullOrEmpty(cachePath))
-                    cachePath = AppSettings.GetDefaultCachePath();
+                // 确保缓存目录存在
+                var cachePath = AppSettings.GetDefaultCachePath();
                 if (!System.IO.Directory.Exists(cachePath))
                     System.IO.Directory.CreateDirectory(cachePath);
-                Current.CachePath = cachePath;
 
                 if (System.IO.File.Exists(FilePath))
                 {
-                    var json = System.IO.File.ReadAllText(FilePath);
+                    var json = await System.IO.File.ReadAllTextAsync(FilePath);
                     Current = JsonConvert.DeserializeObject<AppSettings>(json) ?? new AppSettings();
                 }
                 else
@@ -55,17 +55,21 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
             }
         }
 
+        /// <summary>
+        /// 异步保存配置到 settings.json。
+        /// </summary>
         public async Task SaveAsync()
         {
-            await Task.Run(() =>
+            try
             {
                 var dir = System.IO.Path.GetDirectoryName(FilePath);
                 if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
                     System.IO.Directory.CreateDirectory(dir);
 
                 var json = JsonConvert.SerializeObject(Current, Formatting.Indented);
-                System.IO.File.WriteAllTextAsync(FilePath, json).GetAwaiter().GetResult();
-            });
+                await System.IO.File.WriteAllTextAsync(FilePath, json);
+            }
+            catch { }
         }
     }
 }
