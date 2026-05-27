@@ -24,6 +24,7 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
 SetupIconFile=src\BlackGoldAncientSword.Resources\Images\app.ico
+UninstallDisplayIcon={app}\BlackGoldAncientSword.App.exe
 
 [Files]
 Source: "build\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
