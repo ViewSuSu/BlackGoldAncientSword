@@ -52,6 +52,15 @@ jobs:
           git commit -m "Set version to '$newVer'"
           echo "new_version=$newVer" >> $env:GITHUB_OUTPUT
 
+      - name: Publish Release build
+        shell: powershell
+        run: |
+          dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained `
+            -o publish/Release
+
       - name: Push to release and tag
         shell: powershell
         run: |
@@ -59,6 +68,16 @@ jobs:
           $tag = "v${{ steps.bump.outputs.new_version }}"
           git tag $tag
           git push origin $tag
+
+      - name: Create GitHub Release and upload artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.new_version }}
+          name: v${{ steps.bump.outputs.new_version }}
+          files: |
+            publish/Release/BlackGoldAncientSword.App.exe
+          draft: false
+          prerelease: false
 
       - name: Sync version bump to main
         shell: powershell
