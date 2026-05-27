@@ -91,4 +91,22 @@ public class ScreenCaptureServiceTests : IDisposable
         await Assert.ThrowsAsync<ArgumentException>(
             () => _service.CaptureWindowAsync(IntPtr.Zero));
     }
+
+    [Fact]
+    public void CaptureGame_NarakaBladepoint_SavesToDesktop()
+    {
+        const string processName = "NarakaBladepoint";
+        var desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        var filePath = Path.Combine(desktop, $"NarakaBladepoint_Screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+
+        var found = _service.TryFindGameWindow(processName, out var hwnd);
+        Assert.True(found, $"Game process '{processName}' not running. Start the game and re-run this test.");
+        Assert.NotEqual(IntPtr.Zero, hwnd);
+
+        _service.CaptureWindowToFile(hwnd, filePath);
+
+        Assert.True(File.Exists(filePath), $"Screenshot file not found: {filePath}");
+        var fileInfo = new FileInfo(filePath);
+        Assert.True(fileInfo.Length > 0, "Screenshot file is empty.");
+    }
 }
