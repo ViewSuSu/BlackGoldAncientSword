@@ -137,10 +137,18 @@
     <system:String x:Key="Settings.UpdateChecking">正在檢查更新...</system:String>
     <system:String x:Key="Settings.NoUpdateAvailable">目前已是最新版本</system:String>
     <system:String x:Key="Settings.UpdateAvailable">發現新版本</system:String>
+    <system:String x:Key="Settings.NewVersionTooltip">發現新版本: {0}，點擊更新</system:String>
     <system:String x:Key="Settings.UpdateCheckFailed">檢查更新失敗，請稍後重試</system:String>
     <system:String x:Key="Settings.UpdateError">更新錯誤: {0}</system:String>
     <system:String x:Key="Settings.UpdateDownloading">正在下載更新...</system:String>
     <system:String x:Key="Settings.CurrentVersion">目前版本: {0}</system:String>
+    <system:String x:Key="Settings.CurrentVersionLatest">目前版本（最新）: {0}</system:String>
+
+    <!--  更新  -->
+    <system:String x:Key="Settings.AutoUpdate">更新</system:String>
+
+    <!--  檢測更新  -->
+    <system:String x:Key="Settings.AutoCheckUpdates">啟動時自動檢測更新</system:String>
     <!--  Close Prompt  -->
     <system:String x:Key="ClosePrompt.Title">關閉確認</system:String>
     <system:String x:Key="ClosePrompt.Message">您點擊了關閉按鈕，請選擇關閉按鈕的預設行為：</system:String>

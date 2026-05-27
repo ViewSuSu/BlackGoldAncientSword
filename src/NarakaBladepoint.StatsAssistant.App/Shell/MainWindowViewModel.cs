@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Diagnostics;
@@ -15,6 +15,8 @@ namespace NarakaBladepoint.StatsAssistant.App.Shell
         private readonly IMainContentNavigationService _navigation;
         private readonly IRegionManager _regionManager;
         private readonly IModuleManager _moduleManager;
+        private readonly NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions.IUpdateService _updateService;
+        private readonly NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions.ILocalizationService _localization;
 
         public ObservableCollection<ToastItem> ToastItems { get; } = new();
 
@@ -58,6 +60,12 @@ namespace NarakaBladepoint.StatsAssistant.App.Shell
             });
 
         private DelegateCommand? _navigateToAnnouncementCommand;
+
+        public string CurrentVersionText =>
+            string.Format(
+                System.Windows.Application.Current?.TryFindResource("Settings.CurrentVersion") as string ?? "{0}",
+                _updateService.CurrentVersion);
+
         public bool CanGoBack => _navigation.CanGoBack;
 
         private DelegateCommand? _goBackCommand;
@@ -66,6 +74,7 @@ namespace NarakaBladepoint.StatsAssistant.App.Shell
             {
                 _navigation.GoBack();
             }).ObservesCanExecute(() => CanGoBack);
+
         public DelegateCommand NavigateToAnnouncementCommand =>
             _navigateToAnnouncementCommand ??= new DelegateCommand(() =>
             {
@@ -83,11 +92,22 @@ namespace NarakaBladepoint.StatsAssistant.App.Shell
         public MainWindowViewModel(
             IMainContentNavigationService navigation,
             IRegionManager regionManager,
-            IModuleManager moduleManager)
+            IModuleManager moduleManager,
+            NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions.IUpdateService updateService,
+            NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions.ILocalizationService localizationService)
         {
             _navigation = navigation;
             _regionManager = regionManager;
             _moduleManager = moduleManager;
+            _updateService = updateService;
+            _localization = localizationService;
+            _localization.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(_localization.CurrentLanguage))
+                {
+                    RaisePropertyChanged(nameof(CurrentVersionText));
+                }
+            };
 
             _navigation.Navigated += OnNavigated;
             ActivePage = PageNames.HomePage;
@@ -122,7 +142,7 @@ namespace NarakaBladepoint.StatsAssistant.App.Shell
             }
             catch
             {
-                // Module may already be loaded or doesn't exist as OnDemand
+                // Module may already be loaded or doesn"t exist as OnDemand
             }
         }
     }

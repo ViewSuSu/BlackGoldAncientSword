@@ -1,4 +1,4 @@
-﻿<Window
+<Window
     x:Class="NarakaBladepoint.StatsAssistant.App.Shell.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -400,6 +400,18 @@
                 Background="#E0E0E0" />
 
             <!--  ==================== Row 2: Bottom bar ====================  -->
+            <StackPanel
+                Grid.Row="2"
+                Margin="12,0,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="#888888"
+                    Text="{Binding CurrentVersionText}" />
+            </StackPanel>
             <StackPanel
                 Grid.Row="2"
                 Margin="0,0,8,0"

@@ -16,5 +16,20 @@
         /// Configure the update service (called once at startup).
         /// </summary>
         void Configure(string? customUpdateUrl = null);
+
+        /// <summary>
+        /// Whether an update is currently available.
+        /// </summary>
+        bool IsUpdateAvailable { get; }
+
+        /// <summary>
+        /// The latest available version string, or null if no update is available.
+        /// </summary>
+        string? LatestVersion { get; }
+
+        /// <summary>
+        /// Raised when update availability changes.
+        /// </summary>
+        event System.EventHandler<bool>? UpdateAvailabilityChanged;
     }
 }

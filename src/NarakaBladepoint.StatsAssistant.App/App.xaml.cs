@@ -60,6 +60,16 @@ namespace NarakaBladepoint.StatsAssistant.App
                 updateService.Configure("https://github.com/ViewSuSu/NarakaBladepoint-Stats-Assistant");
             }
             catch { }
+            try
+            {
+                var settings = Container.Resolve<NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions.ISettingsService>();
+                if (settings.Current.AutoCheckUpdates)
+                {
+                    var updater = Container.Resolve<NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions.IUpdateService>();
+                    _ = updater.CheckForUpdatesAsync(showNoUpdateMessage: false);
+                }
+            }
+            catch { }
 
             DispatcherUnhandledException += (_, args) =>
             {

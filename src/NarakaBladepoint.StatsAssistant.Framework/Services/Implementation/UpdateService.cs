@@ -12,8 +12,16 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
     {
         private readonly IEventAggregator _eventAggregator;
         private string? _customUpdateUrl;
+        private bool _showNotifications = true;
+        private bool _isChecking;
 
         public string CurrentVersion { get; }
+
+        public bool IsUpdateAvailable { get; private set; }
+
+        public string? LatestVersion { get; private set; }
+
+        public event System.EventHandler<bool>? UpdateAvailabilityChanged;
 
         public UpdateService(IEventAggregator eventAggregator)
         {
@@ -42,6 +50,9 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
 
         public async System.Threading.Tasks.Task CheckForUpdatesAsync(bool showNoUpdateMessage = true)
         {
+            if (_isChecking) return;
+            _showNotifications = showNoUpdateMessage;
+            _isChecking = true;
             var updateUrl = _customUpdateUrl ?? GetDefaultUpdateUrl();
             AutoUpdater.Start(updateUrl);
             await System.Threading.Tasks.Task.CompletedTask;
@@ -49,34 +60,52 @@ namespace NarakaBladepoint.StatsAssistant.Framework.Services.Implementation
 
         private void OnCheckForUpdateEvent(UpdateInfoEventArgs args)
         {
+            _isChecking = false;
+
             if (args == null)
             {
-                _eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(
-                        L("Settings.UpdateCheckFailed", "Failed to check for updates. Please try again later."),
-                        new List<string> { "Error" }));
+                if (_showNotifications)
+                {
+                    _eventAggregator.GetEvent<TipMessageEvent>()
+                        .Publish(new TipMessageWithHighlightArgs(
+                            L("Settings.UpdateCheckFailed", "Failed to check for updates. Please try again later."),
+                            new List<string> { "Error" }));
+                }
                 return;
             }
+
+            IsUpdateAvailable = args.IsUpdateAvailable;
+            LatestVersion = args.IsUpdateAvailable ? args.CurrentVersion : null;
+            UpdateAvailabilityChanged?.Invoke(this, args.IsUpdateAvailable);
 
             if (!args.IsUpdateAvailable)
             {
-                _eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(
-                        L("Settings.NoUpdateAvailable", "You are running the latest version.")));
+                if (_showNotifications)
+                {
+                    _eventAggregator.GetEvent<TipMessageEvent>()
+                        .Publish(new TipMessageWithHighlightArgs(
+                            L("Settings.NoUpdateAvailable", "You are running the latest version.")));
+                }
                 return;
             }
 
-            // Update is available; AutoUpdater will show its own dialog
+            // Update is available; show dialog only for manual checks
             try
             {
-                AutoUpdater.ShowUpdateForm(args);
+                if (_showNotifications)
+                {
+                    AutoUpdater.ShowUpdateForm(args);
+                }
             }
             catch (Exception ex)
             {
-                _eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(
-                        string.Format(L("Settings.UpdateError", "Update error: {0}"), ex.Message),
-                        new List<string> { "Error" }));
+                if (_showNotifications)
+                {
+                    _eventAggregator.GetEvent<TipMessageEvent>()
+                        .Publish(new TipMessageWithHighlightArgs(
+                            string.Format(L("Settings.UpdateError", "Update error: {0}"), ex.Message),
+                            new List<string> { "Error" }));
+                }
             }
         }
 
