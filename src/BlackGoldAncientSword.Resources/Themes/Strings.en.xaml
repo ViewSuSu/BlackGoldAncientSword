@@ -172,6 +172,7 @@
     <system:String x:Key="Settings.CloseBehavior.Description">Set the default behavior when clicking the close button</system:String>
     <system:String x:Key="Settings.CloseBehavior.Ask">Ask every time</system:String>
     <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">Minimize to taskbar</system:String>
+    <system:String x:Key="Settings.CloseBehavior.MinimizeToTray">Minimize to System Tray</system:String>
     <system:String x:Key="Settings.CloseBehavior.ExitDirectly">Exit directly</system:String>
     <system:String x:Key="Settings.CloseBehavior.RememberChoice">Remember choice</system:String>
 </ResourceDictionary>

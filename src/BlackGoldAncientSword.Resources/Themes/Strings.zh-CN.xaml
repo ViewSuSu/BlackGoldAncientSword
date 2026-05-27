@@ -147,7 +147,9 @@
     <system:String x:Key="Settings.Category.CloseBehavior">关闭行为</system:String>
     <system:String x:Key="Settings.CloseBehavior.Description">设置点击关闭按钮时的默认行为</system:String>
     <system:String x:Key="Settings.CloseBehavior.Ask">每次询问</system:String>
-    <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到任务栏</system:String><system:String x:Key="Settings.CloseBehavior.ExitDirectly">直接退出</system:String>
+    <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到任务栏</system:String>
+    <system:String x:Key="Settings.CloseBehavior.MinimizeToTray">最小化到系统托盘</system:String>
+    <system:String x:Key="Settings.CloseBehavior.ExitDirectly">直接退出</system:String>
     <system:String x:Key="Settings.CloseBehavior.RememberChoice">记住选项</system:String>
 
 

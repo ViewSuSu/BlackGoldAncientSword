@@ -81,6 +81,11 @@
                         Margin="0,0,8,0"
                         Command="{Binding MinimizeToTaskbarCommand}" ToolTip="{DynamicResource ClosePrompt.MinimizeToTaskbar}" Content="{DynamicResource ClosePrompt.MinimizeToTaskbar}" />
                     <Button
+                        MinWidth="100"
+                        Height="32"
+                        Margin="0,0,8,0"
+                        Command="{Binding MinimizeToTrayCommand}" ToolTip="{DynamicResource ClosePrompt.MinimizeToTray}" Content="{DynamicResource ClosePrompt.MinimizeToTray}" />
+                    <Button
                         MinWidth="80"
                         Height="32"
                         Command="{Binding ExitDirectlyCommand}" ToolTip="{DynamicResource ClosePrompt.ExitDirectly}" Content="{DynamicResource ClosePrompt.ExitDirectly}" />
