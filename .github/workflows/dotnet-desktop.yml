@@ -45,15 +45,34 @@ jobs:
         echo "authors=$authors" >> $env:GITHUB_OUTPUT
         echo "url=$url" >> $env:GITHUB_OUTPUT
 
-    - name: Publish (no single-file)
+    - name: Build (separate DLLs)
+      shell: powershell
+      run: |
+        dotnet build src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj `
+          -c Release `
+          -r win-x64 `
+          -o build/Release
+
+    - name: Publish (self-contained single exe)
       shell: powershell
       run: |
         dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj `
           -c Release `
           -r win-x64 `
-          --self-contained `
-          /p:PublishSingleFile=false `
           -o publish/Release
+
+    - name: Merge outputs
+      shell: powershell
+      run: |
+        # Copy all DLLs from build output to publish (preserve self-contained exe)
+        Get-ChildItem build/Release -Filter *.dll | ForEach-Object {
+          $dest = "publish/Release/$($_.Name)"
+          if (-not (Test-Path $dest)) {
+            Copy-Item $_.FullName $dest
+          }
+        }
+        Write-Host "Publish folder contents:"
+        Get-ChildItem publish/Release | Select-Object Name, Length | Format-Table -AutoSize
 
     - name: Install Inno Setup
       shell: powershell
@@ -61,9 +80,17 @@ jobs:
         choco install innosetup -y
 
     - name: Build Installer
-      shell: cmd
+      shell: powershell
       run: |
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=${{ steps.version.outputs.new_version }} /DMyAppPublisher=${{ steps.meta.outputs.authors }} /DMyAppURL=${{ steps.meta.outputs.url }} setup.iss
+        $ver = '${{ steps.version.outputs.new_version }}'
+        $authors = '${{ steps.meta.outputs.authors }}'
+        $url = '${{ steps.meta.outputs.url }}'
+        $content = Get-Content setup.iss
+        $content = $content -replace '#define MyAppVersion "0.0.0"', "#define MyAppVersion `"$ver`""
+        $content = $content -replace '#define MyAppPublisher "Unknown"', "#define MyAppPublisher `"$authors`""
+        $content = $content -replace '#define MyAppURL ".*"', "#define MyAppURL `"$url`""
+        [System.IO.File]::WriteAllText("setup.iss", ($content -join "`r`n"), [System.Text.UTF8Encoding]::new($true))
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
 
     - name: Tag
       shell: powershell
