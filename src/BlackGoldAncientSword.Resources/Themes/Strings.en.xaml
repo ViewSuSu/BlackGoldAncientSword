@@ -136,6 +136,7 @@
     <system:String x:Key="TitleBar.Close">Close</system:String>
 
 
+    
     <!--  Update  -->
     <system:String x:Key="Settings.CheckForUpdates">Check for Updates</system:String>
     <system:String x:Key="Settings.UpdateChecking">Checking for updates...</system:String>
@@ -147,6 +148,11 @@
     <system:String x:Key="Settings.UpdateDownloading">Downloading update...</system:String>
     <system:String x:Key="Settings.CurrentVersion">Current version: {0}</system:String>
     <system:String x:Key="Settings.CurrentVersionLatest">Current version (latest): {0}</system:String>
+
+    
+
+        <system:String x:Key="GameStatus.LobbyWaiting">In Lobby</system:String>
+    <system:String x:Key="GameStatus.Queuing">Queuing</system:String>
 
     <!--  Update  -->
     <system:String x:Key="Settings.AutoUpdate">Update</system:String>

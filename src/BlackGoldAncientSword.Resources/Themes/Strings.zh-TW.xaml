@@ -150,6 +150,10 @@
     <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到任务栏</system:String><system:String x:Key="Settings.CloseBehavior.ExitDirectly">直接退出</system:String>
     <system:String x:Key="Settings.CloseBehavior.RememberChoice">记住选项</system:String>
 
+
+        <system:String x:Key="GameStatus.LobbyWaiting">大廳等候</system:String>
+    <system:String x:Key="GameStatus.Queuing">排隊中</system:String>
+
     <!--  Update  -->
     <system:String x:Key="Settings.CheckForUpdates">检查更新</system:String>
     <system:String x:Key="Settings.UpdateChecking">正在检查更新...</system:String>

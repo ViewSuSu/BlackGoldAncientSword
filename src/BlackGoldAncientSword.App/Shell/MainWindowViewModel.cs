@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Diagnostics;
@@ -6,6 +6,7 @@ using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
+using BlackGoldAncientSword.GameMonitor.Models;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
 using Prism.Regions;
 
@@ -27,6 +28,14 @@ namespace BlackGoldAncientSword.App.Shell
         {
             get => _activePage;
             set => SetProperty(ref _activePage, value);
+        }
+
+        private GameStatus _currentGameStatus = GameStatus.Unknown;
+        private string _gameStatusText = string.Empty;
+        public string GameStatusText
+        {
+            get => _gameStatusText;
+            set => SetProperty(ref _gameStatusText, value);
         }
 
         private DelegateCommand? _navigateToHomeCommand;
@@ -104,13 +113,21 @@ namespace BlackGoldAncientSword.App.Shell
                 _navigation.NavigateTo(PageNames.SettingsPage);
             });
 
+        private DelegateCommand? _checkForUpdatesCommand;
+        public DelegateCommand CheckForUpdatesCommand =>
+            _checkForUpdatesCommand ??= new DelegateCommand(async () =>
+            {
+                await _updateService.CheckForUpdatesAsync();
+            });
+
         public MainWindowViewModel(
             IPlayerPrefsService playerPrefsService,
             IMainContentNavigationService navigation,
             IRegionManager regionManager,
             IModuleManager moduleManager,
             BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService updateService,
-            BlackGoldAncientSword.Framework.Services.Abstractions.ILocalizationService localizationService)
+            BlackGoldAncientSword.Framework.Services.Abstractions.ILocalizationService localizationService,
+            IGameStatusMonitor gameStatusMonitor)
         {
             _playerPrefsService = playerPrefsService;
             _navigation = navigation;
@@ -123,12 +140,12 @@ namespace BlackGoldAncientSword.App.Shell
                 if (e.PropertyName == nameof(_localization.CurrentLanguage))
                 {
                     RaisePropertyChanged(nameof(CurrentVersionText));
+                    RefreshGameStatusText();
                 }
             };
 
             _navigation.Navigated += OnNavigated;
             ActivePage = PageNames.HomePage;
-
 
             UpdateCanNavigateToPersonal();
             eventAggregator.GetEvent<TipMessageEvent>()
@@ -141,6 +158,22 @@ namespace BlackGoldAncientSword.App.Shell
                     };
                     ToastItems.Add(item);
                 }, ThreadOption.UIThread);
+
+            gameStatusMonitor.GameStatusRecognized += (_, args) =>
+            {
+                _currentGameStatus = args.Status;
+                RefreshGameStatusText();
+            };
+        }
+
+        private void RefreshGameStatusText()
+        {
+            GameStatusText = _currentGameStatus switch
+            {
+                GameStatus.LobbyWaiting => System.Windows.Application.Current.TryFindResource("GameStatus.LobbyWaiting") as string ?? "LobbyWaiting",
+                GameStatus.Queuing => System.Windows.Application.Current.TryFindResource("GameStatus.Queuing") as string ?? "Queuing",
+                _ => string.Empty,
+            };
         }
 
         private void OnNavigated(string viewName)
@@ -168,7 +201,6 @@ namespace BlackGoldAncientSword.App.Shell
             }
             catch
             {
-                // Module may already be loaded or doesn"t exist as OnDemand
             }
         }
     }

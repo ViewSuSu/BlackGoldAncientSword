@@ -2,6 +2,7 @@
 
 /// <summary>
 /// 游戏截屏服务接口。提供截取游戏窗口画面并保存为图片字节/文件的能力。
+/// 支持按四象限（上下左右）截取窗口子区域。
 /// </summary>
 public interface IScreenCaptureService
 {
@@ -28,4 +29,31 @@ public interface IScreenCaptureService
 
     /// <summary>根据进程名直接截取游戏画面，返回 PNG 字节数组。</summary>
     byte[] CaptureGame(string processName);
+
+    // ─────────────────── Region / Quadrant capture ───────────────────
+
+    /// <summary>
+    /// 截取窗口的指定象限区域，返回 PNG 字节数组。
+    /// 例如 <c>ScreenQuadrant.BottomRight</c> 获取右下角，
+    /// <c>ScreenQuadrant.BottomLeft | ScreenQuadrant.BottomRight</c> 获取下半部分。
+    /// </summary>
+    byte[] CaptureRegion(IntPtr hwnd, ScreenQuadrant quadrants);
+
+    /// <summary>异步截取窗口的指定象限区域，返回 PNG 字节数组。</summary>
+    Task<byte[]> CaptureRegionAsync(IntPtr hwnd, ScreenQuadrant quadrants);
+
+    /// <summary>截取窗口的指定象限区域并保存到文件。</summary>
+    void CaptureRegionToFile(IntPtr hwnd, ScreenQuadrant quadrants, string filePath);
+
+    /// <summary>异步截取窗口的指定象限区域并保存到文件。</summary>
+    Task CaptureRegionToFileAsync(IntPtr hwnd, ScreenQuadrant quadrants, string filePath);
+
+    /// <summary>根据进程名截取游戏指定象限区域，返回 PNG 字节数组。</summary>
+    byte[] CaptureGameRegion(string processName, ScreenQuadrant quadrants);
+
+    /// <summary>根据进程名截取游戏指定象限区域并保存到文件。</summary>
+    void CaptureGameRegion(string processName, ScreenQuadrant quadrants, string filePath);
+
+    /// <summary>异步根据进程名截取游戏指定象限区域并保存到文件。</summary>
+    Task CaptureGameRegionAsync(string processName, ScreenQuadrant quadrants, string filePath);
 }

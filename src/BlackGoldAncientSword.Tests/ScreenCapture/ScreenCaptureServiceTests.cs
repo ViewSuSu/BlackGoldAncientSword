@@ -1,4 +1,4 @@
-﻿using BlackGoldAncientSword.ScreenCapture;
+using BlackGoldAncientSword.ScreenCapture;
 using Moq;
 using System.Diagnostics;
 
@@ -29,12 +29,9 @@ public class ScreenCaptureServiceTests : IDisposable
     [Fact]
     public void TryFindGameWindow_EmptyProcessName_NoThrow()
     {
-        // Process.GetProcessesByName("") behavior is OS-dependent;
-        // the key invariant is that it does not throw.
         var exception = Record.Exception(() => _service.TryFindGameWindow("", out _));
         Assert.Null(exception);
     }
-
 
     [Fact]
     public void TryFindGameWindow_ExplorerProcess_ShouldFindWindow()
@@ -92,19 +89,76 @@ public class ScreenCaptureServiceTests : IDisposable
             () => _service.CaptureWindowAsync(IntPtr.Zero));
     }
 
+    // =========================================================================
+    //  NarakaBladepoint live-capture tests (require game to be running)
+    // =========================================================================
+
     [Fact]
-    public void CaptureGame_NarakaBladepoint_SavesToDesktop()
+    public void CaptureGame_NarakaBladepoint_Full_SavesToDesktop()
+    {
+        var hwnd = FindNarakaWindow();
+        var filePath = MakeDesktopPath("Full");
+        _service.CaptureWindowToFile(hwnd, filePath);
+        AssertFileSaved(filePath);
+    }
+
+    [Fact]
+    public void CaptureGame_NarakaBladepoint_TopLeft_SavesToDesktop()
+    {
+        var hwnd = FindNarakaWindow();
+        var filePath = MakeDesktopPath("TopLeft");
+        _service.CaptureRegionToFile(hwnd, ScreenQuadrant.TopLeft, filePath);
+        AssertFileSaved(filePath);
+    }
+
+    [Fact]
+    public void CaptureGame_NarakaBladepoint_TopRight_SavesToDesktop()
+    {
+        var hwnd = FindNarakaWindow();
+        var filePath = MakeDesktopPath("TopRight");
+        _service.CaptureRegionToFile(hwnd, ScreenQuadrant.TopRight, filePath);
+        AssertFileSaved(filePath);
+    }
+
+    [Fact]
+    public void CaptureGame_NarakaBladepoint_BottomLeft_SavesToDesktop()
+    {
+        var hwnd = FindNarakaWindow();
+        var filePath = MakeDesktopPath("BottomLeft");
+        _service.CaptureRegionToFile(hwnd, ScreenQuadrant.BottomLeft, filePath);
+        AssertFileSaved(filePath);
+    }
+
+    [Fact]
+    public void CaptureGame_NarakaBladepoint_BottomRight_SavesToDesktop()
+    {
+        var hwnd = FindNarakaWindow();
+        var filePath = MakeDesktopPath("BottomRight");
+        _service.CaptureRegionToFile(hwnd, ScreenQuadrant.BottomRight, filePath);
+        AssertFileSaved(filePath);
+    }
+
+    // =========================================================================
+    //  Helpers
+    // =========================================================================
+
+    private IntPtr FindNarakaWindow()
     {
         const string processName = "NarakaBladepoint";
-        var desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-        var filePath = Path.Combine(desktop, $"NarakaBladepoint_Screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
-
         var found = _service.TryFindGameWindow(processName, out var hwnd);
         Assert.True(found, $"Game process '{processName}' not running. Start the game and re-run this test.");
         Assert.NotEqual(IntPtr.Zero, hwnd);
+        return hwnd;
+    }
 
-        _service.CaptureWindowToFile(hwnd, filePath);
+    private static string MakeDesktopPath(string label)
+    {
+        var desktop = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        return Path.Combine(desktop, $"NarakaBladepoint_{label}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+    }
 
+    private static void AssertFileSaved(string filePath)
+    {
         Assert.True(File.Exists(filePath), $"Screenshot file not found: {filePath}");
         var fileInfo = new FileInfo(filePath);
         Assert.True(fileInfo.Length > 0, "Screenshot file is empty.");
