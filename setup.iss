@@ -2,19 +2,19 @@
 #ifndef MyAppVersion
 #define MyAppVersion "0.0.0"
 #endif
-#ifndef MyAppbuilder
-#define MyAppbuilder "Unknown"
+#ifndef MyAppPublisher
+#define MyAppPublisher "Unknown"
 #endif
 #ifndef MyAppURL
 #define MyAppURL "https://github.com"
 #endif
 
 [Setup]
-AppId={{B8A1F3E2-9C5D-4A7B-8E6F-1D2C3A4B5F6C}}
+AppId={B8A1F3E2-9C5D-4A7B-8E6F-1D2C3A4B5F6C}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-Appbuilder={#MyAppbuilder}
-AppbuilderURL={#MyAppURL}
+AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=.\output
