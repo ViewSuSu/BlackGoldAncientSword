@@ -10,6 +10,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,10 +52,23 @@ jobs:
           git commit -m "Set version to '$newVer'"
           echo "new_version=$newVer" >> $env:GITHUB_OUTPUT
 
-      - name: Tag and push
+      - name: Push to release and tag
         shell: powershell
         run: |
           git push origin release
           $tag = "v${{ steps.bump.outputs.new_version }}"
           git tag $tag
           git push origin $tag
+
+      - name: Sync version bump to main
+        shell: powershell
+        run: |
+          $newVer = "${{ steps.bump.outputs.new_version }}"
+          git checkout main
+          git merge release --strategy-option theirs -- version.json
+          if ($LASTEXITCODE -ne 0) {
+            git checkout --theirs -- version.json
+            git add version.json
+          }
+          git commit -m "Sync version to '$newVer' from release" --allow-empty
+          git push origin main
