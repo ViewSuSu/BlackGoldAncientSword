@@ -1,4 +1,4 @@
-Ôªø#define MyAppName "BlackGoldAncientSword"
+#define MyAppName "BlackGoldAncientSword"
 #ifndef MyAppVersion
 #define MyAppVersion "0.0.0"
 #endif
@@ -10,7 +10,7 @@
 #endif
 
 [Setup]
-AppId={B8A1F3E2-9C5D-4A7B-8E6F-1D2C3A4B5F6C}
+AppId={{B8A1F3E2-9C5D-4A7B-8E6F-1D2C3A4B5F6C}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -33,4 +33,4 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"
 
 [Run]
-Filename: "{app}\BlackGoldAncientSword.App.exe"; Description: "ÂêØÂä® {#MyAppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\BlackGoldAncientSword.App.exe"; Description: "∆Ù∂Ø {#MyAppName}"; Flags: nowait postinstall skipifsilent
