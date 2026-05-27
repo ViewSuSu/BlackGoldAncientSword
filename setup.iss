@@ -23,7 +23,7 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile=src\BlackGoldAncientSword.Resources\Images\app.png
+SetupIconFile=publish\Release\app.ico
 
 [Files]
 Source: "publish\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
