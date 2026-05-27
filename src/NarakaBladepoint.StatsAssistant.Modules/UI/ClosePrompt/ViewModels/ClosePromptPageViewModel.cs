@@ -1,6 +1,7 @@
 using System.Windows;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Bases.ViewModels;
 using NarakaBladepoint.StatsAssistant.Framework.Core.Consts;
+using NarakaBladepoint.StatsAssistant.Framework.Core.Events;
 using NarakaBladepoint.StatsAssistant.Framework.Services.Abstractions;
 
 namespace NarakaBladepoint.StatsAssistant.Modules.UI.ClosePrompt.ViewModels
@@ -30,6 +31,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.ClosePrompt.ViewModels
                     _settingsService.Current.CloseBehavior = "MinimizeToTaskbar";
                     _settingsService.Current.CloseBehaviorRemembered = true;
                     _ = _settingsService.SaveAsync();
+                    eventAggregator.GetEvent<SettingsChangedEvent>().Publish();
                 }
                 DismissOverlay();
                 Application.Current.MainWindow!.WindowState = WindowState.Minimized;
@@ -51,6 +53,7 @@ namespace NarakaBladepoint.StatsAssistant.Modules.UI.ClosePrompt.ViewModels
                     _settingsService.Current.CloseBehavior = "ExitDirectly";
                     _settingsService.Current.CloseBehaviorRemembered = true;
                     _ = _settingsService.SaveAsync();
+                    eventAggregator.GetEvent<SettingsChangedEvent>().Publish();
                 }
                 DismissOverlay();
                 Application.Current.Shutdown();
