@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Authors>小窗同学</Authors>
+    <Authors>С��ͬѧ</Authors>
     <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
     <Company>$(Authors)</Company>
     <Description>$(PackageProjectUrl)</Description>
@@ -48,4 +48,11 @@
     <Message Importance="high" Text="========================================" />
   </Target>
 
+
+  <ItemGroup>
+    <Content Include="..\BlackGoldAncientSword.ScreenCapture\runtimes\win-x64\native\wgc_capture.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>wgc_capture.dll</Link>
+    </Content>
+  </ItemGroup>
 </Project>
