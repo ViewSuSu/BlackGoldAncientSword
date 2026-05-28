@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Authors>С��ͬѧ</Authors>
+    <Authors>��????</Authors>
     <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
     <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -8,359 +8,208 @@ namespace BlackGoldAncientSword.ScreenCapture;
 public class ScreenCaptureService : IScreenCaptureService, IDisposable
 {
     private bool _disposed;
-
-    // ========================================================================
-    //  Public API
-    // ========================================================================
+    private IntPtr _d3dDevicePtr;
+    private SharpDX.Direct3D11.Device? _sharpDxDevice;
+    private SharpDX.Direct3D11.DeviceContext? _sharpDxCtx;
+    private static bool _nativeWgcAvailable = true;
 
     public bool TryFindGameWindow(string processName, out IntPtr hwnd)
     {
         hwnd = IntPtr.Zero;
         if (string.IsNullOrEmpty(processName)) return false;
-        var processes = Process.GetProcessesByName(processName);
-        foreach (var p in processes)
-        {
-            if (p.MainWindowHandle != IntPtr.Zero)
-            {
-                hwnd = p.MainWindowHandle;
-                return true;
-            }
-        }
+        foreach (var p in Process.GetProcessesByName(processName))
+            if (p.MainWindowHandle != IntPtr.Zero) { hwnd = p.MainWindowHandle; return true; }
         return false;
     }
 
-    public byte[] CaptureWindow(IntPtr hwnd)
-    {
-        ThrowIfDisposed();
-        if (hwnd == IntPtr.Zero) throw new ArgumentException("Invalid window handle", nameof(hwnd));
-        if (!IsWindow(hwnd)) throw new ArgumentException("Window no longer exists", nameof(hwnd));
-        return CaptureFrameInternal(hwnd, ScreenQuadrant.Full);
-    }
-
-    public Task<byte[]> CaptureWindowAsync(IntPtr hwnd) =>
-        Task.Run(() => CaptureWindow(hwnd));
-
-    public void CaptureWindowToFile(IntPtr hwnd, string filePath)
-    {
-        var bytes = CaptureWindow(hwnd);
-        SaveBytes(bytes, filePath);
-    }
-
-    public async Task CaptureWindowToFileAsync(IntPtr hwnd, string filePath)
-    {
-        var bytes = await CaptureWindowAsync(hwnd);
-        SaveBytes(bytes, filePath);
-    }
-
-    public void CaptureGame(string processName, string filePath)
-    {
-        var hwnd = ResolveGameWindow(processName);
-        CaptureWindowToFile(hwnd, filePath);
-    }
-
-    public async Task CaptureGameAsync(string processName, string filePath)
-    {
-        var hwnd = ResolveGameWindow(processName);
-        await CaptureWindowToFileAsync(hwnd, filePath);
-    }
-
-    public byte[] CaptureGame(string processName)
-    {
-        var hwnd = ResolveGameWindow(processName);
-        return CaptureWindow(hwnd);
-    }
-
-    // ========================================================================
-    //  Region / Quadrant capture
-    // ========================================================================
+    public byte[] CaptureWindow(IntPtr hwnd) { ThrowIfDisposed(); ValidateHwnd(hwnd); return CaptureFrameInternal(hwnd, ScreenQuadrant.Full); }
+    public Task<byte[]> CaptureWindowAsync(IntPtr hwnd) => Task.Run(() => CaptureWindow(hwnd));
+    public void CaptureWindowToFile(IntPtr hwnd, string filePath) { SaveBytes(CaptureWindow(hwnd), filePath); }
+    public async Task CaptureWindowToFileAsync(IntPtr hwnd, string filePath) { SaveBytes(await CaptureWindowAsync(hwnd), filePath); }
+    public void CaptureGame(string processName, string filePath) { CaptureWindowToFile(ResolveGameWindow(processName), filePath); }
+    public byte[] CaptureGame(string processName) => CaptureWindow(ResolveGameWindow(processName));
+    public async Task CaptureGameAsync(string processName, string filePath) { var h = ResolveGameWindow(processName); SaveBytes(await CaptureWindowAsync(h), filePath); }
+    public byte[] CaptureGameRegion(string processName, ScreenQuadrant q) => CaptureRegion(ResolveGameWindow(processName), q);
+    public void CaptureGameRegion(string processName, ScreenQuadrant q, string filePath) { SaveBytes(CaptureRegion(ResolveGameWindow(processName), q), filePath); }
+    public async Task CaptureGameRegionAsync(string processName, ScreenQuadrant q, string filePath) { SaveBytes(await CaptureRegionAsync(ResolveGameWindow(processName), q), filePath); }
+    public async Task CaptureRegionToFileAsync(IntPtr hwnd, ScreenQuadrant q, string filePath) { SaveBytes(await CaptureRegionAsync(hwnd, q), filePath); }
 
     public byte[] CaptureRegion(IntPtr hwnd, ScreenQuadrant quadrants)
-    {
-        ThrowIfDisposed();
-        if (quadrants == ScreenQuadrant.None)
-            throw new ArgumentException("At least one quadrant must be specified", nameof(quadrants));
-        if (hwnd == IntPtr.Zero) throw new ArgumentException("Invalid window handle", nameof(hwnd));
-        if (!IsWindow(hwnd)) throw new ArgumentException("Window no longer exists", nameof(hwnd));
-        return CaptureFrameInternal(hwnd, quadrants);
-    }
+    { ThrowIfDisposed(); if (quadrants == ScreenQuadrant.None) throw new ArgumentException("quadrants"); ValidateHwnd(hwnd); return CaptureFrameInternal(hwnd, quadrants); }
+    public Task<byte[]> CaptureRegionAsync(IntPtr hwnd, ScreenQuadrant quadrants) => Task.Run(() => CaptureRegion(hwnd, quadrants));
+    public void CaptureRegionToFile(IntPtr hwnd, ScreenQuadrant quadrants, string filePath) { SaveBytes(CaptureRegion(hwnd, quadrants), filePath); }
 
-    public Task<byte[]> CaptureRegionAsync(IntPtr hwnd, ScreenQuadrant quadrants) =>
-        Task.Run(() => CaptureRegion(hwnd, quadrants));
-
-    public void CaptureRegionToFile(IntPtr hwnd, ScreenQuadrant quadrants, string filePath)
-    {
-        var bytes = CaptureRegion(hwnd, quadrants);
-        SaveBytes(bytes, filePath);
-    }
-
-    public async Task CaptureRegionToFileAsync(IntPtr hwnd, ScreenQuadrant quadrants, string filePath)
-    {
-        var bytes = await CaptureRegionAsync(hwnd, quadrants);
-        SaveBytes(bytes, filePath);
-    }
-
-    public byte[] CaptureGameRegion(string processName, ScreenQuadrant quadrants)
-    {
-        var hwnd = ResolveGameWindow(processName);
-        return CaptureRegion(hwnd, quadrants);
-    }
-
-    public void CaptureGameRegion(string processName, ScreenQuadrant quadrants, string filePath)
-    {
-        var hwnd = ResolveGameWindow(processName);
-        CaptureRegionToFile(hwnd, quadrants, filePath);
-    }
-
-    public async Task CaptureGameRegionAsync(string processName, ScreenQuadrant quadrants, string filePath)
-    {
-        var hwnd = ResolveGameWindow(processName);
-        await CaptureRegionToFileAsync(hwnd, quadrants, filePath);
-    }
-
-    // ========================================================================
-    //  Capture pipeline: PrintWindow (occlusion-safe) with screen fallback
-    // ========================================================================
+    private void ValidateHwnd(IntPtr hwnd) { if (hwnd == IntPtr.Zero) throw new ArgumentException("Invalid hwnd"); if (!IsWindow(hwnd)) throw new ArgumentException("Window gone"); }
 
     private byte[] CaptureFrameInternal(IntPtr hwnd, ScreenQuadrant quadrants)
     {
-        if (!GetWindowRect(hwnd, out RECT rect))
-            throw new InvalidOperationException("Failed to get window rectangle.");
+        if (!GetWindowRect(hwnd, out RECT wr)) throw new InvalidOperationException("GetWindowRect failed");
+        int w = wr.Right - wr.Left, h = wr.Bottom - wr.Top;
+        if (w <= 0 || h <= 0) throw new InvalidOperationException("Zero size window");
+        var crop = CalcCrop(w, h, quadrants);
+        Console.WriteLine($"[SC] Win=({wr.Left},{wr.Top}) {w}x{h} Crop=({crop.x},{crop.y} {crop.w}x{crop.h})");
 
-        int fullWidth = rect.Right - rect.Left;
-        int fullHeight = rect.Bottom - rect.Top;
+        // 1. Native WGC DLL (occlusion-free)
+        if (_nativeWgcAvailable)
+        {
+            try
+            {
+                var capResult = NativeWgc.Capture(hwnd, w, h, crop);
+                if (capResult != null) { var (data, cw, ch) = capResult.Value; Console.WriteLine("[SC] Native WGC OK"); return BgraToPng(data, cw, ch); }
+            }
+            catch (DllNotFoundException) { Console.WriteLine("[SC] wgc_capture.dll not found"); _nativeWgcAvailable = false; }
+            catch (Exception ex) { Console.WriteLine($"[SC] Native WGC: {ex.Message}"); }
+        }
 
-        if (fullWidth <= 0 || fullHeight <= 0)
-            throw new InvalidOperationException("Window has zero size.");
-
-        var cropRect = CalculateCropRect(fullWidth, fullHeight, quadrants);
-
-        // Get window DC to create compatible bitmap
-        IntPtr hdcWindow = GetWindowDC(hwnd);
-        if (hdcWindow == IntPtr.Zero)
-            throw new InvalidOperationException("Failed to get window DC.");
-
-        IntPtr hdcMem = CreateCompatibleDC(hdcWindow);
-        IntPtr hBitmap = CreateCompatibleBitmap(hdcWindow, fullWidth, fullHeight);
-        IntPtr hOld = SelectObject(hdcMem, hBitmap);
-
+        // 2. COM vtable WGC (occlusion-free, if interop available)
         try
         {
-            // Primary: PrintWindow with PW_RENDERFULLCONTENT — captures window
-            // content even when occluded. Works with DWM-composited DirectX windows
-            // on Windows 8.1+.
-            const uint PW_RENDERFULLCONTENT = 0x00000002;
-            bool captured = PrintWindow(hwnd, hdcMem, PW_RENDERFULLCONTENT);
+            return CaptureViaWgcCom(hwnd, w, h, crop);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SC] COM WGC failed ({ex.GetType().Name}: {ex.Message}), GDI fallback...");
+        }
 
-            if (!captured)
-            {
-                // Fallback: screen-capture at window coordinates (legacy path)
-                ReleaseDC(hwnd, hdcWindow);
-                IntPtr hdcScreen = GetDC(IntPtr.Zero);
-                if (hdcScreen == IntPtr.Zero)
-                    throw new InvalidOperationException("Failed to get screen DC.");
-                try
-                {
-                    const uint SRCCOPY = 0x00CC0020;
-                    const uint CAPTUREBLT = 0x40000000;
-                    if (!BitBlt(hdcMem, 0, 0, fullWidth, fullHeight,
-                                hdcScreen, rect.Left, rect.Top, SRCCOPY | CAPTUREBLT))
-                    {
-                        if (!BitBlt(hdcMem, 0, 0, fullWidth, fullHeight,
-                                    hdcScreen, rect.Left, rect.Top, SRCCOPY))
-                        {
-                            throw new InvalidOperationException("BitBlt failed.");
-                        }
-                    }
-                }
-                finally
-                {
-                    ReleaseDC(IntPtr.Zero, hdcScreen);
-                }
-            }
+        // 3. GDI fallback
+        return CaptureViaGdi(hwnd, wr, w, h, crop);
+    }
+
+    // ──────────── COM vtable WGC ────────────
+
+    private byte[] CaptureViaWgcCom(IntPtr hwnd, int w, int h, (int x, int y, int w, int h) c)
+    {
+        EnsureD3DDevice();
+        IntPtr item = IntPtr.Zero, pool = IntPtr.Zero, sess = IntPtr.Zero, frame = IntPtr.Zero, surf = IntPtr.Zero, dxgi = IntPtr.Zero;
+        try
+        {
+            item = WgcInterop.CreateCaptureItemForWindow(hwnd);
+            pool = WgcInterop.CreateFreeThreadedFramePool(_d3dDevicePtr, w, h);
+            sess = WgcInterop.CreateCaptureSession(pool, _d3dDevicePtr, item);
+            WgcInterop.StartCapture(sess);
+            frame = WgcInterop.WaitForFrame(pool, 5000);
+            surf = WgcInterop.GetFrameSurface(frame);
+            dxgi = WgcInterop.GetDxgiInterface(surf, typeof(SharpDX.DXGI.Surface).GUID);
+            return ReadDxgiSurface(dxgi, w, h, c);
         }
         finally
         {
-            SelectObject(hdcMem, hOld);
-            DeleteDC(hdcMem);
-            ReleaseDC(hwnd, hdcWindow);
+            if (dxgi != IntPtr.Zero) Marshal.Release(dxgi);
+            if (surf != IntPtr.Zero) Marshal.Release(surf);
+            if (frame != IntPtr.Zero) Marshal.Release(frame);
+            if (sess != IntPtr.Zero) Marshal.Release(sess);
+            if (pool != IntPtr.Zero) Marshal.Release(pool);
+            if (item != IntPtr.Zero) Marshal.Release(item);
         }
+    }
 
+    private void EnsureD3DDevice()
+    {
+        if (_d3dDevicePtr != IntPtr.Zero) return;
+        _sharpDxDevice = new SharpDX.Direct3D11.Device(SharpDX.Direct3D.DriverType.Hardware, SharpDX.Direct3D11.DeviceCreationFlags.BgraSupport);
+        _sharpDxCtx = _sharpDxDevice.ImmediateContext;
+        using var d = _sharpDxDevice.QueryInterface<SharpDX.DXGI.Device>();
+        int hr = CreateDirect3D11DeviceFromDXGIDevice(d.NativePointer, out _d3dDevicePtr);
+        if (hr != 0) throw new InvalidOperationException($"CreateDirect3D11DeviceFromDXGIDevice: 0x{hr:X8}");
+        Console.WriteLine($"[SC] D3D WinRT device: 0x{_d3dDevicePtr:X}");
+    }
+
+    private byte[] ReadDxgiSurface(IntPtr dxgiPtr, int w, int h, (int x, int y, int w, int h) c)
+    {
+        var s = new SharpDX.DXGI.Surface(dxgiPtr);
         try
         {
-            // Convert to WPF BitmapSource then PNG
-            var bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                hBitmap, IntPtr.Zero, System.Windows.Int32Rect.Empty,
-                System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
-
-            // Crop if needed
-            if (cropRect.x != 0 || cropRect.y != 0 ||
-                cropRect.width != fullWidth || cropRect.height != fullHeight)
+            var desc = new SharpDX.Direct3D11.Texture2DDescription { Width = w, Height = h, MipLevels = 1, ArraySize = 1, Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm, SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0), Usage = SharpDX.Direct3D11.ResourceUsage.Staging, BindFlags = SharpDX.Direct3D11.BindFlags.None, CpuAccessFlags = SharpDX.Direct3D11.CpuAccessFlags.Read, OptionFlags = SharpDX.Direct3D11.ResourceOptionFlags.None };
+            var st = new SharpDX.Direct3D11.Texture2D(_sharpDxDevice!, desc);
+            _sharpDxCtx!.CopyResource(st, s.QueryInterface<SharpDX.Direct3D11.Texture2D>());
+            var map = _sharpDxCtx.MapSubresource(st, 0, SharpDX.Direct3D11.MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
+            try
             {
-                bs = new System.Windows.Media.Imaging.CroppedBitmap(bs,
-                    new System.Windows.Int32Rect(cropRect.x, cropRect.y,
-                        cropRect.width, cropRect.height));
+                int stride = map.RowPitch;
+                var fd = new byte[w * h * 4];
+                if (stride == w * 4) Marshal.Copy(map.DataPointer, fd, 0, fd.Length);
+                else for (int y = 0; y < h; y++) Marshal.Copy(map.DataPointer + y * stride, fd, y * w * 4, w * 4);
+                var r = new byte[c.w * c.h * 4]; int fs = w * 4, cs = c.w * 4;
+                for (int y = 0; y < c.h; y++) Array.Copy(fd, (c.y + y) * fs + c.x * 4, r, y * cs, cs);
+                return BgraToPng(r, c.w, c.h);
             }
-
-            var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
-            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bs));
-
-            using var ms = new MemoryStream();
-            encoder.Save(ms);
-            return ms.ToArray();
+            finally { _sharpDxCtx.UnmapSubresource(st, 0); st.Dispose(); }
         }
-        finally
-        {
-            DeleteObject(hBitmap);
-        }
+        finally { s.Dispose(); }
     }
 
-    private static (int x, int y, int width, int height) CalculateCropRect(
-        int fullWidth, int fullHeight, ScreenQuadrant quadrants)
+    // ──────────── GDI fallback ────────────
+
+    private static byte[] CaptureViaGdi(IntPtr hwnd, RECT wr, int w, int h, (int x, int y, int w, int h) c)
     {
-        if (quadrants == ScreenQuadrant.Full)
-            return (0, 0, fullWidth, fullHeight);
-
-        int midX = fullWidth / 2;
-        int midY = fullHeight / 2;
-
-        int minX = fullWidth;
-        int minY = fullHeight;
-        int maxX = 0;
-        int maxY = 0;
-
-        if (quadrants.HasFlag(ScreenQuadrant.TopLeft))
+        IntPtr hdcW = GetWindowDC(hwnd); if (hdcW == IntPtr.Zero) throw new InvalidOperationException("GetWindowDC");
+        IntPtr hdcM = CreateCompatibleDC(hdcW), hbmp = CreateCompatibleBitmap(hdcW, w, h), ho = SelectObject(hdcM, hbmp);
+        try
         {
-            minX = Math.Min(minX, 0);
-            minY = Math.Min(minY, 0);
-            maxX = Math.Max(maxX, midX);
-            maxY = Math.Max(maxY, midY);
+            bool printed = PrintWindow(hwnd, hdcM, 0x2);
+            if (!printed) { ReleaseDC(hwnd, hdcW); hdcW = IntPtr.Zero; IntPtr hdcS = GetDC(IntPtr.Zero); try { if (!BitBlt(hdcM, 0, 0, w, h, hdcS, wr.Left, wr.Top, 0x40CC0020) && !BitBlt(hdcM, 0, 0, w, h, hdcS, wr.Left, wr.Top, 0x00CC0020)) throw new InvalidOperationException("BitBlt"); } finally { ReleaseDC(IntPtr.Zero, hdcS); } }
         }
-        if (quadrants.HasFlag(ScreenQuadrant.TopRight))
-        {
-            minX = Math.Min(minX, midX);
-            minY = Math.Min(minY, 0);
-            maxX = Math.Max(maxX, fullWidth);
-            maxY = Math.Max(maxY, midY);
-        }
-        if (quadrants.HasFlag(ScreenQuadrant.BottomLeft))
-        {
-            minX = Math.Min(minX, 0);
-            minY = Math.Min(minY, midY);
-            maxX = Math.Max(maxX, midX);
-            maxY = Math.Max(maxY, fullHeight);
-        }
-        if (quadrants.HasFlag(ScreenQuadrant.BottomRight))
-        {
-            minX = Math.Min(minX, midX);
-            minY = Math.Min(minY, midY);
-            maxX = Math.Max(maxX, fullWidth);
-            maxY = Math.Max(maxY, fullHeight);
-        }
-
-        int cropWidth = maxX - minX;
-        int cropHeight = maxY - minY;
-        return (minX, minY, cropWidth, cropHeight);
+        finally { SelectObject(hdcM, ho); DeleteDC(hdcM); if (hdcW != IntPtr.Zero) ReleaseDC(hwnd, hdcW); }
+        return BitmapToPng(hbmp, w, h, c);
     }
 
-    // ========================================================================
-    //  Helpers
-    // ========================================================================
-
-    private static IntPtr ResolveGameWindow(string processName)
+    private static byte[] BitmapToPng(IntPtr hbmp, int w, int h, (int x, int y, int w, int h) c)
     {
-        if (string.IsNullOrEmpty(processName))
-            throw new ArgumentException("Process name cannot be empty", nameof(processName));
-        if (!TryFindGameWindowStatic(processName, out var hwnd))
-            throw new InvalidOperationException(
-                $"Game process \"{processName}\" not found or has no visible window.");
-        return hwnd;
-    }
-
-    private static bool TryFindGameWindowStatic(string processName, out IntPtr hwnd)
-    {
-        hwnd = IntPtr.Zero;
-        var processes = Process.GetProcessesByName(processName);
-        foreach (var p in processes)
+        IntPtr hdcS = GetDC(IntPtr.Zero);
+        try
         {
-            if (p.MainWindowHandle != IntPtr.Zero)
-            {
-                hwnd = p.MainWindowHandle;
-                return true;
-            }
+            IntPtr hdcM = CreateCompatibleDC(hdcS); IntPtr ho2 = SelectObject(hdcM, hbmp);
+            var bi = new BITMAPINFO { biHeader = new BITMAPINFOHEADER { biSize = Marshal.SizeOf<BITMAPINFOHEADER>(), biWidth = w, biHeight = -h, biPlanes = 1, biBitCount = 32 } };
+            var fp = new byte[w * h * 4]; if (GetDIBits(hdcM, hbmp, 0, (uint)h, fp, ref bi, 0) == 0) throw new InvalidOperationException("GetDIBits");
+            SelectObject(hdcM, ho2); DeleteDC(hdcM);
+            var r = new byte[c.w * c.h * 4]; int fs = w * 4, cs = c.w * 4;
+            for (int y = 0; y < c.h; y++) Array.Copy(fp, (c.y + y) * fs + c.x * 4, r, y * cs, cs);
+            return BgraToPng(r, c.w, c.h);
         }
-        return false;
+        finally { ReleaseDC(IntPtr.Zero, hdcS); }
     }
 
-    private static void SaveBytes(byte[] bytes, string filePath)
+    private static byte[] BgraToPng(byte[] d, int w, int h)
+    { using var ms = new MemoryStream(); var enc = new System.Windows.Media.Imaging.PngBitmapEncoder(); enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(System.Windows.Media.Imaging.BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgra32, null, d, w * 4))); enc.Save(ms); return ms.ToArray(); }
+
+    private static (int x, int y, int w, int h) CalcCrop(int w, int h, ScreenQuadrant q)
     {
-        var dir = Path.GetDirectoryName(filePath);
-        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
-        File.WriteAllBytes(filePath, bytes);
+        if (q == ScreenQuadrant.Full) return (0, 0, w, h);
+        int mx = w / 2, my = h / 2, x = 0, y = 0, rw = w, rh = h;
+        bool hl = q.HasFlag(ScreenQuadrant.TopLeft) || q.HasFlag(ScreenQuadrant.BottomLeft), hr2 = q.HasFlag(ScreenQuadrant.TopRight) || q.HasFlag(ScreenQuadrant.BottomRight), ht = q.HasFlag(ScreenQuadrant.TopLeft) || q.HasFlag(ScreenQuadrant.TopRight), hb = q.HasFlag(ScreenQuadrant.BottomLeft) || q.HasFlag(ScreenQuadrant.BottomRight);
+        if (hl && !hr2) { x = 0; rw = mx; } if (hr2 && !hl) { x = mx; rw = w - mx; } if (ht && !hb) { y = 0; rh = my; } if (hb && !ht) { y = my; rh = h - my; }
+        return (x, y, rw, rh);
     }
 
-    // ========================================================================
-    //  P/Invoke
-    // ========================================================================
+    private static IntPtr ResolveGameWindow(string n) { if (string.IsNullOrEmpty(n)) throw new ArgumentException("name"); if (!TryFindWindow(n, out var h)) throw new InvalidOperationException($"Not found: {n}"); return h; }
+    private static bool TryFindWindow(string n, out IntPtr h) { h = IntPtr.Zero; foreach (var p in Process.GetProcessesByName(n)) if (p.MainWindowHandle != IntPtr.Zero) { h = p.MainWindowHandle; return true; } return false; }
+    private static void SaveBytes(byte[] b, string p) { var d = Path.GetDirectoryName(p); if (!string.IsNullOrEmpty(d) && !Directory.Exists(d)) Directory.CreateDirectory(d); File.WriteAllBytes(p, b); }
 
-    [DllImport("user32.dll")]
-    private static extern bool IsWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
+    [DllImport("user32.dll")] static extern IntPtr GetWindowDC(IntPtr h);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr h);
+    [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr h, IntPtr dc);
+    [DllImport("gdi32.dll")] static extern IntPtr CreateCompatibleDC(IntPtr dc);
+    [DllImport("gdi32.dll")] static extern IntPtr CreateCompatibleBitmap(IntPtr dc, int w, int h);
+    [DllImport("gdi32.dll")] static extern IntPtr SelectObject(IntPtr dc, IntPtr o);
+    [DllImport("gdi32.dll")] static extern bool BitBlt(IntPtr ddc, int x, int y, int w, int h, IntPtr sdc, int sx, int sy, uint rop);
+    [DllImport("gdi32.dll")] static extern bool DeleteDC(IntPtr dc);
+    [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr o);
+    [DllImport("user32.dll", SetLastError = true)] static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f);
+    [DllImport("gdi32.dll")] static extern int GetDIBits(IntPtr dc, IntPtr bmp, uint s, uint c, byte[] bits, ref BITMAPINFO bi, uint u);
+    [DllImport("d3d11.dll", EntryPoint = "CreateDirect3D11DeviceFromDXGIDevice")] static extern int CreateDirect3D11DeviceFromDXGIDevice(IntPtr d, out IntPtr o);
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetWindowDC(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetDC(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr CreateCompatibleDC(IntPtr hDC);
-
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr CreateCompatibleBitmap(IntPtr hDC, int width, int height);
-
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
-
-    [DllImport("gdi32.dll")]
-    private static extern bool BitBlt(IntPtr hDestDC, int x, int y, int width, int height,
-        IntPtr hSrcDC, int xSrc, int ySrc, uint rop);
-
-    [DllImport("gdi32.dll")]
-    private static extern bool DeleteDC(IntPtr hDC);
-
-    [DllImport("gdi32.dll")]
-    private static extern bool DeleteObject(IntPtr hObject);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct RECT
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
-
-    // ========================================================================
-    //  Disposal
-    // ========================================================================
+    [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)] struct BITMAPINFOHEADER { public int biSize, biWidth, biHeight; public short biPlanes, biBitCount; public int biCompression, biSizeImage, biXPelsPerMeter, biYPelsPerMeter, biClrUsed, biClrImportant; }
+    [StructLayout(LayoutKind.Sequential)] struct BITMAPINFO { public BITMAPINFOHEADER biHeader; }
 
     public void Dispose()
     {
-        _disposed = true;
+        if (_disposed) return; _disposed = true;
+        if (_d3dDevicePtr != IntPtr.Zero) { Marshal.Release(_d3dDevicePtr); _d3dDevicePtr = IntPtr.Zero; }
+        _sharpDxCtx?.Dispose(); _sharpDxDevice?.Dispose();
     }
-
-    private void ThrowIfDisposed()
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(ScreenCaptureService));
-    }
+    void ThrowIfDisposed() { if (_disposed) throw new ObjectDisposedException(nameof(ScreenCaptureService)); }
 }
+
