@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 
@@ -118,7 +118,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     }
 
     // ========================================================================
-    //  GDI capture pipeline
+    //  Capture pipeline: PrintWindow (occlusion-safe) with screen fallback
     // ========================================================================
 
     private byte[] CaptureFrameInternal(IntPtr hwnd, ScreenQuadrant quadrants)
@@ -134,27 +134,47 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
 
         var cropRect = CalculateCropRect(fullWidth, fullHeight, quadrants);
 
-        IntPtr hdcScreen = GetDC(IntPtr.Zero);
-        if (hdcScreen == IntPtr.Zero)
-            throw new InvalidOperationException("Failed to get screen DC.");
+        // Get window DC to create compatible bitmap
+        IntPtr hdcWindow = GetWindowDC(hwnd);
+        if (hdcWindow == IntPtr.Zero)
+            throw new InvalidOperationException("Failed to get window DC.");
 
-        IntPtr hdcMem = CreateCompatibleDC(hdcScreen);
-        IntPtr hBitmap = CreateCompatibleBitmap(hdcScreen, fullWidth, fullHeight);
+        IntPtr hdcMem = CreateCompatibleDC(hdcWindow);
+        IntPtr hBitmap = CreateCompatibleBitmap(hdcWindow, fullWidth, fullHeight);
         IntPtr hOld = SelectObject(hdcMem, hBitmap);
 
-        // SRCCOPY | CAPTUREBLT to include layered windows
-        const uint SRCCOPY = 0x00CC0020;
-        const uint CAPTUREBLT = 0x40000000;
         try
         {
-            if (!BitBlt(hdcMem, 0, 0, fullWidth, fullHeight,
-                        hdcScreen, rect.Left, rect.Top, SRCCOPY | CAPTUREBLT))
+            // Primary: PrintWindow with PW_RENDERFULLCONTENT — captures window
+            // content even when occluded. Works with DWM-composited DirectX windows
+            // on Windows 8.1+.
+            const uint PW_RENDERFULLCONTENT = 0x00000002;
+            bool captured = PrintWindow(hwnd, hdcMem, PW_RENDERFULLCONTENT);
+
+            if (!captured)
             {
-                // Retry without CAPTUREBLT on failure
-                if (!BitBlt(hdcMem, 0, 0, fullWidth, fullHeight,
-                            hdcScreen, rect.Left, rect.Top, SRCCOPY))
+                // Fallback: screen-capture at window coordinates (legacy path)
+                ReleaseDC(hwnd, hdcWindow);
+                IntPtr hdcScreen = GetDC(IntPtr.Zero);
+                if (hdcScreen == IntPtr.Zero)
+                    throw new InvalidOperationException("Failed to get screen DC.");
+                try
                 {
-                    throw new InvalidOperationException("BitBlt failed.");
+                    const uint SRCCOPY = 0x00CC0020;
+                    const uint CAPTUREBLT = 0x40000000;
+                    if (!BitBlt(hdcMem, 0, 0, fullWidth, fullHeight,
+                                hdcScreen, rect.Left, rect.Top, SRCCOPY | CAPTUREBLT))
+                    {
+                        if (!BitBlt(hdcMem, 0, 0, fullWidth, fullHeight,
+                                    hdcScreen, rect.Left, rect.Top, SRCCOPY))
+                        {
+                            throw new InvalidOperationException("BitBlt failed.");
+                        }
+                    }
+                }
+                finally
+                {
+                    ReleaseDC(IntPtr.Zero, hdcScreen);
                 }
             }
         }
@@ -162,7 +182,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         {
             SelectObject(hdcMem, hOld);
             DeleteDC(hdcMem);
-            ReleaseDC(IntPtr.Zero, hdcScreen);
+            ReleaseDC(hwnd, hdcWindow);
         }
 
         try
@@ -280,11 +300,14 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     }
 
     // ========================================================================
-    //  GDI P/Invoke
+    //  P/Invoke
     // ========================================================================
 
     [DllImport("user32.dll")]
     private static extern bool IsWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetWindowDC(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -313,6 +336,9 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
 
     [DllImport("gdi32.dll")]
     private static extern bool DeleteObject(IntPtr hObject);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT
