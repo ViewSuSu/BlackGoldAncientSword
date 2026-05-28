@@ -6,6 +6,7 @@
     xmlns:consts="clr-namespace:BlackGoldAncientSword.Framework.Core.Consts;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions;assembly=BlackGoldAncientSword.Framework"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:prism="http://prismlibrary.com/"
     xmlns:shell="clr-namespace:BlackGoldAncientSword.App.Shell"
@@ -63,7 +64,6 @@
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
-                        Command="{Binding GoBackCommand}"
                         Cursor="Hand">
                         <Button.Style>
                             <Style TargetType="Button">
@@ -77,6 +77,11 @@
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Click">
+                                <i:InvokeCommandAction Command="{Binding GoBackCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
                         <Image Source="/BlackGoldAncientSword.Resources;component/Images/back.png" Stretch="Uniform" />
                     </Button>
                     <Image
@@ -218,7 +223,7 @@
                             <StackPanel Grid.Row="0">
 
                                 <!--  Home  -->
-                                <Button Command="{Binding NavigateToHomeCommand}" ToolTip="{DynamicResource Nav.Home}">
+                                <Button ToolTip="{DynamicResource Nav.Home}">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Height" Value="30" />
@@ -237,6 +242,11 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Button.Style>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding NavigateToHomeCommand}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="24" />
@@ -261,7 +271,7 @@
                                 </Button>
 
                                 <!--  Stats  -->
-                                <Button Command="{Binding NavigateToStatsCommand}" ToolTip="{DynamicResource Nav.Stats}">
+                                <Button ToolTip="{DynamicResource Nav.Stats}">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Height" Value="30" />
@@ -281,6 +291,11 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Button.Style>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding NavigateToStatsCommand}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="24" />
@@ -305,7 +320,7 @@
                                 </Button>
 
                                 <!--  Search  -->
-                                <Button Command="{Binding NavigateToSearchCommand}" ToolTip="{DynamicResource Nav.Search}">
+                                <Button ToolTip="{DynamicResource Nav.Search}">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Height" Value="30" />
@@ -325,6 +340,11 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Button.Style>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding NavigateToSearchCommand}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="24" />
@@ -354,7 +374,7 @@
                                 Margin="0,0,0,12"
                                 VerticalAlignment="Bottom">
                                 <!--  Personal  -->
-                                <Button Command="{Binding NavigateToPersonalCommand}" ToolTip="{DynamicResource Nav.Personal}">
+                                <Button ToolTip="{DynamicResource Nav.Personal}">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Height" Value="30" />
@@ -379,6 +399,11 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Button.Style>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding NavigateToPersonalCommand}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="24" />
@@ -401,7 +426,7 @@
                                             TextTrimming="CharacterEllipsis" />
                                     </Grid>
                                 </Button>
-                                <Button Command="{Binding OpenSettingsCommand}" ToolTip="{DynamicResource Nav.Settings}">
+                                <Button ToolTip="{DynamicResource Nav.Settings}">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Height" Value="30" />
@@ -421,6 +446,11 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Button.Style>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding OpenSettingsCommand}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="24" />
@@ -496,9 +526,11 @@
                         Foreground="#5B8DEF"
                         Text="检测更新"
                         ToolTip="检查是否有新版本">
-                        <TextBlock.InputBindings>
-                            <MouseBinding Command="{Binding CheckForUpdatesCommand}" MouseAction="LeftClick" />
-                        </TextBlock.InputBindings>
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="MouseLeftButtonDown">
+                                <i:InvokeCommandAction Command="{Binding CheckForUpdatesCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
                     </TextBlock>
                 </StackPanel>
                 <StackPanel
@@ -514,9 +546,13 @@
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
-                        Command="{Binding OpenFeedbackCommand}"
                         Cursor="Hand"
                         ToolTip="{DynamicResource Nav.Feedback}">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Click">
+                                <i:InvokeCommandAction Command="{Binding OpenFeedbackCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
                         <Image
                             Width="15"
                             Height="15"
@@ -530,9 +566,13 @@
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
-                        Command="{Binding NavigateToAnnouncementCommand}"
                         Cursor="Hand"
                         ToolTip="{DynamicResource Nav.Announcement}">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Click">
+                                <i:InvokeCommandAction Command="{Binding NavigateToAnnouncementCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
                         <Image
                             Width="15"
                             Height="15"

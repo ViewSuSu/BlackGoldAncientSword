@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Authors>小窗同学</Authors>
     <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
