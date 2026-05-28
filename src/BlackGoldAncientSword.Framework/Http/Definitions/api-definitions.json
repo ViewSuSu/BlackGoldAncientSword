@@ -5,34 +5,68 @@
     "Accept": "application/json",
     "X-Requested-With": "XMLHttpRequest"
   },
-  "enumTypeNames": ["GameMode", "GameModeCategory", "TeamSize", "DataSource"],
+  "enumTypeNames": [
+    "GameMode",
+    "GameModeCategory",
+    "TeamSize",
+    "DataSource"
+  ],
   "apis": [
     {
       "id": "SearchRecord",
       "description": "搜索玩家记录，支持昵称或角色ID",
       "method": "GET",
       "path": "/api/record/search",
-      "queryParameters": { "name": "string" },
+      "queryParameters": {
+        "name": "string"
+      },
       "responseBody": {
         "type": "SearchRecordResponse",
         "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "SearchRecordData" }
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "SearchRecordData"
+          }
         },
         "nestedTypes": {
           "SearchRecordData": {
             "type": "SearchRecordData",
             "properties": {
-              "roleId": { "type": "string" },
-              "roleIdMiniProgram": { "type": "string" },
-              "roleIdSimple": { "type": "string" },
-              "roleName": { "type": "string" },
-              "avatar": { "type": "string" },
-              "dataSource": { "type": "string" },
-              "roleLevel": { "type": "int" },
-              "levelName": { "type": "string" },
-              "levelImg": { "type": "string" }
+              "gameUserId": {
+                "type": "long"
+              },
+              "roleId": {
+                "type": "string"
+              },
+              "roleIdMiniProgram": {
+                "type": "string"
+              },
+              "roleIdSimple": {
+                "type": "string"
+              },
+              "roleName": {
+                "type": "string"
+              },
+              "avatar": {
+                "type": "string"
+              },
+              "dataSource": {
+                "type": "string"
+              },
+              "roleLevel": {
+                "type": "int"
+              },
+              "levelName": {
+                "type": "string"
+              },
+              "levelImg": {
+                "type": "string"
+              }
             }
           }
         }
@@ -43,37 +77,73 @@
       "description": "查询玩家基础信息（昵称、头像、等级、各模式段位、当前赛季）",
       "method": "GET",
       "path": "/api/record/mini-program/user/{roleId}",
-      "pathParameters": { "roleId": "string" },
+      "pathParameters": {
+        "roleId": "string"
+      },
       "responseBody": {
         "type": "GetUserInfoResponse",
         "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "UserInfoData" }
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "UserInfoData"
+          }
         },
         "nestedTypes": {
           "UserInfoData": {
             "type": "UserInfoData",
             "properties": {
-              "id": { "type": "int" },
-              "userId": { "type": "int" },
-              "nickName": { "type": "string" },
-              "avatarUrl": { "type": "string" },
-              "role": { "type": "UserRoleInfo" },
-              "surviveSingleGrade": { "type": "int" },
-              "surviveDoubleGrade": { "type": "int" },
-              "surviveTriplexGrade": { "type": "int" },
-              "currentSeasonId": { "type": "int" }
+              "id": {
+                "type": "int"
+              },
+              "userId": {
+                "type": "int"
+              },
+              "nickName": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": "string"
+              },
+              "role": {
+                "type": "UserRoleInfo"
+              },
+              "surviveSingleGrade": {
+                "type": "int"
+              },
+              "surviveDoubleGrade": {
+                "type": "int"
+              },
+              "surviveTriplexGrade": {
+                "type": "int"
+              },
+              "currentSeasonId": {
+                "type": "int"
+              }
             },
             "nestedTypes": {
               "UserRoleInfo": {
                 "type": "UserRoleInfo",
                 "properties": {
-                  "uid": { "type": "string" },
-                  "roleId": { "type": "string" },
-                  "roleName": { "type": "string" },
-                  "roleLevel": { "type": "int" },
-                  "headIcon": { "type": "string" }
+                  "uid": {
+                    "type": "string"
+                  },
+                  "roleId": {
+                    "type": "string"
+                  },
+                  "roleName": {
+                    "type": "string"
+                  },
+                  "roleLevel": {
+                    "type": "int"
+                  },
+                  "headIcon": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -87,42 +157,70 @@
       "method": "GET",
       "path": "/api/record/mini-program/stats",
       "queryParameters": {
-        "roleId": "string",
+        "roleIdSimple": "string",
         "seasonId": "int",
         "gameMode": "GameMode"
       },
       "responseBody": {
         "type": "GetPlayerStatsResponse",
         "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "PlayerStatsData" }
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "PlayerStatsData"
+          }
         },
         "nestedTypes": {
           "PlayerStatsData": {
             "type": "PlayerStatsData",
             "properties": {
-              "grade": { "type": "GradeInfo" },
-              "dragonKill": { "type": "int" },
-              "stats": { "type": "List<StatEntry>" }
+              "grade": {
+                "type": "GradeInfo"
+              },
+              "dragonKill": {
+                "type": "int"
+              },
+              "stats": {
+                "type": "List<StatEntry>"
+              }
             },
             "nestedTypes": {
               "GradeInfo": {
                 "type": "GradeInfo",
                 "properties": {
-                  "gradeId": { "type": "int" },
-                  "gradeName": { "type": "string" },
-                  "gradeIcon": { "type": "string" },
-                  "gradeLevel": { "type": "string" },
-                  "gradeScore": { "type": "int" }
+                  "gradeId": {
+                    "type": "int"
+                  },
+                  "gradeName": {
+                    "type": "string"
+                  },
+                  "gradeIcon": {
+                    "type": "string"
+                  },
+                  "gradeLevel": {
+                    "type": "string"
+                  },
+                  "gradeScore": {
+                    "type": "int"
+                  }
                 }
               },
               "StatEntry": {
                 "type": "StatEntry",
                 "properties": {
-                  "name": { "type": "string" },
-                  "key": { "type": "string" },
-                  "value": { "type": "string" }
+                  "name": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -138,17 +236,29 @@
       "responseBody": {
         "type": "QuerySeasonsResponse",
         "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "List<SeasonInfo>" }
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "List<SeasonInfo>"
+          }
         },
         "nestedTypes": {
           "SeasonInfo": {
             "type": "SeasonInfo",
             "properties": {
-              "code": { "type": "int" },
-              "name": { "type": "string" },
-              "heyBoxSeasonName": { "type": "string" }
+              "code": {
+                "type": "int"
+              },
+              "name": {
+                "type": "string"
+              },
+              "heyBoxSeasonName": {
+                "type": "string"
+              }
             }
           }
         }
@@ -162,17 +272,29 @@
       "responseBody": {
         "type": "GetGameModesResponse",
         "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "List<GameModeInfo>" }
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "List<GameModeInfo>"
+          }
         },
         "nestedTypes": {
           "GameModeInfo": {
             "type": "GameModeInfo",
             "properties": {
-              "name": { "type": "string" },
-              "code": { "type": "int" },
-              "dataSource": { "type": "string" }
+              "name": {
+                "type": "string"
+              },
+              "code": {
+                "type": "int"
+              },
+              "dataSource": {
+                "type": "string"
+              }
             }
           }
         }
@@ -184,58 +306,110 @@
       "method": "GET",
       "path": "/api/record/mini-program/battle/recent",
       "queryParameters": {
-        "roleId": "string",
+        "roleIdSimple": "string",
         "gameMode": "GameMode"
       },
       "responseBody": {
         "type": "GetRecentBattlesResponse",
         "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "RecentBattleListData" }
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "RecentBattleListData"
+          }
         },
         "nestedTypes": {
           "RecentBattleListData": {
             "type": "RecentBattleListData",
             "properties": {
-              "reachLimit": { "type": "bool" },
-              "list": { "type": "List<RecentBattleItem>" }
+              "reachLimit": {
+                "type": "bool"
+              },
+              "list": {
+                "type": "List<RecentBattleItem>"
+              }
             },
             "nestedTypes": {
               "RecentBattleItem": {
                 "type": "RecentBattleItem",
                 "properties": {
-                  "battleId": { "type": "int" },
-                  "rank": { "type": "int" },
-                  "hero": { "type": "HeroInfo" },
-                  "battleEndTime": { "type": "long" },
-                  "gameMode": { "type": "int" },
-                  "kill": { "type": "int" },
-                  "damage": { "type": "int" },
-                  "beginRankScore": { "type": "int" },
-                  "roundRankScore": { "type": "int" },
-                  "rating": { "type": "string" },
-                  "win": { "type": "bool" },
-                  "dragonKillSuccess": { "type": "bool" },
-                  "jinwuKillSuccess": { "type": "bool" },
-                  "honorTitles": { "type": "List<HonorTitleInfo>" }
+                  "battleId": {
+                    "type": "int"
+                  },
+                  "rank": {
+                    "type": "int"
+                  },
+                  "hero": {
+                    "type": "HeroInfo"
+                  },
+                  "battleEndTime": {
+                    "type": "long"
+                  },
+                  "gameMode": {
+                    "type": "int"
+                  },
+                  "kill": {
+                    "type": "int"
+                  },
+                  "damage": {
+                    "type": "int"
+                  },
+                  "beginRankScore": {
+                    "type": "int"
+                  },
+                  "roundRankScore": {
+                    "type": "int"
+                  },
+                  "rating": {
+                    "type": "string"
+                  },
+                  "win": {
+                    "type": "bool"
+                  },
+                  "dragonKillSuccess": {
+                    "type": "bool"
+                  },
+                  "jinwuKillSuccess": {
+                    "type": "bool"
+                  },
+                  "honorTitles": {
+                    "type": "List<HonorTitleInfo>"
+                  }
                 },
                 "nestedTypes": {
                   "HonorTitleInfo": {
                     "type": "HonorTitleInfo",
                     "properties": {
-                      "honorId": { "type": "int" },
-                      "honorName": { "type": "string" },
-                      "honorIcon": { "type": "string" },
-                      "honorDesc": { "type": "string" }
+                      "honorId": {
+                        "type": "int"
+                      },
+                      "honorName": {
+                        "type": "string"
+                      },
+                      "honorIcon": {
+                        "type": "string"
+                      },
+                      "honorDesc": {
+                        "type": "string"
+                      }
                     }
                   },
                   "HeroInfo": {
                     "type": "HeroInfo",
                     "properties": {
-                      "heroId": { "type": "int" },
-                      "heroName": { "type": "string" },
-                      "heroIcon": { "type": "string" }
+                      "heroId": {
+                        "type": "int"
+                      },
+                      "heroName": {
+                        "type": "string"
+                      },
+                      "heroIcon": {
+                        "type": "string"
+                      }
                     }
                   }
                 }
@@ -251,110 +425,206 @@
       "method": "GET",
       "path": "/api/record/mini-program/battle/detail/top5",
       "queryParameters": {
-        "roleId": "string",
+        "roleIdSimple": "string",
         "battleId": "string"
       },
       "responseBody": {
         "type": "GetTop5BattleDetailResponse",
         "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "Top5BattleDetailData" }
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "Top5BattleDetailData"
+          }
         },
         "nestedTypes": {
           "Top5BattleDetailData": {
             "type": "Top5BattleDetailData",
             "properties": {
-              "gameMode": { "type": "int" },
-              "rank": { "type": "int" },
-              "win": { "type": "bool" },
-              "dragonKillSuccess": { "type": "bool" },
-              "jinwuKillSuccess": { "type": "bool" },
-                  "honorTitles": { "type": "List<HonorTitleInfo>" },
-              "top5": { "type": "List<Top5Entry>" }
+              "gameMode": {
+                "type": "int"
+              },
+              "rank": {
+                "type": "int"
+              },
+              "win": {
+                "type": "bool"
+              },
+              "dragonKillSuccess": {
+                "type": "bool"
+              },
+              "jinwuKillSuccess": {
+                "type": "bool"
+              },
+              "honorTitles": {
+                "type": "List<HonorTitleInfo>"
+              },
+              "top5": {
+                "type": "List<Top5Entry>"
+              }
             },
             "nestedTypes": {
               "Top5Entry": {
                 "type": "Top5Entry",
                 "properties": {
-                  "rank": { "type": "int" },
-                  "members": { "type": "List<Top5Member>" }
+                  "rank": {
+                    "type": "int"
+                  },
+                  "members": {
+                    "type": "List<Top5Member>"
+                  }
                 },
                 "nestedTypes": {
                   "Top5Member": {
                     "type": "Top5Member",
                     "properties": {
-                      "hero": { "type": "HeroInfo" },
-                      "role": { "type": "RoleBriefInfo" },
-                      "isMe": { "type": "bool" },
-                      "armor": { "type": "ArmorInfo" },
-                      "dataList": { "type": "List<StatItem>" },
-                      "weapons": { "type": "List<WeaponInfo>" },
-                      "soulItems": { "type": "List<SoulItemInfo>" },
-                      "honorTitles": { "type": "List<HonorTitleInfo>" }
+                      "hero": {
+                        "type": "HeroInfo"
+                      },
+                      "role": {
+                        "type": "RoleBriefInfo"
+                      },
+                      "isMe": {
+                        "type": "bool"
+                      },
+                      "armor": {
+                        "type": "ArmorInfo"
+                      },
+                      "dataList": {
+                        "type": "List<StatItem>"
+                      },
+                      "weapons": {
+                        "type": "List<WeaponInfo>"
+                      },
+                      "soulItems": {
+                        "type": "List<SoulItemInfo>"
+                      },
+                      "honorTitles": {
+                        "type": "List<HonorTitleInfo>"
+                      }
                     },
                     "nestedTypes": {
                       "HeroInfo": {
                         "type": "HeroInfo",
                         "properties": {
-                          "heroId": { "type": "int" },
-                          "heroName": { "type": "string" },
-                          "heroIcon": { "type": "string" }
+                          "heroId": {
+                            "type": "int"
+                          },
+                          "heroName": {
+                            "type": "string"
+                          },
+                          "heroIcon": {
+                            "type": "string"
+                          }
                         }
                       },
                       "RoleBriefInfo": {
                         "type": "RoleBriefInfo",
                         "properties": {
-                          "roleId": { "type": "string" },
-                          "roleName": { "type": "string" },
-                          "roleLevel": { "type": "int" },
-                          "headIcon": { "type": "string" }
+                          "roleId": {
+                            "type": "string"
+                          },
+                          "roleName": {
+                            "type": "string"
+                          },
+                          "roleLevel": {
+                            "type": "int"
+                          },
+                          "headIcon": {
+                            "type": "string"
+                          }
                         }
                       },
                       "ArmorInfo": {
                         "type": "ArmorInfo",
                         "properties": {
-                          "armorId": { "type": "int" },
-                          "armorLevel": { "type": "int" },
-                          "armorIcon": { "type": "string" }
+                          "armorId": {
+                            "type": "int"
+                          },
+                          "armorLevel": {
+                            "type": "int"
+                          },
+                          "armorIcon": {
+                            "type": "string"
+                          }
                         }
                       },
                       "StatItem": {
                         "type": "StatItem",
                         "properties": {
-                          "name": { "type": "string" },
-                          "key": { "type": "string" },
-                          "value": { "type": "string" }
+                          "name": {
+                            "type": "string"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          }
                         }
                       },
                       "WeaponInfo": {
                         "type": "WeaponInfo",
                         "properties": {
-                          "weaponId": { "type": "int" },
-                          "weaponName": { "type": "string" },
-                          "weaponIcon": { "type": "string" },
-                          "weaponLevel": { "type": "int" },
-                          "kill": { "type": "int" },
-                          "damage": { "type": "int" },
-                          "percent": { "type": "float" }
+                          "weaponId": {
+                            "type": "int"
+                          },
+                          "weaponName": {
+                            "type": "string"
+                          },
+                          "weaponIcon": {
+                            "type": "string"
+                          },
+                          "weaponLevel": {
+                            "type": "int"
+                          },
+                          "kill": {
+                            "type": "int"
+                          },
+                          "damage": {
+                            "type": "int"
+                          },
+                          "percent": {
+                            "type": "float"
+                          }
                         }
                       },
                       "SoulItemInfo": {
                         "type": "SoulItemInfo",
                         "properties": {
-                          "soulItemId": { "type": "int" },
-                          "soulItemName": { "type": "string" },
-                          "soulItemIcon": { "type": "string" },
-                          "soulItemLevel": { "type": "int" }
+                          "soulItemId": {
+                            "type": "int"
+                          },
+                          "soulItemName": {
+                            "type": "string"
+                          },
+                          "soulItemIcon": {
+                            "type": "string"
+                          },
+                          "soulItemLevel": {
+                            "type": "int"
+                          }
                         }
                       },
                       "HonorTitleInfo": {
                         "type": "HonorTitleInfo",
                         "properties": {
-                          "honorId": { "type": "int" },
-                          "honorName": { "type": "string" },
-                          "honorIcon": { "type": "string" },
-                          "honorDesc": { "type": "string" }
+                          "honorId": {
+                            "type": "int"
+                          },
+                          "honorName": {
+                            "type": "string"
+                          },
+                          "honorIcon": {
+                            "type": "string"
+                          },
+                          "honorDesc": {
+                            "type": "string"
+                          }
                         }
                       }
                     }
@@ -372,100 +642,193 @@
       "method": "GET",
       "path": "/api/record/mini-program/battle/detail/person",
       "queryParameters": {
-        "roleId": "string",
+        "roleIdSimple": "string",
         "battleId": "string"
       },
       "responseBody": {
         "type": "GetBattleDetailResponse",
         "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "BattleDetailData" }
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "BattleDetailData"
+          }
         },
         "nestedTypes": {
           "BattleDetailData": {
             "type": "BattleDetailData",
             "properties": {
-              "hero": { "type": "HeroInfo" },
-              "role": { "type": "RoleBriefInfo" },
-              "beginRankScore": { "type": "int" },
-              "roundRankScore": { "type": "int" },
-              "rank": { "type": "int" },
-              "rating": { "type": "string" },
-              "win": { "type": "bool" },
-              "battleEndTime": { "type": "long" },
-              "gameMode": { "type": "int" },
-              "dragonKillSuccess": { "type": "bool" },
-              "jinwuKillSuccess": { "type": "bool" },
-                  "honorTitles": { "type": "List<HonorTitleInfo>" },
-              "armor": { "type": "ArmorInfo" },
-              "dataList": { "type": "List<StatItem>" },
-              "weapons": { "type": "List<WeaponInfo>" },
-              "soulItems": { "type": "List<SoulItemInfo>" },
-              "honorTitles": { "type": "List<HonorTitleInfo>" }
+              "hero": {
+                "type": "HeroInfo"
+              },
+              "role": {
+                "type": "RoleBriefInfo"
+              },
+              "beginRankScore": {
+                "type": "int"
+              },
+              "roundRankScore": {
+                "type": "int"
+              },
+              "rank": {
+                "type": "int"
+              },
+              "rating": {
+                "type": "string"
+              },
+              "win": {
+                "type": "bool"
+              },
+              "battleEndTime": {
+                "type": "long"
+              },
+              "gameMode": {
+                "type": "int"
+              },
+              "dragonKillSuccess": {
+                "type": "bool"
+              },
+              "jinwuKillSuccess": {
+                "type": "bool"
+              },
+              "honorTitles": {
+                "type": "List<HonorTitleInfo>"
+              },
+              "armor": {
+                "type": "ArmorInfo"
+              },
+              "dataList": {
+                "type": "List<StatItem>"
+              },
+              "weapons": {
+                "type": "List<WeaponInfo>"
+              },
+              "soulItems": {
+                "type": "List<SoulItemInfo>"
+              }
             },
             "nestedTypes": {
               "HeroInfo": {
                 "type": "HeroInfo",
                 "properties": {
-                  "heroId": { "type": "int" },
-                  "heroName": { "type": "string" },
-                  "heroIcon": { "type": "string" }
+                  "heroId": {
+                    "type": "int"
+                  },
+                  "heroName": {
+                    "type": "string"
+                  },
+                  "heroIcon": {
+                    "type": "string"
+                  }
                 }
               },
               "RoleBriefInfo": {
                 "type": "RoleBriefInfo",
                 "properties": {
-                  "roleId": { "type": "string" },
-                  "roleName": { "type": "string" },
-                  "roleLevel": { "type": "int" },
-                  "headIcon": { "type": "string" }
+                  "roleId": {
+                    "type": "string"
+                  },
+                  "roleName": {
+                    "type": "string"
+                  },
+                  "roleLevel": {
+                    "type": "int"
+                  },
+                  "headIcon": {
+                    "type": "string"
+                  }
                 }
               },
               "ArmorInfo": {
                 "type": "ArmorInfo",
                 "properties": {
-                  "armorId": { "type": "int" },
-                  "armorLevel": { "type": "int" },
-                  "armorIcon": { "type": "string" }
+                  "armorId": {
+                    "type": "int"
+                  },
+                  "armorLevel": {
+                    "type": "int"
+                  },
+                  "armorIcon": {
+                    "type": "string"
+                  }
                 }
               },
               "StatItem": {
                 "type": "StatItem",
                 "properties": {
-                  "name": { "type": "string" },
-                  "key": { "type": "string" },
-                  "value": { "type": "string" }
+                  "name": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
                 }
               },
               "WeaponInfo": {
                 "type": "WeaponInfo",
                 "properties": {
-                  "weaponId": { "type": "int" },
-                  "weaponName": { "type": "string" },
-                  "weaponIcon": { "type": "string" },
-                  "weaponLevel": { "type": "int" },
-                  "kill": { "type": "int" },
-                  "damage": { "type": "int" },
-                  "percent": { "type": "float" }
+                  "weaponId": {
+                    "type": "int"
+                  },
+                  "weaponName": {
+                    "type": "string"
+                  },
+                  "weaponIcon": {
+                    "type": "string"
+                  },
+                  "weaponLevel": {
+                    "type": "int"
+                  },
+                  "kill": {
+                    "type": "int"
+                  },
+                  "damage": {
+                    "type": "int"
+                  },
+                  "percent": {
+                    "type": "float"
+                  }
                 }
               },
               "SoulItemInfo": {
                 "type": "SoulItemInfo",
                 "properties": {
-                  "soulItemId": { "type": "int" },
-                  "soulItemName": { "type": "string" },
-                  "soulItemIcon": { "type": "string" },
-                  "soulItemLevel": { "type": "int" }
+                  "soulItemId": {
+                    "type": "int"
+                  },
+                  "soulItemName": {
+                    "type": "string"
+                  },
+                  "soulItemIcon": {
+                    "type": "string"
+                  },
+                  "soulItemLevel": {
+                    "type": "int"
+                  }
                 }
               },
               "HonorTitleInfo": {
                 "type": "HonorTitleInfo",
                 "properties": {
-                  "honorId": { "type": "int" },
-                  "honorName": { "type": "string" },
-                  "honorIcon": { "type": "string" },
-                  "honorDesc": { "type": "string" }
+                  "honorId": {
+                    "type": "int"
+                  },
+                  "honorName": {
+                    "type": "string"
+                  },
+                  "honorIcon": {
+                    "type": "string"
+                  },
+                  "honorDesc": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -479,115 +842,204 @@
       "method": "GET",
       "path": "/api/record/mini-program/battle/detail/team",
       "queryParameters": {
-        "roleId": "string",
+        "roleIdSimple": "string",
         "battleId": "string"
       },
       "responseBody": {
         "type": "GetTeamBattleDetailResponse",
         "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "TeamBattleDetailData" }
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "TeamBattleDetailData"
+          }
         },
         "nestedTypes": {
           "TeamBattleDetailData": {
             "type": "TeamBattleDetailData",
             "properties": {
-              "gameMode": { "type": "int" },
-              "battleEndTime": { "type": "long" },
-              "rank": { "type": "int" },
-              "win": { "type": "bool" },
-              "rating": { "type": "string" },
-              "dragonKillSuccess": { "type": "bool" },
-              "jinwuKillSuccess": { "type": "bool" },
-                  "honorTitles": { "type": "List<HonorTitleInfo>" },
-              "kill": { "type": "int" },
-              "teammates": { "type": "List<TeammateInfo>" }
+              "gameMode": {
+                "type": "int"
+              },
+              "battleEndTime": {
+                "type": "long"
+              },
+              "rank": {
+                "type": "int"
+              },
+              "win": {
+                "type": "bool"
+              },
+              "rating": {
+                "type": "string"
+              },
+              "dragonKillSuccess": {
+                "type": "bool"
+              },
+              "jinwuKillSuccess": {
+                "type": "bool"
+              },
+              "honorTitles": {
+                "type": "List<HonorTitleInfo>"
+              },
+              "kill": {
+                "type": "int"
+              },
+              "teammates": {
+                "type": "List<TeammateInfo>"
+              }
             },
             "nestedTypes": {
               "TeammateInfo": {
                 "type": "TeammateInfo",
                 "properties": {
-                  "hero": { "type": "HeroInfo" },
-                  "role": { "type": "RoleBriefInfo" },
-                  "isMe": { "type": "bool" },
-                  "armor": { "type": "ArmorInfo" },
-                  "dataList": { "type": "List<StatItem>" },
-                  "weapons": { "type": "List<WeaponInfo>" },
-                  "soulItems": { "type": "List<SoulItemInfo>" },
-                  "honorTitles": { "type": "List<HonorTitleInfo>" }
+                  "hero": {
+                    "type": "HeroInfo"
+                  },
+                  "role": {
+                    "type": "RoleBriefInfo"
+                  },
+                  "isMe": {
+                    "type": "bool"
+                  },
+                  "armor": {
+                    "type": "ArmorInfo"
+                  },
+                  "dataList": {
+                    "type": "List<StatItem>"
+                  },
+                  "weapons": {
+                    "type": "List<WeaponInfo>"
+                  },
+                  "soulItems": {
+                    "type": "List<SoulItemInfo>"
+                  },
+                  "honorTitles": {
+                    "type": "List<HonorTitleInfo>"
+                  }
                 },
                 "nestedTypes": {
                   "HonorTitleInfo": {
                     "type": "HonorTitleInfo",
                     "properties": {
-                      "honorId": { "type": "int" },
-                      "honorName": { "type": "string" },
-                      "honorIcon": { "type": "string" },
-                      "honorDesc": { "type": "string" }
+                      "honorId": {
+                        "type": "int"
+                      },
+                      "honorName": {
+                        "type": "string"
+                      },
+                      "honorIcon": {
+                        "type": "string"
+                      },
+                      "honorDesc": {
+                        "type": "string"
+                      }
                     }
                   },
                   "HeroInfo": {
                     "type": "HeroInfo",
                     "properties": {
-                      "heroId": { "type": "int" },
-                      "heroName": { "type": "string" },
-                      "heroIcon": { "type": "string" }
+                      "heroId": {
+                        "type": "int"
+                      },
+                      "heroName": {
+                        "type": "string"
+                      },
+                      "heroIcon": {
+                        "type": "string"
+                      }
                     }
                   },
                   "RoleBriefInfo": {
                     "type": "RoleBriefInfo",
                     "properties": {
-                      "roleId": { "type": "string" },
-                      "roleName": { "type": "string" },
-                      "roleLevel": { "type": "int" },
-                      "headIcon": { "type": "string" }
+                      "roleId": {
+                        "type": "string"
+                      },
+                      "roleName": {
+                        "type": "string"
+                      },
+                      "roleLevel": {
+                        "type": "int"
+                      },
+                      "headIcon": {
+                        "type": "string"
+                      }
                     }
                   },
                   "ArmorInfo": {
                     "type": "ArmorInfo",
                     "properties": {
-                      "armorId": { "type": "int" },
-                      "armorLevel": { "type": "int" },
-                      "armorIcon": { "type": "string" }
+                      "armorId": {
+                        "type": "int"
+                      },
+                      "armorLevel": {
+                        "type": "int"
+                      },
+                      "armorIcon": {
+                        "type": "string"
+                      }
                     }
                   },
                   "StatItem": {
                     "type": "StatItem",
                     "properties": {
-                      "name": { "type": "string" },
-                      "key": { "type": "string" },
-                      "value": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "key": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
                     }
                   },
                   "WeaponInfo": {
                     "type": "WeaponInfo",
                     "properties": {
-                      "weaponId": { "type": "int" },
-                      "weaponName": { "type": "string" },
-                      "weaponIcon": { "type": "string" },
-                      "weaponLevel": { "type": "int" },
-                      "kill": { "type": "int" },
-                      "damage": { "type": "int" },
-                      "percent": { "type": "float" }
+                      "weaponId": {
+                        "type": "int"
+                      },
+                      "weaponName": {
+                        "type": "string"
+                      },
+                      "weaponIcon": {
+                        "type": "string"
+                      },
+                      "weaponLevel": {
+                        "type": "int"
+                      },
+                      "kill": {
+                        "type": "int"
+                      },
+                      "damage": {
+                        "type": "int"
+                      },
+                      "percent": {
+                        "type": "float"
+                      }
                     }
                   },
                   "SoulItemInfo": {
                     "type": "SoulItemInfo",
                     "properties": {
-                      "soulItemId": { "type": "int" },
-                      "soulItemName": { "type": "string" },
-                      "soulItemIcon": { "type": "string" },
-                      "soulItemLevel": { "type": "int" }
-                    }
-                  },
-                  "HonorTitleInfo": {
-                    "type": "HonorTitleInfo",
-                    "properties": {
-                      "honorId": { "type": "int" },
-                      "honorName": { "type": "string" },
-                      "honorIcon": { "type": "string" },
-                      "honorDesc": { "type": "string" }
+                      "soulItemId": {
+                        "type": "int"
+                      },
+                      "soulItemName": {
+                        "type": "string"
+                      },
+                      "soulItemIcon": {
+                        "type": "string"
+                      },
+                      "soulItemLevel": {
+                        "type": "int"
+                      }
                     }
                   }
                 }

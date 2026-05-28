@@ -5,6 +5,7 @@
     xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     Background="Transparent"
     mc:Ignorable="d">
     <Grid
@@ -79,11 +80,23 @@
                         MinWidth="100"
                         Height="32"
                         Margin="0,0,8,0"
-                        Command="{Binding MinimizeToTaskbarCommand}" ToolTip="{DynamicResource ClosePrompt.MinimizeToTaskbar}" Content="{DynamicResource ClosePrompt.MinimizeToTaskbar}" />
+                        ToolTip="{DynamicResource ClosePrompt.MinimizeToTaskbar}" Content="{DynamicResource ClosePrompt.MinimizeToTaskbar}">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Click">
+                                <i:InvokeCommandAction Command="{Binding MinimizeToTaskbarCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </Button>
                     <Button
                         MinWidth="80"
                         Height="32"
-                        Command="{Binding ExitDirectlyCommand}" ToolTip="{DynamicResource ClosePrompt.ExitDirectly}" Content="{DynamicResource ClosePrompt.ExitDirectly}" />
+                        ToolTip="{DynamicResource ClosePrompt.ExitDirectly}" Content="{DynamicResource ClosePrompt.ExitDirectly}">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Click">
+                                <i:InvokeCommandAction Command="{Binding ExitDirectlyCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
