@@ -93,13 +93,26 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
 
             try
             {
-                var bytes = _screenCapture.CaptureRegion(hwnd, ScreenQuadrant.BottomRight);
-                var text = await _ocrService.RecognizeTextAsync(bytes);
+                // 左上角一次截图，同时用于"游戏中"和"英雄选择阶段"检测
+                var topLeftBytes = _screenCapture.CaptureRegion(hwnd, ScreenQuadrant.TopLeft);
+                var topLeftText = await _ocrService.RecognizeTextAsync(topLeftBytes);
 
-                if (text.Contains("取消") || text.Contains("取") || text.Contains("消"))
+                // 游戏中：左上角同时包含"尚存"和"灵魂"
+                if ((topLeftText.Contains("尚存") && topLeftText.Contains("灵魂")) || topLeftText.Contains("剩余返魂次数") || topLeftText.Contains("小队展示"))
+                    return GameStatus.InGame;
+
+                // 英雄选择阶段：左上角包含"英雄选择"或"选择"
+                if (topLeftText.Contains("英雄选择") || topLeftText.Contains("选择"))
+                    return GameStatus.HeroSelection;
+
+                // 右下角检测：排队中 / 大厅等候
+                var bottomRightBytes = _screenCapture.CaptureRegion(hwnd, ScreenQuadrant.BottomRight);
+                var bottomRightText = await _ocrService.RecognizeTextAsync(bottomRightBytes);
+
+                if (bottomRightText.Contains("取消") || bottomRightText.Contains("取") || bottomRightText.Contains("消"))
                     return GameStatus.Queuing;
 
-                if (text.Contains("开始游戏") || text.Contains("开始") || text.Contains("游戏"))
+                if (bottomRightText.Contains("开始游戏") || bottomRightText.Contains("开始") || bottomRightText.Contains("游戏"))
                     return GameStatus.LobbyWaiting;
             }
             catch

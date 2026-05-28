@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Diagnostics;
@@ -172,6 +172,8 @@ namespace BlackGoldAncientSword.App.Shell
             {
                 GameStatus.LobbyWaiting => System.Windows.Application.Current.TryFindResource("GameStatus.LobbyWaiting") as string ?? "LobbyWaiting",
                 GameStatus.Queuing => System.Windows.Application.Current.TryFindResource("GameStatus.Queuing") as string ?? "Queuing",
+                GameStatus.HeroSelection => System.Windows.Application.Current.TryFindResource("GameStatus.HeroSelection") as string ?? "HeroSelection",
+                GameStatus.InGame => System.Windows.Application.Current.TryFindResource("GameStatus.InGame") as string ?? "InGame",
                 _ => string.Empty,
             };
         }
