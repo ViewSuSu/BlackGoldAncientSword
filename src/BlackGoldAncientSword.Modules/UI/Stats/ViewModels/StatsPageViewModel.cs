@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Generated;
@@ -33,7 +33,11 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string UserName
         {
             get => _userName;
-            set => SetProperty(ref _userName, value);
+            set
+            {
+                if (SetProperty(ref _userName, value))
+                    RaisePropertyChanged(nameof(IsLocalUser));
+            }
         }
 
         private string _uid = string.Empty;
@@ -66,7 +70,46 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "复制成功"));
             });
 
+        private string _searchText = string.Empty;
+        public string SearchText
+        {
+            get => _searchText;
+            set => SetProperty(ref _searchText, value);
+        }
+
+        private DelegateCommand? _searchCommand;
+        public DelegateCommand SearchCommand =>
+            _searchCommand ??= new DelegateCommand(async () =>
+            {
+                if (string.IsNullOrWhiteSpace(SearchText)) return;
+                _playerPrefsService.Current.PlayerName = SearchText.Trim();
+                await RefreshAllAsync();
+            });
+
+        // Store the original local player name loaded from player_prefs
+        private string _originalLocalPlayerName = string.Empty;
+
+        public bool IsLocalUser =>
+            !string.IsNullOrEmpty(UserName) &&
+            !string.IsNullOrEmpty(_originalLocalPlayerName) &&
+            string.Equals(UserName, _originalLocalPlayerName, StringComparison.OrdinalIgnoreCase);
+
+        private DelegateCommand? _goBackToMeCommand;
+        public DelegateCommand GoBackToMeCommand =>
+            _goBackToMeCommand ??= new DelegateCommand(async () =>
+            {
+                if (string.IsNullOrWhiteSpace(_originalLocalPlayerName))
+                {
+                    _tipMessage.ShowError(L("Stats.NoLocalUser", "未检测到本地用户信息"));
+                    return;
+                }
+                _playerPrefsService.Current.PlayerName = _originalLocalPlayerName;
+                SearchText = _originalLocalPlayerName;
+                await RefreshAllAsync();
+            });
+
         private DelegateCommand? _copyUIDCommand;
+
         public DelegateCommand CopyUIDCommand =>
             _copyUIDCommand ??= new DelegateCommand(() =>
             {
@@ -74,6 +117,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 eventAggregator.GetEvent<TipMessageEvent>()
                     .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "复制成功"));
             });
+
+        private DelegateCommand? _refreshAllCommand;
+        public DelegateCommand RefreshAllCommand =>
+            _refreshAllCommand ??= new DelegateCommand(async () => await RefreshAllAsync());
 
 
         // === Rank ===
@@ -288,9 +335,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         protected override async void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
-            CancelAndDispose(ref _loadAllCts);
-            _loadAllCts = new CancellationTokenSource();
-            await LoadAllAsync(_loadAllCts.Token);
+            _originalLocalPlayerName = _playerPrefsService.Current.PlayerName;
+            RaisePropertyChanged(nameof(IsLocalUser));
+            SearchText = _originalLocalPlayerName;
+            SearchCommand.Execute();
         }
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
@@ -322,16 +370,40 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             RankIcon = string.Empty;
         }
 
+        private async System.Threading.Tasks.Task RefreshAllAsync()
+        {
+            CancelAndDispose(ref _loadAllCts);
+            _loadAllCts = new CancellationTokenSource();
+            var ct = _loadAllCts.Token;
+
+            IsPlayerInfoLoading = true;
+            PlayerInfoProgress = 0;
+            IsRecentBattlesLoading = true;
+            RecentBattlesProgress = 0;
+            IsStatsLoading = true;
+            StatsProgress = 0;
+
+            var success = await LoadAllAsync(ct);
+
+            if (!ct.IsCancellationRequested)
+            {
+                if (success)
+                    _tipMessage.ShowInfo(L("Stats.SearchSuccess", "搜索成功"));
+                else
+                    _tipMessage.ShowError(L("Stats.SearchError", "搜索失败，请检查网络后重试"));
+            }
+        }
+
         private static string L(string key, string fallback) =>
             System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
 
-        private async System.Threading.Tasks.Task LoadAllAsync(CancellationToken ct)
+        private async System.Threading.Tasks.Task<bool> LoadAllAsync(CancellationToken ct)
         {
             var localName = _playerPrefsService.Current.PlayerName;
             if (string.IsNullOrEmpty(localName))
             {
                 _tipMessage.ShowError(L("Stats.NoPlayerName", "请先在设置中配置玩家名称"));
-                return;
+                return false;
             }
 
             IsPlayerInfoLoading = true;
@@ -344,9 +416,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             try
             {
                 var search = await NarakaApiClient.SearchRecordAsync(localName, ct);
-                if (search?.Data == null) { _tipMessage.ShowError(search?.Msg ?? L("Stats.LoadError", "加载战绩失败，请检查网络后重试。")); return; }
+                if (search?.Data == null) { _tipMessage.ShowError(search?.Msg ?? L("Stats.LoadError", "加载战绩失败，请检查网络后重试。")); return false; }
                 _roleId = search.Data.RoleIdSimple ?? string.Empty;
-                if (string.IsNullOrEmpty(_roleId)) { _tipMessage.ShowError(L("Stats.PlayerNotFound", "未找到该玩家，请检查名称是否正确")); return; }
+                if (string.IsNullOrEmpty(_roleId)) { _tipMessage.ShowError(L("Stats.PlayerNotFound", "未找到该玩家，请检查名称是否正确")); return false; }
 
                 // Fire all three requests in parallel
                 var userInfoTask = NarakaApiClient.GetUserInfoAsync(_roleId, ct);
@@ -376,6 +448,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                             HeroIcon = b.Hero?.HeroIcon ?? string.Empty,
                             HeroName = b.Hero?.HeroName ?? "Unknown",
                             GameModeText = FormatGameMode(b.GameMode),
+                            GameModeCategoryText = FormatGameModeCategory(b.GameMode),
+                            GameModeTeamSizeText = FormatGameModeTeamSize(b.GameMode),
                             GameMode = b.GameMode,
                             Kill = b.Kill,
                             Damage = b.Damage,
@@ -422,15 +496,18 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
                 RecentBattlesProgress = 100;
                 IsRecentBattlesLoading = false;
+                return true;
             }
             catch (OperationCanceledException)
             {
                 // Navigation away or filter changed 鈥?not an error
+                            return false;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadRecentBattlesAsync failed: {ex}");
                 _tipMessage.ShowError(ex.Message);
+                return false;
             }
             finally
             {
@@ -603,6 +680,56 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             return $"{unknownKey}({gameMode})";
         }
 
+        private static string FormatGameModeCategory(int gameMode)
+        {
+            var enumValue = gameMode switch
+            {
+                1 => GameModeCategory.Rank,
+                12 => GameModeCategory.Rank,
+                2 => GameModeCategory.Rank,
+                6 => GameModeCategory.Match,
+                9 => GameModeCategory.Match,
+                7 => GameModeCategory.Match,
+                4 => GameModeCategory.Tianren,
+                13 => GameModeCategory.Tianren,
+                5 => GameModeCategory.Tianren,
+                _ => (GameModeCategory?)null
+            };
+
+            if (enumValue.HasValue)
+            {
+                var key = "GameMode." + enumValue.Value.ToString();
+                return Application.Current?.TryFindResource(key) as string ?? enumValue.Value.ToString();
+            }
+
+            return Application.Current?.TryFindResource("GameMode.Unknown") as string ?? "Unknown";
+        }
+
+        private static string FormatGameModeTeamSize(int gameMode)
+        {
+            var enumValue = gameMode switch
+            {
+                1 => TeamSize.Solo,
+                12 => TeamSize.Duo,
+                2 => TeamSize.Trio,
+                6 => TeamSize.Solo,
+                9 => TeamSize.Duo,
+                7 => TeamSize.Trio,
+                4 => TeamSize.Solo,
+                13 => TeamSize.Duo,
+                5 => TeamSize.Trio,
+                _ => (TeamSize?)null
+            };
+
+            if (enumValue.HasValue)
+            {
+                var key = "GameMode." + enumValue.Value.ToString();
+                return Application.Current?.TryFindResource(key) as string ?? enumValue.Value.ToString();
+            }
+
+            return Application.Current?.TryFindResource("GameMode.Unknown") as string ?? "Unknown";
+        }
+
         private static string FormatUnixTime(long unixMilliseconds)
         {
             try
@@ -724,6 +851,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string HeroName { get; set; } = string.Empty;
         public string GameModeText { get; set; } = string.Empty;
         public int GameMode { get; set; }
+        public string GameModeCategoryText { get; set; } = string.Empty;
+        public string GameModeTeamSizeText { get; set; } = string.Empty;
         public int Kill { get; set; }
         public int Damage { get; set; }
         public int ScoreNumber { get; set; }
@@ -739,7 +868,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
     {
         public string Icon { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
-        public string Desc { get; set; } = string.Empty;
+        public string HonorName { get; set; } = string.Empty;
+        public string HonorDesc { get; set; } = string.Empty;
     }
 
     public class TeamSizeOption

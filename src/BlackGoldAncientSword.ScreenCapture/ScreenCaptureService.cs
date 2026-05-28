@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 
@@ -17,9 +17,19 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     {
         hwnd = IntPtr.Zero;
         if (string.IsNullOrEmpty(processName)) return false;
-        foreach (var p in Process.GetProcessesByName(processName))
-            if (p.MainWindowHandle != IntPtr.Zero) { hwnd = p.MainWindowHandle; return true; }
-        return false;
+        var procs = Process.GetProcessesByName(processName);
+        try
+        {
+            foreach (var p in procs)
+            {
+                if (p.MainWindowHandle != IntPtr.Zero) { hwnd = p.MainWindowHandle; return true; }
+            }
+            return false;
+        }
+        finally
+        {
+            foreach (var p in procs) p.Dispose();
+        }
     }
 
     public byte[] CaptureWindow(IntPtr hwnd) { ThrowIfDisposed(); ValidateHwnd(hwnd); return CaptureFrameInternal(hwnd, ScreenQuadrant.Full); }
@@ -75,7 +85,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         return CaptureViaGdi(hwnd, wr, w, h, crop);
     }
 
-    // ──────────── COM vtable WGC ────────────
+    // ������������������������ COM vtable WGC ������������������������
 
     private byte[] CaptureViaWgcCom(IntPtr hwnd, int w, int h, (int x, int y, int w, int h) c)
     {
@@ -138,7 +148,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         finally { s.Dispose(); }
     }
 
-    // ──────────── GDI fallback ────────────
+    // ������������������������ GDI fallback ������������������������
 
     private static byte[] CaptureViaGdi(IntPtr hwnd, RECT wr, int w, int h, (int x, int y, int w, int h) c)
     {
@@ -150,7 +160,8 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
             if (!printed) { ReleaseDC(hwnd, hdcW); hdcW = IntPtr.Zero; IntPtr hdcS = GetDC(IntPtr.Zero); try { if (!BitBlt(hdcM, 0, 0, w, h, hdcS, wr.Left, wr.Top, 0x40CC0020) && !BitBlt(hdcM, 0, 0, w, h, hdcS, wr.Left, wr.Top, 0x00CC0020)) throw new InvalidOperationException("BitBlt"); } finally { ReleaseDC(IntPtr.Zero, hdcS); } }
         }
         finally { SelectObject(hdcM, ho); DeleteDC(hdcM); if (hdcW != IntPtr.Zero) ReleaseDC(hwnd, hdcW); }
-        return BitmapToPng(hbmp, w, h, c);
+        try { return BitmapToPng(hbmp, w, h, c); }
+        finally { DeleteObject(hbmp); }
     }
 
     private static byte[] BitmapToPng(IntPtr hbmp, int w, int h, (int x, int y, int w, int h) c)
@@ -182,7 +193,21 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     }
 
     private static IntPtr ResolveGameWindow(string n) { if (string.IsNullOrEmpty(n)) throw new ArgumentException("name"); if (!TryFindWindow(n, out var h)) throw new InvalidOperationException($"Not found: {n}"); return h; }
-    private static bool TryFindWindow(string n, out IntPtr h) { h = IntPtr.Zero; foreach (var p in Process.GetProcessesByName(n)) if (p.MainWindowHandle != IntPtr.Zero) { h = p.MainWindowHandle; return true; } return false; }
+    private static bool TryFindWindow(string n, out IntPtr h)
+    {
+        h = IntPtr.Zero;
+        var procs = Process.GetProcessesByName(n);
+        try
+        {
+            foreach (var p in procs)
+                if (p.MainWindowHandle != IntPtr.Zero) { h = p.MainWindowHandle; return true; }
+            return false;
+        }
+        finally
+        {
+            foreach (var p in procs) p.Dispose();
+        }
+    }
     private static void SaveBytes(byte[] b, string p) { var d = Path.GetDirectoryName(p); if (!string.IsNullOrEmpty(d) && !Directory.Exists(d)) Directory.CreateDirectory(d); File.WriteAllBytes(p, b); }
 
     [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
@@ -204,6 +229,76 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     [StructLayout(LayoutKind.Sequential)] struct BITMAPINFOHEADER { public int biSize, biWidth, biHeight; public short biPlanes, biBitCount; public int biCompression, biSizeImage, biXPelsPerMeter, biYPelsPerMeter, biClrUsed, biClrImportant; }
     [StructLayout(LayoutKind.Sequential)] struct BITMAPINFO { public BITMAPINFOHEADER biHeader; }
 
+    
+    // ������������������������ Raw pixel capture ������������������������
+
+    public byte[] CaptureFullRaw(IntPtr hwnd, out int width, out int height)
+    {
+        ThrowIfDisposed();
+        ValidateHwnd(hwnd);
+        if (!GetWindowRect(hwnd, out RECT wr))
+            throw new InvalidOperationException("GetWindowRect failed");
+        int winW = wr.Right - wr.Left;
+        int winH = wr.Bottom - wr.Top;
+        if (winW <= 0 || winH <= 0)
+            throw new InvalidOperationException("Zero size window");
+
+        Console.WriteLine($"[SC] CaptureFullRaw: Win=({wr.Left},{wr.Top}) {winW}x{winH}");
+
+        // 1. Native WGC DLL (already returns raw BGRA, may differ from window rect due to DPI)
+        if (_nativeWgcAvailable)
+        {
+            try
+            {
+                var capResult = NativeWgc.Capture(hwnd, winW, winH, (0, 0, winW, winH));
+                if (capResult != null)
+                {
+                    var (data, w, h) = capResult.Value;
+                    width = w;
+                    height = h;
+                    Console.WriteLine($"[SC] CaptureFullRaw: Native WGC OK {w}x{h}");
+                    return data;
+                }
+            }
+            catch (DllNotFoundException) { Console.WriteLine("[SC] wgc_capture.dll not found"); _nativeWgcAvailable = false; }
+            catch (Exception ex) { Console.WriteLine($"[SC] Native WGC: {ex.Message}"); }
+        }
+
+        // 2. Fallback: capture full PNG, then decode to raw BGRA
+        Console.WriteLine("[SC] CaptureFullRaw: falling back to PNG decode path");
+        var pngBytes = CaptureWindow(hwnd);
+        return PngToBgra(pngBytes, out width, out height);
+    }
+
+    public byte[] CropRawToPng(byte[] rawBgra, int fullWidth, int fullHeight, ScreenQuadrant quadrants)
+    {
+        var crop = CalcCrop(fullWidth, fullHeight, quadrants);
+        if (crop.w <= 0 || crop.h <= 0)
+            throw new ArgumentException("Crop region has zero size");
+
+        var result = new byte[crop.w * crop.h * 4];
+        int fullStride = fullWidth * 4;
+        int cropStride = crop.w * 4;
+        for (int y = 0; y < crop.h; y++)
+            Array.Copy(rawBgra, (crop.y + y) * fullStride + crop.x * 4, result, y * cropStride, cropStride);
+
+        return BgraToPng(result, crop.w, crop.h);
+    }
+
+    private static byte[] PngToBgra(byte[] pngBytes, out int width, out int height)
+    {
+        using var ms = new MemoryStream(pngBytes);
+        var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
+            ms, System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+            System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+        var frame = decoder.Frames[0];
+        width = frame.PixelWidth;
+        height = frame.PixelHeight;
+        int stride = width * 4;
+        var bgra = new byte[stride * height];
+        frame.CopyPixels(bgra, stride, 0);
+        return bgra;
+    }
     public void Dispose()
     {
         if (_disposed) return; _disposed = true;
@@ -212,4 +307,3 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     }
     void ThrowIfDisposed() { if (_disposed) throw new ObjectDisposedException(nameof(ScreenCaptureService)); }
 }
-

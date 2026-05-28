@@ -23,7 +23,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         private System.Threading.Timer? _saveTimer;
         private const int SaveDebounceMs = 300;
 
-        /// <summary>延迟保存，合并短时间内连续修改为一次写盘。</summary>
+        /// <summary>延迟保存，合并短时间内连续修改为一次写盘�?/summary>
         private void DebouncedSave()
         {
             _saveTimer?.Dispose();
@@ -167,7 +167,15 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
 
             _dataPath = _settings.Current.DataSavePath;
             _cachePath = _settings.Current.CachePath;
+            _gameLogPath = _settings.Current.GameLogPath;
             RefreshCacheSizeAsync().SafeFireAndForget("Settings.RefreshCacheSize");
+        }
+
+        protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
+        {
+            _saveTimer?.Dispose();
+            _saveTimer = null;
+            base.OnNavigatedFromExecute(navigationContext);
         }
 
         public async System.Threading.Tasks.Task RefreshCacheSizeAsync()
@@ -229,6 +237,20 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 }
             });
 
+        private string _gameLogPath = string.Empty;
+        public string GameLogPath
+        {
+            get => _gameLogPath;
+            set
+            {
+                if (!SetProperty(ref _gameLogPath, value))
+                    return;
+
+                _settings.Current.GameLogPath = value;
+                DebouncedSave();
+            }
+        }
+
         private DelegateCommand? _browseCachePathCommand;
         public DelegateCommand BrowseCachePathCommand =>
             _browseCachePathCommand ??= new DelegateCommand(async () =>
@@ -246,6 +268,22 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                     {
                         await MigrateFolderAsync(oldPath, CachePath);
                     }
+                }
+            });
+
+        private DelegateCommand? _browseGameLogPathCommand;
+        public DelegateCommand BrowseGameLogPathCommand =>
+            _browseGameLogPathCommand ??= new DelegateCommand(() =>
+            {
+                var dialog = new OpenFileDialog
+                {
+                    Title = L("Settings.BrowseGameLogPath", "Select game log file"),
+                    Filter = "Log files (*.log)|*.log|All files (*.*)|*.*",
+                    InitialDirectory = System.IO.Path.GetDirectoryName(string.IsNullOrWhiteSpace(GameLogPath) ? AppSettings.GetDefaultGameLogPath() : GameLogPath)
+                };
+                if (dialog.ShowDialog() == true)
+                {
+                    GameLogPath = dialog.FileName;
                 }
             });
 
