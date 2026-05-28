@@ -1,4 +1,4 @@
-name: Release Build & Publish
+﻿name: Release Build & Publish
 
 on:
   push:
@@ -22,17 +22,18 @@ jobs:
       with:
         dotnet-version: "10.0.x"
 
-    - name: Install NBGV
-      run: dotnet tool install -g nbgv
-
-    - name: Bump version & get new version
+    - name: Bump version
       id: version
       shell: powershell
       run: |
-        nbgv prepare-release --versionIncrement patch
-        $ver = nbgv get-version -v SimpleVersion
-        Write-Host "Release version: $ver"
-        echo "new_version=$ver" >> $env:GITHUB_OUTPUT
+        $versionFile = "version.json"
+        $json = Get-Content $versionFile -Raw | ConvertFrom-Json
+        $current = [Version]$json.version
+        $new = "{0}.{1}.{2}" -f $current.Major, $current.Minor, ($current.Build + 1)
+        $json.version = $new
+        $json | ConvertTo-Json -Depth 10 | Set-Content $versionFile -Encoding UTF8
+        Write-Host "Bumped version: $($current.ToString()) -> $new"
+        echo "new_version=$new" >> $env:GITHUB_OUTPUT
 
     - name: Build (separate DLLs)
       shell: powershell
