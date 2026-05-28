@@ -1,4 +1,4 @@
-using BlackGoldAncientSword.Framework.Core.Consts;
+﻿using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 
 namespace BlackGoldAncientSword.Framework.Core.Infrastructure
@@ -6,7 +6,7 @@ namespace BlackGoldAncientSword.Framework.Core.Infrastructure
     [Component(ComponentLifetime.Singleton)]
     public class MainContentNavigator : IMainContentNavigationService
     {
-        public static event EventHandler? Removed;
+        public event EventHandler? Removed;
         public event Action<string>? Navigated;
 
         private readonly IRegionManager _regionManager;

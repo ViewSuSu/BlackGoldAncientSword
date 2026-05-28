@@ -169,6 +169,41 @@
 
 
 
+
+                <!--  Game Log Path  -->
+                <GroupBox Margin="0,12,0,0" Style="{x:Null}" MinHeight="70" Padding="0,5,0,5">
+                    <GroupBox.Header>
+                        <TextBlock
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Text="{DynamicResource Settings.Category.GameLog}" />
+                    </GroupBox.Header>
+                    <StackPanel>
+                        <TextBlock
+                            Margin="0,0,0,4"
+                            FontSize="12"
+                            Foreground="Gray"
+                            Text="{DynamicResource Settings.GameLogPath.Description}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                Grid.Column="0"
+                                Height="28"
+                                Text="{Binding GameLogPath, UpdateSourceTrigger=LostFocus}" />
+                            <Button
+                                Grid.Column="1"
+                                Width="32"
+                                Height="28"
+                                Margin="4,0,0,0"
+                                Content="..."
+                                Command="{Binding BrowseGameLogPathCommand}"
+                                ToolTip="{DynamicResource Settings.BrowseGameLogPath}" />
+                        </Grid>
+                    </StackPanel>
+                </GroupBox>
                 <!--  更新  -->
                 <GroupBox Margin="0,12,0,0" Style="{x:Null}" MinHeight="70" Padding="0,5,0,5">
                     <GroupBox.Header>

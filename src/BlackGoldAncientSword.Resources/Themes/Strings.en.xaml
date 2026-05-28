@@ -75,11 +75,14 @@
     <system:String x:Key="Stats.BestDamage">Best Damage</system:String>
         <system:String x:Key="Stats.Header.Rank">Rank</system:String>
     <system:String x:Key="Stats.Header.Mode">Mode</system:String>
+    <system:String x:Key="Stats.Header.ModeCategory">Rank Mode</system:String>
+    <system:String x:Key="Stats.Header.ModeType">Match Type</system:String>
     <system:String x:Key="Stats.Header.Kill">Kills</system:String>
     <system:String x:Key="Stats.Header.Damage">Damage</system:String>
     <system:String x:Key="Stats.Header.RankScore">Tier</system:String>
     <system:String x:Key="Stats.Header.Time">Time</system:String>
     <system:String x:Key="Stats.RankName">Unrivaled Asura</system:String>
+    <system:String x:Key="Stats.Refresh">Refresh</system:String>
 
     <system:String x:Key="Search.Title">Search Player</system:String>
     <system:String x:Key="Search.Input">Enter player name or ID</system:String>
@@ -154,6 +157,7 @@
         <system:String x:Key="GameStatus.LobbyWaiting">In Lobby</system:String>
     <system:String x:Key="GameStatus.Queuing">Queuing</system:String>
     <system:String x:Key="GameStatus.HeroSelection">Hero Selection</system:String>
+    <system:String x:Key="GameStatus.BattleEnded">Battle Over</system:String>
     <system:String x:Key="GameStatus.InGame">In Game</system:String>
 
 
@@ -179,4 +183,8 @@
     <system:String x:Key="Settings.CloseBehavior.MinimizeToTray">Minimize to System Tray</system:String>
     <system:String x:Key="Settings.CloseBehavior.ExitDirectly">Exit directly</system:String>
     <system:String x:Key="Settings.CloseBehavior.RememberChoice">Remember choice</system:String>
+
+    <system:String x:Key="Settings.Category.GameLog">Game Status Detection</system:String>
+    <system:String x:Key="Settings.GameLogPath.Description">Full path to Naraka Bladepoint Player.log for game status detection</system:String>
+    <system:String x:Key="Settings.BrowseGameLogPath">Select game log file</system:String>
 </ResourceDictionary>

@@ -20,6 +20,7 @@ namespace BlackGoldAncientSword.App.Shell
         private readonly IModuleManager _moduleManager;
         private readonly BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService _updateService;
         private readonly BlackGoldAncientSword.Framework.Services.Abstractions.ILocalizationService _localization;
+        private readonly IGameStatusMonitor _gameStatusMonitor;
 
         public ObservableCollection<ToastItem> ToastItems { get; } = new();
 
@@ -50,6 +51,13 @@ namespace BlackGoldAncientSword.App.Shell
             _navigateToStatsCommand ??= new DelegateCommand(() =>
             {
                 _navigation.NavigateTo(PageNames.StatsPage);
+            });
+
+        private DelegateCommand? _navigateToTeamInfoCommand;
+        public DelegateCommand NavigateToTeamInfoCommand =>
+            _navigateToTeamInfoCommand ??= new DelegateCommand(() =>
+            {
+                _navigation.NavigateTo(PageNames.TeamInfoPage);
             });
 
         private DelegateCommand? _navigateToSearchCommand;
@@ -135,16 +143,12 @@ namespace BlackGoldAncientSword.App.Shell
             _moduleManager = moduleManager;
             _updateService = updateService;
             _localization = localizationService;
-            _localization.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(_localization.CurrentLanguage))
-                {
-                    RaisePropertyChanged(nameof(CurrentVersionText));
-                    RefreshGameStatusText();
-                }
-            };
+            _gameStatusMonitor = gameStatusMonitor;
 
+            _localization.PropertyChanged += OnLocalizationChanged;
             _navigation.Navigated += OnNavigated;
+            _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
+
             ActivePage = PageNames.HomePage;
 
             UpdateCanNavigateToPersonal();
@@ -158,22 +162,40 @@ namespace BlackGoldAncientSword.App.Shell
                     };
                     ToastItems.Add(item);
                 }, ThreadOption.UIThread);
+        }
 
-            gameStatusMonitor.GameStatusRecognized += (_, args) =>
+        /// <summary>
+        /// Clean up event subscriptions. Called by MainWindow when closing.
+        /// </summary>
+        public void Cleanup()
+        {
+            _localization.PropertyChanged -= OnLocalizationChanged;
+            _navigation.Navigated -= OnNavigated;
+            _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
+        }
+
+        private void OnLocalizationChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(_localization.CurrentLanguage))
             {
-                _currentGameStatus = args.Status;
+                RaisePropertyChanged(nameof(CurrentVersionText));
                 RefreshGameStatusText();
-            };
+            }
+        }
+
+        private void OnGameStatusRecognized(object? sender, GameStatusChangedEventArgs args)
+        {
+            _currentGameStatus = args.Status;
+            RefreshGameStatusText();
         }
 
         private void RefreshGameStatusText()
         {
             GameStatusText = _currentGameStatus switch
             {
-                GameStatus.LobbyWaiting => System.Windows.Application.Current.TryFindResource("GameStatus.LobbyWaiting") as string ?? "LobbyWaiting",
-                GameStatus.Queuing => System.Windows.Application.Current.TryFindResource("GameStatus.Queuing") as string ?? "Queuing",
                 GameStatus.HeroSelection => System.Windows.Application.Current.TryFindResource("GameStatus.HeroSelection") as string ?? "HeroSelection",
                 GameStatus.InGame => System.Windows.Application.Current.TryFindResource("GameStatus.InGame") as string ?? "InGame",
+                GameStatus.BattleEnded => System.Windows.Application.Current.TryFindResource("GameStatus.BattleEnded") as string ?? "BattleEnded",
                 _ => string.Empty,
             };
         }
