@@ -1,0 +1,5 @@
+# Native build artifacts (keep source + build script only)
+*.dll
+*.exp
+*.lib
+*.obj

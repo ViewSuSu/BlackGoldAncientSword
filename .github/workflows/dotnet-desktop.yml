@@ -2,7 +2,7 @@
 
 on:
   push:
-    branches: [ "release" ]
+    branches: ["release"]
 
 jobs:
   build:
@@ -58,6 +58,14 @@ jobs:
         Write-Host "Combined build folder contents:"
         Get-ChildItem build/Release | Select-Object Name, Length | Format-Table -AutoSize
 
+    - name: Zip published output
+      shell: powershell
+      run: |
+        New-Item -ItemType Directory -Force -Path output | Out-Null
+        $zipName = "BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}.zip"
+        Compress-Archive -Path publish/Release/* -DestinationPath "output/$zipName"
+        Write-Host "Created: output/$zipName"
+
     - name: Install Inno Setup
       shell: powershell
       run: |
@@ -67,6 +75,26 @@ jobs:
       shell: powershell
       run: |
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
+
+    - name: Generate update.xml
+      shell: powershell
+      run: |
+        $ver = '${{ steps.version.outputs.new_version }}'
+        $xml = @"
+        <?xml version="1.0" encoding="UTF-8"?>
+        <item>
+          <version>$ver</version>
+          <url>
+            https://github.com/ViewSuSu/NarakaBladepoint-Stats-Assistant/releases/download/v$ver/BlackGoldAncientSword-v$ver.zip
+          </url>
+          <changelog>
+            https://github.com/ViewSuSu/NarakaBladepoint-Stats-Assistant/releases/tag/v$ver
+          </changelog>
+          <mandatory>false</mandatory>
+        </item>
+        "@
+        $xml.Trim() | Set-Content -Path "output/update.xml" -Encoding UTF8
+        Write-Host "Generated update.xml for v$ver"
 
     - name: Commit bump, Tag & Push
       shell: powershell
@@ -87,5 +115,7 @@ jobs:
         name: v${{ steps.version.outputs.new_version }}
         files: |
           output/*.exe
+          output/*.zip
+          output/update.xml
         draft: false
         prerelease: false

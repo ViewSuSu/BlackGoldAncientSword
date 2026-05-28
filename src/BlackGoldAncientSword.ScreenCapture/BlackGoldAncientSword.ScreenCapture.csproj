@@ -1,17 +1,60 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Authors>小窗同学</Authors>
+    <Authors>С��ͬѧ</Authors>
     <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
-    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
-
-  <ItemGroup>
+<ItemGroup>
     <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
+  </ItemGroup>
+
+  <!-- Native WGC DLL, auto-copied to output -->
+  <ItemGroup>
+    <Content Include="runtimes\win-x64\native\wgc_capture.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>wgc_capture.dll</Link>
+    </Content>
+  </ItemGroup>
+  <!-- Native WGC DLL -->
+  <ItemGroup>
+    <Content Include="runtimes\win-x64\native\wgc_capture.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>wgc_capture.dll</Link>
+      <Pack>true</Pack>
+      <PackagePath>runtimes\win-x64\native\wgc_capture.dll</PackagePath>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="native\.gitignore">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="native\build_native.bat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="native\wgc_capture.cpp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="runtimes\win-x64\native\wgc_capture.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Copy native DLL to referencing projects' output -->
+  <Target Name="CopyNativeDll" AfterTargets="Build">
+    <ItemGroup>
+      <_CopyItems Include="$(OutDir)wgc_capture.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_CopyItems)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
+
+

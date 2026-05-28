@@ -5,6 +5,7 @@
     xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:viewmodels="clr-namespace:BlackGoldAncientSword.Modules.UI.Search.ViewModels"
     d:DesignHeight="600"
     d:DesignWidth="800"
@@ -69,7 +70,13 @@
                     MinWidth="80"
                     Height="32"
                     Margin="8,0,0,0"
-                    Command="{Binding SearchCommand}" ToolTip="{DynamicResource Search.Button}" Content="{DynamicResource Search.Button}" />
+                    ToolTip="{DynamicResource Search.Button}" Content="{DynamicResource Search.Button}">
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="Click">
+                            <i:InvokeCommandAction Command="{Binding SearchCommand}" />
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
+                </Button>
             </Grid>
         </Border>
 
@@ -126,8 +133,13 @@
                                     Background="Transparent"
                                     BorderBrush="LightGray"
                                     BorderThickness="1"
-                                    Command="{Binding DataContext.CopyCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                    CommandParameter="{Binding}" ToolTip="{DynamicResource Search.Copy}" Content="{DynamicResource Search.Copy}"
+                                    CommandParameter="{Binding}" ToolTip="{DynamicResource Search.Copy}" Content="{DynamicResource Search.Copy}">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding DataContext.CopyCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Button>
                                     FontSize="11"
                                     Foreground="Gray" />
                                 <Button
@@ -138,8 +150,13 @@
                                     Background="Transparent"
                                     BorderBrush="LightGray"
                                     BorderThickness="1"
-                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                    CommandParameter="{Binding}" ToolTip="{DynamicResource Search.Delete}" Content="{DynamicResource Search.Delete}"
+                                    CommandParameter="{Binding}" ToolTip="{DynamicResource Search.Delete}" Content="{DynamicResource Search.Delete}">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Button>
                                     FontSize="11"
                                     Foreground="Gray" />
                             </Grid>
