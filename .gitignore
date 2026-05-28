@@ -9,3 +9,5 @@ obj/
 src/ocr_service/python/
 src/ocr_service/python-*.zip
 src/ocr_service/__pycache__/
+
+*.binlog
