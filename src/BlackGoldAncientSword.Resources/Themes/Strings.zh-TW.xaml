@@ -153,6 +153,10 @@
 
         <system:String x:Key="GameStatus.LobbyWaiting">大廳等候</system:String>
     <system:String x:Key="GameStatus.Queuing">排隊中</system:String>
+    <system:String x:Key="GameStatus.HeroSelection">英雄選擇</system:String>
+    <system:String x:Key="GameStatus.InGame">遊戲中</system:String>
+
+
 
     <!--  Update  -->
     <system:String x:Key="Settings.CheckForUpdates">检查更新</system:String>

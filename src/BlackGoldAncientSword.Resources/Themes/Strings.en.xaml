@@ -153,6 +153,10 @@
 
         <system:String x:Key="GameStatus.LobbyWaiting">In Lobby</system:String>
     <system:String x:Key="GameStatus.Queuing">Queuing</system:String>
+    <system:String x:Key="GameStatus.HeroSelection">Hero Selection</system:String>
+    <system:String x:Key="GameStatus.InGame">In Game</system:String>
+
+
 
     <!--  Update  -->
     <system:String x:Key="Settings.AutoUpdate">Update</system:String>

@@ -1,4 +1,4 @@
-namespace BlackGoldAncientSword.GameMonitor.Models
+﻿namespace BlackGoldAncientSword.GameMonitor.Models
 {
     /// <summary>
     /// 当前游戏状态枚举。
@@ -11,5 +11,9 @@ namespace BlackGoldAncientSword.GameMonitor.Models
         LobbyWaiting,
         /// <summary>排队中</summary>
         Queuing,
+        /// <summary>英雄选择阶段</summary>
+        HeroSelection,
+        /// <summary>游戏中</summary>
+        InGame,
     }
 }
