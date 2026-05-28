@@ -60,7 +60,7 @@ namespace BlackGoldAncientSword.App
             try
             {
                 var updateService = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>();
-                updateService.Configure("https://github.com/ViewSuSu/BlackGoldAncientSword");
+                updateService.Configure("https://github.com/ViewSuSu/NarakaBladepoint-Stats-Assistant/releases/latest/download/update.xml");
             }
             catch { }
             try

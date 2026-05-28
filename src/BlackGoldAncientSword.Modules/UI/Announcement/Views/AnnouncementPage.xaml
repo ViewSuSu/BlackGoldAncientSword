@@ -5,6 +5,7 @@
     xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     Background="Transparent"
     mc:Ignorable="d">
     <Grid
@@ -46,9 +47,13 @@
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
-                        Command="{Binding DismissCommand}"
                         Cursor="Hand"
                         ToolTip="{DynamicResource TitleBar.Close}">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Click">
+                                <i:InvokeCommandAction Command="{Binding DismissCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
                         <Image
                             Width="15"
                             Height="15"
@@ -114,7 +119,13 @@
                     Grid.Row="2"
                     HorizontalAlignment="Right"
                     Orientation="Horizontal">
-                    <Button MinWidth="80" Height="32" Command="{Binding ConfirmCommand}" ToolTip="{DynamicResource Announcement.Confirm}" Content="{DynamicResource Announcement.Confirm}" />
+                    <Button MinWidth="80" Height="32" ToolTip="{DynamicResource Announcement.Confirm}" Content="{DynamicResource Announcement.Confirm}">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Click">
+                                <i:InvokeCommandAction Command="{Binding ConfirmCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>

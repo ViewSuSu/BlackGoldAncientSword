@@ -5,6 +5,7 @@
     xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:hc="https://handyorg.github.io/handycontrol"
     d:DesignHeight="400"
     d:DesignWidth="600"
@@ -48,10 +49,14 @@
                                     Margin="0,0,20,0"
                                     Padding="0"
                                     VerticalAlignment="Center"
-                                    Command="{Binding DataContext.SelectLanguageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding Code}"
                                     Content="{Binding DisplayName}"
                                     GroupName="Language">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding DataContext.SelectLanguageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Code}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
                                     <RadioButton.IsChecked>
                                         <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
                                             <Binding Path="Code" />
@@ -87,8 +92,13 @@
                                 Width="32"
                                 Height="28"
                                 Margin="4,0,0,0"
-                                Command="{Binding BrowseFolderCommand}"
-                                Content="..." ToolTip="{DynamicResource Settings.BrowseDataPath}" />
+                                Content="..." ToolTip="{DynamicResource Settings.BrowseDataPath}">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="Click">
+                                        <i:InvokeCommandAction Command="{Binding BrowseFolderCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                            </Button>
                         </Grid>
                     </StackPanel>
                 </GroupBox>
@@ -116,8 +126,13 @@
                                 Width="32"
                                 Height="28"
                                 Margin="4,0,0,0"
-                                Command="{Binding BrowseCacheFolderCommand}"
-                                Content="..." ToolTip="{DynamicResource Settings.BrowseCachePath}" />
+                                Content="..." ToolTip="{DynamicResource Settings.BrowseCachePath}">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="Click">
+                                        <i:InvokeCommandAction Command="{Binding BrowseCacheFolderCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                            </Button>
                         </Grid>
                         <Grid Margin="0,16,0,0">
                             <Grid.ColumnDefinitions>
@@ -141,7 +156,13 @@
                                 Grid.Column="2"
                                 MinWidth="80"
                                 Height="28"
-                                Command="{Binding ClearCacheCommand}" ToolTip="{DynamicResource Settings.ClearCache}" Content="{DynamicResource Settings.ClearCache}" />
+                                ToolTip="{DynamicResource Settings.ClearCache}" Content="{DynamicResource Settings.ClearCache}">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="Click">
+                                        <i:InvokeCommandAction Command="{Binding ClearCacheCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                            </Button>
                         </Grid>
                     </StackPanel>
                 </GroupBox>
@@ -229,10 +250,14 @@
                                         Margin="0,0,20,0"
                                         Padding="0"
                                         VerticalAlignment="Center"
-                                        Command="{Binding DataContext.SelectCloseBehaviorCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding Value}"
                                         Content="{Binding DisplayName}"
                                         GroupName="CloseBehavior">
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="Click">
+                                                <i:InvokeCommandAction Command="{Binding DataContext.SelectCloseBehaviorCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Value}" />
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
                                         <RadioButton.IsChecked>
                                             <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
                                                 <Binding Path="Value" />

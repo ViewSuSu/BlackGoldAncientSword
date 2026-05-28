@@ -6,7 +6,7 @@
     <Company>$(Authors)</Company>
     <Description>$(PackageProjectUrl)</Description>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>

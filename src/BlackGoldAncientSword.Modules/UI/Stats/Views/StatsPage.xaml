@@ -7,6 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hc="clr-namespace:HandyControl.Controls;assembly=HandyControl"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:viewmodels="clr-namespace:BlackGoldAncientSword.Modules.UI.Stats.ViewModels"
     d:DataContext="{d:DesignInstance Type=viewmodels:StatsPageViewModel}"
     d:DesignHeight="600"
@@ -67,9 +68,13 @@
                                 Padding="0"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Command="{Binding CopyUserNameCommand}"
                                 Cursor="Hand"
                                 ToolTip="{DynamicResource Stats.CopyNickname}">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="Click">
+                                        <i:InvokeCommandAction Command="{Binding CopyUserNameCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
                                 <Path
                                     Width="12"
                                     Height="12"
@@ -97,9 +102,13 @@
                                 Padding="0"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Command="{Binding CopyUIDCommand}"
                                 Cursor="Hand"
                                 ToolTip="{DynamicResource Stats.CopyUID}">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="Click">
+                                        <i:InvokeCommandAction Command="{Binding CopyUIDCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
                                 <Path
                                     Width="10"
                                     Height="10"
@@ -124,8 +133,7 @@
                         VerticalAlignment="Center"
                         ArcThickness="4"
                         Foreground="#4A90D9"
-                        ShowText="True"
-                        Value="{Binding PlayerInfoProgress}" />
+                        IsIndeterminate="True" />
                 </Border>
             </Grid>
 
@@ -179,10 +187,14 @@
                                 <DataTemplate>
                                     <RadioButton
                                         Margin="0,0,12,0"
-                                        Command="{Binding DataContext.SelectTeamSizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding .}"
                                         Content="{Binding DisplayName}"
                                         GroupName="TeamSize">
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="Click">
+                                                <i:InvokeCommandAction Command="{Binding DataContext.SelectTeamSizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding .}" />
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
                                         <RadioButton.IsChecked>
                                             <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
                                                 <Binding Path="Value" />
@@ -205,10 +217,14 @@
                                 <DataTemplate>
                                     <RadioButton
                                         Margin="0,0,12,0"
-                                        Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding .}"
                                         Content="{Binding DisplayName}"
                                         GroupName="Category">
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="Click">
+                                                <i:InvokeCommandAction Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding .}" />
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
                                         <RadioButton.IsChecked>
                                             <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
                                                 <Binding Path="Value" />
@@ -327,8 +343,7 @@
                                 VerticalAlignment="Center"
                                 ArcThickness="4"
                                 Foreground="#4A90D9"
-                                ShowText="True"
-                                Value="{Binding StatsProgress}" />
+                                IsIndeterminate="True" />
                         </Border>
                     </Grid>
 
@@ -552,8 +567,7 @@
                         VerticalAlignment="Center"
                         ArcThickness="4"
                         Foreground="#4A90D9"
-                        ShowText="True"
-                        Value="{Binding RecentBattlesProgress}" />
+                        IsIndeterminate="True" />
                 </Border>
             </Grid>
         </Grid>

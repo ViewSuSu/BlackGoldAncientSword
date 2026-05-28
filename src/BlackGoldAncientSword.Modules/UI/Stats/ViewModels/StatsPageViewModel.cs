@@ -345,14 +345,18 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             {
                 var search = await NarakaApiClient.SearchRecordAsync(localName, ct);
                 if (search?.Data == null) { _tipMessage.ShowError(search?.Msg ?? L("Stats.LoadError", "加载战绩失败，请检查网络后重试。")); return; }
-                _roleId = search.Data.RoleIdMiniProgram ?? string.Empty;
+                _roleId = search.Data.RoleIdSimple ?? string.Empty;
                 if (string.IsNullOrEmpty(_roleId)) { _tipMessage.ShowError(L("Stats.PlayerNotFound", "未找到该玩家，请检查名称是否正确")); return; }
 
-                // Fire userInfo + seasons in background; get battles list first
+                // Fire all three requests in parallel
                 var userInfoTask = NarakaApiClient.GetUserInfoAsync(_roleId, ct);
                 var seasonsTask = NarakaApiClient.QuerySeasonsAsync(ct);
-                var battlesResult = await NarakaApiClient.GetRecentBattlesAsync(_roleId, ct: ct);
+                var battlesTask = NarakaApiClient.GetRecentBattlesAsync(_roleId, ct: ct);
+
+                await System.Threading.Tasks.Task.WhenAll(userInfoTask, seasonsTask, battlesTask);
                 ct.ThrowIfCancellationRequested();
+
+                var battlesResult = battlesTask.Result;
 
                 // As soon as battles list arrives, fire all 10 detail requests concurrently
                 System.Threading.Tasks.Task? detailsTask = null;
