@@ -370,6 +370,7 @@
                     <DataGrid.ColumnHeaderStyle>
                         <Style BasedOn="{StaticResource DataGridColumnHeaderStyle}" TargetType="DataGridColumnHeader">
                             <Setter Property="HorizontalContentAlignment" Value="Center" />
+                            <Setter Property="Background" Value="#F2F3F5" />
                         </Style>
                     </DataGrid.ColumnHeaderStyle>
                     <DataGrid.CellStyle>
@@ -393,9 +394,15 @@
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTemplateColumn MinWidth="50">
+                        <DataGridTemplateColumn Width="50">
                             <DataGridTemplateColumn.Header>
-                                <TextBlock Text="{DynamicResource Stats.Header.Rank}" />
+                                <TextBlock Text="{DynamicResource Stats.Header.Rank}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{DynamicResource Stats.Header.Rank}" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -406,7 +413,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="400" Header="">
+                        <DataGridTemplateColumn Width="*" Header="">
 
                             <DataGridTemplateColumn.CellStyle>
                                 <Style BasedOn="{StaticResource DataGridCellStyle}" TargetType="DataGridCell">
@@ -446,12 +453,21 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Image
-                                                        Width="25"
-                                                        Height="25"
-                                                        Margin="1"
+                                                        Width="28"
+                                                        Height="28"
+                                                        VerticalAlignment="Center"
+                                                        Margin="0"
                                                         Source="{Binding Icon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
-                                                        Stretch="Uniform"
-                                                        ToolTip="{Binding Desc}" />
+                                                        Stretch="Uniform">
+                                                        <Image.ToolTip>
+                                                            <ToolTip>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="{Binding HonorName}" FontWeight="Bold" />
+                                                                    <TextBlock Text="{Binding HonorDesc}" />
+                                                                </StackPanel>
+                                                            </ToolTip>
+                                                        </Image.ToolTip>
+                                                    </Image>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -459,46 +475,91 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="*" MinWidth="70">
+                        <DataGridTemplateColumn Width="75">
                             <DataGridTemplateColumn.Header>
-                                <TextBlock Text="{DynamicResource Stats.Header.Mode}" />
+                                <TextBlock Text="{DynamicResource Stats.Header.ModeCategory}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{DynamicResource Stats.Header.ModeCategory}" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock
                                         VerticalAlignment="Center"
                                         Foreground="Gray"
-                                        Text="{Binding GameModeText}"
+                                        Text="{Binding GameModeCategoryText}"
+                                        TextAlignment="Center" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Width="75">
+                            <DataGridTemplateColumn.Header>
+                                <TextBlock Text="{DynamicResource Stats.Header.ModeType}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{DynamicResource Stats.Header.ModeType}" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
+                            </DataGridTemplateColumn.Header>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="Gray"
+                                        Text="{Binding GameModeTeamSizeText}"
                                         TextAlignment="Center" />
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         <DataGridTemplateColumn Width="50">
                             <DataGridTemplateColumn.Header>
-                                <TextBlock Text="{DynamicResource Stats.Header.Kill}" />
+                                <TextBlock Text="{DynamicResource Stats.Header.Kill}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{DynamicResource Stats.Header.Kill}" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock
                                         VerticalAlignment="Center"
                                         FontWeight="SemiBold"
+                                        Foreground="#333333"
                                         Text="{Binding Kill}" />
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn MinWidth="60">
+                        <DataGridTemplateColumn Width="65">
                             <DataGridTemplateColumn.Header>
-                                <TextBlock Text="{DynamicResource Stats.Header.Damage}" />
+                                <TextBlock Text="{DynamicResource Stats.Header.Damage}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{DynamicResource Stats.Header.Damage}" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock VerticalAlignment="Center" Text="{Binding Damage}" />
+                                    <TextBlock VerticalAlignment="Center" Foreground="#333333" Text="{Binding Damage}" />
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="140" MinWidth="145">
+                        <DataGridTemplateColumn Width="140">
                             <DataGridTemplateColumn.Header>
-                                <TextBlock Text="{DynamicResource Stats.Header.RankScore}" />
+                                <TextBlock Text="{DynamicResource Stats.Header.RankScore}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{DynamicResource Stats.Header.RankScore}" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -507,6 +568,7 @@
                                             VerticalAlignment="Center"
                                             FontSize="12"
                                             FontWeight="SemiBold"
+                                            Foreground="#333333"
                                             Text="{Binding RankDisplayText}" />
                                         <Image
                                             Width="14"
@@ -519,6 +581,7 @@
                                             VerticalAlignment="Center"
                                             FontSize="12"
                                             FontWeight="SemiBold"
+                                            Foreground="#333333"
                                             Text="{Binding StarCount}"
                                             Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                         <TextBlock
@@ -538,9 +601,15 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="*" MinWidth="90">
+                        <DataGridTemplateColumn Width="130">
                             <DataGridTemplateColumn.Header>
-                                <TextBlock Text="{DynamicResource Stats.Header.Time}" />
+                                <TextBlock Text="{DynamicResource Stats.Header.Time}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{DynamicResource Stats.Header.Time}" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
