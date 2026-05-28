@@ -33,4 +33,11 @@
     <ProjectReference Include="..\BlackGoldAncientSword.Modules\BlackGoldAncientSword.Modules.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\BlackGoldAncientSword.ScreenCapture\runtimes\win-x64\native\wgc_capture.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>wgc_capture.dll</Link>
+    </Content>
+  </ItemGroup>
 </Project>
+

@@ -1,4 +1,4 @@
-using BlackGoldAncientSword.ScreenCapture;
+﻿using BlackGoldAncientSword.ScreenCapture;
 using Moq;
 using System.Diagnostics;
 
@@ -47,14 +47,14 @@ public class ScreenCaptureServiceTests : IDisposable
     public void CaptureWindow_ZeroHandle_ThrowsArgumentException()
     {
         var ex = Assert.Throws<ArgumentException>(() => _service.CaptureWindow(IntPtr.Zero));
-        Assert.Contains("Invalid window handle", ex.Message);
+        Assert.Contains("Invalid hwnd", ex.Message);
     }
 
     [Fact]
     public void CaptureWindow_InvalidHandle_ThrowsArgumentException()
     {
         var ex = Assert.Throws<ArgumentException>(() => _service.CaptureWindow(new IntPtr(0xDEADBEEF)));
-        Assert.Contains("Window no longer exists", ex.Message);
+        Assert.Contains("Window gone", ex.Message);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class ScreenCaptureServiceTests : IDisposable
     {
         var ex = Assert.Throws<InvalidOperationException>(
             () => _service.CaptureGame("NonExistentProcess_XYZ123"));
-        Assert.Contains("not found", ex.Message);
+        Assert.Contains("Not found", ex.Message);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class ScreenCaptureServiceTests : IDisposable
     {
         var ex = Assert.Throws<InvalidOperationException>(
             () => _service.CaptureGame("NonExistentProcess_XYZ123", @"C:\temp\nonexistent.png"));
-        Assert.Contains("not found", ex.Message);
+        Assert.Contains("Not found", ex.Message);
     }
 
     [Fact]
