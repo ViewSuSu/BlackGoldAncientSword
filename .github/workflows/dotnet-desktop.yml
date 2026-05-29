@@ -103,6 +103,17 @@ jobs:
             exit 1
           }
 
+      - name: Get installer EXE info
+        id: installer
+        shell: powershell
+        run: |
+          $exeFile = Get-ChildItem output/*.exe | Select-Object -First 1
+          $exeName = $exeFile.Name
+          $exeSize = $exeFile.Length
+          "exe_name=$exeName" >> $env:GITHUB_OUTPUT
+          "exe_size=$exeSize" >> $env:GITHUB_OUTPUT
+          Write-Host "Installer: $exeName ($exeSize bytes)"
+
       - name: Generate appcast.xml
         shell: powershell
         run: |
@@ -126,10 +137,10 @@ jobs:
                 </sparkle:releaseNotesLink>
                 <pubDate>$pubDate</pubDate>
                 <enclosure
-                  url="https://github.com/$repo/releases/download/v$ver/BlackGoldAncientSword-v$ver.zip"
+                  url="https://github.com/$repo/releases/download/v$ver/${{ steps.installer.outputs.exe_name }}"
                   sparkle:version="$ver"
-                  length="$zipSize"
-                  type="application/zip"
+                  length="${{ steps.installer.outputs.exe_size }}"
+                  type="application/octet-stream"
                   sparkle:os="windows" />
               </item>
             </channel>
