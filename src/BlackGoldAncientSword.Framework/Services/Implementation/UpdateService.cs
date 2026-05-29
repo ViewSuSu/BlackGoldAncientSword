@@ -1,10 +1,8 @@
 ﻿using BlackGoldAncientSword.Framework.Core.Attributes;
-using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using NetSparkleUpdater;
 using NetSparkleUpdater.Enums;
 using NetSparkleUpdater.UI.WPF;
-using Prism.Events;
 using System.Reflection;
 using System.Windows.Media.Imaging;
 
@@ -13,10 +11,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
     [Component(ComponentLifetime.Singleton)]
     public class UpdateService : IUpdateService
     {
-        private readonly IEventAggregator _eventAggregator;
         private SparkleUpdater? _sparkle;
-        private string? _customAppcastUrl;
-
         public string CurrentVersion { get; }
 
         public bool IsUpdateAvailable { get; private set; }
@@ -25,17 +20,11 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public event System.EventHandler<bool>? UpdateAvailabilityChanged;
 
-        public UpdateService(IEventAggregator eventAggregator)
+        public UpdateService()
         {
-            _eventAggregator = eventAggregator;
             CurrentVersion = GetCurrentVersion();
-        }
 
-        public void Configure(string? customAppcastUrl = null)
-        {
-            _customAppcastUrl = customAppcastUrl;
-
-            var appcastUrl = _customAppcastUrl ?? GetDefaultAppcastUrl();
+            var appcastUrl = GetDefaultAppcastUrl();
 
             // Load icon from Resources assembly
             var iconUri = new Uri("pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/app.png");
@@ -93,7 +82,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
             if (showNoUpdateMessage)
             {
-                // User-requested check: dispatch to UI thread so NetSparkle's WPF
+                // User-requested check: dispatch to UI thread so NetSparkle''s WPF
                 // controls (ProgressBar, dialogs) are created on the correct thread.
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(
                     () => _sparkle.CheckForUpdatesAtUserRequest());
@@ -158,4 +147,3 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         }
     }
 }
-

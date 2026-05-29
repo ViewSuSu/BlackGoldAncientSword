@@ -1,4 +1,4 @@
-namespace BlackGoldAncientSword.Framework.Services.Abstractions
+﻿namespace BlackGoldAncientSword.Framework.Services.Abstractions
 {
     public interface IUpdateService
     {
@@ -6,7 +6,6 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
 
         string CurrentVersion { get; }
 
-        void Configure(string? customAppcastUrl = null);
 
         bool IsUpdateAvailable { get; }
 
