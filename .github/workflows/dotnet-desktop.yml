@@ -2,7 +2,11 @@ name: Release Build & Publish
 
 on:
   push:
-    branches: ["release"]
+    branches:
+      - release
+    branches-ignore:
+      - main
+      - master
 
 jobs:
   build:
