@@ -1,7 +1,9 @@
 ﻿using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using NetSparkleUpdater;
+using NetSparkleUpdater.AssemblyAccessors;
 using NetSparkleUpdater.Enums;
+using NetSparkleUpdater.Interfaces;
 using NetSparkleUpdater.UI.WPF;
 using System.Diagnostics;
 using System.Reflection;
@@ -9,6 +11,21 @@ using System.Windows.Media.Imaging;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
 {
+    /// <summary>
+    /// Wraps a default AssemblyDiagnosticsAccessor but overrides AssemblyVersion
+    /// to return a normalized version string matching the appcast format.
+    /// </summary>
+    internal sealed class VersionNormalizedAssemblyAccessor(AssemblyDiagnosticsAccessor inner, string normalizedVersion)
+        : IAssemblyAccessor
+    {
+        public string AssemblyVersion => normalizedVersion;
+        public string AssemblyTitle => inner.AssemblyTitle;
+        public string AssemblyDescription => inner.AssemblyDescription;
+        public string AssemblyProduct => inner.AssemblyProduct;
+        public string AssemblyCopyright => inner.AssemblyCopyright;
+        public string AssemblyCompany => inner.AssemblyCompany;
+    }
+
     [Component(ComponentLifetime.Singleton)]
     public class UpdateService : IUpdateService
     {
@@ -45,6 +62,18 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 RelaunchAfterUpdate = true,
                 LogWriter = new LogWriter(LogWriterOutputMode.Debug),
             };
+
+            // Override AssemblyAccessor to use normalized version string
+            var entryAsm = Assembly.GetEntryAssembly();
+            if (entryAsm != null)
+            {
+                var assemblyName = entryAsm.GetName().Name ?? "BlackGoldAncientSword.App";
+                var defaultAccessor = new AssemblyDiagnosticsAccessor(assemblyName);
+                _sparkle.Configuration.AssemblyAccessor =
+                    new VersionNormalizedAssemblyAccessor(defaultAccessor, CurrentVersion);
+                Debug.WriteLine($"[UpdateService] 已设置自定义 AssemblyAccessor，规范化版本: {CurrentVersion}");
+            }
+
             Debug.WriteLine("[UpdateService] SparkleUpdater 实例已创建，SecurityMode=Unsafe");
 
             // Update detected
