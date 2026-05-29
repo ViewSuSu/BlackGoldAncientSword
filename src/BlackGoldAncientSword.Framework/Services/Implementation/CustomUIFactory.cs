@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -25,6 +26,18 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         {
             Debug.WriteLine("[CustomUIFactory] 带图标构造函数");
             InitWhiteBackground();
+        }
+
+        private static string GetInstalledVersion()
+        {
+            var attr = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            if (attr != null)
+            {
+                var version = attr.InformationalVersion;
+                var plusIndex = version.IndexOf('+');
+                return plusIndex > 0 ? version[..plusIndex] : version;
+            }
+            return "";
         }
 
         #region Resource Helpers
@@ -81,6 +94,12 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         {
             Debug.WriteLine("[CustomUIFactory] CreateUpdateAvailableWindow 开始");
 
+            var latestItem = updates.FirstOrDefault();
+            var latestVersion = latestItem?.Version ?? "";
+            var installedVersion = GetInstalledVersion();
+            var isSameVersion = !string.IsNullOrEmpty(latestVersion) &&
+                string.Equals(latestVersion, installedVersion, StringComparison.OrdinalIgnoreCase);
+
             var window = base.CreateUpdateAvailableWindow(
                 updates, signatureVerifier, currentVersion, appName, isUpdateAlreadyDownloaded);
 
@@ -93,17 +112,30 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
                 // Localize buttons
                 if (wpfWindow.FindName("SkipButton") is Button skipBtn)
+                {
                     skipBtn.Content = ResOrDefault("UpdateDialog.SkipVersion", "Skip this version");
+                    if (isSameVersion)
+                        skipBtn.Visibility = Visibility.Collapsed;
+                }
 
                 if (wpfWindow.FindName("RemindMeLaterButton") is Button remindBtn)
                     remindBtn.Visibility = Visibility.Collapsed;
 
                 if (wpfWindow.FindName("DownloadInstallButton") is Button installBtn)
                 {
-                    installBtn.Content = isUpdateAlreadyDownloaded
-                        ? ResOrDefault("UpdateDialog.Restart", "Restart")
-                        : ResOrDefault("UpdateDialog.DownloadInstall", "Download/Install");
-                    installBtn.MinWidth = 60;
+                    if (isSameVersion)
+                    {
+                        installBtn.Content = ResOrDefault("UpdateDialog.UpToDate", "Up to Date");
+                        installBtn.IsEnabled = false;
+                        installBtn.MinWidth = 60;
+                    }
+                    else
+                    {
+                        installBtn.Content = isUpdateAlreadyDownloaded
+                            ? ResOrDefault("UpdateDialog.Restart", "Restart")
+                            : ResOrDefault("UpdateDialog.DownloadInstall", "Download/Install");
+                        installBtn.MinWidth = 60;
+                    }
                 }
 
                 // Localize view model strings
@@ -142,6 +174,13 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                                 "Would you like to {0} it now?"),
                             downloadInstallWord);
                     }
+
+                    // If same version, override content to show "up to date"
+                    if (isSameVersion)
+                    {
+                        vm.TitleHeaderText = ResOrDefault("UpdateDialog.UpToDate", "Your current version is up to date.");
+                        vm.InfoText = "";
+                    }
                 }
             }
 
@@ -172,28 +211,10 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 wpfWindow.Background = Brushes.White;
                 ApplyHandyControlStyles(wpfWindow);
 
-                // Localize action button + hook download completion
+                // Localize action button via view model
                 if (wpfWindow.DataContext is DownloadProgressWindowViewModel progressVm)
                 {
-                    // Set initial button text (Cancel or Install)
                     progressVm.ActionButtonTitle = localizedAction;
-
-                    // Hook download completion: change title to "更新完成" and button to "重新启动"
-                    progressVm.PropertyChanged += (sender, args) =>
-                    {
-                        if (args.PropertyName == nameof(progressVm.IsDownloading) && !progressVm.IsDownloading)
-                        {
-                            // Download finished successfully
-                            if (progressVm.DidDownloadAnything && !progressVm.DidDownloadFail)
-                            {
-                                progressVm.ActionButtonTitle = ResOrDefault("UpdateDialog.Restart", "Restart");
-                                // Update downloading title text
-                                var tbs = FindVisualChildren<TextBlock>(wpfWindow).ToList();
-                                if (tbs.Count > 0)
-                                    tbs[0].Text = ResOrDefault("UpdateDialog.UpdateCompleted", "Update Complete");
-                            }
-                        }
-                    };
                 }
 
                 // Fallback: find button in visual tree and set Content directly
