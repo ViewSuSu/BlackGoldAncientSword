@@ -1,4 +1,4 @@
-﻿<ResourceDictionary
+<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:system="clr-namespace:System;assembly=mscorlib">
@@ -185,6 +185,30 @@
     <system:String x:Key="Settings.CloseBehavior.ExitDirectly">Exit directly</system:String>
     <system:String x:Key="Settings.CloseBehavior.RememberChoice">Remember choice</system:String>
 
+    <!--  Update Dialog - NetSparkle UI Localization  -->
+    <system:String x:Key="UpdateDialog.SoftwareUpdate">Software Update</system:String>
+    <system:String x:Key="UpdateDialog.NewVersionAvailable">A new version of {0} is available.</system:String>
+    <system:String x:Key="UpdateDialog.VersionInfo">{0} {3} is now available (you have {1}). Would you like to {2} it now?</system:String>
+    <system:String x:Key="UpdateDialog.VersionInfoNoName">Would you like to {0} it now?</system:String>
+    <system:String x:Key="UpdateDialog.SkipVersion">Skip this version</system:String>
+    <system:String x:Key="UpdateDialog.RemindLater">Remind me later</system:String>
+    <system:String x:Key="UpdateDialog.DownloadInstall">Download/Install</system:String>
+    <system:String x:Key="UpdateDialog.Install">Install</system:String>
+    <system:String x:Key="UpdateDialog.InstallRelaunch">Install and Relaunch</system:String>
+    <system:String x:Key="UpdateDialog.Downloading">Downloading {0}</system:String>
+    <system:String x:Key="UpdateDialog.DownloadingGeneric">Downloading...</system:String>
+    <system:String x:Key="UpdateDialog.Download">download</system:String>
+    <system:String x:Key="UpdateDialog.CheckingForUpdates">Checking for Updates...</system:String>
+    <system:String x:Key="UpdateDialog.Cancel">Cancel</system:String>
+    <system:String x:Key="UpdateDialog.UpToDate">Your current version is up to date.</system:String>
+    <system:String x:Key="UpdateDialog.VersionSkipped">You have elected to skip this version.</system:String>
+    <system:String x:Key="UpdateDialog.UnknownInstallerFormat">Updater not supported, please execute {0} manually.</system:String>
+    <system:String x:Key="UpdateDialog.ToastMessage">New Version Available</system:String>
+    <system:String x:Key="UpdateDialog.ToastAction">More information</system:String>
+    <system:String x:Key="UpdateDialog.ErrorTitle">Error</system:String>
+    <system:String x:Key="UpdateDialog.InfoTitle">Info</system:String>
+    <system:String x:Key="UpdateDialog.CannotDownloadAppcast">Unable to connect to update server. Please check your network and try again.</system:String>
+    <system:String x:Key="UpdateDialog.DownloadError">There was a problem downloading the update:\n{0}</system:String>
     <system:String x:Key="Settings.Category.GameLog">Game Status Detection</system:String>
     <system:String x:Key="Settings.GameLogPath.Description">Full path to Naraka Bladepoint Player.log for game status detection</system:String>
     <system:String x:Key="Settings.BrowseGameLogPath">Select game log file</system:String>
