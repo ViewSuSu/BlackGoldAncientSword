@@ -1,6 +1,10 @@
 ﻿#define MyAppName "BlackGoldAncientSword"
-#define ExePath "build\Release\BlackGoldAncientSword.App.exe"
-#define MyAppVersion GetFileVersion(ExePath)
+#define ExePath "publish\Release\BlackGoldAncientSword.App.exe"
+
+#ifndef MyAppVersion
+  #define MyAppVersion GetFileVersion(ExePath)
+#endif
+
 #define MyAppPublisher GetStringFileInfo(ExePath, "CompanyName")
 #define MyAppURL GetStringFileInfo(ExePath, "FileDescription")
 
@@ -22,7 +26,7 @@ SetupIconFile=src\BlackGoldAncientSword.Resources\Images\app.ico
 UninstallDisplayIcon={app}\BlackGoldAncientSword.App.exe
 
 [Files]
-Source: "build\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "publish\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"
