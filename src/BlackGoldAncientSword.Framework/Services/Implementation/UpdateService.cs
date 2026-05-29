@@ -87,8 +87,16 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             // Update detected
             _sparkle.UpdateDetected += (_, args) =>
             {
-                var latestVer = args.LatestVersion?.Version ?? "null";
-                Debug.WriteLine($"[UpdateService] UpdateDetected 事件触发，最新版本: {latestVer}");
+                var latestVer = args.LatestVersion?.Version ?? "";
+                Debug.WriteLine($"[UpdateService] UpdateDetected 事件触发，最新版本: {latestVer}, 当前版本: {CurrentVersion}");
+
+                // Guard: ignore if same version is detected (e.g. assembly version differs from appcast version)
+                if (string.Equals(latestVer, CurrentVersion, StringComparison.OrdinalIgnoreCase))
+                {
+                    Debug.WriteLine($"[UpdateService] 版本一致 ({latestVer})，忽略更新通知");
+                    return;
+                }
+
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     IsUpdateAvailable = true;
@@ -161,60 +169,15 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         private static string GetCurrentVersion()
         {
-            Debug.WriteLine("[UpdateService] GetCurrentVersion 开始");
-
-            var entryAsm = Assembly.GetEntryAssembly();
-            Debug.WriteLine($"[UpdateService] EntryAssembly: {(entryAsm == null ? "null" : entryAsm.FullName)}");
-
-            if (entryAsm != null)
+            // Read AssemblyInformationalVersionAttribute, strip Git commit hash suffix
+            var attr = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            if (attr != null)
             {
-                var thisAssemblyType = entryAsm.GetType("ThisAssembly");
-                Debug.WriteLine($"[UpdateService] ThisAssembly 类型: {(thisAssemblyType == null ? "null" : "存在")}");
-
-                if (thisAssemblyType != null)
-                {
-                    var field = thisAssemblyType.GetField("AssemblyInformationalVersion");
-                    Debug.WriteLine($"[UpdateService] AssemblyInformationalVersion 字段: {(field == null ? "null" : "存在")}");
-
-                    if (field != null)
-                    {
-                        var value = field.GetValue(null) as string;
-                        Debug.WriteLine($"[UpdateService] ThisAssembly 原始值: {value ?? "null"}");
-
-                        if (!string.IsNullOrWhiteSpace(value))
-                        {
-                            var plusIndex = value.IndexOf('+');
-                            var result = plusIndex > 0 ? value[..plusIndex] : value;
-                            Debug.WriteLine($"[UpdateService] 从 ThisAssembly 获取版本: {result}");
-                            return result;
-                        }
-                    }
-                }
-
-                var attr = entryAsm.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-                Debug.WriteLine($"[UpdateService] AssemblyInformationalVersionAttribute: {(attr == null ? "null" : attr.InformationalVersion)}");
-
-                if (attr != null)
-                {
-                    var version = attr.InformationalVersion;
-                    var plusIndex = version.IndexOf('+');
-                    var result = plusIndex > 0 ? version[..plusIndex] : version;
-                    Debug.WriteLine($"[UpdateService] 从 AssemblyInformationalVersion 获取版本: {result}");
-                    return result;
-                }
-
-                var fileVersionAttr = entryAsm.GetCustomAttribute<AssemblyFileVersionAttribute>();
-                Debug.WriteLine($"[UpdateService] AssemblyFileVersionAttribute: {(fileVersionAttr == null ? "null" : fileVersionAttr.Version)}");
-
-                if (fileVersionAttr != null)
-                {
-                    Debug.WriteLine($"[UpdateService] 从 AssemblyFileVersion 获取版本: {fileVersionAttr.Version}");
-                    return fileVersionAttr.Version;
-                }
+                var version = attr.InformationalVersion;
+                var plusIndex = version.IndexOf('+');
+                return plusIndex > 0 ? version[..plusIndex] : version;
             }
-
-            Debug.WriteLine("[UpdateService] 所有版本检测失败，返回兜底值 1.0.0");
-            return "1.0.0";
+            return "0.0.0";
         }
 
         private static string GetDefaultAppcastUrl()
