@@ -1,4 +1,4 @@
-using System.Windows.Threading;
+﻿using System.Windows.Threading;
 using BlackGoldAncientSword.App.Shell;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Core.Extensions;
@@ -57,12 +57,6 @@ namespace BlackGoldAncientSword.App
             }
             catch { }
 
-            try
-            {
-                var updateService = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>();
-                updateService.Configure("https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest/download/appcast.xml");
-            }
-            catch { }
             try
             {
                 var settings = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService>();
