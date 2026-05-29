@@ -102,7 +102,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 {
                     installBtn.Content = isUpdateAlreadyDownloaded
                         ? ResOrDefault("UpdateDialog.Restart", "Restart")
-                        : ResOrDefault("UpdateDialog.DownloadInstall", "Update");
+                        : ResOrDefault("UpdateDialog.DownloadInstall", "Download/Install");
                     installBtn.MinWidth = 60;
                 }
 
@@ -200,6 +200,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 foreach (var btn in FindVisualChildren<Button>(wpfWindow))
                 {
                     btn.Content = localizedAction;
+                    btn.MinWidth = 60;
                 }
 
                 // Adjust font sizes in progress window
