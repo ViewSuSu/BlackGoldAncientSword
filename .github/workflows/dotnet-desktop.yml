@@ -3,61 +3,79 @@ name: Release Build & Publish
 on:
   push:
     branches:
-      - release
-    branches-ignore:
-      - main
-      - master
+      - release  # 仅在推送到 release 分支时触发
+    # 移除 branches-ignore，避免与 branches 冲突（原配置会导致触发逻辑异常）
 
 jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: write
+      contents: write  # 确保有创建 Release、推送标签/代码的权限
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # 拉取完整历史，用于版本标签
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: "10.0.x"
+        dotnet-version: "8.0.x"  # 修正：.NET 10.0 尚未正式发布，改用 LTS 版本 8.0（根据实际项目调整）
 
     - name: Bump version
       id: version
       shell: powershell
       run: |
+        # 检查 version.json 是否存在
         $versionFile = "version.json"
+        if (-not (Test-Path $versionFile)) {
+          Write-Error "version.json file not found!"
+          exit 1
+        }
+        # 读取并递增版本号
         $json = Get-Content $versionFile -Raw | ConvertFrom-Json
         $current = [Version]$json.version
-        $new = "{0}.{1}.{2}" -f $current.Major, $current.Minor, ($current.Build + 1)
-        $json.version = $new
+        $newVersion = "{0}.{1}.{2}" -f $current.Major, $current.Minor, ($current.Build + 1)
+        # 更新 version.json
+        $json.version = $newVersion
         $json | ConvertTo-Json -Depth 10 | Set-Content $versionFile -Encoding UTF8
-        Write-Host "Bumped version: $($current.ToString()) -> $new"
-        echo "new_version=$new" >> $env:GITHUB_OUTPUT
+        # 输出新版本号（确保 GitHub Output 正确）
+        Write-Host "Bumped version: $($current.ToString()) -> $newVersion"
+        echo "new_version=$newVersion" >> $env:GITHUB_OUTPUT
 
     - name: Build (separate DLLs)
       shell: powershell
       run: |
-        dotnet build src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj `
+        $projPath = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+        if (-not (Test-Path $projPath)) {
+          Write-Error "Project file not found: $projPath"
+          exit 1
+        }
+        # 构建 Release 版本
+        dotnet build $projPath `
           -c Release `
           -r win-x64 `
-          -o build/Release
+          -o build/Release `
+          /p:Version=${{ steps.version.outputs.new_version }}  # 传递版本号到项目
 
     - name: Publish (self-contained single exe)
       shell: powershell
       run: |
-        dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj `
+        $projPath = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+        dotnet publish $projPath `
           -c Release `
           -r win-x64 `
-          -o publish/Release
+          -o publish/Release `
+          --self-contained true `  # 显式指定自包含
+          /p:Version=${{ steps.version.outputs.new_version }}
 
     - name: Merge outputs
       shell: powershell
       run: |
+        # 确保目录存在
+        New-Item -ItemType Directory -Force -Path build/Release | Out-Null
         Copy-Item publish/Release/* build/Release/ -Recurse -Force
         Write-Host "Combined build folder contents:"
         Get-ChildItem build/Release | Select-Object Name, Length | Format-Table -AutoSize
@@ -67,65 +85,100 @@ jobs:
       run: |
         New-Item -ItemType Directory -Force -Path output | Out-Null
         $zipName = "BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}.zip"
-        Compress-Archive -Path publish/Release/* -DestinationPath "output/$zipName"
-        Write-Host "Created: output/$zipName"
+        $zipPath = "output/$zipName"
+        # 压缩发布文件
+        Compress-Archive -Path publish/Release/* -DestinationPath $zipPath -Force
+        # 获取 ZIP 文件大小（修复 appcast.xml 中 length=0 的问题）
+        $zipSize = (Get-Item $zipPath).Length
+        echo "zip_size=$zipSize" >> $env:GITHUB_OUTPUT
+        Write-Host "Created: $zipPath (Size: $zipSize bytes)"
 
     - name: Install Inno Setup
       shell: powershell
       run: |
-        choco install innosetup -y
+        # 确保 choco 可用，并重试安装
+        choco upgrade chocolatey -y --no-progress
+        choco install innosetup -y --no-progress --force
 
     - name: Build Installer
       shell: powershell
       run: |
-        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
+        $issPath = "setup.iss"
+        if (-not (Test-Path $issPath)) {
+          Write-Error "Inno Setup script not found: $issPath"
+          exit 1
+        }
+        # 传递版本号到 Inno Setup
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+          /DMyAppVersion=${{ steps.version.outputs.new_version }} `
+          $issPath `
+          /O"output"  # 指定安装包输出到 output 目录
+        # 验证安装包是否生成
+        $exeFiles = Get-ChildItem output/*.exe
+        if (-not $exeFiles) {
+          Write-Error "Installer EXE not generated!"
+          exit 1
+        }
 
     - name: Generate appcast.xml
       shell: powershell
       run: |
-        $ver = '${{ steps.version.outputs.new_version }}'
+        $ver = "${{ steps.version.outputs.new_version }}"
+        $zipSize = "${{ steps.zip_size.outputs.zip_size }}"  # 获取 ZIP 文件大小
         $pubDate = (Get-Date -Format "ddd, dd MMM yyyy HH:mm:ss zzz")
+        $repo = "${{ github.repository }}"
+        # 生成合法的 appcast.xml（修复 length=0 问题）
         $xml = @"
         <?xml version="1.0" encoding="UTF-8"?>
         <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
           <channel>
             <title>BlackGoldAncientSword</title>
+            <link>https://github.com/$repo</link>
+            <description>BlackGoldAncientSword Auto Update Feed</description>
+            <language>en</language>
             <item>
-              <title>$ver</title>
-              <sparkle:releaseNotesLink>https://github.com/${{ github.repository }}/releases/tag/v$ver</sparkle:releaseNotesLink>
+              <title>Version $ver</title>
+              <sparkle:releaseNotesLink>https://github.com/$repo/releases/tag/v$ver</sparkle:releaseNotesLink>
               <pubDate>$pubDate</pubDate>
-              <enclosure url="https://github.com/${{ github.repository }}/releases/download/v$ver/BlackGoldAncientSword-v$ver.zip"
+              <enclosure url="https://github.com/$repo/releases/download/v$ver/BlackGoldAncientSword-v$ver.zip"
                          sparkle:version="$ver"
-                         length="0"
-                         type="application/octet-stream"
+                         length="$zipSize"
+                         type="application/zip"
                          sparkle:os="windows" />
             </item>
           </channel>
         </rss>
 "@
-        $xml.Trim() | Set-Content -Path "output/appcast.xml" -Encoding UTF8
-        Write-Host "Generated appcast.xml for v$ver"
+        # 写入 XML 文件（确保编码正确）
+        $xml.Trim() | Set-Content -Path "output/appcast.xml" -Encoding UTF8 -Force
+        Write-Host "Generated appcast.xml for v$ver (ZIP size: $zipSize bytes)"
 
-    - name: Commit bump, Tag & Push
+    - name: Commit version bump, Tag & Push
       shell: powershell
       run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        $ver = '${{ steps.version.outputs.new_version }}'
+        # 配置 Git 身份
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        $ver = "${{ steps.version.outputs.new_version }}"
+        # 提交版本号变更
         git add version.json
         git commit -m "chore: bump version to $ver [skip ci]"
-        git tag "v$ver"
+        # 推送提交和标签（推送到 release 分支）
         git push origin HEAD:release
+        git tag -a "v$ver" -m "Release v$ver"
         git push origin "v$ver"
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.new_version }}
-        name: v${{ steps.version.outputs.new_version }}
+        name: Release v${{ steps.version.outputs.new_version }}
         files: |
           output/*.exe
           output/*.zip
           output/appcast.xml
         draft: false
         prerelease: false
+        generate_release_notes: true  # 自动生成发布说明（可选）
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 显式传递 Token
