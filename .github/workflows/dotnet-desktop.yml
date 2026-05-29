@@ -68,7 +68,8 @@ jobs:
           -c Release `
           -r win-x64 `
           -o publish/Release `
-          --self-contained true `  # 显式指定自包含
+          # 显式指定自包含
+          --self-contained true `
           /p:Version=${{ steps.version.outputs.new_version }}
 
     - name: Merge outputs
