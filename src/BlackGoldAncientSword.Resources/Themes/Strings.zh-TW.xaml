@@ -189,7 +189,7 @@
     <system:String x:Key="UpdateDialog.VersionInfoNoName">是否立即{0}？</system:String>
     <system:String x:Key="UpdateDialog.SkipVersion">跳過此版本</system:String>
     <system:String x:Key="UpdateDialog.RemindLater">稍後提醒</system:String>
-    <system:String x:Key="UpdateDialog.DownloadInstall">更新</system:String>
+    <system:String x:Key="UpdateDialog.DownloadInstall">下載並安裝</system:String>
     <system:String x:Key="UpdateDialog.Restart">重新啟動</system:String>
     <system:String x:Key="UpdateDialog.UpdateCompleted">更新完成</system:String>
     <system:String x:Key="UpdateDialog.Install">安裝</system:String>
