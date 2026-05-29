@@ -201,6 +201,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 {
                     btn.Content = localizedAction;
                     btn.MinWidth = 60;
+                    btn.FontSize = 12;
                 }
 
                 // Adjust font sizes in progress window
