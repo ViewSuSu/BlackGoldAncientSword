@@ -16,7 +16,7 @@ OutputBaseFilename={#MyAppName}-Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesInstallIn64BitMode=x64
 SetupIconFile=src\BlackGoldAncientSword.Resources\Images\app.ico
 UninstallDisplayIcon={app}\BlackGoldAncientSword.App.exe
 

@@ -35,14 +35,20 @@ jobs:
           $latestTag = git tag --sort=-v:refname | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } | Select-Object -First 1
 
           if (-not $latestTag) {
-            # No tags yet, start at 1.0.0
             $newVersion = "1.0.0"
             Write-Host "No existing version tags found. Starting at $newVersion"
           } else {
             $latestTag -match '^v(\d+\.\d+\.\d+)$' | Out-Null
             $current = [Version]$Matches[1]
             $newVersion = "{0}.{1}.{2}" -f $current.Major, $current.Minor, ($current.Build + 1)
-            Write-Host "Latest tag: $latestTag -> $newVersion"
+            Write-Host "Latest tag: $latestTag -> candidate $newVersion"
+            # Avoid collision if tag already exists
+            $allTags = git tag
+            while ($allTags -contains "v$newVersion") {
+              $parts = [Version]$newVersion
+              $newVersion = "{0}.{1}.{2}" -f $parts.Major, $parts.Minor, ($parts.Build + 1)
+              Write-Host "Tag v$newVersion exists, bumped to $newVersion"
+            }
           }
 
           "new_version=$newVersion" >> $env:GITHUB_OUTPUT
@@ -121,34 +127,36 @@ jobs:
           $ver = "${{ steps.version.outputs.new_version }}"
           $zipSize = "${{ steps.zip.outputs.zip_size }}"
           $repo = "${{ github.repository }}"
-          $pubDate = (Get-Date).ToString("ddd, dd MMM yyyy HH:mm:ss zzz")
+          $pubDate = (Get-Date).ToString("ddd, dd MMM yyyy HH:mm:ss zzz", [System.Globalization.CultureInfo]::InvariantCulture)
 
           $xml = @"
-          <?xml version="1.0" encoding="UTF-8"?>
-          <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
-            <channel>
-              <title>BlackGoldAncientSword</title>
-              <link>https://github.com/$repo</link>
-              <description>BlackGoldAncientSword Auto Update Feed</description>
-              <language>en</language>
-              <item>
-                <title>Version $ver</title>
-                <sparkle:releaseNotesLink>
-                  https://github.com/$repo/releases/tag/v$ver
-                </sparkle:releaseNotesLink>
-                <pubDate>$pubDate</pubDate>
-                <enclosure
-                  url="https://github.com/$repo/releases/download/v$ver/${{ steps.zip.outputs.zip_name }}"
-                  sparkle:version="$ver"
-                  length="${{ steps.zip.outputs.zip_size }}"
-                  type="application/octet-stream"
-                  sparkle:os="windows" />
-              </item>
-            </channel>
-          </rss>
-          "@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>BlackGoldAncientSword</title>
+    <link>https://github.com/$repo</link>
+    <description>BlackGoldAncientSword Auto Update Feed</description>
+    <language>en</language>
+    <item>
+      <title>Version $ver</title>
+      <sparkle:releaseNotesLink>https://github.com/$repo/releases/tag/v$ver</sparkle:releaseNotesLink>
+      <pubDate>$pubDate</pubDate>
+      <enclosure
+        url="https://github.com/$repo/releases/download/v$ver/${{ steps.zip.outputs.zip_name }}"
+        sparkle:version="$ver"
+        sparkle:shortVersionString="$ver"
+        length="$zipSize"
+        type="application/octet-stream"
+        sparkle:os="windows" />
+    </item>
+  </channel>
+</rss>
+"@
 
-          $xml.Trim() | Set-Content -Path "output/appcast.xml" -Encoding UTF8 -Force
+          # Use .NET to write true UTF-8 without BOM (PowerShell 5 Set-Content adds BOM)
+          $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+          [System.IO.File]::WriteAllText("$pwd\output\appcast.xml", $xml.Trim(), $utf8NoBom)
+          Write-Host "appcast.xml written ($($xml.Length) chars)"
 
       - name: Tag & Push
         shell: powershell
@@ -162,8 +170,9 @@ jobs:
           if (-not $tagExists) {
             git tag -a "v$ver" -m "Release v$ver"
             git push origin "v$ver"
+            Write-Host "Created and pushed tag v$ver"
           } else {
-            Write-Host "Tag v$ver already exists, skipping"
+            Write-Host "Tag v$ver already exists on remote, skipping creation"
           }
 
       - name: Create GitHub Release
