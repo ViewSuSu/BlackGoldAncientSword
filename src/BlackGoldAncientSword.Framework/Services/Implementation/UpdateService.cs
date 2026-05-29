@@ -36,8 +36,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             )
             {
                 UIFactory = new CustomUIFactory(iconImage),
-                RelaunchAfterUpdate = false,
-                CustomInstallerArguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART",
+                RelaunchAfterUpdate = true,
                 LogWriter = new LogWriter(LogWriterOutputMode.Debug),
             };
 
