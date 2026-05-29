@@ -18,14 +18,28 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64
 SetupIconFile=src\BlackGoldAncientSword.Resources\Images\app.ico
+ShowLanguageDialog=yes
 UninstallDisplayIcon={app}\BlackGoldAncientSword.App.exe
+
+[Languages]
+Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+Name: "en"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
 
 [Files]
 Source: "publish\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\BlackGoldAncientSword.App.exe"; Tasks: desktopicon
+
+[CustomMessages]
+en.CreateDesktopIcon=Create a &desktop shortcut
+en.AdditionalIcons=Additional icons:
+chinesesimplified.CreateDesktopIcon=创建桌面快捷方式(&D)
+chinesesimplified.AdditionalIcons=附加图标:
 
 [Run]
 Filename: "{app}\BlackGoldAncientSword.App.exe"; Description: "启动 {#MyAppName}"; Flags: nowait postinstall skipifsilent
