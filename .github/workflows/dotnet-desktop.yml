@@ -91,6 +91,14 @@ jobs:
         run: |
           choco install innosetup -y --no-progress --force
 
+      - name: Download Inno Setup Chinese language file
+        shell: powershell
+        run: |
+          $url = "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/ChineseSimplified.isl"
+          $dest = "C:\Program Files (x86)\Inno Setup 6\Languages\ChineseSimplified.isl"
+          Invoke-WebRequest -Uri $url -OutFile $dest
+          Write-Host "Downloaded ChineseSimplified.isl"
+
       - name: Build Installer
         shell: powershell
         run: |
