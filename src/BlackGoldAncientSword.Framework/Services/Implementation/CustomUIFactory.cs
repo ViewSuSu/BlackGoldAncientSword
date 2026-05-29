@@ -70,6 +70,23 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         #endregion
 
+        /// <summary>
+        /// Enforces modal ShowDialog behavior on a window that NetSparkle may show with Show().
+        /// Hooks Loaded to hide and re-show as a dialog.
+        /// </summary>
+        private static void EnforceModal(Window window)
+        {
+            window.ShowInTaskbar = false;
+            window.Loaded += (sender, _) =>
+            {
+                var win = (Window)sender;
+                win.Hide();
+                win.Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Normal,
+                    new Action(() => win.ShowDialog()));
+            };
+        }
+
         #region CreateUpdateAvailableWindow
 
         public override IUpdateAvailable CreateUpdateAvailableWindow(
@@ -89,6 +106,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 // Localize window title
                 wpfWindow.Title = ResOrDefault("UpdateDialog.SoftwareUpdate", "Software Update");
                 wpfWindow.Background = Brushes.White;
+                wpfWindow.Owner = Application.Current.MainWindow;
+                wpfWindow.Topmost = true;
+                EnforceModal(wpfWindow);
                 ApplyHandyControlStyles(wpfWindow);
 
                 // Localize buttons
@@ -96,28 +116,26 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     skipBtn.Content = ResOrDefault("UpdateDialog.SkipVersion", "Skip this version");
 
                 if (wpfWindow.FindName("RemindMeLaterButton") is Button remindBtn)
-                    remindBtn.Content = ResOrDefault("UpdateDialog.RemindLater", "Remind me later");
+                    remindBtn.Visibility = Visibility.Collapsed;
 
                 if (wpfWindow.FindName("DownloadInstallButton") is Button installBtn)
                 {
                     installBtn.Content = isUpdateAlreadyDownloaded
                         ? ResOrDefault("UpdateDialog.Install", "Install")
-                        : ResOrDefault("UpdateDialog.DownloadInstall", "Download/Install");
+                        : ResOrDefault("UpdateDialog.DownloadInstall", "Update");
+                    installBtn.MinWidth = 60;
                 }
 
                 // Localize view model strings
                 if (wpfWindow.DataContext is UpdateAvailableWindowViewModel vm)
                 {
                     var item = updates.FirstOrDefault();
-                    var appDisplayName = !string.IsNullOrWhiteSpace(appName) ? appName : (item?.Title ?? "the application");
                     var downloadInstallWord = isUpdateAlreadyDownloaded
                         ? ResOrDefault("UpdateDialog.Install", "Install")
-                        : ResOrDefault("UpdateDialog.Download", "download");
+                        : ResOrDefault("UpdateDialog.Download", "update");
 
-                    vm.TitleHeaderText = string.Format(
-                        ResOrDefault("UpdateDialog.NewVersionAvailable",
-                            "A new version of {0} is available."),
-                        appDisplayName);
+                    vm.TitleHeaderText = ResOrDefault("UpdateDialog.NewVersionAvailable",
+                        "A new version is available.");
 
                     if (item != null)
                     {
@@ -134,8 +152,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
                         vm.InfoText = string.Format(
                             ResOrDefault("UpdateDialog.VersionInfo",
-                                "{0} {3} is now available (you have {1}). Would you like to {2} it now?"),
-                            appDisplayName, versionString, downloadInstallWord, item.Version);
+                                "{0} is now available (you have {1}). Would you like to {2} it now?"),
+                            item.Version, versionString, downloadInstallWord);
                     }
                     else
                     {
@@ -172,7 +190,29 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 wpfWindow.Title = ResOrDefault("UpdateDialog.SoftwareUpdate", "Software Update");
                 wpfWindow.Background = Brushes.White;
+                wpfWindow.Owner = Application.Current.MainWindow;
+                wpfWindow.Topmost = true;
+                EnforceModal(wpfWindow);
                 ApplyHandyControlStyles(wpfWindow);
+
+                // Localize action button via view model
+                if (wpfWindow.DataContext is DownloadProgressWindowViewModel progressVm)
+                {
+                    progressVm.ActionButtonTitle = localizedAction;
+                }
+
+                // Fallback: find button in visual tree and set Content directly
+                foreach (var btn in FindVisualChildren<Button>(wpfWindow))
+                {
+                    btn.Content = localizedAction;
+                }
+
+                // Adjust font sizes in progress window
+                var textBlocks = FindVisualChildren<TextBlock>(wpfWindow).ToList();
+                for (int i = 0; i < textBlocks.Count; i++)
+                {
+                    textBlocks[i].FontSize = i == 0 ? 15 : 12;
+                }
             }
 
             Debug.WriteLine("[CustomUIFactory] CreateProgressWindow 已完成本地化");
@@ -193,7 +233,16 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 checkingWindow.Title = ResOrDefault("UpdateDialog.SoftwareUpdate", "Software Update");
                 checkingWindow.Background = Brushes.White;
+                checkingWindow.Owner = Application.Current.MainWindow;
+                checkingWindow.Topmost = true;
+                EnforceModal(checkingWindow);
                 ApplyHandyControlStyles(checkingWindow);
+
+                // Adjust progress bar height
+                foreach (var pb in FindVisualChildren<ProgressBar>(checkingWindow))
+                {
+                    pb.Height = 25;
+                }
 
                 // Find TextBlock and Button via visual tree traversal
                 if (checkingWindow.Content is Grid grid)
