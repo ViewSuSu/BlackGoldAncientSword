@@ -75,11 +75,14 @@
     <system:String x:Key="Stats.BestDamage">最高伤害</system:String>
         <system:String x:Key="Stats.Header.Rank">排名</system:String>
     <system:String x:Key="Stats.Header.Mode">模式</system:String>
+    <system:String x:Key="Stats.Header.ModeCategory">排位模式</system:String>
+    <system:String x:Key="Stats.Header.ModeType">對局模式</system:String>
     <system:String x:Key="Stats.Header.Kill">击败</system:String>
     <system:String x:Key="Stats.Header.Damage">伤害</system:String>
     <system:String x:Key="Stats.Header.RankScore">段位</system:String>
     <system:String x:Key="Stats.Header.Time">时间</system:String>
     <system:String x:Key="Stats.RankName">无双修罗</system:String>
+    <system:String x:Key="Stats.Refresh">刷新</system:String>
 
     <system:String x:Key="Search.Title">搜索玩家</system:String>
     <system:String x:Key="Search.Input">输入玩家名称或者ID</system:String>
@@ -153,6 +156,11 @@
 
         <system:String x:Key="GameStatus.LobbyWaiting">大廳等候</system:String>
     <system:String x:Key="GameStatus.Queuing">排隊中</system:String>
+    <system:String x:Key="GameStatus.HeroSelection">英雄選擇</system:String>
+    <system:String x:Key="GameStatus.BattleEnded">對局結束</system:String>
+    <system:String x:Key="GameStatus.InGame">遊戲中</system:String>
+
+
 
     <!--  Update  -->
     <system:String x:Key="Settings.CheckForUpdates">检查更新</system:String>
@@ -170,4 +178,8 @@
     <system:String x:Key="Settings.AutoUpdate">更新</system:String>
 
     <!--  检测更新  -->
-    <system:String x:Key="Settings.AutoCheckUpdates">启动时自动检测更新</system:String></ResourceDictionary>
+    <system:String x:Key="Settings.AutoCheckUpdates">启动时自动检测更新</system:String>
+    <system:String x:Key="Settings.Category.GameLog">遊戲狀態識別</system:String>
+    <system:String x:Key="Settings.GameLogPath.Description">永劫無間 Player.log 日誌檔案的完整路徑，用於識別對局狀態</system:String>
+    <system:String x:Key="Settings.BrowseGameLogPath">選擇遊戲日誌檔案</system:String>
+</ResourceDictionary>

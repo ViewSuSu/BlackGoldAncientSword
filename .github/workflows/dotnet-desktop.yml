@@ -1,4 +1,4 @@
-﻿name: Release Build & Publish
+name: Release Build & Publish
 
 on:
   push:
@@ -85,10 +85,10 @@ jobs:
         <item>
           <version>$ver</version>
           <url>
-            https://github.com/ViewSuSu/NarakaBladepoint-Stats-Assistant/releases/download/v$ver/BlackGoldAncientSword-v$ver.zip
+            https://github.com/${{ github.repository }}/releases/download/v$ver/BlackGoldAncientSword-v$ver.zip
           </url>
           <changelog>
-            https://github.com/ViewSuSu/NarakaBladepoint-Stats-Assistant/releases/tag/v$ver
+            https://github.com/${{ github.repository }}/releases/tag/v$ver
           </changelog>
           <mandatory>false</mandatory>
         </item>
