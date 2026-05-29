@@ -142,12 +142,13 @@ jobs:
                 <sparkle:releaseNotesLink>https://github.com/$repo/releases/tag/v$ver</sparkle:releaseNotesLink>
                 <pubDate>$pubDate</pubDate>
                 <enclosure
-                  url="https://github.com/$repo/releases/download/v$ver/${{ steps.zip.outputs.zip_name }}"
+                  url="https://github.com/$repo/releases/download/v$ver/${{ steps.installer.outputs.exe_name }}"
                   sparkle:version="$ver"
                   sparkle:shortVersionString="$ver"
-                  length="$zipSize"
+                  length="${{ steps.installer.outputs.exe_size }}"
                   type="application/octet-stream"
-                  sparkle:os="windows" />
+                  sparkle:os="windows"
+                  sparkle:installerArguments="/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" />
               </item>
             </channel>
           </rss>
