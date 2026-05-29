@@ -1,9 +1,14 @@
-﻿name: Release Build & Publish
+name: Release Build & Publish
 
 on:
   push:
     branches:
       - release
+
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -212,11 +217,21 @@ jobs:
 
           if ($LASTEXITCODE -ne 0) {
             git commit -m "chore: bump version to $ver [skip ci]"
+
+            # Pull latest release branch before pushing to avoid rejection
+            git pull --rebase origin release
             git push origin HEAD:release
           }
 
-          git tag -a "v$ver" -m "Release v$ver"
-          git push origin "v$ver"
+          # Only create and push tag if it doesn't already exist on remote
+          $tagExists = git ls-remote --tags origin "refs/tags/v$ver"
+          if (-not $tagExists) {
+            git tag -a "v$ver" -m "Release v$ver"
+            git push origin "v$ver"
+          }
+          else {
+            Write-Host "Tag v$ver already exists on remote, skipping tag creation"
+          }
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
