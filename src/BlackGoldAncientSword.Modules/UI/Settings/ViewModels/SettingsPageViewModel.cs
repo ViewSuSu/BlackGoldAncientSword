@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 using Microsoft.Win32;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
@@ -7,6 +7,7 @@ using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Core.Extensions;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
+using System.Diagnostics;
 
 namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
 {
@@ -23,7 +24,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         private System.Threading.Timer? _saveTimer;
         private const int SaveDebounceMs = 300;
 
-        /// <summary>延迟保存，合并短时间内连续修改为一次写盘�?/summary>
+        /// <summary>寤惰繜淇濆瓨锛屽悎骞剁煭鏃堕棿鍐呰繛缁慨鏀逛负涓€娆″啓鐩樸€?/summary>
         private void DebouncedSave()
         {
             _saveTimer?.Dispose();
@@ -164,6 +165,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             _navigation = navigation;
             _cacheService = cacheService;
             _updateService = updateService;
+            Debug.WriteLine($"[SettingsPageVM] UpdateService 已注入，当前版本: {_updateService.CurrentVersion}");
 
             _dataPath = _settings.Current.DataSavePath;
             _cachePath = _settings.Current.CachePath;
