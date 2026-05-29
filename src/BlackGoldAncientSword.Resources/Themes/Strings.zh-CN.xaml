@@ -181,22 +181,24 @@
     <system:String x:Key="Settings.AutoUpdate">更新</system:String>
 
     <!--  检测更新  -->
+    <system:String x:Key="MainWindow.CheckForUpdates">检测更新</system:String>
+    <system:String x:Key="MainWindow.CheckForUpdates.ToolTip">检查是否有新版本</system:String>
     <system:String x:Key="Settings.AutoCheckUpdates">启动时自动检测更新</system:String>
     <!--  更新对话框 - NetSparkle UI 中文本地化  -->
 
     <!--  更新对话框 - NetSparkle UI 中文本地化  -->
     <system:String x:Key="UpdateDialog.SoftwareUpdate">软件更新</system:String>
-    <system:String x:Key="UpdateDialog.NewVersionAvailable">{0} 有新版本可用</system:String>
-    <system:String x:Key="UpdateDialog.VersionInfo">{0} {3} 现已发布（当前版本 {1}）。是否立即{2}？</system:String>
+    <system:String x:Key="UpdateDialog.NewVersionAvailable">有新版本可用</system:String>
+    <system:String x:Key="UpdateDialog.VersionInfo">{0} 现已发布（当前版本 {1}）。是否立即{2}？</system:String>
     <system:String x:Key="UpdateDialog.VersionInfoNoName">是否立即{0}？</system:String>
     <system:String x:Key="UpdateDialog.SkipVersion">跳过此版本</system:String>
     <system:String x:Key="UpdateDialog.RemindLater">稍后提醒</system:String>
-    <system:String x:Key="UpdateDialog.DownloadInstall">下载并安装</system:String>
+    <system:String x:Key="UpdateDialog.DownloadInstall">更新</system:String>
     <system:String x:Key="UpdateDialog.Install">安装</system:String>
     <system:String x:Key="UpdateDialog.InstallRelaunch">安装并重启</system:String>
     <system:String x:Key="UpdateDialog.Downloading">正在下载 {0}</system:String>
     <system:String x:Key="UpdateDialog.DownloadingGeneric">正在下载...</system:String>
-    <system:String x:Key="UpdateDialog.Download">下载</system:String>
+    <system:String x:Key="UpdateDialog.Download">更新</system:String>
     <system:String x:Key="UpdateDialog.CheckingForUpdates">正在检查更新...</system:String>
     <system:String x:Key="UpdateDialog.Cancel">取消</system:String>
     <system:String x:Key="UpdateDialog.UpToDate">当前已是最新版本</system:String>

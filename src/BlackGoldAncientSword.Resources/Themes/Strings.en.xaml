@@ -167,6 +167,8 @@
     <system:String x:Key="Settings.AutoUpdate">Update</system:String>
 
     <!--  Auto Update  -->
+    <system:String x:Key="MainWindow.CheckForUpdates">Check for Updates</system:String>
+    <system:String x:Key="MainWindow.CheckForUpdates.ToolTip">Check for new version</system:String>
     <system:String x:Key="Settings.AutoCheckUpdates">Auto check for updates on startup</system:String>
     <!--  Close Prompt  -->
     <system:String x:Key="ClosePrompt.Title">Close Confirmation</system:String>
@@ -187,17 +189,17 @@
 
     <!--  Update Dialog - NetSparkle UI Localization  -->
     <system:String x:Key="UpdateDialog.SoftwareUpdate">Software Update</system:String>
-    <system:String x:Key="UpdateDialog.NewVersionAvailable">A new version of {0} is available.</system:String>
-    <system:String x:Key="UpdateDialog.VersionInfo">{0} {3} is now available (you have {1}). Would you like to {2} it now?</system:String>
+    <system:String x:Key="UpdateDialog.NewVersionAvailable">A new version is available.</system:String>
+    <system:String x:Key="UpdateDialog.VersionInfo">{0} is now available (you have {1}). Would you like to {2} it now?</system:String>
     <system:String x:Key="UpdateDialog.VersionInfoNoName">Would you like to {0} it now?</system:String>
     <system:String x:Key="UpdateDialog.SkipVersion">Skip this version</system:String>
     <system:String x:Key="UpdateDialog.RemindLater">Remind me later</system:String>
-    <system:String x:Key="UpdateDialog.DownloadInstall">Download/Install</system:String>
+    <system:String x:Key="UpdateDialog.DownloadInstall">Update</system:String>
     <system:String x:Key="UpdateDialog.Install">Install</system:String>
     <system:String x:Key="UpdateDialog.InstallRelaunch">Install and Relaunch</system:String>
     <system:String x:Key="UpdateDialog.Downloading">Downloading {0}</system:String>
     <system:String x:Key="UpdateDialog.DownloadingGeneric">Downloading...</system:String>
-    <system:String x:Key="UpdateDialog.Download">download</system:String>
+    <system:String x:Key="UpdateDialog.Download">update</system:String>
     <system:String x:Key="UpdateDialog.CheckingForUpdates">Checking for Updates...</system:String>
     <system:String x:Key="UpdateDialog.Cancel">Cancel</system:String>
     <system:String x:Key="UpdateDialog.UpToDate">Your current version is up to date.</system:String>

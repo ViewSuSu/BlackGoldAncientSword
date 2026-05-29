@@ -471,8 +471,8 @@
                         Cursor="Hand"
                         FontSize="11"
                         Foreground="#5B8DEF"
-                        Text="检测更新"
-                        ToolTip="检查是否有新版本">
+                        Text="{DynamicResource MainWindow.CheckForUpdates}"
+                        ToolTip="{DynamicResource MainWindow.CheckForUpdates.ToolTip}">
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="MouseLeftButtonDown">
                                 <i:InvokeCommandAction Command="{Binding CheckForUpdatesCommand}" />
