@@ -53,6 +53,16 @@ jobs:
 
           "new_version=$newVersion" >> $env:GITHUB_OUTPUT
 
+      - name: Build
+        shell: powershell
+        run: |
+          $projPath = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+          dotnet build $projPath `
+            -c Release `
+            -r win-x64 `
+            /p:Version=${{ steps.version.outputs.new_version }}
+          Write-Host "Build completed"
+
       - name: Publish (self-contained)
         shell: powershell
         run: |
@@ -65,8 +75,26 @@ jobs:
             /p:PublishSingleFile=true `
             /p:PublishReadyToRun=true `
             /p:Version=${{ steps.version.outputs.new_version }}
+          Write-Host "Publish completed"
 
-      - name: Zip published output
+      - name: Merge build + publish output
+        shell: powershell
+        run: |
+          $buildDir = "src/BlackGoldAncientSword.App/bin/Release/net10.0-windows/win-x64"
+          $publishDir = "publish/Release"
+          $mergedDir = "publish/Merged"
+
+          New-Item -ItemType Directory -Force -Path $mergedDir | Out-Null
+
+          # 1. Copy all build output as base
+          Copy-Item -Path "$buildDir\*" -Destination $mergedDir -Recurse -Force
+          Write-Host "Copied build output: $(Get-ChildItem $mergedDir -Recurse | Measure-Object).Count files"
+
+          # 2. Overlay with publish output (publish wins on conflicts)
+          Copy-Item -Path "$publishDir\*" -Destination $mergedDir -Recurse -Force
+          Write-Host "Overlaid publish output: $(Get-ChildItem $mergedDir -Recurse | Measure-Object).Count files total"
+
+      - name: Zip merged output
         id: zip
         shell: powershell
         run: |
@@ -76,7 +104,7 @@ jobs:
           $zipPath = "output/$zipName"
 
           Compress-Archive `
-            -Path publish/Release/* `
+            -Path publish/Merged/* `
             -DestinationPath $zipPath `
             -Force
 
