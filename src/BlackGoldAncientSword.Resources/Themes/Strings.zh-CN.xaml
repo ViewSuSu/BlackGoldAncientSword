@@ -3,7 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:system="clr-namespace:System;assembly=mscorlib">
 
-    <system:String x:Key="App.Title">黑金古刀-永劫助手</system:String>
+    <system:String x:Key="App.Title">黑金古刀1-永劫助手</system:String>
     <system:String x:Key="App.Search">搜索</system:String>
     <system:String x:Key="App.Settings">设置</system:String>
     <system:String x:Key="App.Language">语言</system:String>
@@ -39,7 +39,7 @@
     <system:String x:Key="GameMode.Rank">天选</system:String>
     <system:String x:Key="GameMode.Match">匹配</system:String>
     <system:String x:Key="GameMode.Tianren">天人</system:String>
-        <system:String x:Key="GameMode.Unknown">未知</system:String>
+    <system:String x:Key="GameMode.Unknown">未知</system:String>
 
     <system:String x:Key="Stats.Title">天工赛季</system:String>
     <system:String x:Key="Stats.Close">收起</system:String>
@@ -73,7 +73,7 @@
     <system:String x:Key="Stats.BestHeal">最高治疗</system:String>
     <system:String x:Key="Stats.BestAssists">最高助攻</system:String>
     <system:String x:Key="Stats.BestDamage">最高伤害</system:String>
-        <system:String x:Key="Stats.Header.Rank">排名</system:String>
+    <system:String x:Key="Stats.Header.Rank">排名</system:String>
     <system:String x:Key="Stats.Header.Mode">模式</system:String>
     <system:String x:Key="Stats.Header.ModeCategory">排位模式</system:String>
     <system:String x:Key="Stats.Header.ModeType">对局模式</system:String>
@@ -144,7 +144,7 @@
     <system:String x:Key="ClosePrompt.Message">您点击了关闭按钮，请选择关闭按钮的默认行为：</system:String>
     <system:String x:Key="ClosePrompt.RememberChoice">记住我的选择</system:String>
     <system:String x:Key="ClosePrompt.MinimizeToTaskbar">最小化到任务栏</system:String>
-        <system:String x:Key="ClosePrompt.MinimizeToTray">最小化到系统托盘</system:String>
+    <system:String x:Key="ClosePrompt.MinimizeToTray">最小化到系统托盘</system:String>
     <system:String x:Key="ClosePrompt.ExitDirectly">直接退出</system:String>
 
     <!--  Settings - Close Behavior  -->
@@ -157,7 +157,7 @@
     <system:String x:Key="Settings.CloseBehavior.RememberChoice">记住选项</system:String>
 
 
-        <system:String x:Key="GameStatus.LobbyWaiting">大厅等候</system:String>
+    <system:String x:Key="GameStatus.LobbyWaiting">大厅等候</system:String>
     <system:String x:Key="GameStatus.Queuing">排队中</system:String>
     <system:String x:Key="GameStatus.HeroSelection">英雄选择</system:String>
     <system:String x:Key="GameStatus.BattleEnded">对局结束</system:String>

@@ -70,23 +70,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         #endregion
 
-        /// <summary>
-        /// Enforces modal ShowDialog behavior on a window that NetSparkle may show with Show().
-        /// Hooks Loaded to hide and re-show as a dialog.
-        /// </summary>
-        private static void EnforceModal(Window window)
-        {
-            window.ShowInTaskbar = false;
-            window.Loaded += (sender, _) =>
-            {
-                var win = (Window)sender;
-                win.Hide();
-                win.Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Normal,
-                    new Action(() => win.ShowDialog()));
-            };
-        }
-
         #region CreateUpdateAvailableWindow
 
         public override IUpdateAvailable CreateUpdateAvailableWindow(
@@ -106,9 +89,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 // Localize window title
                 wpfWindow.Title = ResOrDefault("UpdateDialog.SoftwareUpdate", "Software Update");
                 wpfWindow.Background = Brushes.White;
-                wpfWindow.Owner = Application.Current.MainWindow;
-                wpfWindow.Topmost = true;
-                EnforceModal(wpfWindow);
                 ApplyHandyControlStyles(wpfWindow);
 
                 // Localize buttons
@@ -190,9 +170,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 wpfWindow.Title = ResOrDefault("UpdateDialog.SoftwareUpdate", "Software Update");
                 wpfWindow.Background = Brushes.White;
-                wpfWindow.Owner = Application.Current.MainWindow;
-                wpfWindow.Topmost = true;
-                EnforceModal(wpfWindow);
                 ApplyHandyControlStyles(wpfWindow);
 
                 // Localize action button via view model
@@ -233,9 +210,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 checkingWindow.Title = ResOrDefault("UpdateDialog.SoftwareUpdate", "Software Update");
                 checkingWindow.Background = Brushes.White;
-                checkingWindow.Owner = Application.Current.MainWindow;
-                checkingWindow.Topmost = true;
-                EnforceModal(checkingWindow);
                 ApplyHandyControlStyles(checkingWindow);
 
                 // Adjust progress bar height
