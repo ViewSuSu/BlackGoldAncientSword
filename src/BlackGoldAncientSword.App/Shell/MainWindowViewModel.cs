@@ -8,6 +8,7 @@ using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.GameMonitor.Models;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
+using System.Windows.Threading;
 using Prism.Regions;
 
 namespace BlackGoldAncientSword.App.Shell
@@ -85,6 +86,22 @@ namespace BlackGoldAncientSword.App.Shell
                 System.Windows.Application.Current?.TryFindResource("Settings.CurrentVersion") as string ?? "{0}",
                 _updateService.CurrentVersion);
 
+        private bool _isUpdateAvailable;
+        public bool IsUpdateAvailable
+        {
+            get => _isUpdateAvailable;
+            set => SetProperty(ref _isUpdateAvailable, value);
+        }
+
+        public bool IsLatestVersion => !IsUpdateAvailable;
+
+        private double _updateIndicatorOpacity = 1.0;
+        public double UpdateIndicatorOpacity
+        {
+            get => _updateIndicatorOpacity;
+            set => SetProperty(ref _updateIndicatorOpacity, value);
+        }
+
         public bool CanGoBack => _navigation.CanGoBack;
         private bool _canNavigateToPersonal;
         public bool CanNavigateToPersonal
@@ -152,6 +169,11 @@ namespace BlackGoldAncientSword.App.Shell
             _navigation.Navigated += OnNavigated;
             _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
 
+            _updateService.UpdateAvailabilityChanged += OnUpdateAvailabilityChanged;
+            IsUpdateAvailable = _updateService.IsUpdateAvailable;
+            if (IsUpdateAvailable)
+                StartBlinkAnimation();
+
             ActivePage = PageNames.HomePage;
 
             UpdateCanNavigateToPersonal();
@@ -167,6 +189,54 @@ namespace BlackGoldAncientSword.App.Shell
                 }, ThreadOption.UIThread);
         }
 
+        private void OnUpdateAvailabilityChanged(object? sender, bool isAvailable)
+        {
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                IsUpdateAvailable = isAvailable;
+                if (isAvailable)
+                    StartBlinkAnimation();
+            });
+        }
+
+        private DispatcherTimer? _blinkTimer;
+        private bool _blinkIncreasing = true;
+
+        private void StartBlinkAnimation()
+        {
+            if (_blinkTimer != null) return;
+
+            UpdateIndicatorOpacity = 0.5;
+            _blinkIncreasing = true;
+            _blinkTimer = new DispatcherTimer(
+                TimeSpan.FromMilliseconds(50),
+                DispatcherPriority.Normal,
+                (s, e) =>
+                {
+                    var delta = 0.05;
+                    if (_blinkIncreasing)
+                    {
+                        UpdateIndicatorOpacity += delta;
+                        if (UpdateIndicatorOpacity >= 1.0)
+                        {
+                            UpdateIndicatorOpacity = 1.0;
+                            _blinkIncreasing = false;
+                        }
+                    }
+                    else
+                    {
+                        UpdateIndicatorOpacity -= delta;
+                        if (UpdateIndicatorOpacity <= 0.5)
+                        {
+                            UpdateIndicatorOpacity = 0.5;
+                            _blinkIncreasing = true;
+                        }
+                    }
+                },
+                System.Windows.Application.Current.Dispatcher);
+            _blinkTimer.Start();
+        }
+
         /// <summary>
         /// Clean up event subscriptions. Called by MainWindow when closing.
         /// </summary>
@@ -175,6 +245,7 @@ namespace BlackGoldAncientSword.App.Shell
             _localization.PropertyChanged -= OnLocalizationChanged;
             _navigation.Navigated -= OnNavigated;
             _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
+            _updateService.UpdateAvailabilityChanged -= OnUpdateAvailabilityChanged;
         }
 
         private void OnLocalizationChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
