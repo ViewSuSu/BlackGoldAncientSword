@@ -48,6 +48,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 UIFactory = new UIFactory(iconImage),
                 RelaunchAfterUpdate = false,
+                LogWriter = new LogWriter(LogWriterOutputMode.Debug),
             };
 
             // Update detected
@@ -91,13 +92,16 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
             if (showNoUpdateMessage)
             {
-                // User-requested check: NetSparkle handles UI automatically
-                await Task.Run(() => _sparkle.CheckForUpdatesAtUserRequest());
+                // User-requested check: dispatch to UI thread so NetSparkle's WPF
+                // controls (ProgressBar, dialogs) are created on the correct thread.
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(
+                    () => _sparkle.CheckForUpdatesAtUserRequest());
             }
             else
             {
                 // Silent auto-check at startup
-                await Task.Run(() => _sparkle.CheckForUpdatesQuietly());
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(
+                    () => _sparkle.CheckForUpdatesQuietly());
             }
         }
 
