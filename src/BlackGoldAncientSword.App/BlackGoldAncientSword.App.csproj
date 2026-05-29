@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Authors>С��ͬѧ</Authors>
+    <Authors>小窗同学</Authors>
     <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
     <Company>$(Authors)</Company>
     <Description>$(PackageProjectUrl)</Description>
