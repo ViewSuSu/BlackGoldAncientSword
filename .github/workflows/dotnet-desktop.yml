@@ -1,4 +1,4 @@
-name: Release Build & Publish
+﻿name: Release Build & Publish
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: write  # 确保有创建 Release、推送标签/代码的权限
+      contents: write  # 确保有创建 Release、推送标签等代码的权限
 
     steps:
     - name: Checkout
@@ -22,7 +22,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: "8.0.x"  # 修正：.NET 10.0 尚未正式发布，改用 LTS 版本 8.0（根据实际项目调整）
+        dotnet-version: "8.0.x"  # 修正：NET 10.0 尚未正式发布，改用 LTS 版本 8.0（根据实际项目调整）
 
     - name: Bump version
       id: version
@@ -82,6 +82,7 @@ jobs:
 
     - name: Zip published output
       shell: powershell
+      id: zip_size
       run: |
         New-Item -ItemType Directory -Force -Path output | Out-Null
         $zipName = "BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}.zip"
@@ -148,7 +149,7 @@ jobs:
             </item>
           </channel>
         </rss>
-"@
+        "@
         # 写入 XML 文件（确保编码正确）
         $xml.Trim() | Set-Content -Path "output/appcast.xml" -Encoding UTF8 -Force
         Write-Host "Generated appcast.xml for v$ver (ZIP size: $zipSize bytes)"
