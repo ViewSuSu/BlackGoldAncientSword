@@ -194,6 +194,8 @@
     <system:String x:Key="UpdateDialog.SkipVersion">跳过此版本</system:String>
     <system:String x:Key="UpdateDialog.RemindLater">稍后提醒</system:String>
     <system:String x:Key="UpdateDialog.DownloadInstall">更新</system:String>
+    <system:String x:Key="UpdateDialog.Restart">重新启动</system:String>
+    <system:String x:Key="UpdateDialog.UpdateCompleted">更新完成</system:String>
     <system:String x:Key="UpdateDialog.Install">安装</system:String>
     <system:String x:Key="UpdateDialog.InstallRelaunch">安装并重启</system:String>
     <system:String x:Key="UpdateDialog.Downloading">正在下载 {0}</system:String>
