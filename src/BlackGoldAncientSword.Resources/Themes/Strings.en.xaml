@@ -195,6 +195,8 @@
     <system:String x:Key="UpdateDialog.SkipVersion">Skip this version</system:String>
     <system:String x:Key="UpdateDialog.RemindLater">Remind me later</system:String>
     <system:String x:Key="UpdateDialog.DownloadInstall">Update</system:String>
+    <system:String x:Key="UpdateDialog.Restart">Restart</system:String>
+    <system:String x:Key="UpdateDialog.UpdateCompleted">Update Complete</system:String>
     <system:String x:Key="UpdateDialog.Install">Install</system:String>
     <system:String x:Key="UpdateDialog.InstallRelaunch">Install and Relaunch</system:String>
     <system:String x:Key="UpdateDialog.Downloading">Downloading {0}</system:String>
