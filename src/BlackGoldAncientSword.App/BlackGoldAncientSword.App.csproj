@@ -31,23 +31,7 @@
 
   <ItemGroup>
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
-    <PackageReference Include="Nerdbank.GitVersioning" Version="3.9.50">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
-
-  <!-- Post-build: print version from Nerdbank.GitVersioning -->
-  <Target Name="PrintBuildVersion" AfterTargets="AfterBuild">
-    <Message Importance="high" Text="========================================" />
-    <Message Importance="high" Text="  Build Version       : $(BuildVersion)" />
-    <Message Importance="high" Text="  Simple Version      : $(BuildVersionSimple)" />
-    <Message Importance="high" Text="  Informational Ver   : $(AssemblyInformationalVersion)" />
-    <Message Importance="high" Text="  Git Tag             : $(GitVersionTag)" />
-    <Message Importance="high" Text="  Git Height          : $(GitVersionHeight)" />
-    <Message Importance="high" Text="========================================" />
-  </Target>
-
 
   <ItemGroup>
     <Content Include="..\BlackGoldAncientSword.ScreenCapture\runtimes\win-x64\native\wgc_capture.dll">

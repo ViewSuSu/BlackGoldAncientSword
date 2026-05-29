@@ -5,6 +5,10 @@ on:
     branches:
       - release
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest
@@ -22,63 +26,31 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
 
-      - name: Bump version
+      - name: Determine version from git tags
         id: version
         shell: powershell
         run: |
-          $versionFile = "version.json"
+          $latestTag = git tag --sort=-v:refname | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } | Select-Object -First 1
 
-          if (-not (Test-Path $versionFile)) {
-            Write-Error "version.json file not found!"
-            exit 1
+          if (-not $latestTag) {
+            # No tags yet, start at 1.0.0
+            $newVersion = "1.0.0"
+            Write-Host "No existing version tags found. Starting at $newVersion"
+          } else {
+            $latestTag -match '^v(\d+\.\d+\.\d+)$' | Out-Null
+            $current = [Version]$Matches[1]
+            $newVersion = "{0}.{1}.{2}" -f $current.Major, $current.Minor, ($current.Build + 1)
+            Write-Host "Latest tag: $latestTag -> $newVersion"
           }
-
-          $json = Get-Content $versionFile -Raw | ConvertFrom-Json
-          $current = [Version]$json.version
-
-          $newVersion = "{0}.{1}.{2}" -f `
-            $current.Major, `
-            $current.Minor, `
-            ($current.Build + 1)
-
-          $json.version = $newVersion
-
-          $json |
-            ConvertTo-Json -Depth 10 |
-            Set-Content $versionFile -Encoding UTF8
-
-          Write-Host "Bumped version: $($current.ToString()) -> $newVersion"
 
           "new_version=$newVersion" >> $env:GITHUB_OUTPUT
-
-      - name: Build (separate DLLs)
-        shell: powershell
-        run: |
-          $projPath = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
-
-          if (-not (Test-Path $projPath)) {
-            Write-Error "Project file not found: $projPath"
-            exit 1
-          }
-
-          dotnet build $projPath `
-            -c Release `
-            -r win-x64 `
-            -o build/Release `
-            /p:Version=${{ steps.version.outputs.new_version }}
 
       - name: Publish (self-contained)
         shell: powershell
         run: |
           $projPath = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
-
-          if (-not (Test-Path $projPath)) {
-            Write-Error "Project file not found: $projPath"
-            exit 1
-          }
-
           dotnet publish $projPath `
             -c Release `
             -r win-x64 `
@@ -88,25 +60,8 @@ jobs:
             /p:PublishReadyToRun=true `
             /p:Version=${{ steps.version.outputs.new_version }}
 
-      - name: Merge outputs
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path build/Release | Out-Null
-
-          Copy-Item `
-            publish/Release/* `
-            build/Release/ `
-            -Recurse `
-            -Force
-
-          Write-Host "Combined build folder contents:"
-
-          Get-ChildItem build/Release |
-            Select-Object Name, Length |
-            Format-Table -AutoSize
-
       - name: Zip published output
-        id: zip_size
+        id: zip
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path output | Out-Null
@@ -120,23 +75,19 @@ jobs:
             -Force
 
           $zipSize = (Get-Item $zipPath).Length
-
           "zip_size=$zipSize" >> $env:GITHUB_OUTPUT
 
-          Write-Host "Created: $zipPath"
-          Write-Host "Size: $zipSize bytes"
+          Write-Host "Created: $zipPath ($zipSize bytes)"
 
       - name: Install Inno Setup
         shell: powershell
         run: |
-          choco upgrade chocolatey -y --no-progress
           choco install innosetup -y --no-progress --force
 
       - name: Build Installer
         shell: powershell
         run: |
           $issPath = "setup.iss"
-
           if (-not (Test-Path $issPath)) {
             Write-Error "Inno Setup script not found: $issPath"
             exit 1
@@ -147,9 +98,7 @@ jobs:
             $issPath `
             /O"output"
 
-          $exeFiles = Get-ChildItem output/*.exe
-
-          if (-not $exeFiles) {
+          if (-not (Get-ChildItem output/*.exe)) {
             Write-Error "Installer EXE not generated!"
             exit 1
           }
@@ -158,10 +107,9 @@ jobs:
         shell: powershell
         run: |
           $ver = "${{ steps.version.outputs.new_version }}"
-          $zipSize = "${{ steps.zip_size.outputs.zip_size }}"
+          $zipSize = "${{ steps.zip.outputs.zip_size }}"
           $repo = "${{ github.repository }}"
-
-          $pubDate = Get-Date -Format "ddd, dd MMM yyyy HH:mm:ss zzz"
+          $pubDate = (Get-Date).ToString("ddd, dd MMM yyyy HH:mm:ss zzz")
 
           $xml = @"
           <?xml version="1.0" encoding="UTF-8"?>
@@ -171,16 +119,12 @@ jobs:
               <link>https://github.com/$repo</link>
               <description>BlackGoldAncientSword Auto Update Feed</description>
               <language>en</language>
-
               <item>
                 <title>Version $ver</title>
-
                 <sparkle:releaseNotesLink>
                   https://github.com/$repo/releases/tag/v$ver
                 </sparkle:releaseNotesLink>
-
                 <pubDate>$pubDate</pubDate>
-
                 <enclosure
                   url="https://github.com/$repo/releases/download/v$ver/BlackGoldAncientSword-v$ver.zip"
                   sparkle:version="$ver"
@@ -192,13 +136,9 @@ jobs:
           </rss>
           "@
 
-          $xml.Trim() |
-            Set-Content `
-            -Path "output/appcast.xml" `
-            -Encoding UTF8 `
-            -Force
+          $xml.Trim() | Set-Content -Path "output/appcast.xml" -Encoding UTF8 -Force
 
-      - name: Commit version bump, Tag & Push
+      - name: Tag & Push
         shell: powershell
         run: |
           git config --global user.name "github-actions[bot]"
@@ -206,17 +146,13 @@ jobs:
 
           $ver = "${{ steps.version.outputs.new_version }}"
 
-          git add version.json
-
-          git diff --cached --quiet
-
-          if ($LASTEXITCODE -ne 0) {
-            git commit -m "chore: bump version to $ver [skip ci]"
-            git push origin HEAD:release
+          $tagExists = git ls-remote --tags origin "refs/tags/v$ver"
+          if (-not $tagExists) {
+            git tag -a "v$ver" -m "Release v$ver"
+            git push origin "v$ver"
+          } else {
+            Write-Host "Tag v$ver already exists, skipping"
           }
-
-          git tag -a "v$ver" -m "Release v$ver"
-          git push origin "v$ver"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
