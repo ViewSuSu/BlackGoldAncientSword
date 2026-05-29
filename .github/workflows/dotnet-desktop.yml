@@ -130,28 +130,28 @@ jobs:
           $pubDate = (Get-Date).ToString("ddd, dd MMM yyyy HH:mm:ss zzz", [System.Globalization.CultureInfo]::InvariantCulture)
 
           $xml = @"
-<?xml version="1.0" encoding="UTF-8"?>
-<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
-  <channel>
-    <title>BlackGoldAncientSword</title>
-    <link>https://github.com/$repo</link>
-    <description>BlackGoldAncientSword Auto Update Feed</description>
-    <language>en</language>
-    <item>
-      <title>Version $ver</title>
-      <sparkle:releaseNotesLink>https://github.com/$repo/releases/tag/v$ver</sparkle:releaseNotesLink>
-      <pubDate>$pubDate</pubDate>
-      <enclosure
-        url="https://github.com/$repo/releases/download/v$ver/${{ steps.zip.outputs.zip_name }}"
-        sparkle:version="$ver"
-        sparkle:shortVersionString="$ver"
-        length="$zipSize"
-        type="application/octet-stream"
-        sparkle:os="windows" />
-    </item>
-  </channel>
-</rss>
-"@
+          <?xml version="1.0" encoding="UTF-8"?>
+          <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+            <channel>
+              <title>BlackGoldAncientSword</title>
+              <link>https://github.com/$repo</link>
+              <description>BlackGoldAncientSword Auto Update Feed</description>
+              <language>en</language>
+              <item>
+                <title>Version $ver</title>
+                <sparkle:releaseNotesLink>https://github.com/$repo/releases/tag/v$ver</sparkle:releaseNotesLink>
+                <pubDate>$pubDate</pubDate>
+                <enclosure
+                  url="https://github.com/$repo/releases/download/v$ver/${{ steps.zip.outputs.zip_name }}"
+                  sparkle:version="$ver"
+                  sparkle:shortVersionString="$ver"
+                  length="$zipSize"
+                  type="application/octet-stream"
+                  sparkle:os="windows" />
+              </item>
+            </channel>
+          </rss>
+          "@
 
           # Use .NET to write true UTF-8 without BOM (PowerShell 5 Set-Content adds BOM)
           $utf8NoBom = New-Object System.Text.UTF8Encoding $false
