@@ -136,7 +136,7 @@ jobs:
               <title>BlackGoldAncientSword</title>
               <link>https://github.com/$repo</link>
               <description>BlackGoldAncientSword Auto Update Feed</description>
-              <language>en</language>
+              <language>zh-CN</language>
               <item>
                 <title>Version $ver</title>
                 <sparkle:releaseNotesLink>https://github.com/$repo/releases/tag/v$ver</sparkle:releaseNotesLink>
