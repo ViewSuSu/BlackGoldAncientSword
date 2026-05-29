@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Windows.Threading;
+using BlackGoldAncientSword.GameMonitor.Models;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
@@ -11,7 +12,7 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
         private readonly DispatcherTimer _processTimer;
         private readonly IGameLogMonitor _gameLogMonitor;
         private readonly IGameStatusMonitor _gameStatusMonitor;
-
+        
         public HomePageViewModel(IGameLogMonitor gameLogMonitor, IGameStatusMonitor gameStatusMonitor)
         {
             _gameLogMonitor = gameLogMonitor;
@@ -67,6 +68,9 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
                 if (!_monitorStarted)
                 {
                     _monitorStarted = true;
+                    _gameLogMonitor.BattleJoined += OnBattleJoined;
+                    _gameLogMonitor.BattleStarted += OnBattleStarted;
+                    _gameLogMonitor.BattleEnded += OnBattleEnded;
                     await _gameLogMonitor.StartAsync();
                     _gameStatusMonitor.Start();
                 }
@@ -80,29 +84,45 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
                 if (_monitorStarted)
                 {
                     _monitorStarted = false;
+                    _gameLogMonitor.BattleJoined -= OnBattleJoined;
+                    _gameLogMonitor.BattleStarted -= OnBattleStarted;
+                    _gameLogMonitor.BattleEnded -= OnBattleEnded;
                     _gameLogMonitor.Stop();
                     _gameStatusMonitor.Stop();
                 }
             }
         }
 
+        private void OnBattleJoined(object? sender, BattleEventArgs args)
+        {
+            _gameStatusMonitor.NotifyStatus(GameStatus.HeroSelection);
+            StatusHint = $"英雄选择中 (RoomId: {args.RoomId})";
+        }
+
+        private void OnBattleStarted(object? sender, BattleEventArgs args)
+        {
+            _gameStatusMonitor.NotifyStatus(GameStatus.InGame);
+            StatusHint = $"对局中 (BattleId: {args.BattleId})";
+        }
+
+        private void OnBattleEnded(object? sender, BattleEventArgs args)
+        {
+            _gameStatusMonitor.NotifyStatus(GameStatus.BattleEnded);
+            StatusHint = string.Empty;
+        }
+
         private static bool IsNarakaProcessRunning()
         {
             try
             {
-                var processes = Process.GetProcesses();
-                foreach (var proc in processes)
+                var processes = Process.GetProcessesByName("NarakaBladepoint");
+                try
                 {
-                    try
-                    {
-                        if (proc.ProcessName.Equals("NarakaBladepoint", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return true;
-                        }
-                    }
-                    catch
-                    {
-                    }
+                    return processes.Length > 0;
+                }
+                finally
+                {
+                    foreach (var proc in processes) proc.Dispose();
                 }
             }
             catch

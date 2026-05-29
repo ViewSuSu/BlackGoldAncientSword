@@ -9,8 +9,8 @@ namespace BlackGoldAncientSword.Modules.Mappings
         {
             config.NewConfig<HonorTitleInfo, HonorTitleDisplayItem>()
                 .Map(dest => dest.Icon, src => src.HonorIcon)
-                .Map(dest => dest.Desc, src => src.HonorDesc)
-                .Map(dest => dest.Name, src => src.HonorName);
+                .Map(dest => dest.HonorDesc, src => src.HonorDesc)
+                .Map(dest => dest.HonorName, src => src.HonorName);
         }
     }
 }
