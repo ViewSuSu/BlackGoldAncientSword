@@ -1,5 +1,8 @@
 ﻿name: Release Build & Publish
 
+permissions:
+  contents: write
+
 on:
   push:
     branches:
@@ -15,7 +18,6 @@ jobs:
 
     permissions:
       contents: write
-      workflows: write
 
     steps:
       - name: Checkout
