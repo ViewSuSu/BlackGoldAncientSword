@@ -338,7 +338,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             _originalLocalPlayerName = _playerPrefsService.Current.PlayerName;
             RaisePropertyChanged(nameof(IsLocalUser));
             SearchText = _originalLocalPlayerName;
-            SearchCommand.Execute();
+            await RefreshAllAsync();
         }
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)

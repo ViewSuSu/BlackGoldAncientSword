@@ -83,9 +83,10 @@
     <system:String x:Key="Stats.Header.Time">Time</system:String>
     <system:String x:Key="Stats.RankName">Unrivaled Asura</system:String>
     <system:String x:Key="Stats.Refresh">Refresh</system:String>
+    <system:String x:Key="Stats.BackToMe">Back to me</system:String>
 
-    <system:String x:Key="Search.Title">Search Player</system:String>
-    <system:String x:Key="Search.Input">Enter player name or ID</system:String>
+    <system:String x:Key="Search.Title">Search</system:String>
+    <system:String x:Key="Search.Input">Enter nickname or ID</system:String>
     <system:String x:Key="Search.Button">Search</system:String>
     <system:String x:Key="Search.Placeholder">Enter player name or ID to search</system:String>
     <system:String x:Key="Search.History">Search History</system:String>

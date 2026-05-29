@@ -6,8 +6,8 @@
     xmlns:controls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hc="clr-namespace:HandyControl.Controls;assembly=HandyControl"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewmodels="clr-namespace:BlackGoldAncientSword.Modules.UI.Stats.ViewModels"
     d:DataContext="{d:DesignInstance Type=viewmodels:StatsPageViewModel}"
     d:DesignHeight="600"
@@ -21,14 +21,82 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
 
+            <!--  === TOOLBAR: Search + Actions ===  -->
+            <Grid Grid.Row="0" Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <hc:SearchBar
+                    Height="25"
+                    VerticalAlignment="Center"
+                    hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
+                    hc:TitleElement.Title="{DynamicResource Search.Title}"
+                    hc:TitleElement.TitlePlacement="Left"
+                    Command="{Binding SearchCommand}"
+                    Style="{StaticResource SearchBarExtend}"
+                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+
+                <!--  Action buttons (right)  -->
+                <StackPanel
+                    Grid.Column="2"
+                    Margin="10,0,0,0"
+                    Orientation="Horizontal">
+                    <!--  Refresh button  -->
+                    <Button
+                        Width="28"
+                        Height="28"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Command="{Binding RefreshAllCommand}"
+                        Cursor="Hand"
+                        ToolTip="{DynamicResource Stats.Refresh}">
+                        <Image
+                            Width="16"
+                            Height="16"
+                            Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/refresh_data.png" />
+                    </Button>
+
+                    <!--  Back to me button (hidden when viewing local user)  -->
+                    <Button
+                        Width="28"
+                        Height="28"
+                        Margin="6,0,0,0"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Command="{Binding GoBackToMeCommand}"
+                        Cursor="Hand"
+                        ToolTip="{DynamicResource Stats.BackToMe}">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLocalUser}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Image
+                            Width="16"
+                            Height="16"
+                            Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/back_to_me.png" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+
             <!--  === TOP: Player Info + Filters ===  -->
-            <Grid Grid.Row="0">
+            <Grid Grid.Row="1">
                 <StackPanel>
-                    <StackPanel Margin="0,0,0,5">
+                    <StackPanel Margin="0,5,0,5">
                         <!--  Avatar - centered  -->
                         <Border
                             Width="48"
@@ -141,7 +209,7 @@
 
             <!--  === FILTERS + DETAIL STATS in rounded container ===  -->
             <Border
-                Grid.Row="1"
+                Grid.Row="2"
                 Margin="0,8,0,0"
                 Padding="10"
                 BorderBrush="LightGray"
@@ -352,12 +420,12 @@
 
 
             <TextBlock
-                Grid.Row="2"
+                Grid.Row="3"
                 Margin="0,20,0,8"
                 FontSize="15"
                 FontWeight="SemiBold"
                 Text="{DynamicResource Stats.RecentBattles}" />
-            <Grid Grid.Row="3">
+            <Grid Grid.Row="4">
                 <DataGrid
                     d:ItemsSource="{d:SampleData}"
                     AutoGenerateColumns="False"
@@ -455,14 +523,14 @@
                                                     <Image
                                                         Width="28"
                                                         Height="28"
-                                                        VerticalAlignment="Center"
                                                         Margin="0"
+                                                        VerticalAlignment="Center"
                                                         Source="{Binding Icon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
                                                         Stretch="Uniform">
                                                         <Image.ToolTip>
                                                             <ToolTip>
                                                                 <StackPanel>
-                                                                    <TextBlock Text="{Binding HonorName}" FontWeight="Bold" />
+                                                                    <TextBlock FontWeight="Bold" Text="{Binding HonorName}" />
                                                                     <TextBlock Text="{Binding HonorDesc}" />
                                                                 </StackPanel>
                                                             </ToolTip>
@@ -547,7 +615,10 @@
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock VerticalAlignment="Center" Foreground="#333333" Text="{Binding Damage}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="#333333"
+                                        Text="{Binding Damage}" />
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

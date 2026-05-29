@@ -1,4 +1,4 @@
-using BlackGoldAncientSword.Framework.Core.Attributes;
+﻿using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using NetSparkleUpdater;
@@ -46,8 +46,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 new NetSparkleUpdater.SignatureVerifiers.Ed25519Checker(SecurityMode.Unsafe, "")
             )
             {
-                UIFactory = new UIFactory(iconImage),
+                UIFactory = new CustomUIFactory(iconImage),
                 RelaunchAfterUpdate = false,
+                CustomInstallerArguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART",
                 LogWriter = new LogWriter(LogWriterOutputMode.Debug),
             };
 
@@ -157,3 +158,4 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         }
     }
 }
+
