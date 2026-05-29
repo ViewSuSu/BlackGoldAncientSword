@@ -1,7 +1,6 @@
 ﻿using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using NetSparkleUpdater;
-using NetSparkleUpdater.AssemblyAccessors;
 using NetSparkleUpdater.Enums;
 using NetSparkleUpdater.Interfaces;
 using NetSparkleUpdater.UI.WPF;
@@ -12,18 +11,29 @@ using System.Windows.Media.Imaging;
 namespace BlackGoldAncientSword.Framework.Services.Implementation
 {
     /// <summary>
-    /// Wraps a default AssemblyDiagnosticsAccessor but overrides AssemblyVersion
-    /// to return a normalized version string matching the appcast format.
+    /// Implements IAssemblyAccessor using reflection on the given assembly.
+    /// AssemblyVersion is overridden with a normalized string matching the appcast.
+    /// Avoids file-path accessors which break under single-file publish.
     /// </summary>
-    internal sealed class VersionNormalizedAssemblyAccessor(AssemblyDiagnosticsAccessor inner, string normalizedVersion)
-        : IAssemblyAccessor
+    internal sealed class VersionNormalizedAssemblyAccessor : IAssemblyAccessor
     {
-        public string AssemblyVersion => normalizedVersion;
-        public string AssemblyTitle => inner.AssemblyTitle;
-        public string AssemblyDescription => inner.AssemblyDescription;
-        public string AssemblyProduct => inner.AssemblyProduct;
-        public string AssemblyCopyright => inner.AssemblyCopyright;
-        public string AssemblyCompany => inner.AssemblyCompany;
+        private readonly Assembly _assembly;
+
+        public VersionNormalizedAssemblyAccessor(Assembly assembly, string normalizedVersion)
+        {
+            _assembly = assembly;
+            AssemblyVersion = normalizedVersion;
+        }
+
+        public string AssemblyVersion { get; }
+        public string AssemblyTitle => GetAttr<AssemblyTitleAttribute>()?.Title ?? "";
+        public string AssemblyDescription => GetAttr<AssemblyDescriptionAttribute>()?.Description ?? "";
+        public string AssemblyProduct => GetAttr<AssemblyProductAttribute>()?.Product ?? "";
+        public string AssemblyCopyright => GetAttr<AssemblyCopyrightAttribute>()?.Copyright ?? "";
+        public string AssemblyCompany => GetAttr<AssemblyCompanyAttribute>()?.Company ?? "";
+
+        private T? GetAttr<T>() where T : Attribute =>
+            _assembly.GetCustomAttribute<T>();
     }
 
     [Component(ComponentLifetime.Singleton)]
@@ -67,10 +77,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             var entryAsm = Assembly.GetEntryAssembly();
             if (entryAsm != null)
             {
-                var assemblyName = entryAsm.GetName().Name ?? "BlackGoldAncientSword.App";
-                var defaultAccessor = new AssemblyDiagnosticsAccessor(assemblyName);
                 _sparkle.Configuration.AssemblyAccessor =
-                    new VersionNormalizedAssemblyAccessor(defaultAccessor, CurrentVersion);
+                    new VersionNormalizedAssemblyAccessor(entryAsm, CurrentVersion);
                 Debug.WriteLine($"[UpdateService] 已设置自定义 AssemblyAccessor，规范化版本: {CurrentVersion}");
             }
 
