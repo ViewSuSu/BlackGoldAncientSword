@@ -2,7 +2,11 @@ name: Release Build & Publish
 
 on:
   push:
-    branches: ["release"]
+    branches:
+      - release
+    branches-ignore:
+      - main
+      - master
 
 jobs:
   build:
@@ -76,25 +80,31 @@ jobs:
       run: |
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
 
-    - name: Generate update.xml
+    - name: Generate appcast.xml
       shell: powershell
       run: |
         $ver = '${{ steps.version.outputs.new_version }}'
+        $pubDate = (Get-Date -Format "ddd, dd MMM yyyy HH:mm:ss zzz")
         $xml = @"
         <?xml version="1.0" encoding="UTF-8"?>
-        <item>
-          <version>$ver</version>
-          <url>
-            https://github.com/${{ github.repository }}/releases/download/v$ver/BlackGoldAncientSword-v$ver.zip
-          </url>
-          <changelog>
-            https://github.com/${{ github.repository }}/releases/tag/v$ver
-          </changelog>
-          <mandatory>false</mandatory>
-        </item>
-        "@
-        $xml.Trim() | Set-Content -Path "output/update.xml" -Encoding UTF8
-        Write-Host "Generated update.xml for v$ver"
+        <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+          <channel>
+            <title>BlackGoldAncientSword</title>
+            <item>
+              <title>$ver</title>
+              <sparkle:releaseNotesLink>https://github.com/${{ github.repository }}/releases/tag/v$ver</sparkle:releaseNotesLink>
+              <pubDate>$pubDate</pubDate>
+              <enclosure url="https://github.com/${{ github.repository }}/releases/download/v$ver/BlackGoldAncientSword-v$ver.zip"
+                         sparkle:version="$ver"
+                         length="0"
+                         type="application/octet-stream"
+                         sparkle:os="windows" />
+            </item>
+          </channel>
+        </rss>
+"@
+        $xml.Trim() | Set-Content -Path "output/appcast.xml" -Encoding UTF8
+        Write-Host "Generated appcast.xml for v$ver"
 
     - name: Commit bump, Tag & Push
       shell: powershell
@@ -116,6 +126,6 @@ jobs:
         files: |
           output/*.exe
           output/*.zip
-          output/update.xml
+          output/appcast.xml
         draft: false
         prerelease: false
