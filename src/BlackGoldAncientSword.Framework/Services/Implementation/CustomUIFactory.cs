@@ -101,7 +101,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 if (wpfWindow.FindName("DownloadInstallButton") is Button installBtn)
                 {
                     installBtn.Content = isUpdateAlreadyDownloaded
-                        ? ResOrDefault("UpdateDialog.Install", "Install")
+                        ? ResOrDefault("UpdateDialog.Restart", "Restart")
                         : ResOrDefault("UpdateDialog.DownloadInstall", "Update");
                     installBtn.MinWidth = 60;
                 }
@@ -111,7 +111,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 {
                     var item = updates.FirstOrDefault();
                     var downloadInstallWord = isUpdateAlreadyDownloaded
-                        ? ResOrDefault("UpdateDialog.Install", "Install")
+                        ? ResOrDefault("UpdateDialog.Restart", "Restart")
                         : ResOrDefault("UpdateDialog.Download", "update");
 
                     vm.TitleHeaderText = ResOrDefault("UpdateDialog.NewVersionAvailable",
@@ -172,10 +172,28 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 wpfWindow.Background = Brushes.White;
                 ApplyHandyControlStyles(wpfWindow);
 
-                // Localize action button via view model
+                // Localize action button + hook download completion
                 if (wpfWindow.DataContext is DownloadProgressWindowViewModel progressVm)
                 {
+                    // Set initial button text (Cancel or Install)
                     progressVm.ActionButtonTitle = localizedAction;
+
+                    // Hook download completion: change title to "更新完成" and button to "重新启动"
+                    progressVm.PropertyChanged += (sender, args) =>
+                    {
+                        if (args.PropertyName == nameof(progressVm.IsDownloading) && !progressVm.IsDownloading)
+                        {
+                            // Download finished successfully
+                            if (progressVm.DidDownloadAnything && !progressVm.DidDownloadFail)
+                            {
+                                progressVm.ActionButtonTitle = ResOrDefault("UpdateDialog.Restart", "Restart");
+                                // Update downloading title text
+                                var tbs = FindVisualChildren<TextBlock>(wpfWindow).ToList();
+                                if (tbs.Count > 0)
+                                    tbs[0].Text = ResOrDefault("UpdateDialog.UpdateCompleted", "Update Complete");
+                            }
+                        }
+                    };
                 }
 
                 // Fallback: find button in visual tree and set Content directly

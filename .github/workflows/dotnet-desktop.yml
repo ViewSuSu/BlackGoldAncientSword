@@ -184,7 +184,7 @@ jobs:
                   length="${{ steps.installer.outputs.exe_size }}"
                   type="application/octet-stream"
                   sparkle:os="windows"
-                  sparkle:installerArguments="/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" />
+                  sparkle:installerArguments="/SILENT" />
               </item>
             </channel>
           </rss>
