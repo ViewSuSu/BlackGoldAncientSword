@@ -194,7 +194,7 @@
     <system:String x:Key="UpdateDialog.VersionInfoNoName">Would you like to {0} it now?</system:String>
     <system:String x:Key="UpdateDialog.SkipVersion">Skip this version</system:String>
     <system:String x:Key="UpdateDialog.RemindLater">Remind me later</system:String>
-    <system:String x:Key="UpdateDialog.DownloadInstall">Update</system:String>
+    <system:String x:Key="UpdateDialog.DownloadInstall">Download/Install</system:String>
     <system:String x:Key="UpdateDialog.Restart">Restart</system:String>
     <system:String x:Key="UpdateDialog.UpdateCompleted">Update Complete</system:String>
     <system:String x:Key="UpdateDialog.Install">Install</system:String>
