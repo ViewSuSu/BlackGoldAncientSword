@@ -1,5 +1,7 @@
 ﻿#define MyAppName "BlackGoldAncientSword"
+#ifndef MyAppVersion
 #define MyAppVersion "0.0.0"
+#endif
 #define MyAppPublisher "小窗同学"
 #define MyAppURL "https://github.com/ViewSuSu/BlackGoldAncientSword"
 
