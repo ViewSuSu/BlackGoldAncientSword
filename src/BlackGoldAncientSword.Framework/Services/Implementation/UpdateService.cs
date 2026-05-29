@@ -1,4 +1,4 @@
-﻿using AutoUpdaterDotNET;
+using AutoUpdaterDotNET;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
@@ -6,9 +6,6 @@ using Prism.Events;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Text.Json;
-using System.Net;
-using System.Threading.Tasks;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
 {
@@ -46,11 +43,15 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         {
             _customUpdateUrl = customUpdateUrl;
 
-            // AutoUpdater uses the entry assembly version by default,
-            // but we can set it explicitly for safety
-            AutoUpdater.InstalledVersion = new Version(CurrentVersion);
+            // GitHub tags use 3-segment semver (e.g. v1.0.4).
+            // Nerdbank.GitVersioning produces 4-segment versions (e.g. 1.0.2.35).
+            // Take only the first 3 segments so AutoUpdater can compare correctly.
+            var parts = CurrentVersion.Split('.');
+            var semver = parts.Length >= 3
+                ? string.Join(".", parts.Take(3))
+                : CurrentVersion;
+            AutoUpdater.InstalledVersion = new Version(semver);
 
-            // Wire up UI callbacks
             AutoUpdater.CheckForUpdateEvent += OnCheckForUpdateEvent;
             AutoUpdater.ParseUpdateInfoEvent += OnParseUpdateInfoEvent;
             AutoUpdater.ApplicationExitEvent += () =>
@@ -69,88 +70,10 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             _isChecking = true;
 
             var updateUrl = _customUpdateUrl ?? GetDefaultUpdateUrl();
-            var match = GitHubUrlRegex.Match(updateUrl);
-            if (!match.Success)
-            {
-                // Non-GitHub URL; let AutoUpdater handle it normally
-                AutoUpdater.Start(updateUrl);
-                return;
-            }
 
-            // GitHub URL: bypass AutoUpdater's built-in GitHub handling
-            // to avoid 404 errors when the repo is private, missing, or unreachable.
-            try
-            {
-                var owner = match.Groups["owner"].Value;
-                var repo = match.Groups["repo"].Value;
-                var apiUrl = $"https://api.github.com/repos/{owner}/{repo}/releases?per_page=1";
-
-                using var response = await _httpClient.GetAsync(apiUrl);
-
-                if (response.StatusCode == HttpStatusCode.NotFound ||
-                    response.StatusCode == HttpStatusCode.Forbidden)
-                {
-                    ReportNoUpdate();
-                    return;
-                }
-
-                response.EnsureSuccessStatusCode();
-
-                var json = await response.Content.ReadAsStringAsync();
-                using var doc = JsonDocument.Parse(json);
-                var releases = doc.RootElement;
-
-                if (releases.GetArrayLength() == 0)
-                {
-                    ReportNoUpdate();
-                    return;
-                }
-
-                var latest = releases[0];
-                var tagName = latest.GetProperty("tag_name").GetString() ?? "";
-                var htmlUrl = latest.GetProperty("html_url").GetString() ?? "";
-
-                var latestVersion = tagName.StartsWith("v", StringComparison.OrdinalIgnoreCase)
-                    ? tagName[1..]
-                    : tagName;
-
-                var normalizedLatest = NormalizeVersionSegments(latestVersion, InstalledVersionSegments);
-                var currentVer = new Version(CurrentVersion);
-                var latestVer = new Version(normalizedLatest);
-
-                // Standard numeric comparison first
-                bool isNewer = latestVer > currentVer;
-
-                // Handle Nerdbank.GitVersioning height-based versions:
-                // e.g., installed "1.0.28" (version 1.0 + 28 commits height)
-                // vs GitHub tag "1.0.3" (semver patch release).
-                // When major.minor matches and the GitHub tag exists,
-                // treat it as an update even if the 3rd segment is numerically lower.
-                if (!isNewer
-                    && latestVer.Major == currentVer.Major
-                    && latestVer.Minor == currentVer.Minor
-                    && latestVer != currentVer)
-                {
-                    isNewer = true;
-                }
-
-                IsUpdateAvailable = isNewer;
-                LatestVersion = IsUpdateAvailable ? normalizedLatest : null;
-                UpdateAvailabilityChanged?.Invoke(this, IsUpdateAvailable);
-
-                if (!IsUpdateAvailable)
-                {
-                    ReportNoUpdate();
-                    return;
-                }
-
-                ReportUpdateAvailable(htmlUrl);
-            }
-            catch (Exception)
-            {
-                // Network or parsing error; treat as no update to avoid spamming the user
-                ReportNoUpdate();
-            }
+            // Let AutoUpdater.NET handle everything. Run on background thread
+            // because AutoUpdater.Start() makes synchronous HTTP calls.
+            await Task.Run(() => AutoUpdater.Start(updateUrl));
         }
 
         private void OnCheckForUpdateEvent(UpdateInfoEventArgs args)
@@ -272,24 +195,25 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 return $"https://github.com/{product}";
             }
 
-            return "https://github.com/ViewSuSu/NarakaBladepoint-Stats-Assistant";
+            return "https://github.com/ViewSuSu/BlackGoldAncientSword";
         }
 
+        /// <summary>
+        /// AutoUpdater fires this event when it detects a GitHub URL.
+        /// We use GitHub's releases/latest redirect (302) to find the latest tag 閳?        /// no API call, no rate limit.
+        /// </summary>
         private void OnParseUpdateInfoEvent(ParseUpdateInfoEventArgs args)
         {
-            // Get the update URL that was configured
             var updateUrl = _customUpdateUrl ?? GetDefaultUpdateUrl();
-
             var match = GitHubUrlRegex.Match(updateUrl);
             if (!match.Success)
             {
-                // Not a GitHub URL; let the default XML parser handle it
+                // Not a recognised GitHub repo URL; let AutoUpdater's default XML parser handle it.
                 return;
             }
 
             var owner = match.Groups["owner"].Value;
             var repo = match.Groups["repo"].Value;
-            var latestUrl = $"https://github.com/{owner}/{repo}/releases/latest";
 
             try
             {
@@ -298,6 +222,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 using var handler = new HttpClientHandler { AllowAutoRedirect = false };
                 using var noRedirectClient = new HttpClient(handler) { Timeout = _httpClient.Timeout };
                 noRedirectClient.DefaultRequestHeaders.Add("User-Agent", "BlackGoldAncientSword-UpdateChecker");
+
+                var latestUrl = $"https://github.com/{owner}/{repo}/releases/latest";
                 using var response = noRedirectClient.GetAsync(latestUrl).GetAwaiter().GetResult();
 
                 // 404 means no releases exist yet
@@ -308,7 +234,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
                 response.EnsureSuccessStatusCode();
 
-                // Read the redirect Location header (e.g., /ViewSuSu/BlackGoldAncientSword/releases/tag/v1.0.2)
+                // Read the redirect Location header (e.g., /ViewSuSu/BlackGoldAncientSword/releases/tag/v1.0.4)
                 var redirectUrl = response.Headers.Location?.ToString();
                 if (string.IsNullOrWhiteSpace(redirectUrl))
                 {
@@ -316,12 +242,12 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 }
 
                 // Resolve relative URL
-                if (!redirectUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                if (!redirectUrl.StartsWith("http", System.StringComparison.OrdinalIgnoreCase))
                 {
                     redirectUrl = $"https://github.com{redirectUrl}";
                 }
 
-                // Extract tag from URL: .../releases/tag/v1.0.2
+                // Extract tag from URL: .../releases/tag/v1.0.4
                 var tagMatch = Regex.Match(redirectUrl, @"releases/tag/(?<tag>[^/]+)$", RegexOptions.IgnoreCase);
                 if (!tagMatch.Success)
                 {
@@ -329,90 +255,24 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 }
 
                 var tagName = tagMatch.Groups["tag"].Value;
-                // Strip leading 'v' from tag name to get the version string
-                var latestVersion = tagName.StartsWith("v", StringComparison.OrdinalIgnoreCase)
+                var version = tagName.StartsWith("v", System.StringComparison.OrdinalIgnoreCase)
                     ? tagName[1..]
                     : tagName;
 
-                var normalizedLatest = NormalizeVersionSegments(latestVersion, InstalledVersionSegments);
-
-                // Derive the release page URL (changelog)
+                // Build download URL for the zip file (follows workflow naming convention).
+                var downloadUrl = $"https://github.com/{owner}/{repo}/releases/download/{tagName}/BlackGoldAncientSword-{tagName}.zip";
                 var changelogUrl = $"https://github.com/{owner}/{repo}/releases/tag/{tagName}";
 
                 args.UpdateInfo = new UpdateInfoEventArgs
                 {
-                    CurrentVersion = normalizedLatest,
-                    DownloadURL = changelogUrl,
+                    CurrentVersion = version,
+                    DownloadURL = downloadUrl,
                     ChangelogURL = changelogUrl,
                 };
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Failed to fetch release info from GitHub: {ex.Message}", ex);
-            }
-
-        }
-
-        /// <summary>
-        /// Number of segments in the installed version (e.g., "1.0.2.30" has 4 segments).
-        /// </summary>
-        private int InstalledVersionSegments =>
-            string.IsNullOrEmpty(CurrentVersion) ? 3 : CurrentVersion.Split('.').Length;
-
-        /// <summary>
-        /// Normalize a version string to have the same number of dot-separated segments
-        /// as the installed version, padding with zeros as needed.
-        /// This ensures System.Version comparison works properly when segment counts differ.
-        /// </summary>
-        private string NormalizeVersionSegments(string version, int targetSegments)
-        {
-            var parts = version.Split('.');
-            if (parts.Length >= targetSegments)
-                return version;
-
-            // Pad with zeros to match the target segment count
-            var padded = new string[targetSegments];
-            for (int i = 0; i < targetSegments; i++)
-            {
-                padded[i] = i < parts.Length ? parts[i] : "0";
-            }
-            return string.Join(".", padded);
-        }
-
-        private void ReportNoUpdate()
-        {
-            _isChecking = false;
-            IsUpdateAvailable = false;
-            LatestVersion = null;
-            if (_showNotifications)
-            {
-                _eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(
-                        L("Settings.NoUpdateAvailable", "You are running the latest version.")));
-            }
-        }
-
-        private void ReportUpdateAvailable(string downloadUrl)
-        {
-            _isChecking = false;
-            if (_showNotifications)
-            {
-                var args = new UpdateInfoEventArgs
-                {
-                    CurrentVersion = LatestVersion ?? "",
-                    DownloadURL = downloadUrl,
-                    ChangelogURL = downloadUrl,
-                };
-                try
-                {
-                    AutoUpdater.ShowUpdateForm(args);
-                }
-                catch
-                {
-                    _eventAggregator.GetEvent<TipMessageEvent>()
-                        .Publish(new TipMessageWithHighlightArgs(
-                            L("Settings.NoUpdateAvailable", "You are running the latest version.")));
-                }
             }
         }
 
