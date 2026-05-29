@@ -465,20 +465,38 @@
                         FontSize="11"
                         Foreground="#888888"
                         Text="{Binding CurrentVersionText}" />
+                    <!--  最新版本标记  -->
                     <TextBlock
                         Margin="5,0,0,0"
                         VerticalAlignment="Center"
-                        Cursor="Hand"
                         FontSize="11"
-                        Foreground="#5B8DEF"
-                        Text="{DynamicResource MainWindow.CheckForUpdates}"
-                        ToolTip="{DynamicResource MainWindow.CheckForUpdates.ToolTip}">
+                        Foreground="#888888"
+                        Text="(最新)"
+                        Visibility="{Binding IsLatestVersion, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <!--  发现新版本  -->
+                    <StackPanel
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center"
+                        Cursor="Hand"
+                        Orientation="Horizontal"
+                        Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}}"
+                        Opacity="{Binding UpdateIndicatorOpacity}">
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="MouseLeftButtonDown">
                                 <i:InvokeCommandAction Command="{Binding CheckForUpdatesCommand}" />
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
-                    </TextBlock>
+                        <Image
+                            Width="14"
+                            Height="14"
+                            Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/发现新版本.png" />
+                        <TextBlock
+                            Margin="3,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="#5B8DEF"
+                            Text="发现新版本" />
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel
                     Grid.Row="2"
