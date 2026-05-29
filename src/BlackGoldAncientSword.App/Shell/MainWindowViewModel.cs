@@ -125,7 +125,9 @@ namespace BlackGoldAncientSword.App.Shell
         public DelegateCommand CheckForUpdatesCommand =>
             _checkForUpdatesCommand ??= new DelegateCommand(async () =>
             {
+                Debug.WriteLine("[MainWindowVM] CheckForUpdatesCommand 执行，用户主动检查更新");
                 await _updateService.CheckForUpdatesAsync();
+                Debug.WriteLine("[MainWindowVM] CheckForUpdatesCommand 完成");
             });
 
         public MainWindowViewModel(
@@ -142,6 +144,7 @@ namespace BlackGoldAncientSword.App.Shell
             _regionManager = regionManager;
             _moduleManager = moduleManager;
             _updateService = updateService;
+            Debug.WriteLine($"[MainWindowVM] UpdateService 已注入，当前版本: {_updateService.CurrentVersion}");
             _localization = localizationService;
             _gameStatusMonitor = gameStatusMonitor;
 
