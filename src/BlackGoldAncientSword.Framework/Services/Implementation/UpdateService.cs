@@ -6,6 +6,7 @@ using NetSparkleUpdater.Enums;
 using NetSparkleUpdater.UI.WPF;
 using Prism.Events;
 using System.Reflection;
+using System.Threading;
 using System.Windows.Media.Imaging;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
@@ -84,6 +85,22 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 });
             };
         }
+        /// <summary>
+        /// Runs an action on a dedicated STA thread (required by WPF UI factories like NetSparkle's UIFactory).
+        /// </summary>
+        private static Task RunOnStaThreadAsync(Action action)
+        {
+            var tcs = new TaskCompletionSource();
+            var thread = new Thread(() =>
+            {
+                try { action(); tcs.SetResult(); }
+                catch (Exception ex) { tcs.SetException(ex); }
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            return tcs.Task;
+        }
+
 
         public async Task CheckForUpdatesAsync(bool showNoUpdateMessage = true)
         {
@@ -92,12 +109,12 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             if (showNoUpdateMessage)
             {
                 // User-requested check: NetSparkle handles UI automatically
-                await Task.Run(() => _sparkle.CheckForUpdatesAtUserRequest());
+                await RunOnStaThreadAsync(() => _sparkle.CheckForUpdatesAtUserRequest());
             }
             else
             {
                 // Silent auto-check at startup
-                await Task.Run(() => _sparkle.CheckForUpdatesQuietly());
+                await RunOnStaThreadAsync(() => _sparkle.CheckForUpdatesQuietly());
             }
         }
 
