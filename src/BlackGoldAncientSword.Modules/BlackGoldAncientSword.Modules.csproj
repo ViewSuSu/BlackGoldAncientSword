@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Authors>小窗同学</Authors>
+    <Authors>灏忕獥鍚屽</Authors>
     <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
@@ -17,6 +17,8 @@
     <ProjectReference Include="..\BlackGoldAncientSword.GameMonitor\BlackGoldAncientSword.GameMonitor.csproj" />
 
     <ProjectReference Include="..\BlackGoldAncientSword.Resources\BlackGoldAncientSword.Resources.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.Ocr\BlackGoldAncientSword.Ocr.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.ScreenCapture\BlackGoldAncientSword.ScreenCapture.csproj" />
   </ItemGroup>
 
   <ItemGroup>
