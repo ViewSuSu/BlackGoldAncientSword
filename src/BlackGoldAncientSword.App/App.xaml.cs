@@ -1,4 +1,5 @@
 ﻿using System.Windows.Threading;
+using System.Diagnostics;
 using BlackGoldAncientSword.App.Shell;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Core.Extensions;
