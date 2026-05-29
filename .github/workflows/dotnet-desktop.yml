@@ -75,6 +75,7 @@ jobs:
             -Force
 
           $zipSize = (Get-Item $zipPath).Length
+          "zip_name=$zipName" >> $env:GITHUB_OUTPUT
           "zip_size=$zipSize" >> $env:GITHUB_OUTPUT
 
           Write-Host "Created: $zipPath ($zipSize bytes)"
@@ -137,9 +138,9 @@ jobs:
                 </sparkle:releaseNotesLink>
                 <pubDate>$pubDate</pubDate>
                 <enclosure
-                  url="https://github.com/$repo/releases/download/v$ver/${{ steps.installer.outputs.exe_name }}"
+                  url="https://github.com/$repo/releases/download/v$ver/${{ steps.zip.outputs.zip_name }}"
                   sparkle:version="$ver"
-                  length="${{ steps.installer.outputs.exe_size }}"
+                  length="${{ steps.zip.outputs.zip_size }}"
                   type="application/octet-stream"
                   sparkle:os="windows" />
               </item>
