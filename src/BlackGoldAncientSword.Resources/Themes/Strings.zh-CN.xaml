@@ -83,9 +83,10 @@
     <system:String x:Key="Stats.Header.Time">时间</system:String>
     <system:String x:Key="Stats.RankName">无双修罗</system:String>
     <system:String x:Key="Stats.Refresh">刷新</system:String>
+    <system:String x:Key="Stats.BackToMe">回到我</system:String>
 
-    <system:String x:Key="Search.Title">搜索玩家</system:String>
-    <system:String x:Key="Search.Input">输入玩家名称或者ID</system:String>
+    <system:String x:Key="Search.Title">搜索</system:String>
+    <system:String x:Key="Search.Input">输入昵称或者ID</system:String>
     <system:String x:Key="Search.Button">搜索</system:String>
     <system:String x:Key="Search.Placeholder">输入玩家名称或ID搜索</system:String>
     <system:String x:Key="Search.History">搜索历史</system:String>
