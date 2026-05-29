@@ -4,15 +4,14 @@
 # Source code
 *.cs          text eol=crlf diff=csharp
 *.xaml        text eol=crlf
+*.xaml.cs     text eol=crlf diff=csharp
 *.xml         text eol=crlf
 *.json        text eol=crlf
 *.config      text eol=crlf
 *.props       text eol=crlf
 *.targets     text eol=crlf
 *.sln         text eol=crlf
-*.csproj      text eol=crlf working-tree-encoding=UTF-8-BOM
-*.xaml.cs     text eol=crlf diff=csharp
-*.cs          text eol=crlf diff=csharp
+*.csproj      text eol=crlf
 
 # Scripts
 *.ps1         text eol=crlf
