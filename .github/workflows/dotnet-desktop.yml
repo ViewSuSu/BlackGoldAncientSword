@@ -136,6 +136,13 @@ jobs:
             exit 1
           }
 
+          # Replace version placeholder with actual version
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $issContent = Get-Content $issPath -Raw -Encoding UTF8
+          $issContent = $issContent -replace '#define MyAppVersion "0\.0\.0"', "#define MyAppVersion `"$ver`""
+          [System.IO.File]::WriteAllText($issPath, $issContent, (New-Object System.Text.UTF8Encoding $false))
+          Write-Host "Patched setup.iss MyAppVersion -> $ver"
+
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
             /DMyAppVersion=${{ steps.version.outputs.new_version }} `
             $issPath `
