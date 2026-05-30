@@ -8,6 +8,7 @@
     <system:String x:Key="App.Settings">Settings</system:String>
     <system:String x:Key="App.Language">Language</system:String>
     <system:String x:Key="App.UnhandledError">Error: {0}</system:String>
+    <system:String x:Key="MainWindow.LatestVersion">(Latest)</system:String>
 
 
     <system:String x:Key="Tab.Stats">Stats</system:String>
@@ -59,6 +60,7 @@
     <system:String x:Key="Stats.CopyNickname">Copy nickname</system:String>
     <system:String x:Key="Stats.CopyUID">Copy UID</system:String>
     <system:String x:Key="Stats.CopySuccess">Copied!</system:String>
+    <system:String x:Key="Stats.UserNotFound">User not found</system:String>
     <system:String x:Key="Stats.Unknown">Unknown</system:String>
     <system:String x:Key="Stats.Minute">min</system:String>
     <system:String x:Key="Stats.Second">s</system:String>
@@ -82,6 +84,26 @@
     <system:String x:Key="Stats.Header.RankScore">Tier</system:String>
     <system:String x:Key="Stats.Header.Time">Time</system:String>
     <system:String x:Key="Stats.RankName">Unrivaled Asura</system:String>
+    <system:String x:Key="Stats.RankName.Solo.7000">Nirvana Asura</system:String>
+    <system:String x:Key="Stats.RankName.Solo.6000">Formless Dragon</system:String>
+    <system:String x:Key="Stats.RankName.Solo.5000">Unrivaled Asura</system:String>
+    <system:String x:Key="Stats.RankName.Solo.4500">Infernal Asura</system:String>
+    <system:String x:Key="Stats.RankName.Solo.4000">Sunset</system:String>
+    <system:String x:Key="Stats.RankName.Solo.3500">Eclipse</system:String>
+    <system:String x:Key="Stats.RankName.Solo.3000">Asteroid</system:String>
+    <system:String x:Key="Stats.RankName.Solo.2500">Platinum</system:String>
+    <system:String x:Key="Stats.RankName.Solo.2000">Gold</system:String>
+    <system:String x:Key="Stats.RankName.Solo.1500">Silver</system:String>
+    <system:String x:Key="Stats.RankName.Solo.0">Bronze</system:String>
+    <system:String x:Key="Stats.RankName.Trio.7000">Infernal Master</system:String>
+    <system:String x:Key="Stats.RankName.Trio.6500">Celestial Lord</system:String>
+    <system:String x:Key="Stats.RankName.Trio.6000">Void Sovereign</system:String>
+    <system:String x:Key="Stats.RankName.Trio.5500">Heavenly Champion</system:String>
+    <system:String x:Key="Stats.RankName.Trio.5000">Solar Veteran</system:String>
+    <system:String x:Key="Stats.RankName.Trio.4500">Lunar Grandmaster</system:String>
+    <system:String x:Key="Stats.RankName.Trio.4000">Cloud Warrior</system:String>
+    <system:String x:Key="Stats.RankName.Trio.3500">Supreme Expert</system:String>
+    <system:String x:Key="Stats.RankName.Trio.3000">Mortal Adept</system:String>
     <system:String x:Key="Stats.Refresh">Refresh</system:String>
     <system:String x:Key="Stats.BackToMe">Back to me</system:String>
 
@@ -125,6 +147,14 @@
     <system:String x:Key="Home.RoleIdNotAvailable">Player role ID not available.</system:String>
     <system:String x:Key="Home.LoadUserInfoFailed">Failed to load user info.</system:String>
     <system:String x:Key="Home.NetworkError">Network error: {0}</system:String>
+    <system:String x:Key="Home.Status.WaitingForGame">Waiting for game to start</system:String>
+    <system:String x:Key="Announcement.InitialVersion">Initial Version</system:String>
+    <system:String x:Key="Announcement.InitialDetail">Supports Naraka Bladepoint stats query, player search, data saving and more.</system:String>
+    <system:String x:Key="Announcement.ThanksMessage">Thank you for using Naraka Bladepoint Stats Assistant! Feedback is welcome.</system:String>
+    <system:String x:Key="Home.Status.GameStarted">Game started</system:String>
+    <system:String x:Key="Home.Status.GameDetected">Naraka Bladepoint process detected</system:String>
+    <system:String x:Key="Home.Status.HeroSelection">Hero Selection (RoomId: {0})</system:String>
+    <system:String x:Key="Home.Status.InGame">In Game (BattleId: {0})</system:String>
     <system:String x:Key="Announcement.UpdateHistory">Update History</system:String>
     <system:String x:Key="Announcement.Notice">Announcement</system:String>
     <system:String x:Key="Announcement.Confirm">Confirm</system:String>
@@ -216,4 +246,29 @@
     <system:String x:Key="Settings.Category.GameLog">Game Status Detection</system:String>
     <system:String x:Key="Settings.GameLogPath.Description">Full path to Naraka Bladepoint Player.log for game status detection</system:String>
     <system:String x:Key="Settings.BrowseGameLogPath">Select game log file</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgKill">Kill Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgDamage">Damage Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffTop5Rate">Top5 Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgSurvival">Survival Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffKD">KD Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgHeal">Heal Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgAssist">Assist Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffBestKill">Best Kill Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffBestDamage">Best Dmg Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffMostParry">Parry Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffFirstRate">Win Rate Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffMatches">Matches Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffFirstPlace">Wins Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffTopFive">Top5 Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffBestHeal">Best Heal Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffBestAssist">Best Assist Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffRankScore">Rank Diff</system:String>
+    <system:String x:Key="TeamInfo.Title">Team Info</system:String>
+    <system:String x:Key="TeamInfo.WaitingForHeroSelect">Waiting to enter hero selection...</system:String>
+    <system:String x:Key="TeamInfo.HeroSelectRecognizing">Hero selection, identifying teammates...</system:String>
+    <system:String x:Key="TeamInfo.InGameLocked">Match started, team info locked</system:String>
+    <system:String x:Key="TeamInfo.PlayerNotFound">Player not found</system:String>
+    <system:String x:Key="TeamInfo.LoadFailed">Load failed</system:String>
+    <system:String x:Key="TeamInfo.LoadError">Load error</system:String>
+    <system:String x:Key="TeamInfo.QueryFailed">Query Failed</system:String>
 </ResourceDictionary>

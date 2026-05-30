@@ -49,7 +49,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                         {
                             switch (kv.Key)
                             {
-                                case "player_name": result.PlayerName = kv.Value; break;
+                                case "player_name": result.PlayerName = kv.Value; result.OriginalPlayerName = kv.Value; break;
                                 case "player_id": result.PlayerId = kv.Value; break;
                                 case "player_level":
                                     if (int.TryParse(kv.Value, out var level)) result.PlayerLevel = level;

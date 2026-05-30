@@ -11,3 +11,5 @@ src/ocr_service/python-*.zip
 src/ocr_service/__pycache__/
 
 *.binlog
+/temp_patch.diff
+/temp_patch.diff

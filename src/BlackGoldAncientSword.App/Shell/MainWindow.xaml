@@ -13,7 +13,7 @@
     xmlns:tb="http://www.hardcodet.net/taskbar"
     Title="{DynamicResource App.Title}"
     Width="1180"
-    Height="761"
+    Height="781"
     d:DataContext="{d:DesignInstance Type=shell:MainWindowViewModel}"
     d:Icon="/BlackGoldAncientSword.Resources;component/Images/app.ico"
     d:Title="{DynamicResource App.Title}"
@@ -320,7 +320,7 @@
                                 </Button>
 
                                 <!--  Team Info  -->
-                                <Button ToolTip="队伍信息">
+                                <Button ToolTip="{DynamicResource TeamInfo.Title}">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Height" Value="30" />
@@ -363,7 +363,7 @@
                                             Grid.Column="1"
                                             VerticalAlignment="Center"
                                             FontSize="13"
-                                            Text="队伍信息"
+                                            Text="{DynamicResource TeamInfo.Title}"
                                             TextTrimming="CharacterEllipsis" />
                                     </Grid>
                                 </Button>
@@ -471,7 +471,7 @@
                         VerticalAlignment="Center"
                         FontSize="11"
                         Foreground="#888888"
-                        Text="(最新)"
+                        Text="{DynamicResource MainWindow.LatestVersion}"
                         Visibility="{Binding IsLatestVersion, Converter={StaticResource BoolToVisibilityConverter}}" />
                     <!--  发现新版本  -->
                     <StackPanel
@@ -495,7 +495,7 @@
                             VerticalAlignment="Center"
                             FontSize="11"
                             Foreground="#5B8DEF"
-                            Text="发现新版本" />
+                            Text="{DynamicResource Settings.UpdateAvailable}" />
                     </StackPanel>
                 </StackPanel>
                 <StackPanel
