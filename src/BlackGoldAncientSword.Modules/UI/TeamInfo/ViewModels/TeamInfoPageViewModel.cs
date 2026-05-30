@@ -21,6 +21,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private bool _isOcrRunning;
         private readonly object _ocrLock = new();
         private bool _isSubscribed;
+        private bool _isHeroSelectionPhase;
         private CancellationTokenSource? _refreshMembersCts;
 
         private static string L(string key, string fallback) =>
@@ -92,6 +93,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 if (param != null) SelectedCategory = param.Value;
             });
 
+        private DelegateCommand? _refreshOcrCommand;
+        public DelegateCommand RefreshOcrCommand =>
+            _refreshOcrCommand ??= new DelegateCommand(async () =>
+            {
+                await RefreshOcrOnceAsync();
+            });
+
         public static System.ComponentModel.BindingList<TeamSizeOption> TeamSizes { get; } =
             new(new[] { new TeamSizeOption(TeamSize.Trio), new TeamSizeOption(TeamSize.Duo), new TeamSizeOption(TeamSize.Solo) });
 
@@ -157,19 +165,32 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             set => SetProperty(ref _statusText, value);
         }
 
+        public bool IsHeroSelectionPhase
+        {
+            get => _isHeroSelectionPhase;
+            set
+            {
+                if (SetProperty(ref _isHeroSelectionPhase, value))
+                    RaisePropertyChanged(nameof(IsHeroSelectionPhase));
+            }
+        }
+
         private async void OnGameStatusRecognized(object? sender, GameStatusChangedEventArgs args)
         {
             switch (args.Status)
             {
                 case GameStatus.HeroSelection:
+                    IsHeroSelectionPhase = true;
                     StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
                     StartOcrLoop();
                     break;
                 case GameStatus.InGame:
+                    IsHeroSelectionPhase = false;
                     StopOcrLoop();
                     break;
                 case GameStatus.BattleEnded:
                 case GameStatus.Unknown:
+                    IsHeroSelectionPhase = false;
                     StopOcrLoop();
                     StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
                     TeamMembers.Clear();
@@ -200,15 +221,54 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
+        private async Task RefreshOcrOnceAsync()
+        {
+            try
+            {
+                StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
+                var names = await _teamInfoOcrService.RecognizeTeamMembersAsync(CancellationToken.None);
+                if (names.Length > 0)
+                {
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+                    {
+                        await UpdateTeamMembersAsync(names, CancellationToken.None);
+
+                        // Force reload all existing members that aren't already loading
+                        foreach (var member in TeamMembers.ToList())
+                        {
+                            if (!member.IsLoading)
+                                RefreshSingleMember(member);
+                        }
+                    });
+
+                        // ?????????????????????
+                        foreach (var member in TeamMembers.ToList())
+                        {
+                            if (!member.IsLoading)
+                                RefreshSingleMember(member);
+                        }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TeamInfo] Refresh OCR error: {ex.Message}");
+            }
+        }
+
         private async Task OcrLoopAsync(CancellationToken ct)
         {
-            while (!ct.IsCancellationRequested)
+            // 首次截图前等待 2s，确保英雄选择界面稳定
+            try { await Task.Delay(2000, ct); } catch (OperationCanceledException) { return; }
+
+            bool hasRecognized = false;
+            while (!ct.IsCancellationRequested && !hasRecognized)
             {
                 try
                 {
                     var names = await _teamInfoOcrService.RecognizeTeamMembersAsync(ct);
                     if (names.Length > 0 && !ct.IsCancellationRequested)
                     {
+                        hasRecognized = true;
                         await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
                         {
                             await UpdateTeamMembersAsync(names, ct);
@@ -220,8 +280,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 {
                     Debug.WriteLine($"[TeamInfo] OCR loop error: {ex.Message}");
                 }
-
             }
+
+            // 识别完成后停止 OCR 循环
+            if (hasRecognized)
+                StopOcrLoop();
         }
 
         private async Task UpdateTeamMembersAsync(string[] names, CancellationToken ct)
@@ -245,7 +308,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 ct.ThrowIfCancellationRequested();
                 var member = new TeamMemberInfo { UserName = name, IsLoading = true, RefreshAction = RefreshSingleMember };
                 TeamMembers.Add(member);
-                _ = LoadMemberDataAsync(member, ct);
+                _ = LoadMemberDataAsync(member, CancellationToken.None);
             }
 
             ReorderMembersForLocalUser();
@@ -404,7 +467,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 var search = await NarakaApiClient.SearchRecordAsync(member.UserName, ct);
                 if (search?.Data == null || string.IsNullOrEmpty(search.Data.RoleIdSimple))
                 {
-                    member.StatusText = L("TeamInfo.PlayerNotFound", "未找到该玩家");
+                    member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
                     member.IsLoading = false;
                     return;
                 }
@@ -414,7 +477,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 var userInfo = await NarakaApiClient.GetUserInfoAsync(roleId, ct);
                 if (userInfo?.Code != 200 || userInfo.Data == null)
                 {
-                    member.StatusText = L("TeamInfo.LoadFailed", "加载失败");
+                    member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
                     member.IsLoading = false;
                     return;
                 }
@@ -469,7 +532,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             catch (Exception ex)
             {
                 Debug.WriteLine($"[TeamInfo] Load member error: {ex.Message}");
-                member.StatusText = L("TeamInfo.LoadError", "加载出错");
+                member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
             }
             finally
             {
@@ -630,11 +693,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             if (_gameStatusMonitor.CurrentStatus == GameStatus.HeroSelection)
             {
+                IsHeroSelectionPhase = true;
                 StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
                 StartOcrLoop();
             }
             else
             {
+                IsHeroSelectionPhase = false;
                 if (_gameStatusMonitor.CurrentStatus != GameStatus.InGame)
                     StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
             }

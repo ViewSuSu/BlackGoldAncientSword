@@ -270,4 +270,5 @@
     <system:String x:Key="TeamInfo.LoadFailed">加载失败</system:String>
     <system:String x:Key="TeamInfo.LoadError">加载出错</system:String>
     <system:String x:Key="TeamInfo.QueryFailed">查询失败</system:String>
+    <system:String x:Key="TeamInfo.RefreshOcr">重新识别队伍信息</system:String>
 </ResourceDictionary>
