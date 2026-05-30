@@ -138,6 +138,7 @@ __declspec(dllexport) int __stdcall wgc_capture_window(HWND hwnd, int* wOut, int
         fprintf(stderr, "[wgc] Pixels: %dx%d\n", desc.Width, desc.Height);
 
         *pixOut = pixels; *wOut = desc.Width; *hOut = desc.Height;
+        session.Close();
         return 0;
     }
     catch (winrt::hresult_error const& ex) {
@@ -163,5 +164,6 @@ BOOL APIENTRY DllMain(HMODULE, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_DETACH) { g_d3dContext.Reset(); g_d3dDevice.Reset(); }
     return TRUE;
 }
+
 
 
