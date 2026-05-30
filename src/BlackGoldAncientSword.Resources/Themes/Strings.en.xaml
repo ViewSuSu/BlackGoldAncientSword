@@ -271,4 +271,5 @@
     <system:String x:Key="TeamInfo.LoadFailed">Load failed</system:String>
     <system:String x:Key="TeamInfo.LoadError">Load error</system:String>
     <system:String x:Key="TeamInfo.QueryFailed">Query Failed</system:String>
+    <system:String x:Key="TeamInfo.RefreshOcr">Re-identify team info</system:String>
 </ResourceDictionary>
