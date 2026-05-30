@@ -489,23 +489,23 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         var b = battleItems[i];
                         RecentBattles.Add(new RecentBattleDisplayItem
                         {
-                            Rank = b.Rank,
+                            Rank = b.Rank ?? 0,
                             HonorTitles = new ObservableCollection<HonorTitleDisplayItem>(),
                             HeroIcon = b.Hero?.HeroIcon ?? string.Empty,
                             HeroName = b.Hero?.HeroName ?? "Unknown",
-                            GameModeText = FormatGameMode(b.GameMode),
-                            GameModeCategoryText = FormatGameModeCategory(b.GameMode),
-                            GameModeTeamSizeText = FormatGameModeTeamSize(b.GameMode),
-                            GameMode = b.GameMode,
-                            Kill = b.Kill,
-                            Damage = b.Damage,
-                            ScoreNumber = GetRankTierScore(b.RoundRankScore, b.GameMode),
-                            ScoreDiff = b.RoundRankScore - b.BeginRankScore,
-                            RankDisplayText = GetRankNameForScore(b.RoundRankScore, b.GameMode),
-                            StarCount = GetStarCount(b.RoundRankScore, b.GameMode),
-                            HasStars = IsTianxuanMode(b.GameMode) && b.RoundRankScore >= 4500,
-                            ScoreDiffDisplay = FormatScoreDiff(b.RoundRankScore - b.BeginRankScore),
-                            BattleTime = FormatUnixTime(b.BattleEndTime)
+                            GameModeText = FormatGameMode(b.GameMode ?? 0),
+                            GameModeCategoryText = FormatGameModeCategory(b.GameMode ?? 0),
+                            GameModeTeamSizeText = FormatGameModeTeamSize(b.GameMode ?? 0),
+                            GameMode = b.GameMode ?? 0,
+                            Kill = b.Kill ?? 0,
+                            Damage = b.Damage ?? 0,
+                            ScoreNumber = GetRankTierScore((b.RoundRankScore ?? 0), b.GameMode ?? 0),
+                            ScoreDiff = (b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0),
+                            RankDisplayText = GetRankNameForScore((b.RoundRankScore ?? 0), b.GameMode ?? 0),
+                            StarCount = GetStarCount((b.RoundRankScore ?? 0), b.GameMode ?? 0),
+                            HasStars = IsTianxuanMode(b.GameMode ?? 0) && (b.RoundRankScore ?? 0) >= 4500,
+                            ScoreDiffDisplay = FormatScoreDiff((b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0)),
+                            BattleTime = FormatUnixTime(b.BattleEndTime ?? 0)
                         });
                     }
 
@@ -590,13 +590,13 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 {
                     RankName = data.Grade.GradeName ?? string.Empty;
                     RankIcon = data.Grade.GradeIcon ?? string.Empty;
-                    RankScore = data.Grade.GradeScore;
+                    RankScore = data.Grade.GradeScore ?? 0;
                     RankLevel = data.Grade.GradeLevel ?? string.Empty;
-                    PageRankName = GetRankNameForScore(data.Grade.GradeScore, (int)gameMode);
-                    PageStarCount = GetStarCount(data.Grade.GradeScore, (int)gameMode);
-                    PageHasStars = IsTianxuanMode((int)gameMode) && data.Grade.GradeScore >= 4500;
-                    RankDisplayWithStars = FormatPageRankDisplay(data.Grade.GradeScore, (int)gameMode);
-                    RankTierScore = GetRankTierScore(data.Grade.GradeScore, (int)gameMode);
+                    PageRankName = GetRankNameForScore(data.Grade.GradeScore ?? 0, (int)gameMode);
+                    PageStarCount = GetStarCount(data.Grade.GradeScore ?? 0, (int)gameMode);
+                    PageHasStars = IsTianxuanMode((int)gameMode) && (data.Grade.GradeScore ?? 0) >= 4500;
+                    RankDisplayWithStars = FormatPageRankDisplay(data.Grade.GradeScore ?? 0, (int)gameMode);
+                    RankTierScore = GetRankTierScore(data.Grade.GradeScore ?? 0, (int)gameMode);
                 }
 
                 DetailStats.Clear();
