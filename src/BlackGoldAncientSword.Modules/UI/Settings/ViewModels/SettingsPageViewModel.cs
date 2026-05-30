@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Windows;
 using Microsoft.Win32;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
@@ -24,7 +24,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         private System.Threading.Timer? _saveTimer;
         private const int SaveDebounceMs = 300;
 
-        /// <summary>寤惰繜淇濆瓨锛屽悎骞剁煭鏃堕棿鍐呰繛缁慨鏀逛负涓€娆″啓鐩樸€?/summary>
+        /// <summary>鐎点倖鍎肩换婊勭┍濠靛棛鎽犻柨娑樿嫰閹酣鐛崜浣哄彋闁哄啫鐖煎Λ鍧楀礃閸涙壆绠剧紓渚囧幒閹便劑寮ㄩ柅娑滅濞戞挴鍋撴繛鍡忊偓鍐叉櫢闁烩晜菧閳?/summary>
         private void DebouncedSave()
         {
             _saveTimer?.Dispose();
@@ -104,10 +104,8 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 SelectedLanguage = code;
             });
 
-
         public System.ComponentModel.BindingList<CloseBehaviorOption> CloseBehaviorOptions { get; } = new()
         {            new CloseBehaviorOption { Value = "MinimizeToTaskbar", DisplayNameResourceKey = "Settings.CloseBehavior.MinimizeToTaskbar" },
-            new CloseBehaviorOption { Value = "MinimizeToTray", DisplayNameResourceKey = "Settings.CloseBehavior.MinimizeToTray" },
             new CloseBehaviorOption { Value = "ExitDirectly", DisplayNameResourceKey = "Settings.CloseBehavior.ExitDirectly" },
         };
 
@@ -165,12 +163,19 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             _navigation = navigation;
             _cacheService = cacheService;
             _updateService = updateService;
-            Debug.WriteLine($"[SettingsPageVM] UpdateService 已注入，当前版本: {_updateService.CurrentVersion}");
+            Debug.WriteLine($"[SettingsPageVM] UpdateService 瀹稿弶鏁為崗銉礉瑜版挸澧犻悧鍫熸拱: {_updateService.CurrentVersion}");
 
             _dataPath = _settings.Current.DataSavePath;
             _cachePath = _settings.Current.CachePath;
-            _gameLogPath = _settings.Current.GameLogPath;
             RefreshCacheSizeAsync().SafeFireAndForget("Settings.RefreshCacheSize");
+        }
+
+        protected override void OnNavigatedToExecute(NavigationContext navigationContext)
+        {
+            RaisePropertyChanged(nameof(SelectedCloseBehavior));
+            RaisePropertyChanged(nameof(RememberCloseBehavior));
+            RaisePropertyChanged(nameof(AutoCheckUpdates));
+            base.OnNavigatedToExecute(navigationContext);
         }
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
@@ -239,19 +244,6 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 }
             });
 
-        private string _gameLogPath = string.Empty;
-        public string GameLogPath
-        {
-            get => _gameLogPath;
-            set
-            {
-                if (!SetProperty(ref _gameLogPath, value))
-                    return;
-
-                _settings.Current.GameLogPath = value;
-                DebouncedSave();
-            }
-        }
 
         private DelegateCommand? _browseCachePathCommand;
         public DelegateCommand BrowseCachePathCommand =>
@@ -273,21 +265,6 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 }
             });
 
-        private DelegateCommand? _browseGameLogPathCommand;
-        public DelegateCommand BrowseGameLogPathCommand =>
-            _browseGameLogPathCommand ??= new DelegateCommand(() =>
-            {
-                var dialog = new OpenFileDialog
-                {
-                    Title = L("Settings.BrowseGameLogPath", "Select game log file"),
-                    Filter = "Log files (*.log)|*.log|All files (*.*)|*.*",
-                    InitialDirectory = System.IO.Path.GetDirectoryName(string.IsNullOrWhiteSpace(GameLogPath) ? AppSettings.GetDefaultGameLogPath() : GameLogPath)
-                };
-                if (dialog.ShowDialog() == true)
-                {
-                    GameLogPath = dialog.FileName;
-                }
-            });
 
         private DelegateCommand? _clearCacheCommand;
         public DelegateCommand ClearCacheCommand =>

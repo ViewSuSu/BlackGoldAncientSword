@@ -10,6 +10,8 @@ using System.Windows.Threading;
 using Prism.Modularity;
 using Prism.Regions;
 using BlackGoldAncientSword.Framework.Core.Bases;
+using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.App.Shell
 {
@@ -271,9 +273,25 @@ namespace BlackGoldAncientSword.App.Shell
             RestoreFromTray();
         }
 
-        private void TrayMenu_Show_Click(object sender, RoutedEventArgs e)
+        private void TrayMenu_Settings_Click(object sender, RoutedEventArgs e)
         {
             RestoreFromTray();
+            var navigation = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<IMainContentNavigationService>();
+            navigation.NavigateTo(PageNames.SettingsPage);
+        }
+
+        private void TrayMenu_Stats_Click(object sender, RoutedEventArgs e)
+        {
+            RestoreFromTray();
+            var navigation = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<IMainContentNavigationService>();
+            navigation.NavigateTo(PageNames.StatsPage);
+        }
+
+        private void TrayMenu_TeamInfo_Click(object sender, RoutedEventArgs e)
+        {
+            RestoreFromTray();
+            var navigation = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<IMainContentNavigationService>();
+            navigation.NavigateTo(PageNames.TeamInfoPage);
         }
 
         private void TrayMenu_Exit_Click(object sender, RoutedEventArgs e)
