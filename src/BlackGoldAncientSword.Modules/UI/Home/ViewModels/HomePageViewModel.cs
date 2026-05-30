@@ -8,6 +8,9 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
 {
     public class HomePageViewModel : ViewModelBase
     {
+        private static string L(string key, string fallback) =>
+            System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
+
         private const int PollIntervalMs = 2000;
         private readonly DispatcherTimer _processTimer;
         private readonly IGameLogMonitor _gameLogMonitor;
@@ -23,7 +26,7 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
             };
             _processTimer.Tick += OnTimerTick;
 
-            StatusText = "等待游戏启动";
+            StatusText = L("Home.Status.WaitingForGame", "等待游戏启动");
             IsLoading = true;
         }
 
@@ -63,8 +66,8 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
             {
                 IsGameRunning = true;
                 IsLoading = false;
-                StatusText = "游戏启动成功";
-                StatusHint = "永劫无间进程已检测到";
+                StatusText = L("Home.Status.GameStarted", "游戏启动成功");
+                StatusHint = L("Home.Status.GameDetected", "永劫无间进程已检测到");
                 if (!_monitorStarted)
                 {
                     _monitorStarted = true;
@@ -79,7 +82,7 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
             {
                 IsGameRunning = false;
                 IsLoading = true;
-                StatusText = "等待游戏启动";
+                StatusText = L("Home.Status.WaitingForGame", "等待游戏启动");
                 StatusHint = string.Empty;
                 if (_monitorStarted)
                 {
@@ -96,13 +99,13 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
         private void OnBattleJoined(object? sender, BattleEventArgs args)
         {
             _gameStatusMonitor.NotifyStatus(GameStatus.HeroSelection);
-            StatusHint = $"英雄选择中 (RoomId: {args.RoomId})";
+            StatusHint = string.Format(L("Home.Status.HeroSelection", "英雄选择中 (RoomId: {0})"), args.RoomId);
         }
 
         private void OnBattleStarted(object? sender, BattleEventArgs args)
         {
             _gameStatusMonitor.NotifyStatus(GameStatus.InGame);
-            StatusHint = $"对局中 (BattleId: {args.BattleId})";
+            StatusHint = string.Format(L("Home.Status.InGame", "对局中 (BattleId: {0})"), args.BattleId);
         }
 
         private void OnBattleEnded(object? sender, BattleEventArgs args)

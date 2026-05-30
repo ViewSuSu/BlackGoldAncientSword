@@ -13,6 +13,8 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
 
         public bool IsRunning { get; private set; }
 
+        public GameStatus CurrentStatus { get; private set; } = GameStatus.Unknown;
+
         public void Start()
         {
             IsRunning = true;
@@ -21,11 +23,13 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         public void Stop()
         {
             IsRunning = false;
+            CurrentStatus = GameStatus.Unknown;
             GameStatusRecognized?.Invoke(this, new GameStatusChangedEventArgs(GameStatus.Unknown));
         }
 
         public void NotifyStatus(GameStatus status)
         {
+            CurrentStatus = status;
             GameStatusRecognized?.Invoke(this, new GameStatusChangedEventArgs(status));
         }
 

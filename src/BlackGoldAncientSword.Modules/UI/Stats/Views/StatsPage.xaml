@@ -1,4 +1,4 @@
-<bases:UserControlBase
+﻿<bases:UserControlBase
     x:Class="BlackGoldAncientSword.Modules.UI.Stats.Views.StatsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -74,13 +74,15 @@
                         BorderThickness="0"
                         Command="{Binding GoBackToMeCommand}"
                         Cursor="Hand"
-                        ToolTip="{DynamicResource Stats.BackToMe}">
+                        ToolTip="{DynamicResource Stats.BackToMe}" ToolTipService.ShowOnDisabled="True">
                         <Button.Style>
                             <Style TargetType="Button">
-                                <Setter Property="Visibility" Value="Visible" />
+                                <Setter Property="IsEnabled" Value="True" />
+                                <Setter Property="Opacity" Value="1" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsLocalUser}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Setter Property="IsEnabled" Value="False" />
+                                        <Setter Property="Opacity" Value="0.5" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -92,6 +94,20 @@
                     </Button>
                 </StackPanel>
             </Grid>
+
+            <!--  === NOT FOUND OVERLAY ===  -->
+            <Border
+                Grid.Row="1"
+                Grid.RowSpan="4"
+                Background="White"
+                Visibility="{Binding ShowNotFound, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="18"
+                    Foreground="Gray"
+                    Text="{DynamicResource Stats.UserNotFound}" />
+            </Border>
 
             <!--  === TOP: Player Info + Filters ===  -->
             <Grid Grid.Row="1">
