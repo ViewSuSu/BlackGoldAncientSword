@@ -429,14 +429,33 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 ct.ThrowIfCancellationRequested();
 
                 var battlesResult = battlesTask.Result;
+                // Process userInfo and seasons first (fast responses)
+                var userInfo = await userInfoTask;
+                if (userInfo?.Code == 200 && userInfo.Data != null)
+                {
+                    var d = userInfo.Data;
+                    UserName = d.Role?.RoleName ?? d.NickName ?? localName;
+                    Level = $"Lv.{d.Role?.RoleLevel ?? 0}";
+                    UID = d.Role?.Uid ?? string.Empty;
+                    AvatarUrl = d.Role?.HeadIcon ?? string.Empty;
+                }
+                PlayerInfoProgress = 100;
+                IsPlayerInfoLoading = false;
 
-                // As soon as battles list arrives, fire all 10 detail requests concurrently
-                System.Threading.Tasks.Task? detailsTask = null;
+                var seasonsResult = await seasonsTask;
+                if (seasonsResult?.Code == 200 && seasonsResult.Data != null)
+                {
+                    Seasons.Clear();
+                    foreach (var s in seasonsResult.Data)
+                        if (s.Code > 0) Seasons.Add(s);
+                    if (Seasons.Count > 0) SelectedSeason = Seasons[0];
+                }
+
+                // Populate recent battles basic info, then serially fetch team performance
                 if (battlesResult?.Code == 200 && battlesResult.Data?.List != null)
                 {
                     var battleItems = battlesResult.Data.List.Take(10).ToList();
 
-                    // Populate recent battles with basic info first (no honor titles yet)
                     RecentBattles.Clear();
                     for (int i = 0; i < battleItems.Count; i++)
                     {
@@ -463,39 +482,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         });
                     }
 
-                    // Launch all 10 detail requests concurrently 鈥?don't wait yet
-                    var detailTasks = battleItems
-                        .Select((b, index) => FetchAndUpdateHonorTitlesAsync(b.BattleId.ToString(), index, ct))
-                        .ToArray();
-                    detailsTask = System.Threading.Tasks.Task.WhenAll(detailTasks);
+                    // Loading spinner done — launch team performance fetch in background
+                    RecentBattlesProgress = 100;
+                    IsRecentBattlesLoading = false;
+                    _ = FetchHonorTitlesSeriallyAsync(battleItems, ct);
                 }
-                // Now process userInfo and seasons while detail requests are in-flight
-                var userInfo = await userInfoTask;
-                if (userInfo?.Code == 200 && userInfo.Data != null)
-                {
-                    var d = userInfo.Data;
-                    UserName = d.Role?.RoleName ?? d.NickName ?? localName;
-                    Level = $"Lv.{d.Role?.RoleLevel ?? 0}";
-                    UID = d.Role?.Uid ?? string.Empty;
-                    AvatarUrl = d.Role?.HeadIcon ?? string.Empty;
-                }
-                PlayerInfoProgress = 100;
-                IsPlayerInfoLoading = false;
 
-                var seasonsResult = await seasonsTask;
-                if (seasonsResult?.Code == 200 && seasonsResult.Data != null)
-                {
-                    Seasons.Clear();
-                    foreach (var s in seasonsResult.Data)
-                        if (s.Code > 0) Seasons.Add(s);
-                    if (Seasons.Count > 0) SelectedSeason = Seasons[0];
-                }
-                // Wait for all detail requests to finish
-                if (detailsTask != null)
-                    await detailsTask;
-
-                RecentBattlesProgress = 100;
-                IsRecentBattlesLoading = false;
                 return true;
             }
             catch (OperationCanceledException)
@@ -514,6 +506,16 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 IsPlayerInfoLoading = false;
                 IsRecentBattlesLoading = false;
                 IsStatsLoading = false;
+            }
+        }
+
+        private async System.Threading.Tasks.Task FetchHonorTitlesSeriallyAsync(
+            System.Collections.Generic.List<RecentBattleItem> battleItems, CancellationToken ct)
+        {
+            for (int i = 0; i < battleItems.Count; i++)
+            {
+                if (ct.IsCancellationRequested) return;
+                await FetchAndUpdateHonorTitlesAsync(battleItems[i].BattleId.ToString(), i, ct);
             }
         }
 
