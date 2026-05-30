@@ -19,6 +19,7 @@ internal static class WgcInterop
     static readonly Guid IID_IActivationFactory = new(0x00000035, 0x0000, 0x0000, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
     static readonly Guid IID_IGraphicsCaptureItemInterop = new(0x3628E81B, 0x3CAC, 0x4C60, 0x92, 0x07, 0x6A, 0x5D, 0x7B, 0x3C, 0x2C, 0x0C);
     static readonly Guid IID_IDirect3D11CaptureFramePoolStatics = new(0xEF106DE2, 0x6CCF, 0x539B, 0x9B, 0xA6, 0x96, 0xDA, 0x5F, 0x17, 0x4A, 0xEA);
+    static readonly Guid IID_IClosable = new(0x30D5A829, 0x7FA4, 0x4026, 0x83, 0xBB, 0xD7, 0x5B, 0xAE, 0x4E, 0xA9, 0x9E);
     static readonly Guid IID_IDirect3DDxgiInterfaceAccess = new(0xA9B3D012, 0x3DF2, 0x4EE3, 0xB8, 0xD1, 0x86, 0x95, 0xF4, 0x57, 0xD3, 0xC1);
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate int D1(IntPtr self, IntPtr device, int fmt, int nBuf, SizeN sz, out IntPtr pool);
@@ -28,6 +29,7 @@ internal static class WgcInterop
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate int D5(IntPtr self, out IntPtr surface);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate int D6(IntPtr self, [MarshalAs(UnmanagedType.LPStruct)] ref Guid iid, out IntPtr ppv);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate int D7(IntPtr self, IntPtr hwnd, [MarshalAs(UnmanagedType.LPStruct)] ref Guid riid, out IntPtr result);
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate int D8(IntPtr self); // Close on IClosable
 
     [StructLayout(LayoutKind.Sequential)] struct SizeN { public int Width; public int Height; }
 
@@ -151,6 +153,22 @@ internal static class WgcInterop
             return dxgi;
         }
         finally { Marshal.Release(access); }
+    }
+
+    public static void StopCapture(IntPtr session)
+    {
+        var closableIid = IID_IClosable;
+        int hr = Marshal.QueryInterface(session, ref closableIid, out var closable);
+        if (hr != 0) throw new InvalidOperationException($"QI(IClosable): 0x{hr:X8}");
+        try
+        {
+            var vt = Vt(closable, 6);
+            var del = Marshal.GetDelegateForFunctionPointer<D8>(vt);
+            hr = del(closable);
+            if (hr != 0) throw new InvalidOperationException($"Close: 0x{hr:X8}");
+            Console.WriteLine("[WGC] Session closed");
+        }
+        finally { Marshal.Release(closable); }
     }
 
     static IntPtr Vt(IntPtr p, int slot)
