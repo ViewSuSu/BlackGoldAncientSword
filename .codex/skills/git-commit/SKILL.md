@@ -1,4 +1,4 @@
----
+﻿---
 name: git-commit
 description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户要求"推送"、"提交"、"commit"、"push"、"提交并推送"时使用此技能。
 ---
@@ -34,7 +34,16 @@ description: 在当前分支分析 git diff 差异，用中文撰写详细的 co
 ```powershell
 git add -A
 git commit -m "<message>"
+```
+
+### 4. Push（必须走代理）
+
+Push 前必须设置代理，push 后清理。详见 `git-proxy` 技能：
+
+```powershell
+git config --local http.proxy http://127.0.0.1:9098
 git push origin <current-branch>
+git config --local --unset http.proxy
 ```
 
 ## 原则
@@ -42,3 +51,4 @@ git push origin <current-branch>
 - 必须先完整分析 diff 再写 message，不能跳过分析直接提交
 - 不要主动切换分支，在当前分支操作
 - 不要 `git add` 特定文件后分批提交，一次性 `git add -A` 全部提交
+- Push 前必须检查 `git-proxy` 技能，确保代理已配置
