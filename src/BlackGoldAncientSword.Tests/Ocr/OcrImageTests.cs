@@ -3,9 +3,10 @@
 namespace BlackGoldAncientSword.Tests.Ocr;
 
 /// <summary>
-/// OCR 集成测试，使用真实 PaddleOCR 引擎识别测试图片。
-/// 如果运行环境中未配置 Python/PaddleOCR，测试将直接通过（等同于跳过）。
-/// 在 VS 中调试时若弹出异常对话框，按"继续"即可，测试结果仍为通过。
+/// OCR integration test using the real PaddleOCR engine to recognize test images.
+/// If Python/PaddleOCR is not configured in the runtime environment, the test
+/// will pass silently (equivalent to skip). In Visual Studio, if a debug
+/// exception dialog pops up, press "Continue" - the test will still pass.
 /// </summary>
 public class OcrImageTests
 {
@@ -13,10 +14,10 @@ public class OcrImageTests
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestData");
 
     [Fact]
-    public void Recognize_测试1_返回永劫无间查询战绩助手()
+    public void Recognize_Test1_ReturnsExpectedText()
     {
         var imagePath = Path.Combine(TestDataPath, "test1.png");
-        Assert.True(File.Exists(imagePath), $"测试图片不存在: {imagePath}");
+        Assert.True(File.Exists(imagePath), $"Test image not found: {imagePath}");
 
         OcrEngine? engine = null;
         try
@@ -25,7 +26,7 @@ public class OcrImageTests
         }
         catch (InvalidOperationException)
         {
-            // Python/PaddleOCR 未配置，测试跳过
+            // Python/PaddleOCR not configured, skip test
             return;
         }
 

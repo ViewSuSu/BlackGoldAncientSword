@@ -7,14 +7,17 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
 {
     public class AnnouncementPageViewModel : ViewModelBase
     {
+        private static string L(string key, string fallback) =>
+            System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
+
         private readonly IRegionManager _regionManager;
 
         public ObservableCollection<UpdateHistoryItem> UpdateHistory { get; } = new()
         {
-            new UpdateHistoryItem { Version = "v1.0.0", Title = "初始版本", Detail = "支持永劫无间战绩查询、搜索玩家、数据保存等功能。" }
+            new UpdateHistoryItem { Version = "v1.0.0", Title = L("Announcement.InitialVersion", "初始版本"), Detail = L("Announcement.InitialDetail", "支持永劫无间战绩查询、搜索玩家、数据保存等功能。") }
         };
 
-        public string Notice => "感谢使用永劫无间战绩查询助手！如有问题或建议，欢迎反馈。";
+        public string Notice => L("Announcement.ThanksMessage", "感谢使用永劫无间战绩查询助手！如有问题或建议，欢迎反馈。");
 
         public AnnouncementPageViewModel(IRegionManager regionManager)
         {

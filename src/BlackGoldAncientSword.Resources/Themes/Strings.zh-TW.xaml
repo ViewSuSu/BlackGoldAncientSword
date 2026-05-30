@@ -1,214 +1,269 @@
-<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:system="clr-namespace:System;assembly=mscorlib">
+<?xml version="1.0" encoding="utf-8"?>
+<ns0:ResourceDictionary xmlns:ns0="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:ns1="clr-namespace:System;assembly=mscorlib" xmlns:ns2="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <system:String x:Key="App.Title">黑金古刀-永劫助手</system:String>
-    <system:String x:Key="App.Search">搜索</system:String>
-    <system:String x:Key="App.Settings">设置</system:String>
-    <system:String x:Key="App.Language">语言</system:String>
-    <system:String x:Key="App.UnhandledError">程序错误: {0}</system:String>
-
-
-    <system:String x:Key="Tab.Stats">战绩</system:String>
-    <system:String x:Key="Tab.GodTrial">征神之路</system:String>
-    <system:String x:Key="Tab.Arena">无尽试炼</system:String>
-
-    <system:String x:Key="Mode.Ranked">排位</system:String>
-    <system:String x:Key="Mode.Normal">匹配</system:String>
-    <system:String x:Key="Mode.Casual">娱乐</system:String>
-    <system:String x:Key="Mode.Immortal">天人</system:String>
-    <system:String x:Key="Mode.Trio">三排</system:String>
-    <system:String x:Key="Mode.Duo">双排</system:String>
-    <system:String x:Key="Mode.Solo">单排</system:String>
-    <system:String x:Key="Mode.Rank">天选</system:String>
-    <system:String x:Key="Mode.Match">匹配</system:String>
-    <system:String x:Key="Mode.Tianren">天人</system:String>
-    <system:String x:Key="GameMode.RankSolo">天选单排</system:String>
-    <system:String x:Key="GameMode.RankDuo">天选双排</system:String>
-    <system:String x:Key="GameMode.RankTrio">天选三排</system:String>
-    <system:String x:Key="GameMode.MatchSolo">匹配单排</system:String>
-    <system:String x:Key="GameMode.MatchDuo">匹配双排</system:String>
-    <system:String x:Key="GameMode.MatchTrio">匹配三排</system:String>
-    <system:String x:Key="GameMode.TianrenSolo">天人单排</system:String>
-    <system:String x:Key="GameMode.TianrenDuo">天人双排</system:String>
-    <system:String x:Key="GameMode.TianrenTrio">天人三排</system:String>
-    <system:String x:Key="GameMode.Trio">三排</system:String>
-    <system:String x:Key="GameMode.Duo">双排</system:String>
-    <system:String x:Key="GameMode.Solo">单排</system:String>
-    <system:String x:Key="GameMode.Rank">天选</system:String>
-    <system:String x:Key="GameMode.Match">匹配</system:String>
-    <system:String x:Key="GameMode.Tianren">天人</system:String>
-        <system:String x:Key="GameMode.Unknown">未知</system:String>
-
-    <system:String x:Key="Stats.Title">天工賽季</system:String>
-    <system:String x:Key="Stats.Close">收起</system:String>
-    <system:String x:Key="Stats.DetailTitle">數據詳情</system:String>
-    <system:String x:Key="Stats.BestTitle">最高記錄</system:String>
-    <system:String x:Key="Stats.MostParry">最多振刀</system:String>
-    <system:String x:Key="Stats.Matches">對局數</system:String>
-    <system:String x:Key="Stats.FirstPlace">第一數</system:String>
-    <system:String x:Key="Stats.TopFive">前五數</system:String>
-    <system:String x:Key="Stats.AvgDamage">場傷</system:String>
-    <system:String x:Key="Stats.Points">分</system:String>
-    <system:String x:Key="Stats.Season">賽季：</system:String>
-    <system:String x:Key="Stats.RecentBattles">最近10場對局</system:String>
-    <system:String x:Key="Stats.LoadError">載入戰績失敗，請檢查網路後重試。</system:String>
-    <system:String x:Key="Stats.NoPlayerName">請先在設定中設定玩家名稱</system:String>
-    <system:String x:Key="Stats.PlayerNotFound">找不到該玩家，請檢查名稱是否正確</system:String>
-    <system:String x:Key="Stats.CopyNickname">複製暱稱</system:String>
-    <system:String x:Key="Stats.CopyUID">複製UID</system:String>
-    <system:String x:Key="Stats.CopySuccess">複製成功</system:String>
-    <system:String x:Key="Stats.Unknown">未知</system:String>
-    <system:String x:Key="Stats.Minute">分</system:String>
-    <system:String x:Key="Stats.Second">秒</system:String>
-    <system:String x:Key="Stats.KD">K/D</system:String>
-    <system:String x:Key="Stats.FirstRate">第一率</system:String>
-    <system:String x:Key="Stats.TopFiveRate">前五率</system:String>
-    <system:String x:Key="Stats.AvgKills">场均击败</system:String>
-    <system:String x:Key="Stats.AvgHeal">场均治疗</system:String>
-    <system:String x:Key="Stats.AvgAssists">场均助攻</system:String>
-    <system:String x:Key="Stats.AvgSurvival">场均生存</system:String>
-    <system:String x:Key="Stats.BestKills">最高击败</system:String>
-    <system:String x:Key="Stats.BestHeal">最高治疗</system:String>
-    <system:String x:Key="Stats.BestAssists">最高助攻</system:String>
-    <system:String x:Key="Stats.BestDamage">最高伤害</system:String>
-        <system:String x:Key="Stats.Header.Rank">排名</system:String>
-    <system:String x:Key="Stats.Header.Mode">模式</system:String>
-    <system:String x:Key="Stats.Header.ModeCategory">排位模式</system:String>
-    <system:String x:Key="Stats.Header.ModeType">對局模式</system:String>
-    <system:String x:Key="Stats.Header.Kill">击败</system:String>
-    <system:String x:Key="Stats.Header.Damage">伤害</system:String>
-    <system:String x:Key="Stats.Header.RankScore">段位</system:String>
-    <system:String x:Key="Stats.Header.Time">时间</system:String>
-    <system:String x:Key="Stats.RankName">无双修罗</system:String>
-    <system:String x:Key="Stats.Refresh">刷新</system:String>
-    <system:String x:Key="Stats.BackToMe">回到我</system:String>
-
-    <system:String x:Key="Search.Title">搜索</system:String>
-    <system:String x:Key="Search.Input">輸入暱稱或者ID</system:String>
-    <system:String x:Key="Search.Button">搜索</system:String>
-    <system:String x:Key="Search.Placeholder">输入玩家名称或ID搜索</system:String>
-    <system:String x:Key="Search.History">搜索历史</system:String>
-    <system:String x:Key="Search.Copy">复制</system:String>
-    <system:String x:Key="Search.Delete">删除</system:String>
-    <system:String x:Key="Search.CopySuccess">複製成功</system:String>
+    <ns1:String ns2:Key="App.Title">黑金古刀-永劫助手</ns1:String>
+    <ns1:String ns2:Key="App.Search">搜尋</ns1:String>
+    <ns1:String ns2:Key="App.Settings">設定</ns1:String>
+    <ns1:String ns2:Key="App.Language">語言</ns1:String>
+    <ns1:String ns2:Key="App.UnhandledError">程序錯誤: {0}</ns1:String>
+    <ns1:String ns2:Key="MainWindow.LatestVersion">(最新)</ns1:String>
 
 
-    <system:String x:Key="Settings.Title">设置</system:String>
-    <system:String x:Key="Settings.DataPath">数据保存路径</system:String>
-    <system:String x:Key="Settings.Save">保存</system:String>
-    <system:String x:Key="Settings.Cancel">取消</system:String>
-    <system:String x:Key="Settings.DefaultPathHint">默认: 用户文件夹下</system:String>
-    <system:String x:Key="Settings.Category.General">数据存储路径</system:String>
-    <system:String x:Key="Settings.Category.Cache">缓存文件路径</system:String>
-    <system:String x:Key="Settings.Category.Language">语言</system:String>
-    <system:String x:Key="Settings.BrowseDataPath">选择数据保存路径</system:String>
-    <system:String x:Key="Settings.BrowseCachePath">选择缓存路径</system:String>
-    <system:String x:Key="Settings.CacheCleared">缓存已清除</system:String>
-    <system:String x:Key="Settings.InvalidDataPath">数据保存路径无效或不存在，请检查后重试</system:String>
-    <system:String x:Key="Settings.InvalidCachePath">缓存路径无效或不存在，请检查后重试</system:String>
-    <system:String x:Key="Settings.SaveSuccess">保存成功</system:String>
-    <system:String x:Key="Settings.SaveFailed">保存失败: {0}</system:String>
+    <ns1:String ns2:Key="Tab.Stats">戰績</ns1:String>
+    <ns1:String ns2:Key="Tab.GodTrial">徵神之路</ns1:String>
+    <ns1:String ns2:Key="Tab.Arena">無盡試煉</ns1:String>
 
-    <system:String x:Key="Nav.Detail">详情</system:String>
-    <system:String x:Key="Nav.Home">启动页</system:String>
-    <system:String x:Key="Nav.Stats">战绩</system:String>
-    <system:String x:Key="Nav.CurrentUser">当前用户</system:String>
-    <system:String x:Key="Nav.Search">搜索</system:String>
-    <system:String x:Key="Nav.Settings">设置</system:String>
-    <system:String x:Key="Nav.Personal">個人</system:String>
-    <system:String x:Key="Nav.Announcement">公告</system:String>
-    <system:String x:Key="Nav.Feedback">反馈</system:String>
-    <system:String x:Key="Home.NoLocalData">未找到本地玩家数据，请先启动永劫无间</system:String>
-    <system:String x:Key="Home.PlayerNotFound">服务器上未找到该玩家</system:String>
-    <system:String x:Key="Home.RoleIdNotAvailable">玩家角色ID不可用</system:String>
-    <system:String x:Key="Home.LoadUserInfoFailed">加载用户信息失败</system:String>
-    <system:String x:Key="Home.NetworkError">网络错误: {0}</system:String>
-    <system:String x:Key="Announcement.UpdateHistory">更新历史</system:String>
-    <system:String x:Key="Announcement.Notice">公告通知</system:String>
-    <system:String x:Key="Announcement.Confirm">确认</system:String>
+    <ns1:String ns2:Key="Mode.Ranked">排位</ns1:String>
+    <ns1:String ns2:Key="Mode.Normal">匹配</ns1:String>
+    <ns1:String ns2:Key="Mode.Casual">娛樂</ns1:String>
+    <ns1:String ns2:Key="Mode.Immortal">天人</ns1:String>
+    <ns1:String ns2:Key="Mode.Trio">三排</ns1:String>
+    <ns1:String ns2:Key="Mode.Duo">雙排</ns1:String>
+    <ns1:String ns2:Key="Mode.Solo">單排</ns1:String>
+    <ns1:String ns2:Key="Mode.Rank">天選</ns1:String>
+    <ns1:String ns2:Key="Mode.Match">匹配</ns1:String>
+    <ns1:String ns2:Key="Mode.Tianren">天人</ns1:String>
+    <ns1:String ns2:Key="GameMode.RankSolo">天選單排</ns1:String>
+    <ns1:String ns2:Key="GameMode.RankDuo">天選雙排</ns1:String>
+    <ns1:String ns2:Key="GameMode.RankTrio">天選三排</ns1:String>
+    <ns1:String ns2:Key="GameMode.MatchSolo">匹配單排</ns1:String>
+    <ns1:String ns2:Key="GameMode.MatchDuo">匹配雙排</ns1:String>
+    <ns1:String ns2:Key="GameMode.MatchTrio">匹配三排</ns1:String>
+    <ns1:String ns2:Key="GameMode.TianrenSolo">天人單排</ns1:String>
+    <ns1:String ns2:Key="GameMode.TianrenDuo">天人雙排</ns1:String>
+    <ns1:String ns2:Key="GameMode.TianrenTrio">天人三排</ns1:String>
+    <ns1:String ns2:Key="GameMode.Trio">三排</ns1:String>
+    <ns1:String ns2:Key="GameMode.Duo">雙排</ns1:String>
+    <ns1:String ns2:Key="GameMode.Solo">單排</ns1:String>
+    <ns1:String ns2:Key="GameMode.Rank">天選</ns1:String>
+    <ns1:String ns2:Key="GameMode.Match">匹配</ns1:String>
+    <ns1:String ns2:Key="GameMode.Tianren">天人</ns1:String>
+        <ns1:String ns2:Key="GameMode.Unknown">未知</ns1:String>
 
-    <system:String x:Key="Settings.CachePath">缓存路径</system:String>
-    <system:String x:Key="Settings.CacheSize">缓存大小：</system:String>
-    <system:String x:Key="Settings.ClearCache">清除缓存</system:String>
-    <system:String x:Key="TitleBar.Back">返回</system:String>
+    <ns1:String ns2:Key="Stats.Title">天工賽季</ns1:String>
+    <ns1:String ns2:Key="Stats.Close">收起</ns1:String>
+    <ns1:String ns2:Key="Stats.DetailTitle">數據詳情</ns1:String>
+    <ns1:String ns2:Key="Stats.BestTitle">最高記錄</ns1:String>
+    <ns1:String ns2:Key="Stats.MostParry">最多振刀</ns1:String>
+    <ns1:String ns2:Key="Stats.Matches">對局數</ns1:String>
+    <ns1:String ns2:Key="Stats.FirstPlace">第一數</ns1:String>
+    <ns1:String ns2:Key="Stats.TopFive">前五數</ns1:String>
+    <ns1:String ns2:Key="Stats.AvgDamage">場傷</ns1:String>
+    <ns1:String ns2:Key="Stats.Points">分</ns1:String>
+    <ns1:String ns2:Key="Stats.Season">賽季：</ns1:String>
+    <ns1:String ns2:Key="Stats.RecentBattles">最近10場對局</ns1:String>
+    <ns1:String ns2:Key="Stats.LoadError">載入戰績失敗，請檢查網路後重試。</ns1:String>
+    <ns1:String ns2:Key="Stats.NoPlayerName">請先在設定中設定玩家名稱</ns1:String>
+    <ns1:String ns2:Key="Stats.PlayerNotFound">找不到該玩家，請檢查名稱是否正確</ns1:String>
+    <ns1:String ns2:Key="Stats.CopyNickname">複製暱稱</ns1:String>
+    <ns1:String ns2:Key="Stats.CopyUID">複製UID</ns1:String>
+    <ns1:String ns2:Key="Stats.CopySuccess">複製成功</ns1:String>
+    <ns1:String ns2:Key="Stats.UserNotFound">未查詢到用戶</ns1:String>
+    <ns1:String ns2:Key="Stats.Unknown">未知</ns1:String>
+    <ns1:String ns2:Key="Stats.Minute">分</ns1:String>
+    <ns1:String ns2:Key="Stats.Second">秒</ns1:String>
+    <ns1:String ns2:Key="Stats.KD">K/D</ns1:String>
+    <ns1:String ns2:Key="Stats.FirstRate">第一率</ns1:String>
+    <ns1:String ns2:Key="Stats.TopFiveRate">前五率</ns1:String>
+    <ns1:String ns2:Key="Stats.AvgKills">場均擊敗</ns1:String>
+    <ns1:String ns2:Key="Stats.AvgHeal">場均治療</ns1:String>
+    <ns1:String ns2:Key="Stats.AvgAssists">場均助攻</ns1:String>
+    <ns1:String ns2:Key="Stats.AvgSurvival">場均生存</ns1:String>
+    <ns1:String ns2:Key="Stats.BestKills">最高擊敗</ns1:String>
+    <ns1:String ns2:Key="Stats.BestHeal">最高治療</ns1:String>
+    <ns1:String ns2:Key="Stats.BestAssists">最高助攻</ns1:String>
+    <ns1:String ns2:Key="Stats.BestDamage">最高傷害</ns1:String>
+        <ns1:String ns2:Key="Stats.Header.Rank">排名</ns1:String>
+    <ns1:String ns2:Key="Stats.Header.Mode">模式</ns1:String>
+    <ns1:String ns2:Key="Stats.Header.ModeCategory">排位模式</ns1:String>
+    <ns1:String ns2:Key="Stats.Header.ModeType">對局模式</ns1:String>
+    <ns1:String ns2:Key="Stats.Header.Kill">擊敗</ns1:String>
+    <ns1:String ns2:Key="Stats.Header.Damage">傷害</ns1:String>
+    <ns1:String ns2:Key="Stats.Header.RankScore">段位</ns1:String>
+    <ns1:String ns2:Key="Stats.Header.Time">時間</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName">無雙修羅</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.7000">無量梵天</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.6000">無相龍王</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.5000">無雙修羅</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.4500">無間修羅</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.4000">墜日</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.3500">蝕月</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.3000">隕星</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.2500">鉑金</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.2000">黃金</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.1500">白銀</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Solo.0">青銅</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Trio.7000">無間泰斗</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Trio.6500">禦天尊者</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Trio.6000">劫虛聖主</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Trio.5500">穹蒼魁首</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Trio.5000">日曜名宿</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Trio.4500">星月宗師</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Trio.4000">雲霄武聖</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Trio.3500">絕頂高手</ns1:String>
+    <ns1:String ns2:Key="Stats.RankName.Trio.3000">凡塵武師</ns1:String>
+    <ns1:String ns2:Key="Stats.Refresh">重新整理</ns1:String>
+    <ns1:String ns2:Key="Stats.BackToMe">回到我</ns1:String>
 
-    <system:String x:Key="TitleBar.Minimize">最小化</system:String>
-    <system:String x:Key="TitleBar.Maximize">最大化</system:String>
-    <system:String x:Key="TitleBar.Restore">还原</system:String>
-    <system:String x:Key="TitleBar.Close">关闭</system:String>
-
-    <!--  Close Prompt  -->
-    <system:String x:Key="ClosePrompt.Title">关闭确认</system:String>
-    <system:String x:Key="ClosePrompt.Message">您点击了关闭按钮，请选择关闭按钮的默认行为：</system:String>
-    <system:String x:Key="ClosePrompt.RememberChoice">记住我的选择</system:String>
-    <system:String x:Key="ClosePrompt.MinimizeToTaskbar">最小化到任务栏</system:String>
-        <system:String x:Key="ClosePrompt.MinimizeToTray">最小化到系统托盘</system:String>
-    <system:String x:Key="ClosePrompt.ExitDirectly">直接退出</system:String>
-
-    <!--  Settings - Close Behavior  -->
-    <system:String x:Key="Settings.Category.CloseBehavior">关闭行为</system:String>
-    <system:String x:Key="Settings.CloseBehavior.Description">设置点击关闭按钮时的默认行为</system:String>
-    <system:String x:Key="Settings.CloseBehavior.Ask">每次询问</system:String>
-    <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到任务栏</system:String><system:String x:Key="Settings.CloseBehavior.ExitDirectly">直接退出</system:String>
-    <system:String x:Key="Settings.CloseBehavior.RememberChoice">记住选项</system:String>
+    <ns1:String ns2:Key="Search.Title">搜尋</ns1:String>
+    <ns1:String ns2:Key="Search.Input">輸入暱稱或者ID</ns1:String>
+    <ns1:String ns2:Key="Search.Button">搜尋</ns1:String>
+    <ns1:String ns2:Key="Search.Placeholder">輸入玩家名稱或ID搜尋</ns1:String>
+    <ns1:String ns2:Key="Search.History">搜尋歷史</ns1:String>
+    <ns1:String ns2:Key="Search.Copy">複製</ns1:String>
+    <ns1:String ns2:Key="Search.Delete">刪除</ns1:String>
+    <ns1:String ns2:Key="Search.CopySuccess">複製成功</ns1:String>
 
 
-        <system:String x:Key="GameStatus.LobbyWaiting">大廳等候</system:String>
-    <system:String x:Key="GameStatus.Queuing">排隊中</system:String>
-    <system:String x:Key="GameStatus.HeroSelection">英雄選擇</system:String>
-    <system:String x:Key="GameStatus.BattleEnded">對局結束</system:String>
-    <system:String x:Key="GameStatus.InGame">遊戲中</system:String>
+    <ns1:String ns2:Key="Settings.Title">設定</ns1:String>
+    <ns1:String ns2:Key="Settings.DataPath">資料保存路徑</ns1:String>
+    <ns1:String ns2:Key="Settings.Save">保存</ns1:String>
+    <ns1:String ns2:Key="Settings.Cancel">取消</ns1:String>
+    <ns1:String ns2:Key="Settings.DefaultPathHint">預設: 使用者資料夾下</ns1:String>
+    <ns1:String ns2:Key="Settings.Category.General">資料儲存路徑</ns1:String>
+    <ns1:String ns2:Key="Settings.Category.Cache">快取檔案路徑</ns1:String>
+    <ns1:String ns2:Key="Settings.Category.Language">語言</ns1:String>
+    <ns1:String ns2:Key="Settings.BrowseDataPath">選擇資料儲存路徑</ns1:String>
+    <ns1:String ns2:Key="Settings.BrowseCachePath">選擇快取路徑</ns1:String>
+    <ns1:String ns2:Key="Settings.CacheCleared">快取已清除</ns1:String>
+    <ns1:String ns2:Key="Settings.InvalidDataPath">資料儲存路徑無效或不存在，請檢查後重試</ns1:String>
+    <ns1:String ns2:Key="Settings.InvalidCachePath">快取路徑無效或不存在，請檢查後重試</ns1:String>
+    <ns1:String ns2:Key="Settings.SaveSuccess">儲存成功</ns1:String>
+    <ns1:String ns2:Key="Settings.SaveFailed">儲存失敗: {0}</ns1:String>
+
+    <ns1:String ns2:Key="Nav.Detail">詳情</ns1:String>
+    <ns1:String ns2:Key="Nav.Home">啟動頁</ns1:String>
+    <ns1:String ns2:Key="Nav.Stats">戰績</ns1:String>
+    <ns1:String ns2:Key="Nav.CurrentUser">目前用戶</ns1:String>
+    <ns1:String ns2:Key="Nav.Search">搜尋</ns1:String>
+    <ns1:String ns2:Key="Nav.Settings">設定</ns1:String>
+    <ns1:String ns2:Key="Nav.Personal">個人</ns1:String>
+    <ns1:String ns2:Key="Nav.Announcement">公告</ns1:String>
+    <ns1:String ns2:Key="Nav.Feedback">反饋</ns1:String>
+    <ns1:String ns2:Key="Home.NoLocalData">找不到本機玩家資料，請先啟動永劫無間</ns1:String>
+    <ns1:String ns2:Key="Home.PlayerNotFound">伺服器上找不到該玩家</ns1:String>
+    <ns1:String ns2:Key="Home.RoleIdNotAvailable">玩家角色ID無法使用</ns1:String>
+    <ns1:String ns2:Key="Home.LoadUserInfoFailed">載入用戶資訊失敗</ns1:String>
+    <ns1:String ns2:Key="Home.NetworkError">網路錯誤: {0}</ns1:String>
+    <ns1:String ns2:Key="Home.Status.WaitingForGame">等待遊戲啟動</ns1:String>
+    <ns1:String ns2:Key="Announcement.InitialVersion">初始版本</ns1:String>
+    <ns1:String ns2:Key="Announcement.InitialDetail">支援永劫無間戰績查詢、搜尋玩家、資料儲存等功能。</ns1:String>
+    <ns1:String ns2:Key="Announcement.ThanksMessage">感謝使用永劫無間戰績查詢助手！如有問題或建議，歡迎回饋。</ns1:String>
+    <ns1:String ns2:Key="Home.Status.GameStarted">遊戲啟動成功</ns1:String>
+    <ns1:String ns2:Key="Home.Status.GameDetected">永劫無間進程已檢測到</ns1:String>
+    <ns1:String ns2:Key="Home.Status.HeroSelection">英雄選擇中 (RoomId: {0})</ns1:String>
+    <ns1:String ns2:Key="Home.Status.InGame">對局中 (BattleId: {0})</ns1:String>
+    <ns1:String ns2:Key="Announcement.UpdateHistory">更新歷史</ns1:String>
+    <ns1:String ns2:Key="Announcement.Notice">公告通知</ns1:String>
+    <ns1:String ns2:Key="Announcement.Confirm">確認</ns1:String>
+
+    <ns1:String ns2:Key="Settings.CachePath">緩存路徑</ns1:String>
+    <ns1:String ns2:Key="Settings.CacheSize">緩存大小：</ns1:String>
+    <ns1:String ns2:Key="Settings.ClearCache">清除緩存</ns1:String>
+    <ns1:String ns2:Key="TitleBar.Back">返回</ns1:String>
+
+    <ns1:String ns2:Key="TitleBar.Minimize">最小化</ns1:String>
+    <ns1:String ns2:Key="TitleBar.Maximize">最大化</ns1:String>
+    <ns1:String ns2:Key="TitleBar.Restore">還原</ns1:String>
+    <ns1:String ns2:Key="TitleBar.Close">關閉</ns1:String>
+
+    
+    <ns1:String ns2:Key="ClosePrompt.Title">關閉確認</ns1:String>
+    <ns1:String ns2:Key="ClosePrompt.Message">您點擊了關閉按钮，請選擇關閉按钮的預設行為：</ns1:String>
+    <ns1:String ns2:Key="ClosePrompt.RememberChoice">記住我的選擇</ns1:String>
+    <ns1:String ns2:Key="ClosePrompt.MinimizeToTaskbar">最小化到工作列</ns1:String>
+        <ns1:String ns2:Key="ClosePrompt.MinimizeToTray">最小化到系統托盤</ns1:String>
+    <ns1:String ns2:Key="ClosePrompt.ExitDirectly">直接結束</ns1:String>
+
+    
+    <ns1:String ns2:Key="Settings.Category.CloseBehavior">關閉行為</ns1:String>
+    <ns1:String ns2:Key="Settings.CloseBehavior.Description">設定點擊關閉按鈕時的預設行為</ns1:String>
+    <ns1:String ns2:Key="Settings.CloseBehavior.Ask">每次詢問</ns1:String>
+    <ns1:String ns2:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到任務欄</ns1:String>
+    <ns1:String ns2:Key="Settings.CloseBehavior.MinimizeToTray">最小化到系統托盤</ns1:String>
+    <ns1:String ns2:Key="Settings.CloseBehavior.ExitDirectly">直接結束</ns1:String>
+    <ns1:String ns2:Key="Settings.CloseBehavior.RememberChoice">記住選項</ns1:String>
+
+
+        <ns1:String ns2:Key="GameStatus.LobbyWaiting">大廳等候</ns1:String>
+    <ns1:String ns2:Key="GameStatus.Queuing">排隊中</ns1:String>
+    <ns1:String ns2:Key="GameStatus.HeroSelection">英雄選擇</ns1:String>
+    <ns1:String ns2:Key="GameStatus.BattleEnded">對局結束</ns1:String>
+    <ns1:String ns2:Key="GameStatus.InGame">遊戲中</ns1:String>
 
 
 
-    <!--  Update  -->
-    <system:String x:Key="Settings.CheckForUpdates">检查更新</system:String>
-    <system:String x:Key="Settings.UpdateChecking">正在检查更新...</system:String>
-    <system:String x:Key="Settings.NoUpdateAvailable">当前已是最新版本</system:String>
-    <system:String x:Key="Settings.UpdateAvailable">发现新版本</system:String>
-    <system:String x:Key="Settings.NewVersionTooltip">发现新版本: {0}，点击更新</system:String>
-    <system:String x:Key="Settings.UpdateCheckFailed">检查更新失败，请稍后重试</system:String>
-    <system:String x:Key="Settings.UpdateError">更新错误: {0}</system:String>
-    <system:String x:Key="Settings.UpdateDownloading">正在下载更新...</system:String>
-    <system:String x:Key="Settings.CurrentVersion">当前版本: {0}</system:String>
-    <system:String x:Key="Settings.CurrentVersionLatest">当前版本（最新）: {0}</system:String>
+    
+    <ns1:String ns2:Key="Settings.CheckForUpdates">檢查更新</ns1:String>
+    <ns1:String ns2:Key="Settings.UpdateChecking">正在檢查更新...</ns1:String>
+    <ns1:String ns2:Key="Settings.NoUpdateAvailable">目前已經是最新版本</ns1:String>
+    <ns1:String ns2:Key="Settings.UpdateAvailable">發現新版本</ns1:String>
+    <ns1:String ns2:Key="Settings.NewVersionTooltip">發現新版本: {0}，點擊更新</ns1:String>
+    <ns1:String ns2:Key="Settings.UpdateCheckFailed">檢查更新失敗，請稍後重試</ns1:String>
+    <ns1:String ns2:Key="Settings.UpdateError">更新錯誤: {0}</ns1:String>
+    <ns1:String ns2:Key="Settings.UpdateDownloading">正在下載更新...</ns1:String>
+    <ns1:String ns2:Key="Settings.CurrentVersion">目前版本: {0}</ns1:String>
+    <ns1:String ns2:Key="Settings.CurrentVersionLatest">目前版本（最新）: {0}</ns1:String>
 
-    <!--  更新  -->
-    <system:String x:Key="Settings.AutoUpdate">更新</system:String>
+    
+    <ns1:String ns2:Key="Settings.AutoUpdate">更新</ns1:String>
 
-    <!--  检测更新  -->
-    <system:String x:Key="MainWindow.CheckForUpdates">檢測更新</system:String>
-    <system:String x:Key="MainWindow.CheckForUpdates.ToolTip">檢查是否有新版本</system:String>
-    <system:String x:Key="Settings.AutoCheckUpdates">启动时自动检测更新</system:String>
-    <!--  更新對話框 - NetSparkle UI 繁體中文在地化  -->
-    <system:String x:Key="UpdateDialog.SoftwareUpdate">軟體更新</system:String>
-    <system:String x:Key="UpdateDialog.NewVersionAvailable">有新版本可用</system:String>
-    <system:String x:Key="UpdateDialog.VersionInfo">{0} 現已發布（當前版本 {1}）。是否立即{2}？</system:String>
-    <system:String x:Key="UpdateDialog.VersionInfoNoName">是否立即{0}？</system:String>
-    <system:String x:Key="UpdateDialog.SkipVersion">跳過此版本</system:String>
-    <system:String x:Key="UpdateDialog.RemindLater">稍後提醒</system:String>
-    <system:String x:Key="UpdateDialog.DownloadInstall">下載並安裝</system:String>
-    <system:String x:Key="UpdateDialog.Restart">重新啟動</system:String>
-    <system:String x:Key="UpdateDialog.UpdateCompleted">更新完成</system:String>
-    <system:String x:Key="UpdateDialog.Install">安裝</system:String>
-    <system:String x:Key="UpdateDialog.InstallRelaunch">安裝並重啟</system:String>
-    <system:String x:Key="UpdateDialog.Downloading">正在下載 {0}</system:String>
-    <system:String x:Key="UpdateDialog.DownloadingGeneric">正在下載...</system:String>
-    <system:String x:Key="UpdateDialog.Download">更新</system:String>
-    <system:String x:Key="UpdateDialog.CheckingForUpdates">正在檢查更新...</system:String>
-    <system:String x:Key="UpdateDialog.Cancel">取消</system:String>
-    <system:String x:Key="UpdateDialog.UpToDate">目前已是最新版本</system:String>
-    <system:String x:Key="UpdateDialog.VersionSkipped">您已選擇跳過此版本</system:String>
-    <system:String x:Key="UpdateDialog.UnknownInstallerFormat">不支援此更新格式，請手動執行 {0}</system:String>
-    <system:String x:Key="UpdateDialog.ToastMessage">發現新版本</system:String>
-    <system:String x:Key="UpdateDialog.ToastAction">檢視詳情</system:String>
-    <system:String x:Key="UpdateDialog.ErrorTitle">錯誤</system:String>
-    <system:String x:Key="UpdateDialog.InfoTitle">提示</system:String>
-    <system:String x:Key="UpdateDialog.CannotDownloadAppcast">無法連線更新伺服器，請檢查網路後重試</system:String>
-    <system:String x:Key="UpdateDialog.DownloadError">下載更新時發生錯誤：\n{0}</system:String>
-    <system:String x:Key="Settings.Category.GameLog">遊戲狀態識別</system:String>
-    <system:String x:Key="Settings.GameLogPath.Description">永劫無間 Player.log 日誌檔案的完整路徑，用於識別對局狀態</system:String>
-    <system:String x:Key="Settings.BrowseGameLogPath">選擇遊戲日誌檔案</system:String>
-</ResourceDictionary>
+    
+    <ns1:String ns2:Key="MainWindow.CheckForUpdates">檢測更新</ns1:String>
+    <ns1:String ns2:Key="MainWindow.CheckForUpdates.ToolTip">檢查是否有新版本</ns1:String>
+    <ns1:String ns2:Key="Settings.AutoCheckUpdates">啟動時自動檢查更新</ns1:String>
+    
+    <ns1:String ns2:Key="UpdateDialog.SoftwareUpdate">軟體更新</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.NewVersionAvailable">有新版本可用</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.VersionInfo">{0} 現已發布（當前版本 {1}）。是否立即{2}？</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.VersionInfoNoName">是否立即{0}？</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.SkipVersion">跳過此版本</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.RemindLater">稍後提醒</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.DownloadInstall">下載並安裝</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.Restart">重新啟動</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.UpdateCompleted">更新完成</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.Install">安裝</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.InstallRelaunch">安裝並重啟</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.Downloading">正在下載 {0}</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.DownloadingGeneric">正在下載...</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.Download">更新</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.CheckingForUpdates">正在檢查更新...</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.Cancel">取消</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.UpToDate">目前已是最新版本</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.VersionSkipped">您已選擇跳過此版本</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.UnknownInstallerFormat">不支援此更新格式，請手動執行 {0}</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.ToastMessage">發現新版本</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.ToastAction">檢視詳情</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.ErrorTitle">錯誤</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.InfoTitle">提示</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.CannotDownloadAppcast">無法連線更新伺服器，請檢查網路後重試</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.DownloadError">下載更新時發生錯誤：\n{0}</ns1:String>
+    <ns1:String ns2:Key="Settings.Category.GameLog">遊戲狀態識別</ns1:String>
+    <ns1:String ns2:Key="Settings.GameLogPath.Description">永劫無間 Player.log 日誌檔案的完整路徑，用於識別對局狀態</ns1:String>
+    <ns1:String ns2:Key="Settings.BrowseGameLogPath">選擇遊戲日誌檔案</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffAvgKill">擊殺差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffAvgDamage">傷害差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffTop5Rate">前五差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffAvgSurvival">生存差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffKD">KD差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffAvgHeal">治療差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffAvgAssist">助攻差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffBestKill">最高殺差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffBestDamage">最高傷差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffMostParry">振刀差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffFirstRate">第一率差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffMatches">場次差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffFirstPlace">第一差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffTopFive">前五差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffBestHeal">最高治差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffBestAssist">最高助差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.DiffRankScore">段位差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.Title">隊伍資訊</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.WaitingForHeroSelect">等待遊戲進入英雄選擇...</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.HeroSelectRecognizing">英雄選擇中，正在識別隊友...</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.InGameLocked">進入對局，隊伍資訊已鎖定</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.PlayerNotFound">未找到該玩家</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.LoadFailed">載入失敗</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.LoadError">載入錯誤</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.QueryFailed">查詢失敗</ns1:String>
+</ns0:ResourceDictionary>

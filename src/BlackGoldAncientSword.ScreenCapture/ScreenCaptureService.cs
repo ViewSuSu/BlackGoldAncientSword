@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 
@@ -54,17 +54,55 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     private byte[] CaptureFrameInternal(IntPtr hwnd, ScreenQuadrant quadrants)
     {
         if (!GetWindowRect(hwnd, out RECT wr)) throw new InvalidOperationException("GetWindowRect failed");
-        int w = wr.Right - wr.Left, h = wr.Bottom - wr.Top;
-        if (w <= 0 || h <= 0) throw new InvalidOperationException("Zero size window");
-        var crop = CalcCrop(w, h, quadrants);
-        Console.WriteLine($"[SC] Win=({wr.Left},{wr.Top}) {w}x{h} Crop=({crop.x},{crop.y} {crop.w}x{crop.h})");
+        int winW = wr.Right - wr.Left, winH = wr.Bottom - wr.Top;
+        if (winW <= 0 || winH <= 0) throw new InvalidOperationException("Zero size window");
+
+        // 检测窗口化模式：有标题栏时需要排除标题栏区域
+        int clientW = winW, clientH = winH;
+        int titleBarOffsetY = 0;
+        int borderOffsetX = 0;
+        if (IsWindowedWithTitleBar(hwnd))
+        {
+            GetClientRect(hwnd, out RECT cr);
+            var pt = new POINT();
+            ClientToScreen(hwnd, ref pt);
+            borderOffsetX = pt.X - wr.Left;
+            titleBarOffsetY = pt.Y - wr.Top;
+            clientW = cr.Right - cr.Left;
+            clientH = cr.Bottom - cr.Top;
+
+            // 游戏始终 16:9 渲染，非 16:9 窗口会有黑边，裁剪到有效游戏区域
+            double clientAspect = (double)clientW / clientH;
+            const double GameAspect = 16.0 / 9.0;
+            if (Math.Abs(clientAspect - GameAspect) > 0.01)
+            {
+                if (clientAspect > GameAspect)
+                {
+                    int effectiveW = (int)(clientH * GameAspect);
+                    borderOffsetX += (clientW - effectiveW) / 2;
+                    clientW = effectiveW;
+                }
+                else
+                {
+                    int effectiveH = (int)(clientW / GameAspect);
+                    titleBarOffsetY += (clientH - effectiveH) / 2;
+                    clientH = effectiveH;
+                }
+            }
+        }
+
+        // 以客户区尺寸计算裁剪区域，再偏移到完整窗口坐标系
+        var crop = CalcCrop(clientW, clientH, quadrants);
+        crop.x += borderOffsetX;
+        crop.y += titleBarOffsetY;
+        Console.WriteLine($"[SC] Win=({wr.Left},{wr.Top}) {winW}x{winH} Client={clientW}x{clientH} TitleBarY={titleBarOffsetY} BorderX={borderOffsetX} Crop=({crop.x},{crop.y} {crop.w}x{crop.h})");
 
         // 1. Native WGC DLL (occlusion-free)
         if (_nativeWgcAvailable)
         {
             try
             {
-                var capResult = NativeWgc.Capture(hwnd, w, h, crop);
+                var capResult = NativeWgc.Capture(hwnd, winW, winH, crop);
                 if (capResult != null) { var (data, cw, ch) = capResult.Value; Console.WriteLine("[SC] Native WGC OK"); return BgraToPng(data, cw, ch); }
             }
             catch (DllNotFoundException) { Console.WriteLine("[SC] wgc_capture.dll not found"); _nativeWgcAvailable = false; }
@@ -74,7 +112,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         // 2. COM vtable WGC (occlusion-free, if interop available)
         try
         {
-            return CaptureViaWgcCom(hwnd, w, h, crop);
+            return CaptureViaWgcCom(hwnd, winW, winH, crop);
         }
         catch (Exception ex)
         {
@@ -82,10 +120,8 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         }
 
         // 3. GDI fallback
-        return CaptureViaGdi(hwnd, wr, w, h, crop);
+        return CaptureViaGdi(hwnd, wr, winW, winH, crop);
     }
-
-    // ������������������������ COM vtable WGC ������������������������
 
     private byte[] CaptureViaWgcCom(IntPtr hwnd, int w, int h, (int x, int y, int w, int h) c)
     {
@@ -148,8 +184,6 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         finally { s.Dispose(); }
     }
 
-    // ������������������������ GDI fallback ������������������������
-
     private static byte[] CaptureViaGdi(IntPtr hwnd, RECT wr, int w, int h, (int x, int y, int w, int h) c)
     {
         IntPtr hdcW = GetWindowDC(hwnd); if (hdcW == IntPtr.Zero) throw new InvalidOperationException("GetWindowDC");
@@ -183,6 +217,34 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     private static byte[] BgraToPng(byte[] d, int w, int h)
     { using var ms = new MemoryStream(); var enc = new System.Windows.Media.Imaging.PngBitmapEncoder(); enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(System.Windows.Media.Imaging.BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgra32, null, d, w * 4))); enc.Save(ms); return ms.ToArray(); }
 
+    /// <summary>
+    /// 检测窗口是否处于有标题栏的窗口化模式（WS_CAPTION 样式）。
+    /// 无边框全屏和独占全屏模式没有标题栏，返回 false。
+    /// </summary>
+    private static bool IsWindowedWithTitleBar(IntPtr hwnd)
+    {
+        const int GWL_STYLE = -16;
+        const uint WS_CAPTION = 0x00C00000;
+        var style = GetWindowLongPtr(hwnd, GWL_STYLE);
+        return ((ulong)style & WS_CAPTION) != 0;
+    }
+
+    /// <summary>
+    /// 从原始 BGRA 像素数据中裁剪指定区域。
+    /// </summary>
+    private static byte[] CropRawPixels(byte[] rawBgra, int srcWidth, int srcHeight,
+        int cropX, int cropY, int cropW, int cropH)
+    {
+        if (cropW <= 0 || cropH <= 0)
+            throw new ArgumentException("Crop region has zero size");
+        var result = new byte[cropW * cropH * 4];
+        int srcStride = srcWidth * 4;
+        int dstStride = cropW * 4;
+        for (int y = 0; y < cropH; y++)
+            Array.Copy(rawBgra, (cropY + y) * srcStride + cropX * 4, result, y * dstStride, dstStride);
+        return result;
+    }
+
     private static (int x, int y, int w, int h) CalcCrop(int w, int h, ScreenQuadrant q)
     {
         if (q == ScreenQuadrant.Full) return (0, 0, w, h);
@@ -213,6 +275,10 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
     [DllImport("user32.dll")] static extern IntPtr GetWindowDC(IntPtr h);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] static extern bool GetClientRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] static extern bool ClientToScreen(IntPtr h, ref POINT p);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    static extern IntPtr GetWindowLongPtr(IntPtr h, int nIndex);
     [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr h);
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr h, IntPtr dc);
     [DllImport("gdi32.dll")] static extern IntPtr CreateCompatibleDC(IntPtr dc);
@@ -226,11 +292,9 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     [DllImport("d3d11.dll", EntryPoint = "CreateDirect3D11DeviceFromDXGIDevice")] static extern int CreateDirect3D11DeviceFromDXGIDevice(IntPtr d, out IntPtr o);
 
     [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)] struct POINT { public int X, Y; }
     [StructLayout(LayoutKind.Sequential)] struct BITMAPINFOHEADER { public int biSize, biWidth, biHeight; public short biPlanes, biBitCount; public int biCompression, biSizeImage, biXPelsPerMeter, biYPelsPerMeter, biClrUsed, biClrImportant; }
     [StructLayout(LayoutKind.Sequential)] struct BITMAPINFO { public BITMAPINFOHEADER biHeader; }
-
-    
-    // ������������������������ Raw pixel capture ������������������������
 
     public byte[] CaptureFullRaw(IntPtr hwnd, out int width, out int height)
     {
@@ -243,14 +307,46 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         if (winW <= 0 || winH <= 0)
             throw new InvalidOperationException("Zero size window");
 
-        Console.WriteLine($"[SC] CaptureFullRaw: Win=({wr.Left},{wr.Top}) {winW}x{winH}");
+        // 检测窗口化模式，排除标题栏：只截取客户区
+        int cropX = 0, cropY = 0, cropW = winW, cropH = winH;
+        if (IsWindowedWithTitleBar(hwnd))
+        {
+            GetClientRect(hwnd, out RECT cr);
+            var pt = new POINT();
+            ClientToScreen(hwnd, ref pt);
+            cropX = pt.X - wr.Left;
+            cropY = pt.Y - wr.Top;
+            cropW = cr.Right - cr.Left;
+            cropH = cr.Bottom - cr.Top;
 
-        // 1. Native WGC DLL (already returns raw BGRA, may differ from window rect due to DPI)
+            // 游戏始终 16:9 渲染，裁剪到有效游戏区域（排除黑边）
+            double clientAspect = (double)cropW / cropH;
+            const double GameAspect = 16.0 / 9.0;
+            if (Math.Abs(clientAspect - GameAspect) > 0.01)
+            {
+                if (clientAspect > GameAspect)
+                {
+                    int effectiveW = (int)(cropH * GameAspect);
+                    cropX += (cropW - effectiveW) / 2;
+                    cropW = effectiveW;
+                }
+                else
+                {
+                    int effectiveH = (int)(cropW / GameAspect);
+                    cropY += (cropH - effectiveH) / 2;
+                    cropH = effectiveH;
+                }
+            }
+        }
+
+        Console.WriteLine($"[SC] CaptureFullRaw: Win=({wr.Left},{wr.Top}) {winW}x{winH} Client={cropW}x{cropH} TitleBarY={cropY}");
+
+        // 1. Native WGC DLL
         if (_nativeWgcAvailable)
         {
             try
             {
-                var capResult = NativeWgc.Capture(hwnd, winW, winH, (0, 0, winW, winH));
+                var capResult = NativeWgc.Capture(hwnd, winW, winH, (cropX, cropY, cropW, cropH));
                 if (capResult != null)
                 {
                     var (data, w, h) = capResult.Value;
@@ -264,7 +360,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
             catch (Exception ex) { Console.WriteLine($"[SC] Native WGC: {ex.Message}"); }
         }
 
-        // 2. Fallback: capture full PNG, then decode to raw BGRA
+        // 2. Fallback: CaptureWindow 已通过 CaptureFrameInternal 排除标题栏和黑边
         Console.WriteLine("[SC] CaptureFullRaw: falling back to PNG decode path");
         var pngBytes = CaptureWindow(hwnd);
         return PngToBgra(pngBytes, out width, out height);

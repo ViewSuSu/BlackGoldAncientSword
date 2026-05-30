@@ -6,6 +6,9 @@
     /// </summary>
     public interface IGameStatusMonitor : IDisposable
     {
+        /// <summary>获取当前游戏状态。</summary>
+        GameStatus CurrentStatus { get; }
+
         /// <summary>状态变更时触发，订阅方从事件参数中获取当前状态。</summary>
         event EventHandler<GameStatusChangedEventArgs>? GameStatusRecognized;
 
