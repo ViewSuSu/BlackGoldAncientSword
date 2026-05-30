@@ -266,4 +266,5 @@
     <ns1:String ns2:Key="TeamInfo.LoadFailed">載入失敗</ns1:String>
     <ns1:String ns2:Key="TeamInfo.LoadError">載入錯誤</ns1:String>
     <ns1:String ns2:Key="TeamInfo.QueryFailed">查詢失敗</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.RefreshOcr">重新識別隊伍資訊</ns1:String>
 </ns0:ResourceDictionary>
