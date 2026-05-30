@@ -1,6 +1,6 @@
-﻿---
+---
 name: git-commit
-description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户要求提交代码、commit、push、或"提交并推送"时使用此技能。
+description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户要求"推送"、"提交"、"commit"、"push"、"提交并推送"时使用此技能。
 ---
 
 # Git Commit 工作流
