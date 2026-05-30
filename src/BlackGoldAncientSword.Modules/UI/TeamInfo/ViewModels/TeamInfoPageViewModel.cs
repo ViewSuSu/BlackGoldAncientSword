@@ -420,9 +420,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 member.Level = $"Lv.{d.Role?.RoleLevel ?? 0}";
                 member.UID = d.Role?.Uid ?? string.Empty;
                 member.AvatarUrl = d.Role?.HeadIcon ?? string.Empty;
-                member.SoloRankScore = d.SurviveSingleGrade;
-                member.DuoRankScore = d.SurviveDoubleGrade;
-                member.TrioRankScore = d.SurviveTriplexGrade;
+                member.SoloRankScore = d.SurviveSingleGrade ?? 0;
+                member.DuoRankScore = d.SurviveDoubleGrade ?? 0;
+                member.TrioRankScore = d.SurviveTriplexGrade ?? 0;
 
                 var seasonId = _selectedSeason?.Code ?? d.CurrentSeasonId;
                 var gameMode = ResolveGameMode(_selectedCategory, _selectedTeamSize);
@@ -450,12 +450,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     {
                         member.RankName = stats.Data.Grade.GradeName ?? string.Empty;
                         member.RankIcon = stats.Data.Grade.GradeIcon ?? string.Empty;
-                        member.RankScore = stats.Data.Grade.GradeScore;
+                        member.RankScore = stats.Data.Grade.GradeScore ?? 0;
                         var gm = (int)gameMode;
-                        member.PageRankName = GetRankNameForScore(stats.Data.Grade.GradeScore, gm);
-                        member.PageStarCount = GetStarCount(stats.Data.Grade.GradeScore, gm);
-                        member.PageHasStars = IsTianxuanMode(gm) && stats.Data.Grade.GradeScore >= 4500;
-                        member.RankTierScore = GetRankTierScore(stats.Data.Grade.GradeScore, gm);
+                        member.PageRankName = GetRankNameForScore(stats.Data.Grade.GradeScore ?? 0, gm);
+                        member.PageStarCount = GetStarCount(stats.Data.Grade.GradeScore ?? 0, gm);
+                        member.PageHasStars = IsTianxuanMode(gm) && (stats.Data.Grade.GradeScore ?? 0) >= 4500;
+                        member.RankTierScore = GetRankTierScore(stats.Data.Grade.GradeScore ?? 0, gm);
                     }
                 }
 
