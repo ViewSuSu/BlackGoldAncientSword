@@ -8,6 +8,7 @@
     <system:String x:Key="App.Settings">设置</system:String>
     <system:String x:Key="App.Language">语言</system:String>
     <system:String x:Key="App.UnhandledError">程序错误: {0}</system:String>
+    <system:String x:Key="MainWindow.LatestVersion">(最新)</system:String>
 
 
     <system:String x:Key="Tab.Stats">战绩</system:String>
@@ -59,6 +60,7 @@
     <system:String x:Key="Stats.CopyNickname">复制昵称</system:String>
     <system:String x:Key="Stats.CopyUID">复制UID</system:String>
     <system:String x:Key="Stats.CopySuccess">复制成功</system:String>
+    <system:String x:Key="Stats.UserNotFound">未查询到用户</system:String>
     <system:String x:Key="Stats.Unknown">未知</system:String>
     <system:String x:Key="Stats.Minute">分</system:String>
     <system:String x:Key="Stats.Second">秒</system:String>
@@ -82,6 +84,26 @@
     <system:String x:Key="Stats.Header.RankScore">段位</system:String>
     <system:String x:Key="Stats.Header.Time">时间</system:String>
     <system:String x:Key="Stats.RankName">无双修罗</system:String>
+    <system:String x:Key="Stats.RankName.Solo.7000">无量梵天</system:String>
+    <system:String x:Key="Stats.RankName.Solo.6000">无相龙王</system:String>
+    <system:String x:Key="Stats.RankName.Solo.5000">无双修罗</system:String>
+    <system:String x:Key="Stats.RankName.Solo.4500">无间修罗</system:String>
+    <system:String x:Key="Stats.RankName.Solo.4000">坠日</system:String>
+    <system:String x:Key="Stats.RankName.Solo.3500">蚀月</system:String>
+    <system:String x:Key="Stats.RankName.Solo.3000">陨星</system:String>
+    <system:String x:Key="Stats.RankName.Solo.2500">铂金</system:String>
+    <system:String x:Key="Stats.RankName.Solo.2000">黄金</system:String>
+    <system:String x:Key="Stats.RankName.Solo.1500">白银</system:String>
+    <system:String x:Key="Stats.RankName.Solo.0">青铜</system:String>
+    <system:String x:Key="Stats.RankName.Trio.7000">无间泰斗</system:String>
+    <system:String x:Key="Stats.RankName.Trio.6500">御天尊者</system:String>
+    <system:String x:Key="Stats.RankName.Trio.6000">劫虚圣主</system:String>
+    <system:String x:Key="Stats.RankName.Trio.5500">穹苍魁首</system:String>
+    <system:String x:Key="Stats.RankName.Trio.5000">日曜名宿</system:String>
+    <system:String x:Key="Stats.RankName.Trio.4500">星月宗师</system:String>
+    <system:String x:Key="Stats.RankName.Trio.4000">云霄武圣</system:String>
+    <system:String x:Key="Stats.RankName.Trio.3500">绝顶高手</system:String>
+    <system:String x:Key="Stats.RankName.Trio.3000">凡尘武师</system:String>
     <system:String x:Key="Stats.Refresh">刷新</system:String>
     <system:String x:Key="Stats.BackToMe">回到我</system:String>
 
@@ -125,6 +147,14 @@
     <system:String x:Key="Home.RoleIdNotAvailable">玩家角色ID不可用</system:String>
     <system:String x:Key="Home.LoadUserInfoFailed">加载用户信息失败</system:String>
     <system:String x:Key="Home.NetworkError">网络错误: {0}</system:String>
+    <system:String x:Key="Home.Status.WaitingForGame">等待游戏启动</system:String>
+    <system:String x:Key="Announcement.InitialVersion">初始版本</system:String>
+    <system:String x:Key="Announcement.InitialDetail">支持永劫无间战绩查询、搜索玩家、数据保存等功能。</system:String>
+    <system:String x:Key="Announcement.ThanksMessage">感谢使用永劫无间战绩查询助手！如有问题或建议，欢迎反馈。</system:String>
+    <system:String x:Key="Home.Status.GameStarted">游戏启动成功</system:String>
+    <system:String x:Key="Home.Status.GameDetected">永劫无间进程已检测到</system:String>
+    <system:String x:Key="Home.Status.HeroSelection">英雄选择中 (RoomId: {0})</system:String>
+    <system:String x:Key="Home.Status.InGame">对局中 (BattleId: {0})</system:String>
     <system:String x:Key="Announcement.UpdateHistory">更新历史</system:String>
     <system:String x:Key="Announcement.Notice">公告通知</system:String>
     <system:String x:Key="Announcement.Confirm">确认</system:String>
@@ -215,4 +245,29 @@
     <system:String x:Key="Settings.Category.GameLog">游戏状态识别</system:String>
     <system:String x:Key="Settings.GameLogPath.Description">永劫无间 Player.log 日志文件的完整路径，用于识别对局状态</system:String>
     <system:String x:Key="Settings.BrowseGameLogPath">选择游戏日志文件</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgKill">击杀差</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgDamage">伤害差</system:String>
+    <system:String x:Key="TeamInfo.DiffTop5Rate">前五差</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgSurvival">生存差</system:String>
+    <system:String x:Key="TeamInfo.DiffKD">KD差</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgHeal">治疗差</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgAssist">助攻差</system:String>
+    <system:String x:Key="TeamInfo.DiffBestKill">最高杀差</system:String>
+    <system:String x:Key="TeamInfo.DiffBestDamage">最高伤差</system:String>
+    <system:String x:Key="TeamInfo.DiffMostParry">振刀差</system:String>
+    <system:String x:Key="TeamInfo.DiffFirstRate">第一率差</system:String>
+    <system:String x:Key="TeamInfo.DiffMatches">场次差</system:String>
+    <system:String x:Key="TeamInfo.DiffFirstPlace">第一差</system:String>
+    <system:String x:Key="TeamInfo.DiffTopFive">前五差</system:String>
+    <system:String x:Key="TeamInfo.DiffBestHeal">最高治差</system:String>
+    <system:String x:Key="TeamInfo.DiffBestAssist">最高助差</system:String>
+    <system:String x:Key="TeamInfo.DiffRankScore">段位差</system:String>
+    <system:String x:Key="TeamInfo.Title">队伍信息</system:String>
+    <system:String x:Key="TeamInfo.WaitingForHeroSelect">等待游戏进入英雄选择...</system:String>
+    <system:String x:Key="TeamInfo.HeroSelectRecognizing">英雄选择中，正在识别队友...</system:String>
+    <system:String x:Key="TeamInfo.InGameLocked">进入对局，队伍信息已锁定</system:String>
+    <system:String x:Key="TeamInfo.PlayerNotFound">未找到该玩家</system:String>
+    <system:String x:Key="TeamInfo.LoadFailed">加载失败</system:String>
+    <system:String x:Key="TeamInfo.LoadError">加载出错</system:String>
+    <system:String x:Key="TeamInfo.QueryFailed">查询失败</system:String>
 </ResourceDictionary>
