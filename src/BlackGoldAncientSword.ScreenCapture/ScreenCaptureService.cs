@@ -143,7 +143,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
             if (dxgi != IntPtr.Zero) Marshal.Release(dxgi);
             if (surf != IntPtr.Zero) Marshal.Release(surf);
             if (frame != IntPtr.Zero) Marshal.Release(frame);
-            if (sess != IntPtr.Zero) Marshal.Release(sess);
+            if (sess != IntPtr.Zero) { try { WgcInterop.StopCapture(sess); } catch { } Marshal.Release(sess); }
             if (pool != IntPtr.Zero) Marshal.Release(pool);
             if (item != IntPtr.Zero) Marshal.Release(item);
         }
