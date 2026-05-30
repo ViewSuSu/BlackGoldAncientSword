@@ -1,4 +1,4 @@
-﻿using System.Windows.Media;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BlackGoldAncientSword.Modules.UI.TeamInfo.Services;
 using BlackGoldAncientSword.Ocr;
@@ -20,9 +20,9 @@ public class TeamInfoOcrTests
     /// </summary>
     private static readonly OcrRegion[] TeamRegions = new[]
     {
-        new OcrRegion { X = 0.253, Y = 0.878, Width = 0.088, Height = 0.040 },
-        new OcrRegion { X = 0.456, Y = 0.876, Width = 0.113, Height = 0.043 },
-        new OcrRegion { X = 0.609, Y = 0.875, Width = 0.174, Height = 0.044 },
+        new OcrRegion { X = 0.301953, Y = 0.899306, Width = 0.123661, Height = 0.039583 },  // 左侧
+        new OcrRegion { X = 0.475000, Y = 0.897222, Width = 0.125447, Height = 0.041667 },  // 中间
+        new OcrRegion { X = 0.646484, Y = 0.897917, Width = 0.138672, Height = 0.036806 },  // 右侧
     };
 
     private static readonly string[] RegionLabels = { "left", "middle", "right" };

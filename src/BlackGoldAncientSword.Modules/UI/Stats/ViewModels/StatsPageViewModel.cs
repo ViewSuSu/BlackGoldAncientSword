@@ -86,25 +86,23 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 await RefreshAllAsync();
             });
 
-        // Store the original local player name loaded from player_prefs
-        private string _originalLocalPlayerName = string.Empty;
 
         public bool IsLocalUser =>
             !string.IsNullOrEmpty(UserName) &&
-            !string.IsNullOrEmpty(_originalLocalPlayerName) &&
-            string.Equals(UserName, _originalLocalPlayerName, StringComparison.OrdinalIgnoreCase);
+            !string.IsNullOrEmpty(_playerPrefsService.Current.OriginalPlayerName) &&
+            string.Equals(UserName, _playerPrefsService.Current.OriginalPlayerName, StringComparison.OrdinalIgnoreCase);
 
         private DelegateCommand? _goBackToMeCommand;
         public DelegateCommand GoBackToMeCommand =>
             _goBackToMeCommand ??= new DelegateCommand(async () =>
             {
-                if (string.IsNullOrWhiteSpace(_originalLocalPlayerName))
+                if (string.IsNullOrWhiteSpace(_playerPrefsService.Current.OriginalPlayerName))
                 {
                     _tipMessage.ShowError(L("Stats.NoLocalUser", "未检测到本地用户信息"));
                     return;
                 }
-                _playerPrefsService.Current.PlayerName = _originalLocalPlayerName;
-                SearchText = _originalLocalPlayerName;
+                _playerPrefsService.Current.PlayerName = _playerPrefsService.Current.OriginalPlayerName;
+                SearchText = _playerPrefsService.Current.OriginalPlayerName;
                 await RefreshAllAsync();
             });
 
@@ -330,14 +328,20 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             set => SetProperty(ref _statsProgress, value);
         }
 
+        private bool _showNotFound;
+        public bool ShowNotFound
+        {
+            get => _showNotFound;
+            set => SetProperty(ref _showNotFound, value);
+        }
+
         private string _roleId = string.Empty;
 
         protected override async void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
-            _originalLocalPlayerName = _playerPrefsService.Current.PlayerName;
             RaisePropertyChanged(nameof(IsLocalUser));
-            SearchText = _originalLocalPlayerName;
+            SearchText = _playerPrefsService.Current.PlayerName;
             await RefreshAllAsync();
         }
 
@@ -368,6 +372,29 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         {
             AvatarUrl = string.Empty;
             RankIcon = string.Empty;
+        }
+
+        private void ClearAllData()
+        {
+            UserName = string.Empty;
+            UID = string.Empty;
+            Level = string.Empty;
+            AvatarUrl = string.Empty;
+            RankName = string.Empty;
+            RankIcon = string.Empty;
+            RankScore = 0;
+            RankLevel = string.Empty;
+            PageRankName = string.Empty;
+            PageStarCount = 0;
+            PageHasStars = false;
+            RankDisplayWithStars = string.Empty;
+            RankTierScore = 0;
+            TotalGames = "0";
+            TopOneCount = "0";
+            TopFiveCount = "0";
+            AvgDamage = "0";
+            DetailStats.Clear();
+            RecentBattles.Clear();
         }
 
         private async System.Threading.Tasks.Task RefreshAllAsync()
@@ -416,9 +443,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             try
             {
                 var search = await NarakaApiClient.SearchRecordAsync(localName, ct);
-                if (search?.Data == null) { _tipMessage.ShowError(search?.Msg ?? L("Stats.LoadError", "加载战绩失败，请检查网络后重试。")); return false; }
+                if (search?.Data == null) { ShowNotFound = true; ClearAllData(); _tipMessage.ShowError(search?.Msg ?? L("Stats.LoadError", "加载战绩失败，请检查网络后重试。")); return false; }
                 _roleId = search.Data.RoleIdSimple ?? string.Empty;
-                if (string.IsNullOrEmpty(_roleId)) { _tipMessage.ShowError(L("Stats.PlayerNotFound", "未找到该玩家，请检查名称是否正确")); return false; }
+                if (string.IsNullOrEmpty(_roleId)) { ShowNotFound = true; ClearAllData(); _tipMessage.ShowError(L("Stats.PlayerNotFound", "未找到该玩家，请检查名称是否正确")); return false; }
 
                 // Fire all three requests in parallel
                 var userInfoTask = NarakaApiClient.GetUserInfoAsync(_roleId, ct);
@@ -775,30 +802,30 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         {
             if (IsTianxuanMode(gameMode))
             {
-                if (score >= 7000) return "无量梵天";
-                if (score >= 6000) return "无相龙王";
-                if (score >= 5000) return "无双修罗";
-                if (score >= 4500) return "无间修罗";
-                if (score >= 4000) return "坠日";
-                if (score >= 3500) return "蚀月";
-                if (score >= 3000) return "陨星";
-                if (score >= 2500) return "铂金";
-                if (score >= 2000) return "黄金";
-                if (score >= 1500) return "白银";
-                return "青铜";
+                if (score >= 7000) return L("Stats.RankName.Solo.7000", "无量梵天");
+                if (score >= 6000) return L("Stats.RankName.Solo.6000", "无相龙王");
+                if (score >= 5000) return L("Stats.RankName.Solo.5000", "无双修罗");
+                if (score >= 4500) return L("Stats.RankName.Solo.4500", "无间修罗");
+                if (score >= 4000) return L("Stats.RankName.Solo.4000", "坠日");
+                if (score >= 3500) return L("Stats.RankName.Solo.3500", "蚀月");
+                if (score >= 3000) return L("Stats.RankName.Solo.3000", "陨星");
+                if (score >= 2500) return L("Stats.RankName.Solo.2500", "铂金");
+                if (score >= 2000) return L("Stats.RankName.Solo.2000", "黄金");
+                if (score >= 1500) return L("Stats.RankName.Solo.1500", "白银");
+                return L("Stats.RankName.Solo.0", "青铜");
             }
             else
             {
-                if (score >= 7000) return "无间泰斗";
-                if (score >= 6500) return "御天尊者";
-                if (score >= 6000) return "劫虚圣主";
-                if (score >= 5500) return "穹苍魁首";
-                if (score >= 5000) return "日曜名宿";
-                if (score >= 4500) return "星月宗师";
-                if (score >= 4000) return "云霄武圣";
-                if (score >= 3500) return "绝顶高手";
-                if (score >= 3000) return "凡尘武师";
-                return "凡尘武师";
+                if (score >= 7000) return L("Stats.RankName.Trio.7000", "无间泰斗");
+                if (score >= 6500) return L("Stats.RankName.Trio.6500", "御天尊者");
+                if (score >= 6000) return L("Stats.RankName.Trio.6000", "劫虚圣主");
+                if (score >= 5500) return L("Stats.RankName.Trio.5500", "穹苍魁首");
+                if (score >= 5000) return L("Stats.RankName.Trio.5000", "日曜名宿");
+                if (score >= 4500) return L("Stats.RankName.Trio.4500", "星月宗师");
+                if (score >= 4000) return L("Stats.RankName.Trio.4000", "云霄武圣");
+                if (score >= 3500) return L("Stats.RankName.Trio.3500", "绝顶高手");
+                if (score >= 3000) return L("Stats.RankName.Trio.3000", "凡尘武师");
+                return L("Stats.RankName.Trio.3000", "凡尘武师");
             }
         }
 

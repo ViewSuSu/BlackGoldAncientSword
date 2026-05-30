@@ -1,4 +1,4 @@
-global using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
+﻿global using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 global using BlackGoldAncientSword.Framework.Core.Bases.Views;
 global using BlackGoldAncientSword.Framework.Core.Events;
 global using BlackGoldAncientSword.Framework.Core.Extensions;

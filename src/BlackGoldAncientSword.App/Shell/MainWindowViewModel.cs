@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Diagnostics;
@@ -22,6 +22,7 @@ namespace BlackGoldAncientSword.App.Shell
         private readonly BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService _updateService;
         private readonly BlackGoldAncientSword.Framework.Services.Abstractions.ILocalizationService _localization;
         private readonly IGameStatusMonitor _gameStatusMonitor;
+        private readonly IGameLogMonitor _gameLogMonitor;
 
         public ObservableCollection<ToastItem> ToastItems { get; } = new();
 
@@ -154,7 +155,8 @@ namespace BlackGoldAncientSword.App.Shell
             IModuleManager moduleManager,
             BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService updateService,
             BlackGoldAncientSword.Framework.Services.Abstractions.ILocalizationService localizationService,
-            IGameStatusMonitor gameStatusMonitor)
+            IGameStatusMonitor gameStatusMonitor,
+            IGameLogMonitor gameLogMonitor)
         {
             _playerPrefsService = playerPrefsService;
             _navigation = navigation;
@@ -164,10 +166,20 @@ namespace BlackGoldAncientSword.App.Shell
             Debug.WriteLine($"[MainWindowVM] UpdateService 已注入，当前版本: {_updateService.CurrentVersion}");
             _localization = localizationService;
             _gameStatusMonitor = gameStatusMonitor;
+            _gameLogMonitor = gameLogMonitor;
 
             _localization.PropertyChanged += OnLocalizationChanged;
             _navigation.Navigated += OnNavigated;
             _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
+
+            // 桥接 GameLogMonitor 事件 → GameStatus 状态
+            _gameLogMonitor.BattleJoined += OnBattleJoined;
+            _gameLogMonitor.BattleStarted += OnBattleStarted;
+            _gameLogMonitor.BattleEnded += OnBattleEnded;
+
+            // 启动游戏日志监控和状态监控
+            _gameStatusMonitor.Start();
+            _ = _gameLogMonitor.StartAsync();
 
             _updateService.UpdateAvailabilityChanged += OnUpdateAvailabilityChanged;
             IsUpdateAvailable = _updateService.IsUpdateAvailable;
@@ -240,11 +252,31 @@ namespace BlackGoldAncientSword.App.Shell
         /// <summary>
         /// Clean up event subscriptions. Called by MainWindow when closing.
         /// </summary>
+        
+        private void OnBattleJoined(object? sender, BattleEventArgs e)
+        {
+            _gameStatusMonitor.NotifyStatus(GameStatus.HeroSelection);
+        }
+
+        private void OnBattleStarted(object? sender, BattleEventArgs e)
+        {
+            _gameStatusMonitor.NotifyStatus(GameStatus.InGame);
+        }
+
+        private void OnBattleEnded(object? sender, BattleEventArgs e)
+        {
+            _gameStatusMonitor.NotifyStatus(GameStatus.BattleEnded);
+        }
+
+        /// <summary>
         public void Cleanup()
         {
             _localization.PropertyChanged -= OnLocalizationChanged;
             _navigation.Navigated -= OnNavigated;
             _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
+            _gameLogMonitor.BattleJoined -= OnBattleJoined;
+            _gameLogMonitor.BattleStarted -= OnBattleStarted;
+            _gameLogMonitor.BattleEnded -= OnBattleEnded;
             _updateService.UpdateAvailabilityChanged -= OnUpdateAvailabilityChanged;
         }
 
