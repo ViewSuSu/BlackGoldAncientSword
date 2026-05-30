@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -77,7 +77,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("    /// <summary>API response interface for extracting error messages</summary>");
             sb.AppendLine("    public interface IApiResponse");
             sb.AppendLine("    {");
-            sb.AppendLine("        int Code { get; }");
+            sb.AppendLine("        int? Code { get; }");
             sb.AppendLine("        string Msg { get; }");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -351,7 +351,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 var propName = ToPascalCase(jsonName);
                 var propType = ResolveType(prop.Value.Type);
                 var isRef = IsReferenceType(prop.Value.Type);
-                var nullable = prop.Value.Nullable || isRef;
+                var nullable = isRef || prop.Value.Nullable != false;
                 var jsonAttrName = prop.Value.JsonName ?? jsonName;
                 sb.AppendLine($"{indent}    [Newtonsoft.Json.JsonProperty(\"{jsonAttrName}\")]");
                 sb.AppendLine($"{indent}    public {propType}{(nullable ? "?" : "")} {propName} {{ get; set; }}");
@@ -424,7 +424,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
         private class PropertyDefinition
         {
             public string Type { get; set; } = "string";
-            public bool Nullable { get; set; }
+            public bool? Nullable { get; set; }
             public string? JsonName { get; set; }
         }
     }
