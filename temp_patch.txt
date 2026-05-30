@@ -1,0 +1,13 @@
+﻿*** Begin Patch
+*** Update File: src\BlackGoldAncientSword.Modules\UI\Settings\ViewModels\SettingsPageViewModel.cs
+@@
++        protected override void OnNavigatedToExecute(NavigationContext navigationContext)
++        {
++            RaisePropertyChanged(nameof(SelectedCloseBehavior));
++            RaisePropertyChanged(nameof(RememberCloseBehavior));
++            RaisePropertyChanged(nameof(AutoCheckUpdates));
++            base.OnNavigatedToExecute(navigationContext);
++        }
++
+         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
+*** End Patch

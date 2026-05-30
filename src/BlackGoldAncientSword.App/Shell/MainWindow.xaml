@@ -626,7 +626,22 @@
             TrayMouseDoubleClick="TrayIcon_TrayMouseDoubleClick">
             <tb:TaskbarIcon.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Click="TrayMenu_Show_Click" Header="{DynamicResource App.Title}" />
+                    <MenuItem Header="{Binding GameStatusText}" IsEnabled="False">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding GameStatusText}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem Click="TrayMenu_Settings_Click" Header="{DynamicResource Nav.Settings}" />
+                    <MenuItem Click="TrayMenu_Stats_Click" Header="{DynamicResource Nav.Stats}" />
+                    <MenuItem Click="TrayMenu_TeamInfo_Click" Header="{DynamicResource TeamInfo.Title}" />
                     <Separator />
                     <MenuItem Click="TrayMenu_Exit_Click" Header="{DynamicResource TitleBar.Close}" />
                 </ContextMenu>
