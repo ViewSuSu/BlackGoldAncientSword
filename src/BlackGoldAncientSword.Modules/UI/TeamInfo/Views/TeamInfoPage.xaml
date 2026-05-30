@@ -34,6 +34,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Orientation="Horizontal">
                             <TextBlock
@@ -108,6 +109,37 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+
+                        <!-- Refresh button - only enabled during hero selection -->
+                        <Button
+                            Grid.Column="4"
+                            Width="28"
+                            Height="28"
+                            Margin="6,0,0,0"
+                            Padding="0"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Command="{Binding RefreshOcrCommand}"
+                            Cursor="Hand"
+                            ToolTip="{DynamicResource TeamInfo.RefreshOcr}">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="IsEnabled" Value="True" />
+                                    <Setter Property="Opacity" Value="1" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsHeroSelectionPhase}" Value="False">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                            <Setter Property="Opacity" Value="0.5" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <Image
+                                Width="16"
+                                Height="16"
+                                Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/refresh_data.png" />
+                        </Button>
                     </Grid>
                 </Border>
 
@@ -164,7 +196,7 @@
                         Grid.Row="0"
                         Grid.RowSpan="20"
                         Grid.Column="0"
-                        Background="#CCFFFFFF"
+                        Background="White"
                         CornerRadius="8"
                         Visibility="{Binding Member0.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <hc:CircleProgressBar
@@ -187,7 +219,7 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             FontSize="14"
-                            Foreground="#CC3333"
+                            Foreground="#999999"
                             Text="{Binding Member0.StatusText}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
@@ -213,7 +245,7 @@
                         Grid.Row="0"
                         Grid.RowSpan="20"
                         Grid.Column="2"
-                        Background="#CCFFFFFF"
+                        Background="White"
                         CornerRadius="8"
                         Visibility="{Binding Member1.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <hc:CircleProgressBar
@@ -236,7 +268,7 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             FontSize="14"
-                            Foreground="#CC3333"
+                            Foreground="#999999"
                             Text="{Binding Member1.StatusText}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
@@ -260,7 +292,7 @@
                         Grid.Row="0"
                         Grid.RowSpan="20"
                         Grid.Column="4"
-                        Background="#CCFFFFFF"
+                        Background="White"
                         CornerRadius="8"
                         Visibility="{Binding Member2.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <hc:CircleProgressBar
@@ -283,7 +315,7 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             FontSize="14"
-                            Foreground="#CC3333"
+                            Foreground="#999999"
                             Text="{Binding Member2.StatusText}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
@@ -2549,7 +2581,7 @@
         </ScrollViewer>
 
         <!--  Waiting overlay - covers entire page  -->
-        <Border Background="#CCFFFFFF" Visibility="{Binding IsWaiting, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Border Background="White" Visibility="{Binding IsWaiting, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <hc:CircleProgressBar
                     Width="56"
