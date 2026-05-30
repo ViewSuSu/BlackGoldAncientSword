@@ -221,13 +221,17 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     Debug.WriteLine($"[TeamInfo] OCR loop error: {ex.Message}");
                 }
 
-                try { await Task.Delay(1500, ct); }
-                catch (OperationCanceledException) { break; }
             }
         }
 
         private async Task UpdateTeamMembersAsync(string[] names, CancellationToken ct)
         {
+            // Skip if recognized names are identical to current members
+            if (names.Length == TeamMembers.Count &&
+                names.All(n => TeamMembers.Any(m =>
+                    string.Equals(m.UserName, n, StringComparison.OrdinalIgnoreCase))))
+                return;
+
             var existingNames = TeamMembers.Select(m => m.UserName).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var newNames = names.Where(n => !existingNames.Contains(n)).ToArray();
 
