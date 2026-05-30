@@ -35,6 +35,9 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         _ocr = ocr;
     }
 
+    private static string OcrTempDir => System.IO.Path.Combine(
+        Framework.Services.AppSettings.GetDefaultCachePath(), "ocr");
+
     public async Task<string[]> RecognizeTeamMembersAsync(CancellationToken ct = default)
     {
         if (!_screenCapture.TryFindGameWindow("NarakaBladepoint", out var hwnd))
@@ -53,13 +56,28 @@ public class TeamInfoOcrService : ITeamInfoOcrService
 
         if (fullWidth <= 0 || fullHeight <= 0) return Array.Empty<string>();
 
+        var tempDir = OcrTempDir;
+        try { System.IO.Directory.CreateDirectory(tempDir); } catch { }
+
+        var tempFiles = new List<string>();
         var names = new List<string>();
+        var regionIndex = 0;
         foreach (var region in TeamRegions)
         {
             ct.ThrowIfCancellationRequested();
 
             var (pngBytes, _, _) = CropAndInvert(rawBgra, fullWidth, fullHeight, region);
-            if (pngBytes == null) continue;
+            if (pngBytes == null) { regionIndex++; continue; }
+
+            // Save temp screenshot for debug / cache clear cleanup
+            try
+            {
+                var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var tempPath = System.IO.Path.Combine(tempDir, $"ocr_r{regionIndex}_{ts}.png");
+                await System.IO.File.WriteAllBytesAsync(tempPath, pngBytes, ct);
+                tempFiles.Add(tempPath);
+            }
+            catch { }
 
             try
             {
@@ -73,6 +91,14 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             {
                 Debug.WriteLine($"[TeamInfoOcr] OCR error: {ex.Message}");
             }
+
+            regionIndex++;
+        }
+
+        // Clean up temp files from this cycle
+        foreach (var f in tempFiles)
+        {
+            try { System.IO.File.Delete(f); } catch { }
         }
 
         return names.Distinct().ToArray();
