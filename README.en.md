@@ -91,6 +91,8 @@ All stats data comes from the same API powering https://naraka.drivod.top/ , pro
 
 OCR recognition uses the same underlying technology as OBS screen capture, capturing directly from the graphics card layer and bypassing any overlays. However, it currently only supports recognition when the screen and game resolutions match. If your screen resolution differs from the game resolution, black bars will appear on the sides — please avoid playing in such a setup. For best results, play in fullscreen at the highest resolution or at a resolution matching your display.
 
+Additionally, OCR may sometimes fail to recognize certain special characters. If you encounter unrecognized names, you can use QQ screenshot text recognition or similar tools as a manual workaround.
+
 **Q: Why does the app sometimes crash?**
 
 Possible causes: .NET runtime exceptions, game log file being locked, screen capture API conflicts, etc. Try restarting the app. If the problem persists, please report it in the feedback group.
