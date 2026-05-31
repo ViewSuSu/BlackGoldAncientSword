@@ -617,6 +617,7 @@
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
                     Panel.ZIndex="900"
+                    x:Name="AnnouncementOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.AnnouncementRegion}" />                <!--  Feedback overlay (covers entire window, below toast)  -->
                 <ContentControl
                     Grid.RowSpan="3"
@@ -625,6 +626,7 @@
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
                     Panel.ZIndex="900"
+                    x:Name="FeedbackOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.FeedbackRegion}" />
 
                 <!--  Close prompt overlay (covers entire window, above announcement)  -->
@@ -635,6 +637,7 @@
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
                     Panel.ZIndex="950"
+                    x:Name="ClosePromptOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.ClosePromptRegion}" />
 
                 <!--  Stacked toast notifications (topmost)  -->
