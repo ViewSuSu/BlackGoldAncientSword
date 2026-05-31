@@ -89,7 +89,7 @@ All stats data comes from the official NARAKA API — the app only displays it. 
 
 **Q: Why does teammate recognition fail or show inaccurate results?**
 
-OCR recognition depends on screenshot quality. Make sure the game window is not covered by other windows and that teammate nicknames are clearly visible on the hero selection screen. You can also click "Re-recognize Team" to retry manually.
+OCR recognition uses the same underlying technology as OBS screen capture, capturing directly from the graphics card layer and bypassing any overlays. However, it currently only supports recognition when the screen and game resolutions match. If your screen resolution differs from the game resolution, black bars will appear on the sides — please avoid playing in such a setup. For best results, play in fullscreen at the highest resolution or at a resolution matching your display.
 
 **Q: Why does the app sometimes crash?**
 
