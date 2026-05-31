@@ -157,7 +157,10 @@
     <system:String x:Key="Home.Status.InGame">In Game (BattleId: {0})</system:String>
     <system:String x:Key="Announcement.UpdateHistory">Update History</system:String>
     <system:String x:Key="Announcement.Notice">Announcement</system:String>
-    <system:String x:Key="Announcement.Confirm">Confirm</system:String>
+        <system:String x:Key="Announcement.Loading">Loading update history...</system:String>
+    <system:String x:Key="Announcement.NoData">No update history available.</system:String>
+    <system:String x:Key="Announcement.LoadFailed">Failed to load update history. Please check your network.</system:String>
+<system:String x:Key="Announcement.Confirm">Confirm</system:String>
 
     <system:String x:Key="Settings.CachePath">Cache Path</system:String>
     <system:String x:Key="Settings.CacheSize">Cache Size:</system:String>

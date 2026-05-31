@@ -1,6 +1,10 @@
+using System;
 using System.Collections.ObjectModel;
+using System.Windows;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Extensions;
+using BlackGoldAncientSword.Framework.Services.Abstractions;
 using Prism.Regions;
 
 namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
@@ -10,34 +14,93 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
         private static string L(string key, string fallback) =>
             System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
 
-        private readonly IRegionManager _regionManager;
+        private readonly IGitHubReleaseService _releaseService;
 
-        public ObservableCollection<UpdateHistoryItem> UpdateHistory { get; } = new()
+        public ObservableCollection<UpdateHistoryItem> UpdateHistory { get; } = new();
+
+        private string _notice = string.Empty;
+        public string Notice
         {
-            new UpdateHistoryItem { Version = "v1.0.0", Title = L("Announcement.InitialVersion", "初始版本"), Detail = L("Announcement.InitialDetail", "支持永劫无间战绩查询、搜索玩家、数据保存等功能。") }
-        };
+            get => _notice;
+            set
+            {
+                _notice = value;
+                RaisePropertyChanged();
+            }
+        }
 
-        public string Notice => L("Announcement.ThanksMessage", "感谢使用永劫无间战绩查询助手！如有问题或建议，欢迎反馈。");
-
-        public AnnouncementPageViewModel(IRegionManager regionManager)
+        private bool _isLoading;
+        public bool IsLoading
         {
-            _regionManager = regionManager;
+            get => _isLoading;
+            set
+            {
+                _isLoading = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public AnnouncementPageViewModel(IGitHubReleaseService releaseService)
+        {
+            _releaseService = releaseService;
+            Notice = L("Announcement.Loading", "正在加载更新历史...");
+            IsLoading = true;
+            LoadReleasesAsync().SafeFireAndForget("Announcement.LoadReleases");
+        }
+
+        private async System.Threading.Tasks.Task LoadReleasesAsync()
+        {
+            try
+            {
+                var releases = await _releaseService.GetReleasesAsync();
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    UpdateHistory.Clear();
+                    if (releases.Count > 0)
+                    {
+                        foreach (var r in releases)
+                        {
+                            UpdateHistory.Add(new UpdateHistoryItem
+                            {
+                                Version = r.TagName,
+                                Title = string.IsNullOrEmpty(r.Name) ? r.TagName : r.Name,
+                                Detail = r.Body,
+                                Url = r.HtmlUrl
+                            });
+                        }
+                        Notice = releases[0].Body;
+                    }
+                    else
+                    {
+                        Notice = L("Announcement.NoData", "暂无更新历史。");
+                    }
+                    IsLoading = false;
+                });
+            }
+            catch (Exception)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    Notice = L("Announcement.LoadFailed", "加载更新历史失败，请检查网络连接。");
+                    IsLoading = false;
+                });
+            }
         }
 
         private DelegateCommand? _dismissCommand;
         public DelegateCommand DismissCommand =>
             _dismissCommand ??= new DelegateCommand(() =>
             {
-                var region = _regionManager.Regions[GlobalConstant.AnnouncementRegion];
-                region.RemoveAll();
+                var rgn = regionManager.Regions[GlobalConstant.AnnouncementRegion];
+                rgn.RemoveAll();
             });
 
         private DelegateCommand? _confirmCommand;
         public DelegateCommand ConfirmCommand =>
             _confirmCommand ??= new DelegateCommand(() =>
             {
-                var region = _regionManager.Regions[GlobalConstant.AnnouncementRegion];
-                region.RemoveAll();
+                var rgn = regionManager.Regions[GlobalConstant.AnnouncementRegion];
+                rgn.RemoveAll();
             });
     }
 
@@ -46,5 +109,6 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
         public string Version { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string Detail { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
     }
 }
