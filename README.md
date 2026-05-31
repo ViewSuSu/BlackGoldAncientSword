@@ -345,19 +345,6 @@ API 客户端不手写，而是通过 `BlackGoldAncientSword.Framework.SourceGen
 
 ---
 
-## 关键设计决策
-
-| 决策 | 说明 |
-|---|---|
-| **单文件发布** | `PublishSingleFile=true` + `SelfContained=true`，产出单个 `.exe`，无需安装 .NET 运行时 |
-| **禁止 SetProperty** | ViewModel 基类仅提供 `RaisePropertyChanged`，避免过度封装 |
-| **属性名硬编码禁止** | 调用 `RaisePropertyChanged` 时必须用 `nameof()` 或 `[CallerMemberName]` |
-| **Allman 花括号** | 所有 C# 代码使用 Allman 风格（花括号独占一行） |
-| **commit message 中文** | 所有 git commit 必须使用中文撰写，详细说明改动内容 |
-| **源码生成 API 客户端** | 减少手写 HTTP 调用代码，确保类型安全 |
-| **OnDemand 模块加载** | 非首屏模块按需加载，优化启动性能 |
-
----
 
 ## 构建与运行
 
