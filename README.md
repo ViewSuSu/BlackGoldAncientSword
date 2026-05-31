@@ -373,15 +373,6 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ```
 
-### 发布产物
-
-发布后 `publish/` 目录下的 `BlackGoldAncientSword.App.exe` 即为可直接运行的独立程序。
-
-### 项目地址
-
-- GitHub: [ViewSuSu/BlackGoldAncientSword](https://github.com/ViewSuSu)
-- 问题反馈: [Issues](https://github.com/ViewSuSu/BlackGoldAncientSword/issues/new)
-
 
 ---
 
