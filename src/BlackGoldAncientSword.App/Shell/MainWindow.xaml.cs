@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Shell;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Prism.Modularity;
@@ -69,7 +70,13 @@ namespace BlackGoldAncientSword.App.Shell
 
         private void OnWindowStateChanged(object? sender, EventArgs e)
         {
-            // Not used for tray minimize - we use explicit Hide() instead
+            // 最大化时移除 resize 边框，避免窗口偏移导致按钮命中测试坐标错位
+            if (MainWindowChrome is not null)
+            {
+                MainWindowChrome.ResizeBorderThickness = WindowState == WindowState.Maximized
+                    ? new Thickness(0)
+                    : new Thickness(ResizeBorder);
+            }
         }
 
         private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -124,53 +131,56 @@ namespace BlackGoldAncientSword.App.Shell
                 double w = ActualWidth;
                 double h = ActualHeight;
 
-                bool inTop = ptY < ResizeBorder;
-                bool inBottom = ptY > h - ResizeBorder;
-                bool inLeft = ptX < ResizeBorder;
-                bool inRight = ptX > w - ResizeBorder;
+                if (WindowState != WindowState.Maximized)
+                {
+                    bool inTop = ptY < ResizeBorder;
+                    bool inBottom = ptY > h - ResizeBorder;
+                    bool inLeft = ptX < ResizeBorder;
+                    bool inRight = ptX > w - ResizeBorder;
 
-                // Corners (checked first so they take priority over edges)
-                if (inTop && inLeft)
-                {
-                    handled = true;
-                    return (IntPtr)HTTOPLEFT;
-                }
-                if (inTop && inRight)
-                {
-                    handled = true;
-                    return (IntPtr)HTTOPRIGHT;
-                }
-                if (inBottom && inLeft)
-                {
-                    handled = true;
-                    return (IntPtr)HTBOTTOMLEFT;
-                }
-                if (inBottom && inRight)
-                {
-                    handled = true;
-                    return (IntPtr)HTBOTTOMRIGHT;
-                }
+                    // Corners (checked first so they take priority over edges)
+                    if (inTop && inLeft)
+                    {
+                        handled = true;
+                        return (IntPtr)HTTOPLEFT;
+                    }
+                    if (inTop && inRight)
+                    {
+                        handled = true;
+                        return (IntPtr)HTTOPRIGHT;
+                    }
+                    if (inBottom && inLeft)
+                    {
+                        handled = true;
+                        return (IntPtr)HTBOTTOMLEFT;
+                    }
+                    if (inBottom && inRight)
+                    {
+                        handled = true;
+                        return (IntPtr)HTBOTTOMRIGHT;
+                    }
 
-                // Edges
-                if (inTop)
-                {
-                    handled = true;
-                    return (IntPtr)HTTOP;
-                }
-                if (inBottom)
-                {
-                    handled = true;
-                    return (IntPtr)HTBOTTOM;
-                }
-                if (inLeft)
-                {
-                    handled = true;
-                    return (IntPtr)HTLEFT;
-                }
-                if (inRight)
-                {
-                    handled = true;
-                    return (IntPtr)HTRIGHT;
+                    // Edges
+                    if (inTop)
+                    {
+                        handled = true;
+                        return (IntPtr)HTTOP;
+                    }
+                    if (inBottom)
+                    {
+                        handled = true;
+                        return (IntPtr)HTBOTTOM;
+                    }
+                    if (inLeft)
+                    {
+                        handled = true;
+                        return (IntPtr)HTLEFT;
+                    }
+                    if (inRight)
+                    {
+                        handled = true;
+                        return (IntPtr)HTRIGHT;
+                    }
                 }
 
                 // Title bar drag area (between resize zone and window buttons)

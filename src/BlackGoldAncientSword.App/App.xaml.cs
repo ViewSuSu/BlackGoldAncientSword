@@ -1,4 +1,4 @@
-﻿using System.Windows.Threading;
+using System.Windows.Threading;
 using System.Diagnostics;
 using BlackGoldAncientSword.App.Shell;
 using BlackGoldAncientSword.Framework.Core.Events;
@@ -42,7 +42,7 @@ namespace BlackGoldAncientSword.App
             return ModuleCatalogConfigManager.ConfigAll();
         }
 
-        protected override void OnStartup(System.Windows.StartupEventArgs e)
+        protected override async void OnStartup(System.Windows.StartupEventArgs e)
         {
             base.OnStartup(e);
 
@@ -61,11 +61,11 @@ namespace BlackGoldAncientSword.App
             try
             {
                 var settings = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService>();
-                if (settings.Current.AutoCheckUpdates)
-                {
-                    var updater = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>();
-                    updater.CheckForUpdatesAsync(showNoUpdateMessage: false).SafeFireAndForget("App.CheckForUpdates");
-                }
+                // 等待异步加载完成，不阻塞 UI 线程
+                await settings.LoadAsync();
+                var updater = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>();
+                updater.SetAutoPopupEnabled(settings.Current.AutoCheckUpdates);
+                updater.CheckForUpdatesAsync(showNoUpdateMessage: false).SafeFireAndForget("App.CheckForUpdates");
             }
             catch { }
 
