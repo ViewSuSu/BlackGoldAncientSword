@@ -87,14 +87,21 @@ namespace BlackGoldAncientSword.App.Shell
                 System.Windows.Application.Current?.TryFindResource("Settings.CurrentVersion") as string ?? "{0}",
                 _updateService.CurrentVersion);
 
+        private bool _updateCheckCompleted;
         private bool _isUpdateAvailable;
         public bool IsUpdateAvailable
         {
             get => _isUpdateAvailable;
-            set => SetProperty(ref _isUpdateAvailable, value);
+            set
+            {
+                if (_isUpdateAvailable == value) return;
+                _isUpdateAvailable = value;
+                RaisePropertyChanged();
+                RaisePropertyChanged(nameof(IsLatestVersion));
+            }
         }
 
-        public bool IsLatestVersion => !IsUpdateAvailable;
+        public bool IsLatestVersion => _updateCheckCompleted && !IsUpdateAvailable;
 
         private double _updateIndicatorOpacity = 1.0;
         public double UpdateIndicatorOpacity
@@ -184,7 +191,10 @@ namespace BlackGoldAncientSword.App.Shell
             _updateService.UpdateAvailabilityChanged += OnUpdateAvailabilityChanged;
             IsUpdateAvailable = _updateService.IsUpdateAvailable;
             if (IsUpdateAvailable)
+            {
+                _updateCheckCompleted = true;
                 StartBlinkAnimation();
+            }
 
             ActivePage = PageNames.HomePage;
 
@@ -205,6 +215,7 @@ namespace BlackGoldAncientSword.App.Shell
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
+                _updateCheckCompleted = true;
                 IsUpdateAvailable = isAvailable;
                 if (isAvailable)
                     StartBlinkAnimation();
