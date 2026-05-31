@@ -1,4 +1,4 @@
-namespace BlackGoldAncientSword.Framework.Core.Consts
+﻿namespace BlackGoldAncientSword.Framework.Core.Consts
 {
     public static class GlobalConstant
     {
@@ -10,5 +10,7 @@ namespace BlackGoldAncientSword.Framework.Core.Consts
         public const string MainContentRegion = nameof(MainContentRegion);
         public const string AnnouncementRegion = nameof(AnnouncementRegion);
         public const string ClosePromptRegion = nameof(ClosePromptRegion);
+        public const string FeedbackRegion = nameof(FeedbackRegion);
     }
 }
+

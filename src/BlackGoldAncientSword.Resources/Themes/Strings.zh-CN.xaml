@@ -242,9 +242,6 @@
     <system:String x:Key="UpdateDialog.InfoTitle">提示</system:String>
     <system:String x:Key="UpdateDialog.CannotDownloadAppcast">无法连接更新服务器，请检查网络后重试</system:String>
     <system:String x:Key="UpdateDialog.DownloadError">下载更新时发生错误：\n{0}</system:String>
-    <system:String x:Key="Settings.Category.GameLog">游戏状态识别</system:String>
-    <system:String x:Key="Settings.GameLogPath.Description">永劫无间 Player.log 日志文件的完整路径，用于识别对局状态</system:String>
-    <system:String x:Key="Settings.BrowseGameLogPath">选择游戏日志文件</system:String>
     <system:String x:Key="TeamInfo.DiffAvgKill">击杀差</system:String>
     <system:String x:Key="TeamInfo.DiffAvgDamage">伤害差</system:String>
     <system:String x:Key="TeamInfo.DiffTop5Rate">前五差</system:String>
