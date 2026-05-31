@@ -8,6 +8,13 @@
 
 ---
 
+
+## 下载 📥
+
+[![Download](https://img.shields.io/badge/下载-最新版本-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest)
+
+前往 [最新 Release](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest) 页面，下载 .exe 安装包即可使用。
+
 # 用户手册
 
 ## 简介
