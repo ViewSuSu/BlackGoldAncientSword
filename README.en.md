@@ -1,4 +1,4 @@
-# BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
+﻿# BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
 
 > A desktop companion app for querying *NARAKA: BLADEPOINT* player statistics and match data.
 
@@ -11,9 +11,9 @@
 
 ## Download 📥
 
-[![Download](https://img.shields.io/badge/Download-Latest%20Release-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest)
+[![Download](https://img.shields.io/badge/Download-Latest%20Release-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest/download/BlackGoldAncientSword.App.exe)
 
-Visit the [latest Release](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest) page and download the .exe package to get started.
+Click the button above to directly download the latest .exe package.
 
 # User Guide
 
