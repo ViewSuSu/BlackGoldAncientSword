@@ -313,7 +313,7 @@ public static class PageNames
 1. `GameStatusMonitor` detects `HeroSelection` state
 2. `TeamInfoPageViewModel` starts OCR polling loop
 3. `ScreenCaptureService` captures game window via **Windows Graphics Capture API** (native C++ DLL → SharpDX D3D11)
-4. `OcrService` spawns **PaddleOCR-json.exe** to recognize Chinese text
+4. `OcrService` spawns **PaddleOCR-json.exe** to recognize text
 5. `TeamInfoOcrService` parses OCR output and extracts teammate nicknames
 6. Stats API is queried for each teammate, displayed side-by-side
 
