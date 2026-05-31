@@ -2,6 +2,7 @@
 
 > 查询《永劫无间》（NARAKA: BLADEPOINT）玩家战绩数据的桌面辅助工具。
 
+[![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]() [![PowerShell](https://img.shields.io/badge/PowerShell-UTF--8-5391FE?style=flat&logo=powershell&logoColor=white)]()
 ---
 
 # 用户手册
