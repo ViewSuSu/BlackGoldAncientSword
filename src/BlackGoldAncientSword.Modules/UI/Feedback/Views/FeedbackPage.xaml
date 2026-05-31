@@ -74,8 +74,8 @@
                             Padding="0"
                             Background="Transparent"
                             BorderThickness="0"
-                            FontSize="14"
-                            Foreground="#4A90D9"
+                            FontSize="12"
+                            Foreground="Gray"
                             IsReadOnly="True"
                             Text="146088141" />
 
