@@ -10,21 +10,24 @@ using System.Collections.Generic;
 using NetSparkleUpdater;
 using NetSparkleUpdater.Interfaces;
 using NetSparkleUpdater.UI.WPF;
+using NetSparkleUpdater.Enums;
 using NetSparkleUpdater.UI.WPF.ViewModels;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
 {
     internal class CustomUIFactory : UIFactory
     {
+        public static bool SuppressDialogs { get; set; }
+        public static bool ShowNoUpdateMessage { get; set; } = true;
         public CustomUIFactory() : base()
         {
-            Debug.WriteLine("[CustomUIFactory] ÎÞ²Î¹¹Ôìº¯Êý");
+            Debug.WriteLine("[CustomUIFactory] æ— å‚æž„é€ å‡½æ•°");
             InitWhiteBackground();
         }
 
         public CustomUIFactory(ImageSource icon) : base(icon)
         {
-            Debug.WriteLine("[CustomUIFactory] ´øÍ¼±ê¹¹Ôìº¯Êý");
+            Debug.WriteLine("[CustomUIFactory] å¸¦å›¾æ ‡æž„é€ å‡½æ•°");
             InitWhiteBackground();
         }
 
@@ -92,13 +95,19 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             string appName,
             bool isUpdateAlreadyDownloaded)
         {
-            Debug.WriteLine("[CustomUIFactory] CreateUpdateAvailableWindow ¿ªÊ¼");
+            Debug.WriteLine("[CustomUIFactory] CreateUpdateAvailableWindow å¼€å§‹");
 
             var latestItem = updates.FirstOrDefault();
             var latestVersion = latestItem?.Version ?? "";
             var installedVersion = GetInstalledVersion();
             var isSameVersion = !string.IsNullOrEmpty(latestVersion) &&
                 string.Equals(latestVersion, installedVersion, StringComparison.OrdinalIgnoreCase);
+
+            if (SuppressDialogs)
+            {
+                Debug.WriteLine("[CustomUIFactory] SuppressDialogs=true?????");
+                return new SuppressedUpdateAvailable();
+            }
 
             var window = base.CreateUpdateAvailableWindow(
                 updates, signatureVerifier, currentVersion, appName, isUpdateAlreadyDownloaded);
@@ -108,6 +117,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 // Localize window title
                 wpfWindow.Title = ResOrDefault("UpdateDialog.SoftwareUpdate", "Software Update");
                 wpfWindow.Background = Brushes.White;
+                wpfWindow.Owner = Application.Current.MainWindow;
+                wpfWindow.Topmost = true;
                 ApplyHandyControlStyles(wpfWindow);
 
                 // Localize buttons
@@ -184,7 +195,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 }
             }
 
-            Debug.WriteLine("[CustomUIFactory] CreateUpdateAvailableWindow ÒÑÍê³É±¾µØ»¯");
+            Debug.WriteLine("[CustomUIFactory] CreateUpdateAvailableWindow å·²å®Œæˆæœ¬åœ°åŒ–");
             return window;
         }
 
@@ -196,7 +207,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             string downloadTitle,
             string actionButtonTitle)
         {
-            Debug.WriteLine("[CustomUIFactory] CreateProgressWindow ¿ªÊ¼");
+            Debug.WriteLine("[CustomUIFactory] CreateProgressWindow å¼€å§‹");
 
             var localizedTitle = ResOrDefault("UpdateDialog.DownloadingGeneric", downloadTitle);
             var localizedAction = actionButtonTitle == "Cancel"
@@ -209,6 +220,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 wpfWindow.Title = ResOrDefault("UpdateDialog.SoftwareUpdate", "Software Update");
                 wpfWindow.Background = Brushes.White;
+                wpfWindow.Owner = Application.Current.MainWindow;
+                wpfWindow.Topmost = true;
                 ApplyHandyControlStyles(wpfWindow);
 
                 // Localize action button via view model
@@ -233,7 +246,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 }
             }
 
-            Debug.WriteLine("[CustomUIFactory] CreateProgressWindow ÒÑÍê³É±¾µØ»¯");
+            Debug.WriteLine("[CustomUIFactory] CreateProgressWindow å·²å®Œæˆæœ¬åœ°åŒ–");
             return window;
         }
 
@@ -243,7 +256,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public override ICheckingForUpdates ShowCheckingForUpdates()
         {
-            Debug.WriteLine("[CustomUIFactory] ShowCheckingForUpdates ¿ªÊ¼");
+            Debug.WriteLine("[CustomUIFactory] ShowCheckingForUpdates å¼€å§‹");
 
             var window = base.ShowCheckingForUpdates();
 
@@ -278,7 +291,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 }
             }
 
-            Debug.WriteLine("[CustomUIFactory] ShowCheckingForUpdates ÒÑÍê³É±¾µØ»¯");
+            Debug.WriteLine("[CustomUIFactory] ShowCheckingForUpdates å·²å®Œæˆæœ¬åœ°åŒ–");
             return window;
         }
 
@@ -289,6 +302,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         public override void ShowVersionIsUpToDate()
         {
             Debug.WriteLine("[CustomUIFactory] ShowVersionIsUpToDate");
+            if (!ShowNoUpdateMessage) return;
             ShowLocalizedMessage(
                 ResOrDefault("UpdateDialog.InfoTitle", "Info"),
                 ResOrDefault("UpdateDialog.UpToDate", "Your current version is up to date."));
@@ -297,6 +311,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         public override void ShowVersionIsSkippedByUserRequest()
         {
             Debug.WriteLine("[CustomUIFactory] ShowVersionIsSkippedByUserRequest");
+            if (!ShowNoUpdateMessage) return;
             ShowLocalizedMessage(
                 ResOrDefault("UpdateDialog.InfoTitle", "Info"),
                 ResOrDefault("UpdateDialog.VersionSkipped", "You have elected to skip this version."));
@@ -325,7 +340,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public override void ShowDownloadErrorMessage(string message, string? appcastUrl)
         {
-            Debug.WriteLine($"[CustomUIFactory] ShowDownloadErrorMessage, Ô­Ê¼ÏûÏ¢: {message}, URL: {appcastUrl ?? "null"}");
+            Debug.WriteLine($"[CustomUIFactory] ShowDownloadErrorMessage, åŽŸå§‹æ¶ˆæ¯: {message}, URL: {appcastUrl ?? "null"}");
             var title = ResOrDefault("UpdateDialog.ErrorTitle", "Error");
             var localizedMessage = string.Format(
                 ResOrDefault("UpdateDialog.DownloadError",
@@ -353,32 +368,23 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public override void ShowToast(System.Action clickHandler)
         {
-            Debug.WriteLine("[CustomUIFactory] ShowToast");
-            var toastMessage = ResOrDefault("UpdateDialog.ToastMessage", "New Version Available");
-            var toastAction = ResOrDefault("UpdateDialog.ToastAction", "More information");
-
-            Thread thread = new Thread(() =>
-            {
-                var toast = new ToastNotification()
-                {
-                    ClickAction = clickHandler,
-                    Icon = _applicationIcon
-                };
-                try
-                {
-                    ProcessWindowAfterInit?.Invoke(toast, this);
-                    toast.Show(toastMessage, toastAction, 5);
-                    System.Windows.Threading.Dispatcher.Run();
-                }
-                catch (ThreadAbortException)
-                {
-                    toast.Dispatcher.InvokeShutdown();
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
+            // ??????Toast,??????????
         }
 
         #endregion
+    }
+
+    internal sealed class SuppressedUpdateAvailable : IUpdateAvailable
+    {
+        public bool Displayed { get; set; }
+        public NetSparkleUpdater.Enums.UpdateAvailableResult Result { get; set; }
+        public AppCastItem? CurrentItem { get; set; }
+        public event UserRespondedToUpdate? UserResponded;
+        public void Show() { }
+        public void Close() { }
+        public void HideReleaseNotes() { }
+        public void HideRemindMeLaterButton() { }
+        public void HideSkipButton() { }
+        public void BringToFront() { }
     }
 }

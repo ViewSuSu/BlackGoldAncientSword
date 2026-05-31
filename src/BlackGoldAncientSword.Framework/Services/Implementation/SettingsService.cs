@@ -13,16 +13,26 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         private string FilePath => System.IO.Path.Combine(
             AppSettings.GetDefaultPath(), "settings.json");
 
+        private Task? _loadTask;
+
         public SettingsService()
         {
-            // 构造时触发异步加载，不阻塞 UI。用 SafeFireAndForget 确保异常可追踪。
+            // 构造时触发异步加载，LoadAsync 返回的 Task 可被外部 await 等待完成
             LoadAsync().SafeFireAndForget("SettingsService.LoadAsync");
         }
 
         /// <summary>
-        /// 异步从 settings.json 加载配置。
+        /// 异步从 settings.json 加载配置。可多次调用，内部缓存 Task 避免重复加载。
         /// </summary>
-        public async Task LoadAsync()
+        public Task LoadAsync()
+        {
+            if (_loadTask != null)
+                return _loadTask;
+            _loadTask = LoadInternalAsync();
+            return _loadTask;
+        }
+
+        private async Task LoadInternalAsync()
         {
             try
             {

@@ -4,8 +4,9 @@
     {
         System.Threading.Tasks.Task CheckForUpdatesAsync(bool showNoUpdateMessage = true);
 
-        string CurrentVersion { get; }
+        void SetAutoPopupEnabled(bool enabled);
 
+        string CurrentVersion { get; }
 
         bool IsUpdateAvailable { get; }
 
