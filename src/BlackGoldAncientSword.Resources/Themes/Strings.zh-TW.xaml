@@ -155,7 +155,10 @@
     <ns1:String ns2:Key="Home.Status.InGame">對局中 (BattleId: {0})</ns1:String>
     <ns1:String ns2:Key="Announcement.UpdateHistory">更新歷史</ns1:String>
     <ns1:String ns2:Key="Announcement.Notice">公告通知</ns1:String>
-    <ns1:String ns2:Key="Announcement.Confirm">確認</ns1:String>
+        <ns1:String ns2:Key="Announcement.Loading">正在載入更新歷史...</ns1:String>
+    <ns1:String ns2:Key="Announcement.NoData">暫無更新歷史。</ns1:String>
+    <ns1:String ns2:Key="Announcement.LoadFailed">載入更新歷史失敗，請檢查網絡連接。</ns1:String>
+<ns1:String ns2:Key="Announcement.Confirm">確認</ns1:String>
 
     <ns1:String ns2:Key="Settings.CachePath">緩存路徑</ns1:String>
     <ns1:String ns2:Key="Settings.CacheSize">緩存大小：</ns1:String>

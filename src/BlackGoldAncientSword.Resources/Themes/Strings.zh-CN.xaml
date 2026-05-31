@@ -157,6 +157,9 @@
     <system:String x:Key="Home.Status.InGame">对局中 (BattleId: {0})</system:String>
     <system:String x:Key="Announcement.UpdateHistory">更新历史</system:String>
     <system:String x:Key="Announcement.Notice">公告通知</system:String>
+        <system:String x:Key="Announcement.Loading">正在加载更新历史...</system:String>
+    <system:String x:Key="Announcement.NoData">暂无更新历史。</system:String>
+    <system:String x:Key="Announcement.LoadFailed">加载更新历史失败，请检查网络连接。</system:String>
     <system:String x:Key="Announcement.Confirm">确认</system:String>
 
     <system:String x:Key="Settings.CachePath">缓存路径</system:String>
