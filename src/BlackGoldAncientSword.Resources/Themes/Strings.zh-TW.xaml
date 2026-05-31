@@ -211,7 +211,7 @@
     
     <ns1:String ns2:Key="MainWindow.CheckForUpdates">檢測更新</ns1:String>
     <ns1:String ns2:Key="MainWindow.CheckForUpdates.ToolTip">檢查是否有新版本</ns1:String>
-    <ns1:String ns2:Key="Settings.AutoCheckUpdates">啟動時自動檢查更新</ns1:String>
+    <ns1:String ns2:Key="Settings.AutoCheckUpdates">啟動時檢測新版本</ns1:String>
     
     <ns1:String ns2:Key="UpdateDialog.SoftwareUpdate">軟體更新</ns1:String>
     <ns1:String ns2:Key="UpdateDialog.NewVersionAvailable">有新版本可用</ns1:String>

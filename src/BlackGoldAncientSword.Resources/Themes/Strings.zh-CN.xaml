@@ -213,7 +213,7 @@
     <!--  检测更新  -->
     <system:String x:Key="MainWindow.CheckForUpdates">检测更新</system:String>
     <system:String x:Key="MainWindow.CheckForUpdates.ToolTip">检查是否有新版本</system:String>
-    <system:String x:Key="Settings.AutoCheckUpdates">启动时自动检测更新</system:String>
+    <system:String x:Key="Settings.AutoCheckUpdates">启动时检测新版本</system:String>
     <!--  更新对话框 - NetSparkle UI 中文本地化  -->
 
     <!--  更新对话框 - NetSparkle UI 中文本地化  -->
