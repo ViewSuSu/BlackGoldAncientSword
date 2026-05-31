@@ -41,6 +41,12 @@ namespace BlackGoldAncientSword.App.Shell
 
         private IntPtr _hwnd;
         private bool _isExiting;
+        private bool IsAnyOverlayActive()
+        {
+            return AnnouncementOverlay.Content != null
+                || FeedbackOverlay.Content != null
+                || ClosePromptOverlay.Content != null;
+        }
 
         static MainWindow()
         {
@@ -117,6 +123,7 @@ namespace BlackGoldAncientSword.App.Shell
             // 双击标题栏切换最大化/还原
             if (msg == WM_NCLBUTTONDBLCLK && wParam.ToInt32() == HTCAPTION)
             {
+                if (IsAnyOverlayActive()) return IntPtr.Zero;
                 WindowState = WindowState == WindowState.Maximized
                     ? WindowState.Normal
                     : WindowState.Maximized;
@@ -197,8 +204,11 @@ namespace BlackGoldAncientSword.App.Shell
                 // Title bar drag area (between resize zone and window buttons)
                 if (ptY >= ResizeBorder && ptY <= 32 && ptX > 70 && ptX < w - 100)
                 {
-                    handled = true;
-                    return (IntPtr)HTCAPTION;
+                    if (!IsAnyOverlayActive())
+                    {
+                        handled = true;
+                        return (IntPtr)HTCAPTION;
+                    }
                 }
             }
             return IntPtr.Zero;
@@ -292,6 +302,7 @@ namespace BlackGoldAncientSword.App.Shell
         
         private void TitleBar_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
+            if (IsAnyOverlayActive()) return;
             if (e.ClickCount == 2)
             {
                 WindowState = WindowState == WindowState.Maximized
