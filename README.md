@@ -1,8 +1,10 @@
+[中文](README.md) | [English](README.en.md)
+
+[![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]()
+
 # 黑金古刀-永劫助手（BlackGoldAncientSword）
 
 > 查询《永劫无间》（NARAKA: BLADEPOINT）玩家战绩数据的桌面辅助工具。
-
-[![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]()
 
 > 该项目受到 [Zzaphkiel/Seraphine](https://github.com/Zzaphkiel/Seraphine) 的鼓舞，感谢先驱者们做出的贡献。
 
