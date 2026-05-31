@@ -60,7 +60,6 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 
 - **Data path**: Local storage directory for stats (customizable, with auto-migration)
 - **Cache path**: Image cache directory (size display + one-click clear)
-- **Game log path**: Path to NARAKA's `Player.log` (for match state detection)
 - **Language**: 简体中文 / English / 繁體中文
 - **Close behavior**: Minimize to tray or exit directly
 - **Auto-check updates**: Check for new versions on startup (NetSparkle)

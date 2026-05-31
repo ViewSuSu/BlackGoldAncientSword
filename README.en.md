@@ -44,7 +44,6 @@ When entering hero selection, the app captures the screen and recognizes teammat
 
 - **Data path**: Local storage directory for stats (customizable, with auto-migration)
 - **Cache path**: Image cache directory (size display + one-click clear)
-- **Game log path**: Path to NARAKA's `Player.log` (for match state detection)
 - **Language**: 简体中文 / English / 繁體中文
 - **Close behavior**: Minimize to tray or exit directly
 - **Auto-check updates**: Check for new versions on startup (NetSparkle)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Diagnostics;
@@ -73,11 +73,8 @@ namespace BlackGoldAncientSword.App.Shell
         public DelegateCommand OpenFeedbackCommand =>
             _openFeedbackCommand ??= new DelegateCommand(() =>
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "https://github.com/ViewSuSu/BlackGoldAncientSword/issues/new",
-                    UseShellExecute = true
-                });
+                EnsureModuleLoaded(PageNames.FeedbackPage);
+                _regionManager.RequestNavigate(GlobalConstant.FeedbackRegion, PageNames.FeedbackPage);
             });
 
         private DelegateCommand? _navigateToAnnouncementCommand;
@@ -363,3 +360,4 @@ namespace BlackGoldAncientSword.App.Shell
         }
     }
 }
+
