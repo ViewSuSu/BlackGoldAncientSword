@@ -2,6 +2,7 @@
 
 > A desktop companion app for querying *NARAKA: BLADEPOINT* player statistics and match data.
 
+[![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]() [![PowerShell](https://img.shields.io/badge/PowerShell-UTF--8-5391FE?style=flat&logo=powershell&logoColor=white)]()
 ---
 
 # User Guide
@@ -60,7 +61,6 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 
 - **Data path**: Local storage directory for stats (customizable, with auto-migration)
 - **Cache path**: Image cache directory (size display + one-click clear)
-- **Game log path**: Path to NARAKA's `Player.log` (for match state detection)
 - **Language**: 简体中文 / English / 繁體中文
 - **Close behavior**: Minimize to tray or exit directly
 - **Auto-check updates**: Check for new versions on startup (NetSparkle)
@@ -265,7 +265,7 @@ public static class PageNames
 1. `GameStatusMonitor` detects `HeroSelection` state
 2. `TeamInfoPageViewModel` starts OCR polling loop
 3. `ScreenCaptureService` captures game window via **Windows Graphics Capture API** (native C++ DLL → SharpDX D3D11)
-4. `OcrService` spawns **PaddleOCR-json.exe** to recognize Chinese text
+4. `OcrService` spawns **PaddleOCR-json.exe** to recognize text
 5. `TeamInfoOcrService` parses OCR output and extracts teammate nicknames
 6. Stats API is queried for each teammate, displayed side-by-side
 
@@ -283,19 +283,6 @@ Background checks for new GitHub Releases. Update dialog is fully localized. Thr
 
 ---
 
-## Key Design Decisions
-
-| Decision | Rationale |
-|---|---|
-| **Single-file publish** | `PublishSingleFile=true` + `SelfContained=true`, single `.exe`, no .NET runtime install needed |
-| **No SetProperty** | ViewModel base only exposes `RaisePropertyChanged`, avoiding over-encapsulation |
-| **No property name strings** | Must use `nameof()` or `[CallerMemberName]` for property change notifications |
-| **Allman brace style** | All C# code uses Allman style (braces on own line) |
-| **Chinese commit messages** | All git commits in Chinese with detailed descriptions |
-| **Source-generated API clients** | Reduces hand-written HTTP code, ensures type safety |
-| **OnDemand modules** | Non-initial modules load on demand, improving startup time |
-
----
 
 ## Build & Run
 
@@ -323,10 +310,6 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ```
 
-### Links
-
-- GitHub: [ViewSuSu/BlackGoldAncientSword](https://github.com/ViewSuSu)
-- Issues: [Report a bug](https://github.com/ViewSuSu/BlackGoldAncientSword/issues/new)
 
 ---
 

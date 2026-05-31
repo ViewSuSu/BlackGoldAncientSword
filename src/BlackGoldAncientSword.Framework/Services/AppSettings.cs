@@ -1,4 +1,4 @@
-﻿namespace BlackGoldAncientSword.Framework.Services
+namespace BlackGoldAncientSword.Framework.Services
 {
     public class AppSettings
     {
@@ -12,8 +12,6 @@
         public bool CloseBehaviorRemembered { get; set; } = false;
 
         public bool AutoCheckUpdates { get; set; } = true;
-
-        public string GameLogPath { get; set; } = GetDefaultGameLogPath();
 
         public static string GetDefaultCachePath()
         {

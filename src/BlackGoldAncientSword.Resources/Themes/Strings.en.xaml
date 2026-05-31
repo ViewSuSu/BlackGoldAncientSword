@@ -243,9 +243,6 @@
     <system:String x:Key="UpdateDialog.InfoTitle">Info</system:String>
     <system:String x:Key="UpdateDialog.CannotDownloadAppcast">Unable to connect to update server. Please check your network and try again.</system:String>
     <system:String x:Key="UpdateDialog.DownloadError">There was a problem downloading the update:\n{0}</system:String>
-    <system:String x:Key="Settings.Category.GameLog">Game Status Detection</system:String>
-    <system:String x:Key="Settings.GameLogPath.Description">Full path to Naraka Bladepoint Player.log for game status detection</system:String>
-    <system:String x:Key="Settings.BrowseGameLogPath">Select game log file</system:String>
     <system:String x:Key="TeamInfo.DiffAvgKill">Kill Diff</system:String>
     <system:String x:Key="TeamInfo.DiffAvgDamage">Damage Diff</system:String>
     <system:String x:Key="TeamInfo.DiffTop5Rate">Top5 Diff</system:String>

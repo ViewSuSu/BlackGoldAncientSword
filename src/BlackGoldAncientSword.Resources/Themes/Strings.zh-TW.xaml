@@ -238,9 +238,6 @@
     <ns1:String ns2:Key="UpdateDialog.InfoTitle">提示</ns1:String>
     <ns1:String ns2:Key="UpdateDialog.CannotDownloadAppcast">無法連線更新伺服器，請檢查網路後重試</ns1:String>
     <ns1:String ns2:Key="UpdateDialog.DownloadError">下載更新時發生錯誤：\n{0}</ns1:String>
-    <ns1:String ns2:Key="Settings.Category.GameLog">遊戲狀態識別</ns1:String>
-    <ns1:String ns2:Key="Settings.GameLogPath.Description">永劫無間 Player.log 日誌檔案的完整路徑，用於識別對局狀態</ns1:String>
-    <ns1:String ns2:Key="Settings.BrowseGameLogPath">選擇遊戲日誌檔案</ns1:String>
     <ns1:String ns2:Key="TeamInfo.DiffAvgKill">擊殺差</ns1:String>
     <ns1:String ns2:Key="TeamInfo.DiffAvgDamage">傷害差</ns1:String>
     <ns1:String ns2:Key="TeamInfo.DiffTop5Rate">前五差</ns1:String>

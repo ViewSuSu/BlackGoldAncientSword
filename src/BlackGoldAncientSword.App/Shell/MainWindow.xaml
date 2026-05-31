@@ -504,6 +504,67 @@
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
+                    <!--  联系作者  -->
+                    <Grid>
+                        <ToggleButton
+                            x:Name="ContactToggle"
+                            Width="25"
+                            Height="20"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            IsChecked="{Binding IsContactPopupOpen}">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Border Background="Transparent">
+                                                    <Image
+                                                        Width="15"
+                                                        Height="15"
+                                                        Source="/BlackGoldAncientSword.Resources;component/Images/contact.png"
+                                                        Stretch="Uniform" />
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                        <Popup
+                            IsOpen="{Binding IsContactPopupOpen, Mode=TwoWay}"
+                            AllowsTransparency="True"
+                            HorizontalOffset="-80"
+                            Placement="Bottom"
+                            PlacementTarget="{Binding ElementName=ContactToggle}"
+                            StaysOpen="False">
+                            <Border
+                                Background="White"
+                                BorderBrush="#CCCCCC"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12,10">
+                                <StackPanel>
+                                    <TextBlock
+                                        Margin="0,0,0,6"
+                                        FontSize="13"
+                                        FontWeight="Bold"
+                                        Text="联系作者" />
+                                    <TextBox
+                                        MinWidth="160"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FontSize="12"
+                                        Foreground="#333333"
+                                        IsReadOnly="True"
+                                        Text="微信号：Yyu16147" />
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
                     <!--  Feedback  -->
                     <Button
                         Width="25"
@@ -556,7 +617,16 @@
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
                     Panel.ZIndex="900"
-                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.AnnouncementRegion}" />
+                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.AnnouncementRegion}" />                <!--  Feedback overlay (covers entire window, below toast)  -->
+                <ContentControl
+                    Grid.RowSpan="3"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Panel.ZIndex="900"
+                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.FeedbackRegion}" />
+
                 <!--  Close prompt overlay (covers entire window, above announcement)  -->
                 <ContentControl
                     Grid.RowSpan="3"
@@ -649,5 +719,6 @@
         </tb:TaskbarIcon>
     </Grid>
 </Window>
+
 
 
