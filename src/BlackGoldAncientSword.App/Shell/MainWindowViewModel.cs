@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Diagnostics;
@@ -23,6 +23,12 @@ namespace BlackGoldAncientSword.App.Shell
         private readonly BlackGoldAncientSword.Framework.Services.Abstractions.ILocalizationService _localization;
         private readonly IGameStatusMonitor _gameStatusMonitor;
         private readonly IGameLogMonitor _gameLogMonitor;
+        private bool _isContactPopupOpen;
+        public bool IsContactPopupOpen
+        {
+            get => _isContactPopupOpen;
+            set => SetProperty(ref _isContactPopupOpen, value);
+        }
 
         public ObservableCollection<ToastItem> ToastItems { get; } = new();
 
