@@ -328,6 +328,13 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 - GitHub: [ViewSuSu/BlackGoldAncientSword](https://github.com/ViewSuSu)
 - Issues: [Report a bug](https://github.com/ViewSuSu/BlackGoldAncientSword/issues/new)
 
+
+---
+
+## Special Thanks
+
+- WeChat: craftwyrd
+
 ---
 
 ## License
