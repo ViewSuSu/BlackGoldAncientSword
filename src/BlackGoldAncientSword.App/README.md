@@ -160,7 +160,7 @@
 | **对象映射** | Mapster 7.4 | DTO ↔ ViewModel |
 | **JSON** | Newtonsoft.Json 13 | 序列化 / 反序列化 |
 | **屏幕捕获** | SharpDX + 原生 WGC DLL (C++) | 游戏窗口截图 |
-| **OCR** | PaddleOCR-json.exe | 中文字符识别 |
+| **OCR** | PaddleOCR-json.exe | 多语言文字识别 |
 | **系统托盘** | Hardcodet.NotifyIcon.Wpf | 托盘图标与菜单 |
 | **自动更新** | NetSparkle 3.1 | 版本检测与静默更新 |
 | **打包** | Self-Contained + PublishSingleFile | 单文件独立部署 (win-x64) |
@@ -279,7 +279,7 @@ public static class PageNames
 1. `GameStatusMonitor` 检测到 `HeroSelection` 状态
 2. `TeamInfoPageViewModel` 启动 OCR 轮询循环
 3. `ScreenCaptureService` 通过 **Windows Graphics Capture API**（原生 C++ DLL → SharpDX D3D11）截取游戏窗口
-4. `OcrService` 调用 **PaddleOCR-json.exe** 进程识别截图中的中文文本
+4. `OcrService` 调用 **PaddleOCR-json.exe** 进程识别截图中的文字
 5. `TeamInfoOcrService` 解析 OCR 结果，提取队友昵称
 6. 调用战绩 API 查询每个队友的数据，并排展示
 
