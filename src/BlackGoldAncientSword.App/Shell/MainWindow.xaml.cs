@@ -289,6 +289,18 @@ namespace BlackGoldAncientSword.App.Shell
             timer.Start();
         }
 
+        
+        private void TitleBar_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2)
+            {
+                WindowState = WindowState == WindowState.Maximized
+                    ? WindowState.Normal
+                    : WindowState.Maximized;
+                e.Handled = true;
+            }
+        }
+
         private void TrayIcon_TrayMouseDoubleClick(object sender, RoutedEventArgs e)
         {
             RestoreFromTray();

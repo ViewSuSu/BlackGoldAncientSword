@@ -130,7 +130,6 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 - **App Feedback QQ Group**:
   - Group ①: 146088141
-  - QQ level 32+ (two suns) required for auto-approval; low-level accounts will be rejected
 - **Data Feedback QQ Groups** (QQ group bot also available for stats queries):
   - Group ①: 476074617
   - Group ②: 649891198
