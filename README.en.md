@@ -93,9 +93,10 @@ All stats data comes from the same API powering https://naraka.drivod.top/ , pro
 OCR recognition uses the same underlying technology as OBS screen capture, capturing directly from the graphics card layer and bypassing any overlays. However, it currently only supports recognition when the screen and game resolutions match. If your screen resolution differs from the game resolution, black bars will appear on the sides — please avoid playing in such a setup. For best results, play in fullscreen at the highest resolution or at a resolution matching your display.
 
 Additionally, OCR may sometimes fail to recognize certain special characters. If you encounter unrecognized names, you can use QQ screenshot text recognition or similar tools as a manual workaround.
+
 **Q: Why is the installer / program so large (200MB+)?**
 
-The built-in OCR engine (PaddleOCR) depends on the Intel Math Kernel Library (mklml.dll, ~88MB) and the OpenCV computer vision library (opencv_world4100.dll, ~62MB). These two native AI/vision libraries account for the vast majority of the download size. Without them, automatic screenshot recognition of teammate names wouldn't be possible — the "bulk" is a necessary price to pay 😅.
+The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. Additionally, the built-in OCR engine (PaddleOCR) depends on the Intel Math Kernel Library (mklml.dll, ~88MB) and the OpenCV computer vision library (opencv_world4100.dll, ~62MB). These two native AI/vision libraries, together with the .NET runtime, account for the vast majority of the download size. Without them, automatic screenshot recognition of teammate names wouldn't be possible — the "bulk" is a necessary price to pay 😅.
 
 
 ---
