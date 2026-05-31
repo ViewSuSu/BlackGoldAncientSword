@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="BlackGoldAncientSword.Modules.UI.Feedback.Views.FeedbackPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -69,10 +69,14 @@
                             FontSize="14"
                             FontWeight="SemiBold"
                             Text="客户端问题反馈群" />
-                        <TextBlock
+                        <TextBox
                             Margin="0,0,0,16"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
                             FontSize="14"
                             Foreground="#4A90D9"
+                            IsReadOnly="True"
                             Text="146088141" />
 
                         <TextBlock
@@ -86,24 +90,33 @@
                             Foreground="Gray"
                             Text="QQ群机器人也可以查战绩"
                             TextWrapping="Wrap" />
-                        <TextBlock
+                        <TextBox
                             Margin="0,0,0,4"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
                             FontSize="12"
                             Foreground="Gray"
-                            Text="①群：476074617"
-                            TextWrapping="Wrap" />
-                        <TextBlock
+                            IsReadOnly="True"
+                            Text="①群：476074617" />
+                        <TextBox
                             Margin="0,0,0,4"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
                             FontSize="12"
                             Foreground="Gray"
-                            Text="②群：649891198"
-                            TextWrapping="Wrap" />
-                        <TextBlock
+                            IsReadOnly="True"
+                            Text="②群：649891198" />
+                        <TextBox
                             Margin="0,0,0,4"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
                             FontSize="12"
                             Foreground="Gray"
-                            Text="③群：966720321"
-                            TextWrapping="Wrap" />
+                            IsReadOnly="True"
+                            Text="③群：966720321" />
                         <TextBlock
                             Margin="0,0,0,16"
                             FontSize="11"
@@ -118,10 +131,14 @@
                             FontSize="14"
                             FontWeight="SemiBold"
                             Text="网页端" />
-                        <TextBlock
+                        <TextBox
                             Margin="0,0,0,12"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
                             FontSize="12"
                             Foreground="#4A90D9"
+                            IsReadOnly="True"
                             Text="https://naraka.drivod.top/" />
 
                         <TextBlock
@@ -129,9 +146,13 @@
                             FontSize="14"
                             FontWeight="SemiBold"
                             Text="GitHub" />
-                        <TextBlock
+                        <TextBox
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
                             FontSize="12"
                             Foreground="#4A90D9"
+                            IsReadOnly="True"
                             Text="ViewSuSu/BlackGoldAncientSword" />
                     </StackPanel>
                 </ScrollViewer>
