@@ -358,11 +358,6 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ```
 
-### Links
-
-- GitHub: [ViewSuSu/BlackGoldAncientSword](https://github.com/ViewSuSu)
-- Issues: [Report a bug](https://github.com/ViewSuSu/BlackGoldAncientSword/issues/new)
-
 
 ---
 
