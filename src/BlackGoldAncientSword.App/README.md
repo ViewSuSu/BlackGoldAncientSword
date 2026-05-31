@@ -2,6 +2,7 @@
 
 > 查询《永劫无间》（NARAKA: BLADEPOINT）玩家战绩数据的桌面辅助工具。
 
+[![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]() [![PowerShell](https://img.shields.io/badge/PowerShell-UTF--8-5391FE?style=flat&logo=powershell&logoColor=white)]()
 ---
 
 # 用户手册
@@ -66,7 +67,6 @@
 
 - **数据保存路径**：战绩数据的本地存储目录（支持自定义 + 旧数据自动迁移）
 - **缓存路径**：图片缓存目录（含缓存大小显示与一键清理）
-- **游戏日志路径**：永劫无间 `Player.log` 文件的路径（用于识别对局状态）
 - **语言**：支持 简体中文 / English / 繁體中文
 - **关闭行为**：点击关闭按钮时"最小化到托盘"或"直接退出"
 - **自动检查更新**：启动时检测新版本（基于 NetSparkle）
@@ -160,7 +160,7 @@
 | **对象映射** | Mapster 7.4 | DTO ↔ ViewModel |
 | **JSON** | Newtonsoft.Json 13 | 序列化 / 反序列化 |
 | **屏幕捕获** | SharpDX + 原生 WGC DLL (C++) | 游戏窗口截图 |
-| **OCR** | PaddleOCR-json.exe | 中文字符识别 |
+| **OCR** | PaddleOCR-json.exe | 多语言文字识别 |
 | **系统托盘** | Hardcodet.NotifyIcon.Wpf | 托盘图标与菜单 |
 | **自动更新** | NetSparkle 3.1 | 版本检测与静默更新 |
 | **打包** | Self-Contained + PublishSingleFile | 单文件独立部署 (win-x64) |
@@ -279,7 +279,7 @@ public static class PageNames
 1. `GameStatusMonitor` 检测到 `HeroSelection` 状态
 2. `TeamInfoPageViewModel` 启动 OCR 轮询循环
 3. `ScreenCaptureService` 通过 **Windows Graphics Capture API**（原生 C++ DLL → SharpDX D3D11）截取游戏窗口
-4. `OcrService` 调用 **PaddleOCR-json.exe** 进程识别截图中的中文文本
+4. `OcrService` 调用 **PaddleOCR-json.exe** 进程识别截图中的文字
 5. `TeamInfoOcrService` 解析 OCR 结果，提取队友昵称
 6. 调用战绩 API 查询每个队友的数据，并排展示
 
@@ -297,19 +297,6 @@ API 客户端不手写，而是通过 `BlackGoldAncientSword.Framework.SourceGen
 
 ---
 
-## 关键设计决策
-
-| 决策 | 说明 |
-|---|---|
-| **单文件发布** | `PublishSingleFile=true` + `SelfContained=true`，产出单个 `.exe`，无需安装 .NET 运行时 |
-| **禁止 SetProperty** | ViewModel 基类仅提供 `RaisePropertyChanged`，避免过度封装 |
-| **属性名硬编码禁止** | 调用 `RaisePropertyChanged` 时必须用 `nameof()` 或 `[CallerMemberName]` |
-| **Allman 花括号** | 所有 C# 代码使用 Allman 风格（花括号独占一行） |
-| **commit message 中文** | 所有 git commit 必须使用中文撰写，详细说明改动内容 |
-| **源码生成 API 客户端** | 减少手写 HTTP 调用代码，确保类型安全 |
-| **OnDemand 模块加载** | 非首屏模块按需加载，优化启动性能 |
-
----
 
 ## 构建与运行
 
@@ -338,14 +325,6 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ```
 
-### 发布产物
-
-发布后 `publish/` 目录下的 `BlackGoldAncientSword.App.exe` 即为可直接运行的独立程序。
-
-### 项目地址
-
-- GitHub: [ViewSuSu/BlackGoldAncientSword](https://github.com/ViewSuSu)
-- 问题反馈: [Issues](https://github.com/ViewSuSu/BlackGoldAncientSword/issues/new)
 
 ---
 

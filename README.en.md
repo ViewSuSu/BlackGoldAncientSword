@@ -1,31 +1,26 @@
-# BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
+﻿# BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
 
 > A desktop companion app for querying *NARAKA: BLADEPOINT* player statistics and match data.
 
+[![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]() [![PowerShell](https://img.shields.io/badge/PowerShell-UTF--8-5391FE?style=flat&logo=powershell&logoColor=white)]()
+
+> This project was inspired by [Zzaphkiel/Seraphine](https://github.com/Zzaphkiel/Seraphine). Thanks to the pioneers for their contributions.
+
 ---
+
+
+## Download 📥
+
+[![Download](https://img.shields.io/badge/Download-Latest%20Release-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest/download/BlackGoldAncientSword.App.exe)
+
+Click the button above to directly download the latest .exe package.
 
 # User Guide
 
 ## Overview
 
-**BlackGoldAncientSword** is a Windows desktop application that automatically detects game status, recognizes teammates via OCR, and fetches real-time player stats. No need to alt-tab to a browser — stats are displayed directly on your desktop. Supports **Solo / Duo / Trio** modes and **Ranked / Casual / Immortal** match types.
+**BlackGoldAncientSword** is a Windows desktop application that automatically detects game status, recognizes teammates, and fetches real-time player stats. No need to alt-tab to a browser — stats are displayed directly on your desktop. Supports **Solo / Duo / Trio** modes and **Ranked / Casual / Immortal** match types.
 
----
-
-## Home — Game Status Monitor
-
-The home page automatically detects whether *NARAKA: BLADEPOINT* is running. When the game is detected, it monitors the game log to track the current phase:
-
-- **Waiting for game**: NARAKA is not running
-- **Hero Selection**: Hero pick phase (RoomId displayed)
-- **In Game**: Match in progress (BattleId displayed)
-- **Battle Ended**: Match concluded
-
-![Home screenshot](docs/images/01_home.png)
-
-Use the left sidebar to switch between: **Home**, **Stats**, **Team Info**, and **Settings**. The title bar shows the version number and update indicator.
-
----
 
 ## Player Stats
 
@@ -42,9 +37,9 @@ Filter by season, mode category (Ranked / Casual / Immortal), and team size (Tri
 
 ---
 
-## Team Info — OCR Recognition
+## Team Info — Smart Recognition
 
-When entering hero selection, the app uses **OCR to capture the screen and recognize teammate nicknames** automatically. Teammate stats are displayed side-by-side for quick assessment.
+When entering hero selection, the app captures the screen and recognizes teammate nicknames automatically. Teammate stats are displayed side-by-side for quick assessment.
 
 - Automatic teammate recognition (no manual input)
 - Supports Trio / Duo / Solo teams
@@ -60,7 +55,6 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 
 - **Data path**: Local storage directory for stats (customizable, with auto-migration)
 - **Cache path**: Image cache directory (size display + one-click clear)
-- **Game log path**: Path to NARAKA's `Player.log` (for match state detection)
 - **Language**: 简体中文 / English / 繁體中文
 - **Close behavior**: Minimize to tray or exit directly
 - **Auto-check updates**: Check for new versions on startup (NetSparkle)
@@ -78,13 +72,67 @@ Minimize to system tray during gameplay. Right-click the tray icon to restore or
 
 ![Close prompt screenshot](docs/images/05_close_prompt.png)
 
-### Toast Notifications
 
-Success/error toasts appear in the bottom-right corner (e.g. "Copied", "Cache cleared").
+---
 
-### Auto Updates
 
-Powered by NetSparkle. New GitHub Releases are detected in the background. Options: skip version, remind later, or download & install.
+## FAQ 🧐
+
+**Q: Will I get banned for using BlackGoldAncientSword? 😨**
+
+This app only reads the game log file (Player.log) and captures the hero selection screen for OCR recognition. It does not modify or inject into game files or memory in any way. You are very unlikely to be banned, though no guarantee can be made.
+
+**Q: Why can't I query stats / why is data delayed?**
+
+All stats data comes from the same API powering https://naraka.drivod.top/ , provided by craftwyrd. The app only displays the data. If data is unavailable or delayed, the issue is almost certainly on the API server side. For data-related issues, ask in the data feedback QQ group or contact the API author craftwyrd directly.
+
+**Q: Why does teammate recognition fail or show inaccurate results?**
+
+OCR recognition uses the same underlying technology as OBS screen capture, capturing directly from the graphics card layer and bypassing any overlays. However, it currently only supports recognition when the screen and game resolutions match. If your screen resolution differs from the game resolution, black bars will appear on the sides — please avoid playing in such a setup. For best results, play in fullscreen at the highest resolution or at a resolution matching your display.
+
+Additionally, OCR may sometimes fail to recognize certain special characters. If you encounter unrecognized names, you can use QQ screenshot text recognition or similar tools as a manual workaround.
+
+---
+
+
+## Disclaimer 📢
+
+BlackGoldAncientSword is not endorsed by 24 Entertainment or NetEase and does not reflect the views or opinions of 24 Entertainment, NetEase, or anyone officially involved in producing or managing NARAKA: BLADEPOINT. NARAKA: BLADEPOINT and all associated properties are trademarks or registered trademarks of 24 Entertainment / NetEase.
+
+---
+
+## Legal Shield 🛡️
+
+This program is open-sourced at [ViewSuSu/BlackGoldAncientSword](https://github.com/ViewSuSu/BlackGoldAncientSword) with binaries distributed via GitHub Releases and official QQ groups. This section aims to help users fully understand the program and its potential risks, enabling informed decisions before and during use.
+
+The purpose of this program is to provide out-of-game auxiliary features (stats querying, teammate recognition, etc.) that enhance the player experience. We do not encourage or support any behavior that violates 24 Entertainment or NetEase policies or that may lead to an unfair gaming environment.
+
+This program achieves its functionality by reading the game log file (Player.log) and performing OCR on screen captures. Its code and behavior contain no intrusive measures whatsoever; it does not modify client files or read/write game process memory, and should not compromise the integrity of the game client in any way.
+
+We strive to ensure the stability of both the program and the game client during use. However, changes to the game environment or official services (such as anti-cheat system updates) may negatively impact your gaming experience, including client crashes or account bans.
+
+You assume all consequences arising from the use of this program. We are not liable for any direct or indirect damages resulting from its use. By deciding to use this program, you fully acknowledge and accept all associated risks and consequences.
+
+We reserve the right to modify this disclaimer at any time. Please check this page regularly for the latest information.
+
+Before using this program, please ensure you have read, understood, and agreed to the terms of this disclaimer. Please also abide by the relevant game rules and help maintain a healthy and fair gaming environment.
+
+
+
+## Star Us on GitHub ⭐
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ViewSuSu/BlackGoldAncientSword&type=Date)](https://star-history.com/#ViewSuSu/BlackGoldAncientSword&Date)
+
+
+## Feedback & Community
+
+- **App Feedback QQ Group**: 146088141
+- **Data Feedback QQ Groups** (QQ group bot also available for stats queries):
+  - Group ①: 476074617
+  - Group ②: 649891198
+  - Group ③: 966720321
+  - QQ level 32+ (two suns) required for auto-approval; low-level accounts will be rejected
+- **Web Version**: https://naraka.drivod.top/
 
 ---
 
@@ -265,7 +313,7 @@ public static class PageNames
 1. `GameStatusMonitor` detects `HeroSelection` state
 2. `TeamInfoPageViewModel` starts OCR polling loop
 3. `ScreenCaptureService` captures game window via **Windows Graphics Capture API** (native C++ DLL → SharpDX D3D11)
-4. `OcrService` spawns **PaddleOCR-json.exe** to recognize Chinese text
+4. `OcrService` spawns **PaddleOCR-json.exe** to recognize text
 5. `TeamInfoOcrService` parses OCR output and extracts teammate nicknames
 6. Stats API is queried for each teammate, displayed side-by-side
 
@@ -283,19 +331,6 @@ Background checks for new GitHub Releases. Update dialog is fully localized. Thr
 
 ---
 
-## Key Design Decisions
-
-| Decision | Rationale |
-|---|---|
-| **Single-file publish** | `PublishSingleFile=true` + `SelfContained=true`, single `.exe`, no .NET runtime install needed |
-| **No SetProperty** | ViewModel base only exposes `RaisePropertyChanged`, avoiding over-encapsulation |
-| **No property name strings** | Must use `nameof()` or `[CallerMemberName]` for property change notifications |
-| **Allman brace style** | All C# code uses Allman style (braces on own line) |
-| **Chinese commit messages** | All git commits in Chinese with detailed descriptions |
-| **Source-generated API clients** | Reduces hand-written HTTP code, ensures type safety |
-| **OnDemand modules** | Non-initial modules load on demand, improving startup time |
-
----
 
 ## Build & Run
 
@@ -323,10 +358,12 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ```
 
-### Links
 
-- GitHub: [ViewSuSu/BlackGoldAncientSword](https://github.com/ViewSuSu)
-- Issues: [Report a bug](https://github.com/ViewSuSu/BlackGoldAncientSword/issues/new)
+---
+
+## Special Thanks
+
+- WeChat: craftwyrd
 
 ---
 

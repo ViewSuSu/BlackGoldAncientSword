@@ -1,7 +1,6 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.RegularExpressions;
 using BlackGoldAncientSword.Framework.Core.Attributes;
-using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
 {
@@ -21,8 +20,6 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             @"room_type:(\d+)", RegexOptions.Compiled);
 
         private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
-
-        private readonly ISettingsService _settings;
 
         private FileSystemWatcher? _watcher;
         private long _lastPosition;
@@ -53,16 +50,15 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
 
         public bool IsRunning { get; private set; }
 
-        public GameLogMonitor(ISettingsService settings)
+        public GameLogMonitor()
         {
-            _settings = settings;
         }
 
         public async Task StartAsync()
         {
             if (IsRunning) return;
 
-            var fullPath = _settings.Current.GameLogPath;
+            var fullPath = Framework.Services.AppSettings.GetDefaultGameLogPath();
             if (string.IsNullOrEmpty(fullPath) || !System.IO.File.Exists(fullPath))
                 return;
 

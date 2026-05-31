@@ -23,6 +23,12 @@ namespace BlackGoldAncientSword.App.Shell
         private readonly BlackGoldAncientSword.Framework.Services.Abstractions.ILocalizationService _localization;
         private readonly IGameStatusMonitor _gameStatusMonitor;
         private readonly IGameLogMonitor _gameLogMonitor;
+        private bool _isContactPopupOpen;
+        public bool IsContactPopupOpen
+        {
+            get => _isContactPopupOpen;
+            set => SetProperty(ref _isContactPopupOpen, value);
+        }
 
         public ObservableCollection<ToastItem> ToastItems { get; } = new();
 
@@ -73,11 +79,8 @@ namespace BlackGoldAncientSword.App.Shell
         public DelegateCommand OpenFeedbackCommand =>
             _openFeedbackCommand ??= new DelegateCommand(() =>
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "https://github.com/ViewSuSu/BlackGoldAncientSword/issues/new",
-                    UseShellExecute = true
-                });
+                EnsureModuleLoaded(PageNames.FeedbackPage);
+                _regionManager.RequestNavigate(GlobalConstant.FeedbackRegion, PageNames.FeedbackPage);
             });
 
         private DelegateCommand? _navigateToAnnouncementCommand;
@@ -363,3 +366,4 @@ namespace BlackGoldAncientSword.App.Shell
         }
     }
 }
+
