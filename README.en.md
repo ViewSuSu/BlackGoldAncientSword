@@ -115,6 +115,12 @@ We reserve the right to modify this disclaimer at any time. Please check this pa
 Before using this program, please ensure you have read, understood, and agreed to the terms of this disclaimer. Please also abide by the relevant game rules and help maintain a healthy and fair gaming environment.
 
 
+
+## Star Us on GitHub ⭐
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ViewSuSu/BlackGoldAncientSword&type=Date)](https://star-history.com/#ViewSuSu/BlackGoldAncientSword&Date)
+
+
 ## Feedback & Community
 
 - **App Feedback QQ Group**: 146088141
