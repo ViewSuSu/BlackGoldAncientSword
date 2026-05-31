@@ -283,19 +283,6 @@ Background checks for new GitHub Releases. Update dialog is fully localized. Thr
 
 ---
 
-## Key Design Decisions
-
-| Decision | Rationale |
-|---|---|
-| **Single-file publish** | `PublishSingleFile=true` + `SelfContained=true`, single `.exe`, no .NET runtime install needed |
-| **No SetProperty** | ViewModel base only exposes `RaisePropertyChanged`, avoiding over-encapsulation |
-| **No property name strings** | Must use `nameof()` or `[CallerMemberName]` for property change notifications |
-| **Allman brace style** | All C# code uses Allman style (braces on own line) |
-| **Chinese commit messages** | All git commits in Chinese with detailed descriptions |
-| **Source-generated API clients** | Reduces hand-written HTTP code, ensures type safety |
-| **OnDemand modules** | Non-initial modules load on demand, improving startup time |
-
----
 
 ## Build & Run
 
