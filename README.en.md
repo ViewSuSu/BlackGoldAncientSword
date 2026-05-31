@@ -93,10 +93,6 @@ OCR recognition uses the same underlying technology as OBS screen capture, captu
 
 Additionally, OCR may sometimes fail to recognize certain special characters. If you encounter unrecognized names, you can use QQ screenshot text recognition or similar tools as a manual workaround.
 
-**Q: Why does the app sometimes crash?**
-
-Possible causes: .NET runtime exceptions, game log file being locked, screen capture API conflicts, etc. Try restarting the app. If the problem persists, please report it in the feedback group.
-
 ---
 
 ## Feedback & Community
