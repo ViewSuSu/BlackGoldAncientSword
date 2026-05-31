@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Authors>小窗同学</Authors>
@@ -22,6 +22,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Shell\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.Ocr\BlackGoldAncientSword.Ocr.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.Resources\BlackGoldAncientSword.Resources.csproj" />
@@ -39,5 +43,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>wgc_capture.dll</Link>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Shell\app.ico" />
   </ItemGroup>
 </Project>

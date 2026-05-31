@@ -29,8 +29,8 @@
     </Window.Resources>
     <chrome:WindowChrome.WindowChrome>
         <chrome:WindowChrome
+            x:Name="MainWindowChrome"
             CaptionHeight="0"
-            CornerRadius="10"
             GlassFrameThickness="0"
             ResizeBorderThickness="4" />
     </chrome:WindowChrome.WindowChrome>
@@ -479,8 +479,7 @@
                         VerticalAlignment="Center"
                         Cursor="Hand"
                         Orientation="Horizontal"
-                        Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}}"
-                        Opacity="{Binding UpdateIndicatorOpacity}">
+                        Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="MouseLeftButtonDown">
                                 <i:InvokeCommandAction Command="{Binding CheckForUpdatesCommand}" />
@@ -489,6 +488,7 @@
                         <Image
                             Width="14"
                             Height="14"
+                            Opacity="{Binding UpdateIndicatorOpacity}"
                             Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/发现新版本.png" />
                         <TextBlock
                             Margin="3,0,0,0"

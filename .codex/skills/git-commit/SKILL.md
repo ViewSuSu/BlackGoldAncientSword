@@ -1,6 +1,6 @@
-﻿---
+---
 name: git-commit
-description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户要求"推送"、"提交"、"commit"、"push"、"提交并推送"时使用此技能。
+description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，则执行完整的发版流程：commit+push 当前分支 → 合并到 release → push release → 切回原分支。
 ---
 
 # Git Commit 工作流
@@ -16,6 +16,8 @@ description: 在当前分支分析 git diff 差异，用中文撰写详细的 co
 - 每个文件改了什么
 - 为什么这么改（从代码逻辑推断意图）
 - 变更之间的关联性（是否属于同一批修改）
+- 对于所有提交场景（普通 commit 和发版 release），分析过程和要求完全相同
+- 禁止"修复问题"、"优化代码"等笼统描述
 
 ### 2. 撰写 Commit Message
 
@@ -52,3 +54,30 @@ git config --local --unset http.proxy
 - 不要主动切换分支，在当前分支操作
 - 不要 `git add` 特定文件后分批提交，一次性 `git add -A` 全部提交
 - Push 前必须检查 `git-proxy` 技能，确保代理已配置
+
+## 完整发版流程（当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时）
+
+执行上述 1-4 步（分析差异 → 撰写 commit message → commit → push 当前分支）后，继续以下步骤：
+
+### 5. 合并到 release 分支并推送
+
+```powershell
+git checkout release
+git merge <source-branch>
+git config --local http.proxy http://127.0.0.1:9098
+git push origin release
+git config --local --unset http.proxy
+git checkout <source-branch>
+```
+
+### 6. 确认结果
+
+- 确认 `git merge` 成功，无冲突
+- 确认 `git push origin release` 成功
+- 确认已切回原分支
+
+### 发版原则
+
+- 合并使用 `git merge`（非 fast-forward 时自动生成 merge commit）
+- 合并完成后必须切回原分支
+- 如遇冲突，停止并报告，不做自动解决
