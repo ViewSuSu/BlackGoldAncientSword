@@ -10,22 +10,6 @@
 
 **BlackGoldAncientSword** is a Windows desktop application that automatically detects game status, recognizes teammates, and fetches real-time player stats. No need to alt-tab to a browser — stats are displayed directly on your desktop. Supports **Solo / Duo / Trio** modes and **Ranked / Casual / Immortal** match types.
 
----
-
-## Home — Game Status Monitor
-
-The home page automatically detects whether *NARAKA: BLADEPOINT* is running. When the game is detected, it monitors the game log to track the current phase:
-
-- **Waiting for game**: NARAKA is not running
-- **Hero Selection**: Hero pick phase (RoomId displayed)
-- **In Game**: Match in progress (BattleId displayed)
-- **Battle Ended**: Match concluded
-
-![Home screenshot](docs/images/01_home.png)
-
-Use the left sidebar to switch between: **Home**, **Stats**, **Team Info**, and **Settings**. The title bar shows the version number and update indicator.
-
----
 
 ## Player Stats
 
