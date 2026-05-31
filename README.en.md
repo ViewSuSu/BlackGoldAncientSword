@@ -49,6 +49,8 @@ When entering hero selection, the app captures the screen and recognizes teammat
 
 ![Team Info screenshot](docs/images/03_team_info.png)
 
+> Click "Re-identify Team" anytime to trigger a manual refresh. If some names are recognized incorrectly, you can edit them directly and re-query.
+
 ---
 
 ## Settings
@@ -126,7 +128,9 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 ## Feedback & Community
 
-- **App Feedback QQ Group**: 146088141
+- **App Feedback QQ Group**:
+  - Group ①: 146088141
+  - QQ level 32+ (two suns) required for auto-approval; low-level accounts will be rejected
 - **Data Feedback QQ Groups** (QQ group bot also available for stats queries):
   - Group ①: 476074617
   - Group ②: 649891198

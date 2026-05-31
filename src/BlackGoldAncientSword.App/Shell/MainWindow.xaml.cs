@@ -19,6 +19,7 @@ namespace BlackGoldAncientSword.App.Shell
     public partial class MainWindow
     {
         private const int WM_NCHITTEST = 0x0084;
+        private const int WM_NCLBUTTONDBLCLK = 0x00A3;
         private const int WM_DPICHANGED = 0x02E0;
         private const int HTCAPTION = 2;
         private const int HTLEFT = 10;
@@ -110,9 +111,19 @@ namespace BlackGoldAncientSword.App.Shell
             var source = HwndSource.FromHwnd(_hwnd);
             source?.AddHook(WndProc);
         }
-
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+
         {
+            // 双击标题栏切换最大化/还原
+            if (msg == WM_NCLBUTTONDBLCLK && wParam.ToInt32() == HTCAPTION)
+            {
+                WindowState = WindowState == WindowState.Maximized
+                    ? WindowState.Normal
+                    : WindowState.Maximized;
+                handled = true;
+                return IntPtr.Zero;
+            }
+
             if (msg == WM_NCHITTEST)
             {
                 // Use GetDpiForWindow to always use the current monitor DPI,
