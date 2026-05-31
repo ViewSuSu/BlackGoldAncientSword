@@ -79,10 +79,6 @@ New GitHub Releases are detected in the background. Options: skip version, remin
 
 This app only reads the game log file (Player.log) and captures the hero selection screen for OCR recognition. It does not modify or inject into game files or memory in any way. You are very unlikely to be banned, though no guarantee can be made.
 
-**Q: What if I actually get banned?**
-
-Appeal or wait for the ban to expire 😭
-
 **Q: Why can't I query stats / why is data delayed?**
 
 All stats data comes from the same API powering https://naraka.drivod.top/ , provided by craftwyrd. The app only displays the data. If data is unavailable or delayed, the issue is almost certainly on the API server side.
