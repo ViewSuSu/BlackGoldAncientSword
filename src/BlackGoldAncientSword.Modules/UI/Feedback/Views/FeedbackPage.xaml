@@ -146,14 +146,15 @@
                             FontSize="14"
                             FontWeight="SemiBold"
                             Text="GitHub" />
-                        <TextBox
-                            Padding="0"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            FontSize="12"
-                            Foreground="#4A90D9"
-                            IsReadOnly="True"
-                            Text="ViewSuSu/BlackGoldAncientSword" />
+                        <TextBlock FontSize="12">
+                            <Hyperlink
+                                Cursor="Hand"
+                                Foreground="#4A90D9"
+                                NavigateUri="https://github.com/ViewSuSu/BlackGoldAncientSword"
+                                RequestNavigate="Hyperlink_RequestNavigate">
+                                https://github.com/ViewSuSu/BlackGoldAncientSword
+                            </Hyperlink>
+                        </TextBlock>
                     </StackPanel>
                 </ScrollViewer>
 
