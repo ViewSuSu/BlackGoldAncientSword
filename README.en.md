@@ -8,7 +8,7 @@
 
 ## Overview
 
-**BlackGoldAncientSword** is a Windows desktop application that automatically detects game status, recognizes teammates via OCR, and fetches real-time player stats. No need to alt-tab to a browser — stats are displayed directly on your desktop. Supports **Solo / Duo / Trio** modes and **Ranked / Casual / Immortal** match types.
+**BlackGoldAncientSword** is a Windows desktop application that automatically detects game status, recognizes teammates, and fetches real-time player stats. No need to alt-tab to a browser — stats are displayed directly on your desktop. Supports **Solo / Duo / Trio** modes and **Ranked / Casual / Immortal** match types.
 
 ---
 
@@ -42,9 +42,9 @@ Filter by season, mode category (Ranked / Casual / Immortal), and team size (Tri
 
 ---
 
-## Team Info — OCR Recognition
+## Team Info — Smart Recognition
 
-When entering hero selection, the app uses **OCR to capture the screen and recognize teammate nicknames** automatically. Teammate stats are displayed side-by-side for quick assessment.
+When entering hero selection, the app captures the screen and recognizes teammate nicknames automatically. Teammate stats are displayed side-by-side for quick assessment.
 
 - Automatic teammate recognition (no manual input)
 - Supports Trio / Duo / Solo teams
@@ -84,7 +84,7 @@ Success/error toasts appear in the bottom-right corner (e.g. "Copied", "Cache cl
 
 ### Auto Updates
 
-Powered by NetSparkle. New GitHub Releases are detected in the background. Options: skip version, remind later, or download & install.
+New GitHub Releases are detected in the background. Options: skip version, remind later, or download & install.
 
 ---
 
