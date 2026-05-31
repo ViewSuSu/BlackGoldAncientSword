@@ -84,7 +84,7 @@ This app only reads the game log file (Player.log) and captures the hero selecti
 
 **Q: Why can't I query stats / why is data delayed?**
 
-All stats data comes from the same API powering https://naraka.drivod.top/ , provided by craftwyrd. The app only displays the data. If data is unavailable or delayed, the issue is almost certainly on the API server side.
+All stats data comes from the same API powering https://naraka.drivod.top/ , provided by craftwyrd. The app only displays the data. If data is unavailable or delayed, the issue is almost certainly on the API server side. For data-related issues, ask in the data feedback QQ group or contact the API author craftwyrd directly.
 
 **Q: Why does teammate recognition fail or show inaccurate results?**
 
