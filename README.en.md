@@ -88,6 +88,18 @@ New GitHub Releases are detected in the background. Options: skip version, remin
 
 ---
 
+## Feedback & Community
+
+- **App Feedback QQ Group**: 146088141
+- **Data Feedback QQ Groups** (QQ group bot also available for stats queries):
+  - Group ①: 476074617
+  - Group ②: 649891198
+  - Group ③: 966720321
+  - QQ level 32+ (two suns) required for auto-approval; low-level accounts will be rejected
+- **Web Version**: https://naraka.drivod.top/
+
+---
+
 <br>
 <br>
 <br>
