@@ -50,7 +50,7 @@
                 <!--  ==================== Row 0: Title bar ====================  -->
 
                 <!--  Title bar background  -->
-                <Border Grid.Row="0" Background="#F5F5F5" />
+                <Border Grid.Row="0" Background="#F5F5F5" MouseDown="TitleBar_MouseDown" />
 
                 <!--  Window icon + title  -->
                 <StackPanel
