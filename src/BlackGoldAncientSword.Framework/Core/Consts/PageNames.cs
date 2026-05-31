@@ -1,4 +1,4 @@
-namespace BlackGoldAncientSword.Framework.Core.Consts
+﻿namespace BlackGoldAncientSword.Framework.Core.Consts
 {
     public static class PageNames
     {
@@ -9,5 +9,6 @@ namespace BlackGoldAncientSword.Framework.Core.Consts
         public const string SettingsPage = nameof(SettingsPage);
         public const string AnnouncementPage = nameof(AnnouncementPage);
         public const string ClosePromptPage = nameof(ClosePromptPage);
+        public const string FeedbackPage = nameof(FeedbackPage);
     }
 }
