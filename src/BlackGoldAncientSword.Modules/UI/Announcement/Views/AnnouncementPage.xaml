@@ -6,8 +6,12 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions;assembly=BlackGoldAncientSword.Framework"
     Background="Transparent"
     mc:Ignorable="d">
+    <bases:UserControlBase.Resources>
+        <ext:MultiplyConverter x:Key="MultiplyConverter" />
+    </bases:UserControlBase.Resources>
     <Grid
         x:Name="OverlayGrid"
         HorizontalAlignment="Stretch"
@@ -16,7 +20,7 @@
         KeyDown="Grid_KeyDown"
         Focusable="True">
         <Border
-            MaxWidth="1080"
+            MaxWidth="1080" MinWidth="450" MaxHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource MultiplyConverter}, ConverterParameter=0.8}"
             Padding="10"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
@@ -71,47 +75,34 @@
                             Text="{DynamicResource Announcement.UpdateHistory}" />
                         <ItemsControl ItemsSource="{Binding UpdateHistory}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,2">
+                                                                <DataTemplate>
+                                    <Grid Margin="0,4">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock
+                                        <Border
                                             Grid.Column="0"
+                                            Padding="4,1"
                                             VerticalAlignment="Top"
-                                            FontSize="12"
-                                            Foreground="Gray"
-                                            Text="{Binding Version}" />
-                                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                                            Background="#E8F0FE"
+                                            CornerRadius="3">
                                             <TextBlock
-                                                FontSize="12"
-                                                Text="{Binding Title}"
-                                                TextWrapping="Wrap" />
-                                            <TextBlock
-                                                Margin="0,2,0,0"
                                                 FontSize="11"
-                                                Foreground="Gray"
-                                                Text="{Binding Detail}"
-                                                TextWrapping="Wrap" />
-                                        </StackPanel>
+                                                Foreground="#1A73E8"
+                                                Text="{Binding Version}" />
+                                        </Border>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Margin="10,0,0,0"
+                                            FontSize="12"
+                                            Foreground="#333333"
+                                            Text="{Binding Detail}"
+                                            TextWrapping="Wrap" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-
-                        <Separator Margin="0,12" />
-
-                        <TextBlock
-                            Margin="0,0,0,8"
-                            FontSize="14"
-                            FontWeight="SemiBold"
-                            Text="{DynamicResource Announcement.Notice}" />
-                        <TextBlock
-                            FontSize="12"
-                            Foreground="Gray"
-                            Text="{Binding Notice}"
-                            TextWrapping="Wrap" />
                     </StackPanel>
                 </ScrollViewer>
 

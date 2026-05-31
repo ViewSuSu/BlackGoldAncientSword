@@ -11,23 +11,9 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
 {
     public class AnnouncementPageViewModel : ViewModelBase
     {
-        private static string L(string key, string fallback) =>
-            System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
-
         private readonly IGitHubReleaseService _releaseService;
 
         public ObservableCollection<UpdateHistoryItem> UpdateHistory { get; } = new();
-
-        private string _notice = string.Empty;
-        public string Notice
-        {
-            get => _notice;
-            set
-            {
-                _notice = value;
-                RaisePropertyChanged();
-            }
-        }
 
         private bool _isLoading;
         public bool IsLoading
@@ -43,7 +29,6 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
         public AnnouncementPageViewModel(IGitHubReleaseService releaseService)
         {
             _releaseService = releaseService;
-            Notice = L("Announcement.Loading", "正在加载更新历史...");
             IsLoading = true;
             LoadReleasesAsync().SafeFireAndForget("Announcement.LoadReleases");
         }
@@ -56,23 +41,13 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     UpdateHistory.Clear();
-                    if (releases.Count > 0)
+                    foreach (var r in releases)
                     {
-                        foreach (var r in releases)
+                        UpdateHistory.Add(new UpdateHistoryItem
                         {
-                            UpdateHistory.Add(new UpdateHistoryItem
-                            {
-                                Version = r.TagName,
-                                Title = string.IsNullOrEmpty(r.Name) ? r.TagName : r.Name,
-                                Detail = r.Body,
-                                Url = r.HtmlUrl
-                            });
-                        }
-                        Notice = releases[0].Body;
-                    }
-                    else
-                    {
-                        Notice = L("Announcement.NoData", "暂无更新历史。");
+                            Version = r.TagName,
+                            Detail = r.Body
+                        });
                     }
                     IsLoading = false;
                 });
@@ -81,7 +56,6 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    Notice = L("Announcement.LoadFailed", "加载更新历史失败，请检查网络连接。");
                     IsLoading = false;
                 });
             }
@@ -107,8 +81,6 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
     public class UpdateHistoryItem
     {
         public string Version { get; set; } = string.Empty;
-        public string Title { get; set; } = string.Empty;
         public string Detail { get; set; } = string.Empty;
-        public string Url { get; set; } = string.Empty;
     }
 }
