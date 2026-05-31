@@ -72,6 +72,31 @@ New GitHub Releases are detected in the background. Options: skip version, remin
 
 ---
 
+
+## FAQ 🧐
+
+**Q: Will I get banned for using BlackGoldAncientSword? 😨**
+
+This app only reads the game log file (Player.log) and captures the hero selection screen for OCR recognition. It does not modify or inject into game files or memory in any way. You are very unlikely to be banned, though no guarantee can be made.
+
+**Q: What if I actually get banned?**
+
+Appeal or wait for the ban to expire 😭
+
+**Q: Why can't I query stats / why is data delayed?**
+
+All stats data comes from the official NARAKA API — the app only displays it. If data is unavailable or delayed, the issue is almost certainly on the server side.
+
+**Q: Why does teammate recognition fail or show inaccurate results?**
+
+OCR recognition depends on screenshot quality. Make sure the game window is not covered by other windows and that teammate nicknames are clearly visible on the hero selection screen. You can also click "Re-recognize Team" to retry manually.
+
+**Q: Why does the app sometimes crash?**
+
+Possible causes: .NET runtime exceptions, game log file being locked, screen capture API conflicts, etc. Try restarting the app. If the problem persists, please report it in the feedback group.
+
+---
+
 ## Feedback & Community
 
 - **App Feedback QQ Group**: 146088141
