@@ -1,4 +1,4 @@
-# 黑金古刀-永劫助手（BlackGoldAncientSword）
+﻿# 黑金古刀-永劫助手（BlackGoldAncientSword）
 
 > 查询《永劫无间》（NARAKA: BLADEPOINT）玩家战绩数据的桌面辅助工具。
 
@@ -11,9 +11,9 @@
 
 ## 下载 📥
 
-[![Download](https://img.shields.io/badge/下载-最新版本-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest)
+[![Download](https://img.shields.io/badge/下载-最新版本-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest/download/BlackGoldAncientSword.App.exe)
 
-前往 [最新 Release](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest) 页面，下载 .exe 安装包即可使用。
+点击上方按钮即可直接下载最新版本的 .exe 安装包。
 
 # 用户手册
 
