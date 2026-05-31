@@ -85,7 +85,7 @@ Appeal or wait for the ban to expire 😭
 
 **Q: Why can't I query stats / why is data delayed?**
 
-All stats data comes from the official NARAKA API — the app only displays it. If data is unavailable or delayed, the issue is almost certainly on the server side.
+All stats data comes from the same API powering https://naraka.drivod.top/ , provided by craftwyrd. The app only displays the data. If data is unavailable or delayed, the issue is almost certainly on the API server side.
 
 **Q: Why does teammate recognition fail or show inaccurate results?**
 
