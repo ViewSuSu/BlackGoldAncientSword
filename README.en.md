@@ -65,13 +65,6 @@ Minimize to system tray during gameplay. Right-click the tray icon to restore or
 
 ![Close prompt screenshot](docs/images/05_close_prompt.png)
 
-### Toast Notifications
-
-Success/error toasts appear in the bottom-right corner (e.g. "Copied", "Cache cleared").
-
-### Auto Updates
-
-New GitHub Releases are detected in the background. Options: skip version, remind later, or download & install.
 
 ---
 
