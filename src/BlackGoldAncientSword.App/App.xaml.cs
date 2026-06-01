@@ -1,8 +1,10 @@
-using System.Windows.Threading;
+﻿using System.Windows.Threading;
 using System.Diagnostics;
 using BlackGoldAncientSword.App.Shell;
 using BlackGoldAncientSword.Framework.Core.Events;
+using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Extensions;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services;
 using BlackGoldAncientSword.GameMonitor;
 using BlackGoldAncientSword.Modules;
@@ -45,6 +47,11 @@ namespace BlackGoldAncientSword.App
         protected override async void OnStartup(System.Windows.StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Eagerly create TeamInfo ViewModel so it can always listen for game status
+            var navigation = Container.Resolve<IMainContentNavigationService>();
+            navigation.NavigateTo(PageNames.TeamInfoPage);
+            navigation.NavigateTo(PageNames.HomePage);
 
             try
             {
