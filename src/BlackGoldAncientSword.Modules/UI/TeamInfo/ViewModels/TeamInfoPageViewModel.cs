@@ -445,6 +445,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private static void AddDiffItem(ObservableCollection<MemberDiffItem> target, string label, double leftVal, double rightVal, bool isPercent)
         {
             var diff = leftVal - rightVal;
+            const string fmt = "0.##"; // at most 2 decimal places
             string diffText;
             string color;
             if (Math.Abs(diff) < 0.001)
@@ -470,7 +471,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 RightValue = isPercent ? $"{rightVal:F1}%" : $"{rightVal}",
                 DiffText = diffText,
                 DiffColor = color,
-                IsLeftBetter = diff > 0.001
+                IsLeftBetter = diff > 0.001,
+                DiffTooltip = leftVal + " vs " + rightVal
             });
         }
 
@@ -762,6 +764,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public string DiffText { get; set; } = string.Empty;
         public string DiffColor { get; set; } = "#999999";
         public bool IsLeftBetter { get; set; }
+        public string DiffTooltip { get; set; } = string.Empty;
     }
 
     public class TeamMemberInfo : ViewModelBase

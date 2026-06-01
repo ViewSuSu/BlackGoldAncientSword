@@ -752,7 +752,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[0].DiffColor}"
-                            Text="{Binding DiffLeft[0].DiffText}"
+                            Text="{Binding DiffLeft[0].DiffText}" ToolTip="{Binding DiffLeft[0].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -795,7 +795,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[0].DiffColor}"
-                            Text="{Binding DiffRight[0].DiffText}"
+                            Text="{Binding DiffRight[0].DiffText}" ToolTip="{Binding DiffRight[0].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -862,7 +862,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[1].DiffColor}"
-                            Text="{Binding DiffLeft[1].DiffText}"
+                            Text="{Binding DiffLeft[1].DiffText}" ToolTip="{Binding DiffLeft[1].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -905,7 +905,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[1].DiffColor}"
-                            Text="{Binding DiffRight[1].DiffText}"
+                            Text="{Binding DiffRight[1].DiffText}" ToolTip="{Binding DiffRight[1].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -972,7 +972,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[2].DiffColor}"
-                            Text="{Binding DiffLeft[2].DiffText}"
+                            Text="{Binding DiffLeft[2].DiffText}" ToolTip="{Binding DiffLeft[2].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1015,7 +1015,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[2].DiffColor}"
-                            Text="{Binding DiffRight[2].DiffText}"
+                            Text="{Binding DiffRight[2].DiffText}" ToolTip="{Binding DiffRight[2].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1082,7 +1082,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[3].DiffColor}"
-                            Text="{Binding DiffLeft[3].DiffText}"
+                            Text="{Binding DiffLeft[3].DiffText}" ToolTip="{Binding DiffLeft[3].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1125,7 +1125,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[3].DiffColor}"
-                            Text="{Binding DiffRight[3].DiffText}"
+                            Text="{Binding DiffRight[3].DiffText}" ToolTip="{Binding DiffRight[3].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1192,7 +1192,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[4].DiffColor}"
-                            Text="{Binding DiffLeft[4].DiffText}"
+                            Text="{Binding DiffLeft[4].DiffText}" ToolTip="{Binding DiffLeft[4].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1235,7 +1235,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[4].DiffColor}"
-                            Text="{Binding DiffRight[4].DiffText}"
+                            Text="{Binding DiffRight[4].DiffText}" ToolTip="{Binding DiffRight[4].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1302,7 +1302,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[5].DiffColor}"
-                            Text="{Binding DiffLeft[5].DiffText}"
+                            Text="{Binding DiffLeft[5].DiffText}" ToolTip="{Binding DiffLeft[5].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1345,7 +1345,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[5].DiffColor}"
-                            Text="{Binding DiffRight[5].DiffText}"
+                            Text="{Binding DiffRight[5].DiffText}" ToolTip="{Binding DiffRight[5].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1412,7 +1412,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[6].DiffColor}"
-                            Text="{Binding DiffLeft[6].DiffText}"
+                            Text="{Binding DiffLeft[6].DiffText}" ToolTip="{Binding DiffLeft[6].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1455,7 +1455,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[6].DiffColor}"
-                            Text="{Binding DiffRight[6].DiffText}"
+                            Text="{Binding DiffRight[6].DiffText}" ToolTip="{Binding DiffRight[6].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1522,7 +1522,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[7].DiffColor}"
-                            Text="{Binding DiffLeft[7].DiffText}"
+                            Text="{Binding DiffLeft[7].DiffText}" ToolTip="{Binding DiffLeft[7].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1565,7 +1565,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[7].DiffColor}"
-                            Text="{Binding DiffRight[7].DiffText}"
+                            Text="{Binding DiffRight[7].DiffText}" ToolTip="{Binding DiffRight[7].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1632,7 +1632,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[8].DiffColor}"
-                            Text="{Binding DiffLeft[8].DiffText}"
+                            Text="{Binding DiffLeft[8].DiffText}" ToolTip="{Binding DiffLeft[8].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1675,7 +1675,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[8].DiffColor}"
-                            Text="{Binding DiffRight[8].DiffText}"
+                            Text="{Binding DiffRight[8].DiffText}" ToolTip="{Binding DiffRight[8].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1742,7 +1742,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[9].DiffColor}"
-                            Text="{Binding DiffLeft[9].DiffText}"
+                            Text="{Binding DiffLeft[9].DiffText}" ToolTip="{Binding DiffLeft[9].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1785,7 +1785,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[9].DiffColor}"
-                            Text="{Binding DiffRight[9].DiffText}"
+                            Text="{Binding DiffRight[9].DiffText}" ToolTip="{Binding DiffRight[9].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1852,7 +1852,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[10].DiffColor}"
-                            Text="{Binding DiffLeft[10].DiffText}"
+                            Text="{Binding DiffLeft[10].DiffText}" ToolTip="{Binding DiffLeft[10].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1895,7 +1895,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[10].DiffColor}"
-                            Text="{Binding DiffRight[10].DiffText}"
+                            Text="{Binding DiffRight[10].DiffText}" ToolTip="{Binding DiffRight[10].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -1962,7 +1962,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[11].DiffColor}"
-                            Text="{Binding DiffLeft[11].DiffText}"
+                            Text="{Binding DiffLeft[11].DiffText}" ToolTip="{Binding DiffLeft[11].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2005,7 +2005,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[11].DiffColor}"
-                            Text="{Binding DiffRight[11].DiffText}"
+                            Text="{Binding DiffRight[11].DiffText}" ToolTip="{Binding DiffRight[11].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2072,7 +2072,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[12].DiffColor}"
-                            Text="{Binding DiffLeft[12].DiffText}"
+                            Text="{Binding DiffLeft[12].DiffText}" ToolTip="{Binding DiffLeft[12].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2115,7 +2115,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[12].DiffColor}"
-                            Text="{Binding DiffRight[12].DiffText}"
+                            Text="{Binding DiffRight[12].DiffText}" ToolTip="{Binding DiffRight[12].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2182,7 +2182,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[13].DiffColor}"
-                            Text="{Binding DiffLeft[13].DiffText}"
+                            Text="{Binding DiffLeft[13].DiffText}" ToolTip="{Binding DiffLeft[13].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2225,7 +2225,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[13].DiffColor}"
-                            Text="{Binding DiffRight[13].DiffText}"
+                            Text="{Binding DiffRight[13].DiffText}" ToolTip="{Binding DiffRight[13].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2292,7 +2292,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[14].DiffColor}"
-                            Text="{Binding DiffLeft[14].DiffText}"
+                            Text="{Binding DiffLeft[14].DiffText}" ToolTip="{Binding DiffLeft[14].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2335,7 +2335,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[14].DiffColor}"
-                            Text="{Binding DiffRight[14].DiffText}"
+                            Text="{Binding DiffRight[14].DiffText}" ToolTip="{Binding DiffRight[14].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2402,7 +2402,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[15].DiffColor}"
-                            Text="{Binding DiffLeft[15].DiffText}"
+                            Text="{Binding DiffLeft[15].DiffText}" ToolTip="{Binding DiffLeft[15].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2445,7 +2445,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[15].DiffColor}"
-                            Text="{Binding DiffRight[15].DiffText}"
+                            Text="{Binding DiffRight[15].DiffText}" ToolTip="{Binding DiffRight[15].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2510,7 +2510,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffLeft[16].DiffColor}"
-                            Text="{Binding DiffLeft[16].DiffText}"
+                            Text="{Binding DiffLeft[16].DiffText}" ToolTip="{Binding DiffLeft[16].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border
@@ -2551,7 +2551,7 @@
                             FontSize="13"
                             FontWeight="Bold"
                             Foreground="{Binding DiffRight[16].DiffColor}"
-                            Text="{Binding DiffRight[16].DiffText}"
+                            Text="{Binding DiffRight[16].DiffText}" ToolTip="{Binding DiffRight[16].DiffTooltip, FallbackValue=''}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border

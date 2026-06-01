@@ -10,6 +10,7 @@ namespace BlackGoldAncientSword.Modules.Module
 
         public void RegisterTypes(IContainerRegistry containerRegistry)
         {
+            containerRegistry.RegisterSingleton<TeamInfoPageViewModel>();
             containerRegistry.RegisterForNavigation<TeamInfoPage, TeamInfoPageViewModel>();
         }
     }
