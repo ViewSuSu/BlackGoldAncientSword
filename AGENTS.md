@@ -1,4 +1,4 @@
-﻿# AGENTS.md — NarakaBladepoint-Stats-Assistant
+# AGENTS.md — NarakaBladepoint-Stats-Assistant
 
 ## C# MVVM / 属性变更通知规则
 
@@ -21,4 +21,8 @@
 
 4. **防止中文乱码**：修改或生成文件时，确保文件中的中文字符正常显示，不得出现乱码。写入文件时必须使用 UTF-8 编码（无 BOM）。
 
-
+5. **每次修改后必须 Build**：对代码做任何修改（新增、编辑、删除文件）后，必须运行以下命令确保项目编译通过，不得跳过：
+   ```powershell
+   dotnet build src/BlackGoldAncientSword.slnx
+   ```
+   若编译失败（exit code ≠ 0 或有 error），必须修复所有编译错误后再次 build，直到 0 error 为止才可认为修改完成。

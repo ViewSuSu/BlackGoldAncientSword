@@ -42,6 +42,13 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
     {
         private SparkleUpdater? _sparkle;
         private bool _autoPopupEnabled;
+
+        /// <summary>
+        /// True when UpdateDetected fired but was intentionally suppressed by the version-guard.
+        /// Used by UpdateCheckFinished to know it should notify the VM even when status is UpdateAvailable.
+        /// </summary>
+        private volatile bool _updateSuppressedByGuard;
+
         public string CurrentVersion { get; }
 
         public bool IsUpdateAvailable { get; private set; }
@@ -92,9 +99,13 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 var latestVer = args.LatestVersion?.Version ?? "";
                 Debug.WriteLine($"[UpdateService] UpdateDetected 事件触发，最新版本: {latestVer}, 当前版本: {CurrentVersion}");
 
+                // Reset suppression flag on each detection cycle
+                _updateSuppressedByGuard = false;
+
                 // Guard: ignore if same version is detected (e.g. assembly version differs from appcast version)
                 if (string.Equals(latestVer, CurrentVersion, StringComparison.OrdinalIgnoreCase))
                 {
+                    _updateSuppressedByGuard = true;
                     Debug.WriteLine($"[UpdateService] 版本一致 ({latestVer})，忽略更新通知");
                     return;
                 }
@@ -113,12 +124,18 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             _sparkle.UpdateCheckFinished += (_, status) =>
             {
                 Debug.WriteLine($"[UpdateService] UpdateCheckFinished 事件触发，状态: {status}");
-                if (status != UpdateStatus.UpdateAvailable)
+
+                // Always notify on check finish, even when UpdateDetected was suppressed by guard.
+                // Otherwise the VM would stay in its initial "checking" state forever.
+                bool shouldNotify = status != UpdateStatus.UpdateAvailable || _updateSuppressedByGuard;
+
+                if (shouldNotify)
                 {
                     SafeInvoke(() =>
                     {
                         IsUpdateAvailable = false;
                         LatestVersion = null;
+                        _updateSuppressedByGuard = false;
                         Debug.WriteLine("[UpdateService] 已标记 IsUpdateAvailable=false, LatestVersion=null");
                         UpdateAvailabilityChanged?.Invoke(this, false);
                         Debug.WriteLine("[UpdateService] UpdateAvailabilityChanged 事件已触发 (false)");
@@ -153,7 +170,18 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             // Always use quiet check to avoid NetSparkle dialogs
             CustomUIFactory.SuppressDialogs = true;
             CustomUIFactory.ShowNoUpdateMessage = false;
-            _sparkle.CheckForUpdatesQuietly();
+
+            try
+            {
+                _sparkle.CheckForUpdatesQuietly();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[UpdateService] CheckForUpdatesQuietly 异常: {ex}");
+                // Ensure completion is still reported even if CheckForUpdatesQuietly throws
+                SafeInvoke(() => UpdateAvailabilityChanged?.Invoke(this, IsUpdateAvailable));
+                return;
+            }
             Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
 
             // GUARANTEE: Always notify completion, even when NetSparkle's events don't fire
