@@ -13,3 +13,6 @@ src/ocr_service/__pycache__/
 *.binlog
 /temp_patch.diff
 /temp_patch.diff
+
+# --- Local-only skills (never commit) ---
+.codex/skills/gh-token/
