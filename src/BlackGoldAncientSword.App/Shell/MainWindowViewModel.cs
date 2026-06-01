@@ -153,9 +153,34 @@ namespace BlackGoldAncientSword.App.Shell
         public DelegateCommand CheckForUpdatesCommand =>
             _checkForUpdatesCommand ??= new DelegateCommand(async () =>
             {
-                Debug.WriteLine("[MainWindowVM] CheckForUpdatesCommand 执行，用户主动检查更新");
+                Debug.WriteLine("[MainWindowVM] CheckForUpdatesCommand 执行，打开GitHub下载最新版本");
+            try
+            {
+                // Fetch latest release download URL from GitHub API
+                using var http = new System.Net.Http.HttpClient();
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword");
+                var json = await http.GetStringAsync("https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/releases/latest");
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var assets = doc.RootElement.GetProperty("assets");
+                string? downloadUrl = null;
+                foreach (var asset in assets.EnumerateArray())
+                {
+                    var name = asset.GetProperty("name").GetString();
+                    if (name != null && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        downloadUrl = asset.GetProperty("browser_download_url").GetString();
+                        break;
+                    }
+                }
+                var url = downloadUrl ?? "https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest";
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch
+            {
+                // Fallback: open releases page
                 Process.Start(new ProcessStartInfo("https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest") { UseShellExecute = true });
-                Debug.WriteLine("[MainWindowVM] CheckForUpdatesCommand 完成");
+            }
+            Debug.WriteLine("[MainWindowVM] CheckForUpdatesCommand 完成");
             });
 
         public MainWindowViewModel(
