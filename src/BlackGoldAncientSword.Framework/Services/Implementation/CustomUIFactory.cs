@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -15,7 +15,7 @@ using NetSparkleUpdater.UI.WPF.ViewModels;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
 {
-    internal class CustomUIFactory : UIFactory
+    public class CustomUIFactory : UIFactory
     {
         public static bool SuppressDialogs { get; set; }
         public static bool ShowNoUpdateMessage { get; set; } = true;
