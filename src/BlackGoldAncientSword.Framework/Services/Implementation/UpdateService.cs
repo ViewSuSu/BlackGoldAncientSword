@@ -153,7 +153,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             // Always use quiet check to avoid NetSparkle dialogs
             CustomUIFactory.SuppressDialogs = true;
             CustomUIFactory.ShowNoUpdateMessage = false;
-            await Task.Run(() => _sparkle.CheckForUpdatesQuietly());
+            _sparkle.CheckForUpdatesQuietly();
             Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
 
             // GUARANTEE: Always notify completion, even when NetSparkle's events don't fire
