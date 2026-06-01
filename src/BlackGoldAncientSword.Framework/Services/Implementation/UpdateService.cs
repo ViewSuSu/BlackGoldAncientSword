@@ -99,7 +99,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     return;
                 }
 
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                SafeInvoke(() =>
                 {
                     IsUpdateAvailable = true;
                     LatestVersion = latestVer;
@@ -115,7 +115,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 Debug.WriteLine($"[UpdateService] UpdateCheckFinished 事件触发，状态: {status}");
                 if (status != UpdateStatus.UpdateAvailable)
                 {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    SafeInvoke(() =>
                     {
                         IsUpdateAvailable = false;
                         LatestVersion = null;
@@ -130,7 +130,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             _sparkle.CloseApplication += () =>
             {
                 Debug.WriteLine("[UpdateService] CloseApplication 事件触发，正在关闭应用");
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                SafeInvoke(() =>
                 {
                     System.Windows.Application.Current.Shutdown();
                     Debug.WriteLine("[UpdateService] Application.Shutdown 已调用");
@@ -148,18 +148,26 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 Debug.WriteLine("[UpdateService] _sparkle 为 null，跳过检查");
                 return;
+            }
+
             // Always use quiet check to avoid NetSparkle dialogs
             CustomUIFactory.SuppressDialogs = true;
             CustomUIFactory.ShowNoUpdateMessage = false;
             await Task.Run(() => _sparkle.CheckForUpdatesQuietly());
             Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
 
-            // Ensure completion is always reported (NetSparkle may not fire events when versions match)
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                UpdateAvailabilityChanged?.Invoke(this, IsUpdateAvailable));
-            }
+            // GUARANTEE: Always notify completion, even when NetSparkle's events don't fire
+            // This fixes the bug where "(最新)" doesn't show when versions match
+            SafeInvoke(() => UpdateAvailabilityChanged?.Invoke(this, IsUpdateAvailable));
         }
-
+        private static void SafeInvoke(Action action)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null)
+                dispatcher.Invoke(action);
+            else
+                action();
+                        }
 
         public void SetAutoPopupEnabled(bool enabled)
         {
