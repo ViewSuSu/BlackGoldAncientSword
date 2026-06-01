@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Generated;
@@ -136,8 +136,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             set => SetProperty(ref _rankIcon, value);
         }
 
-        private int _rankScore;
-        public int RankScore
+        private double _rankScore;
+        public double RankScore
         {
             get => _rankScore;
             set => SetProperty(ref _rankScore, value);
@@ -157,8 +157,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             set => SetProperty(ref _rankDisplayWithStars, value);
         }
 
-        private int _rankTierScore;
-        public int RankTierScore
+        private double _rankTierScore;
+        public double RankTierScore
         {
             get => _rankTierScore;
             set => SetProperty(ref _rankTierScore, value);
@@ -493,17 +493,17 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                             HonorTitles = new ObservableCollection<HonorTitleDisplayItem>(),
                             HeroIcon = b.Hero?.HeroIcon ?? string.Empty,
                             HeroName = b.Hero?.HeroName ?? "Unknown",
-                            GameModeText = FormatGameMode(b.GameMode ?? 0),
-                            GameModeCategoryText = FormatGameModeCategory(b.GameMode ?? 0),
-                            GameModeTeamSizeText = FormatGameModeTeamSize(b.GameMode ?? 0),
-                            GameMode = b.GameMode ?? 0,
-                            Kill = b.Kill ?? 0,
-                            Damage = b.Damage ?? 0,
-                            ScoreNumber = GetRankTierScore((b.RoundRankScore ?? 0), b.GameMode ?? 0),
+                            GameModeText = FormatGameMode((int)(b.GameMode ?? 0)),
+                            GameModeCategoryText = FormatGameModeCategory((int)(b.GameMode ?? 0)),
+                            GameModeTeamSizeText = FormatGameModeTeamSize((int)(b.GameMode ?? 0)),
+                            GameMode = (int)(b.GameMode ?? 0),
+                            Kill = (int)(b.Kill ?? 0),
+                            Damage = (int)(b.Damage ?? 0),
+                            ScoreNumber = GetRankTierScore((b.RoundRankScore ?? 0), (int)(b.GameMode ?? 0)),
                             ScoreDiff = (b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0),
-                            RankDisplayText = GetRankNameForScore((b.RoundRankScore ?? 0), b.GameMode ?? 0),
-                            StarCount = GetStarCount((b.RoundRankScore ?? 0), b.GameMode ?? 0),
-                            HasStars = IsTianxuanMode(b.GameMode ?? 0) && (b.RoundRankScore ?? 0) >= 4500,
+                            RankDisplayText = GetRankNameForScore((b.RoundRankScore ?? 0), (int)(b.GameMode ?? 0)),
+                            StarCount = GetStarCount((b.RoundRankScore ?? 0), (int)(b.GameMode ?? 0)),
+                            HasStars = IsTianxuanMode((int)(b.GameMode ?? 0)) && (b.RoundRankScore ?? 0) >= 4500,
                             ScoreDiffDisplay = FormatScoreDiff((b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0)),
                             BattleTime = FormatUnixTime(b.BattleEndTime ?? 0)
                         });
@@ -787,22 +787,22 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             };
         }
 
-        private static string FormatScore(int begin, int round)
+        private static string FormatScore(double begin, double round)
         {
             var diff = round - begin;
             var sign = diff >= 0 ? "+" : "";
             return string.Format("{0} -> {1} ({2}{3})", begin, round, sign, diff);
         }
-        private static bool IsTianxuanMode(int gameMode)
+        private static bool IsTianxuanMode(double gameMode)
         {
             return gameMode == 1 || gameMode == 12 || gameMode == 2;
         }
 
-        private static string GetRankNameForScore(int score, int gameMode = 0)
+        private static string GetRankNameForScore(double score, int gameMode = 0)
         {
             if (IsTianxuanMode(gameMode))
             {
-                if (score >= 7000) return L("Stats.RankName.Solo.7000", "无量梵天");
+                if (score >= 7500) return L("Stats.RankName.Solo.7500", "无量梵天");
                 if (score >= 6000) return L("Stats.RankName.Solo.6000", "无相龙王");
                 if (score >= 5000) return L("Stats.RankName.Solo.5000", "无双修罗");
                 if (score >= 4500) return L("Stats.RankName.Solo.4500", "无间修罗");
@@ -829,23 +829,20 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
         }
 
-        private static int GetStarCount(int score, int gameMode = 0)
+        private static int GetStarCount(double score, int gameMode = 0)
         {
             if (!IsTianxuanMode(gameMode)) return 0;
-            if (score >= 7000) return (score - 7000) / 100;
-            if (score >= 6000) return (score - 6000) / 100;
-            if (score >= 5000) return (score - 5000) / 100;
-            if (score >= 4500) return (score - 4500) / 100;
+            if (score >= 4500) return (int)((score - 4500) / 100);
             return 0;
         }
 
-        private static string FormatScoreDiff(int diff)
+        private static string FormatScoreDiff(double diff)
         {
             var sign = diff >= 0 ? "+" : "";
             return "(" + sign + diff + ")";
         }
 
-        private static string FormatPageRankDisplay(int score, int gameMode = 0)
+        private static string FormatPageRankDisplay(double score, int gameMode = 0)
         {
             var rankName = GetRankNameForScore(score, gameMode);
             var stars = GetStarCount(score, gameMode);
@@ -854,12 +851,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             return rankName;
         }
 
-        private static int GetRankTierScore(int score, int gameMode = 0)
+        private static double GetRankTierScore(double score, int gameMode = 0)
         {
             if (!IsTianxuanMode(gameMode)) return score;
-            if (score >= 7000) return (score - 7000) % 100;
-            if (score >= 6000) return (score - 6000) % 100;
-            if (score >= 5000) return (score - 5000) % 100;
             if (score >= 4500) return (score - 4500) % 100;
             return score;
         }
@@ -874,7 +868,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
     public class RecentBattleDisplayItem
     {
-        public int Rank { get; set; }
+        public double Rank { get; set; }
         public ObservableCollection<HonorTitleDisplayItem> HonorTitles { get; set; } = new();
         public string HeroIcon { get; set; } = string.Empty;
         public string HeroName { get; set; } = string.Empty;
@@ -884,10 +878,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string GameModeTeamSizeText { get; set; } = string.Empty;
         public int Kill { get; set; }
         public int Damage { get; set; }
-        public int ScoreNumber { get; set; }
-        public int ScoreDiff { get; set; }
+        public double ScoreNumber { get; set; }
+        public double ScoreDiff { get; set; }
         public string RankDisplayText { get; set; } = string.Empty;
-        public int StarCount { get; set; }
+        public double StarCount { get; set; }
         public bool HasStars { get; set; }
         public string ScoreDiffDisplay { get; set; } = string.Empty;
         public string BattleTime { get; set; } = string.Empty;
