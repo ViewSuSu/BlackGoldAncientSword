@@ -1,196 +1,344 @@
-using BlackGoldAncientSword.Framework.Core.Attributes;
+﻿using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
-using NetSparkleUpdater;
-using NetSparkleUpdater.Enums;
-using NetSparkleUpdater.Interfaces;
-using NetSparkleUpdater.UI.WPF;
+using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Reflection;
-using System.Windows.Media.Imaging;
+using System.Windows;
+using System.IO;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
 {
     /// <summary>
-    /// Implements IAssemblyAccessor using reflection on the given assembly.
-    /// AssemblyVersion is overridden with a normalized string matching the appcast.
-    /// Avoids file-path accessors which break under single-file publish.
+    /// Update manifest in cc-switch/tauri-plugin-updater "latest.json" format.
     /// </summary>
-    internal sealed class VersionNormalizedAssemblyAccessor : IAssemblyAccessor
+    internal sealed class LatestJsonManifest
     {
-        private readonly Assembly _assembly;
+        [JsonProperty("version")]
+        public string? Version { get; set; }
 
-        public VersionNormalizedAssemblyAccessor(Assembly assembly, string normalizedVersion)
-        {
-            _assembly = assembly;
-            AssemblyVersion = normalizedVersion;
-        }
+        [JsonProperty("notes")]
+        public string? Notes { get; set; }
 
-        public string AssemblyVersion { get; }
-        public string AssemblyTitle => GetAttr<AssemblyTitleAttribute>()?.Title ?? "";
-        public string AssemblyDescription => GetAttr<AssemblyDescriptionAttribute>()?.Description ?? "";
-        public string AssemblyProduct => GetAttr<AssemblyProductAttribute>()?.Product ?? "";
-        public string AssemblyCopyright => GetAttr<AssemblyCopyrightAttribute>()?.Copyright ?? "";
-        public string AssemblyCompany => GetAttr<AssemblyCompanyAttribute>()?.Company ?? "";
+        [JsonProperty("pub_date")]
+        public string? PubDate { get; set; }
 
-        private T? GetAttr<T>() where T : Attribute =>
-            _assembly.GetCustomAttribute<T>();
+        [JsonProperty("platforms")]
+        public Dictionary<string, PlatformInfo>? Platforms { get; set; }
+    }
+
+    internal sealed class PlatformInfo
+    {
+        [JsonProperty("signature")]
+        public string? Signature { get; set; }
+
+        [JsonProperty("url")]
+        public string? Url { get; set; }
     }
 
     [Component(ComponentLifetime.Singleton)]
     public class UpdateService : IUpdateService
     {
-        private SparkleUpdater? _sparkle;
+        private static readonly HttpClient _httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+
         private bool _autoPopupEnabled;
+        private CancellationTokenSource? _downloadCts;
+
         public string CurrentVersion { get; }
 
         public bool IsUpdateAvailable { get; private set; }
 
         public string? LatestVersion { get; private set; }
 
-        public event System.EventHandler<bool>? UpdateAvailabilityChanged;
+        public string? DownloadUrl { get; private set; }
+
+        public string? ReleaseNotes { get; private set; }
+
+        public event EventHandler<bool>? UpdateAvailabilityChanged;
 
         public UpdateService()
         {
-            Debug.WriteLine("[UpdateService] 构造函数开始");
+            Debug.WriteLine("[UpdateService] 使用 cc-switch 兼容 latest.json 更新机制");
 
             CurrentVersion = GetCurrentVersion();
             Debug.WriteLine($"[UpdateService] 当前版本: {CurrentVersion}");
 
-            var appcastUrl = GetDefaultAppcastUrl();
-            Debug.WriteLine($"[UpdateService] Appcast URL: {appcastUrl}");
+            // Set User-Agent for GitHub API compatibility
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword-Updater/1.0");
+        }
 
-            // Load icon from Resources assembly
-            var iconUri = new Uri("pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/app.png");
-            var iconImage = new BitmapImage(iconUri);
-            Debug.WriteLine("[UpdateService] 图标加载完成");
+        /// <summary>
+        /// Checks GitHub Releases for latest.json and reports whether an update is available.
+        /// Mirrors cc-switch''s tauri-plugin-updater behavior.
+        /// </summary>
+        public async Task CheckForUpdatesAsync(bool showNoUpdateMessage = true)
+        {
+            Debug.WriteLine($"[UpdateService] CheckForUpdatesAsync, showNoUpdateMessage={showNoUpdateMessage}");
 
-            _sparkle = new SparkleUpdater(
-                appcastUrl,
-                new NetSparkleUpdater.SignatureVerifiers.Ed25519Checker(SecurityMode.Unsafe, "")
-            )
+            try
             {
-                UIFactory = new CustomUIFactory(iconImage),
-                RelaunchAfterUpdate = true,
-                LogWriter = new LogWriter(LogWriterOutputMode.Debug),
-            };
+                var url = GetLatestJsonUrl();
+                Debug.WriteLine($"[UpdateService] 获取 latest.json: {url}");
 
-            // Override AssemblyAccessor to use normalized version string
-            var entryAsm = typeof(UpdateService).Assembly;
-            if (entryAsm != null)
-            {
-                _sparkle.Configuration.AssemblyAccessor =
-                    new VersionNormalizedAssemblyAccessor(entryAsm, CurrentVersion);
-                Debug.WriteLine($"[UpdateService] 已设置自定义 AssemblyAccessor，规范化版本: {CurrentVersion}");
-            }
+                var json = await _httpClient.GetStringAsync(url);
+                var manifest = JsonConvert.DeserializeObject<LatestJsonManifest>(json);
 
-            Debug.WriteLine("[UpdateService] SparkleUpdater 实例已创建，SecurityMode=Unsafe");
-
-            // Update detected
-            _sparkle.UpdateDetected += (_, args) =>
-            {
-                var latestVer = args.LatestVersion?.Version ?? "";
-                Debug.WriteLine($"[UpdateService] UpdateDetected 事件触发，最新版本: {latestVer}, 当前版本: {CurrentVersion}");
-
-                // Guard: ignore if same version is detected (e.g. assembly version differs from appcast version)
-                if (string.Equals(latestVer, CurrentVersion, StringComparison.OrdinalIgnoreCase))
+                if (manifest == null || string.IsNullOrEmpty(manifest.Version))
                 {
-                    Debug.WriteLine($"[UpdateService] 版本一致 ({latestVer})，忽略更新通知");
+                    Debug.WriteLine("[UpdateService] latest.json 无效或版本为空");
+                    if (showNoUpdateMessage)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                            MessageBox.Show(
+                                Application.Current.TryFindResource("UpdateDialog.CannotDownloadAppcast") as string
+                                ?? "Unable to connect to update server.",
+                                Application.Current.TryFindResource("UpdateDialog.ErrorTitle") as string ?? "Error",
+                                MessageBoxButton.OK, MessageBoxImage.Warning));
+                    }
                     return;
                 }
 
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                var latestVersion = manifest.Version;
+                Debug.WriteLine($"[UpdateService] 最新版本: {latestVersion}");
+
+                // Get platform-specific download URL (windows-x86_64, matching cc-switch)
+                var platformKey = "windows-x86_64";
+                if (manifest.Platforms?.TryGetValue(platformKey, out var platformInfo) == true
+                    && !string.IsNullOrEmpty(platformInfo.Url))
                 {
-                    IsUpdateAvailable = true;
-                    LatestVersion = latestVer;
-                    Debug.WriteLine($"[UpdateService] 已标记 IsUpdateAvailable=true, LatestVersion={latestVer}");
-                    UpdateAvailabilityChanged?.Invoke(this, true);
-                    Debug.WriteLine("[UpdateService] UpdateAvailabilityChanged 事件已触发 (true)");
-                });
-            };
-
-            // Check finished without finding update
-            _sparkle.UpdateCheckFinished += (_, status) =>
-            {
-                Debug.WriteLine($"[UpdateService] UpdateCheckFinished 事件触发，状态: {status}");
-                if (status != UpdateStatus.UpdateAvailable)
-                {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        IsUpdateAvailable = false;
-                        LatestVersion = null;
-                        Debug.WriteLine("[UpdateService] 已标记 IsUpdateAvailable=false, LatestVersion=null");
-                        UpdateAvailabilityChanged?.Invoke(this, false);
-                        Debug.WriteLine("[UpdateService] UpdateAvailabilityChanged 事件已触发 (false)");
-                    });
-                }
-            };
-
-            // Close app when update is ready to install
-            _sparkle.CloseApplication += () =>
-            {
-                Debug.WriteLine("[UpdateService] CloseApplication 事件触发，正在关闭应用");
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                {
-                    System.Windows.Application.Current.Shutdown();
-                    Debug.WriteLine("[UpdateService] Application.Shutdown 已调用");
-                });
-            };
-
-            Debug.WriteLine("[UpdateService] 构造函数完成，所有事件已注册");
-        }
-
-        public async Task CheckForUpdatesAsync(bool showNoUpdateMessage = true)
-        {
-            Debug.WriteLine($"[UpdateService] CheckForUpdatesAsync 调用，showNoUpdateMessage={showNoUpdateMessage}");
-
-            if (_sparkle == null)
-            {
-                Debug.WriteLine("[UpdateService] _sparkle 为 null，跳过检查");
-                return;
-            }
-
-            if (showNoUpdateMessage)
-            {
-                CustomUIFactory.SuppressDialogs = false;
-                Debug.WriteLine("[UpdateService] 用户主动检查更新 -> CheckForUpdatesAtUserRequest");
-                // User-requested check: dispatch to UI thread so NetSparkle''s WPF
-                // controls (ProgressBar, dialogs) are created on the correct thread.
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(
-                    () => _sparkle.CheckForUpdatesAtUserRequest());
-                Debug.WriteLine("[UpdateService] CheckForUpdatesAtUserRequest 完成");
-            }
-            else
-            {
-                if (_autoPopupEnabled)
-                {
-                    // 用户开启了自动弹窗，使用 CheckForUpdatesAtUserRequest 以显示更新对话框
-                    CustomUIFactory.SuppressDialogs = false;
-                    CustomUIFactory.ShowNoUpdateMessage = false;
-                    Debug.WriteLine("[UpdateService] 启动时 AutoCheckUpdates=true，使用 CheckForUpdatesAtUserRequest");
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(
-                        () => _sparkle.CheckForUpdatesAtUserRequest());
-                    Debug.WriteLine("[UpdateService] CheckForUpdatesAtUserRequest 完成");
+                    DownloadUrl = platformInfo.Url;
+                    ReleaseNotes = manifest.Notes;
                 }
                 else
                 {
-                    CustomUIFactory.SuppressDialogs = true;
-                    Debug.WriteLine("[UpdateService] AutoCheckUpdates=false，静默检查");
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(
-                        () => _sparkle.CheckForUpdatesQuietly());
-                    Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
+                    Debug.WriteLine($"[UpdateService] 未找到 {platformKey} 平台下载信息");
+                    if (showNoUpdateMessage)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                            MessageBox.Show(
+                                Application.Current.TryFindResource("UpdateDialog.UpToDate") as string
+                                ?? "Your current version is up to date.",
+                                Application.Current.TryFindResource("UpdateDialog.InfoTitle") as string ?? "Info",
+                                MessageBoxButton.OK, MessageBoxImage.Information));
+                    }
+                    return;
+                }
+
+                // Compare versions (cc-switch style: simple semver comparison)
+                if (IsNewerVersion(latestVersion, CurrentVersion))
+                {
+                    Debug.WriteLine($"[UpdateService] 发现新版本: {latestVersion} > {CurrentVersion}");
+                    IsUpdateAvailable = true;
+                    LatestVersion = latestVersion;
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                        UpdateAvailabilityChanged?.Invoke(this, true));
+
+                    // Show update dialog if auto-popup is enabled or user manually checked
+                    if (showNoUpdateMessage || _autoPopupEnabled)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                            ShowUpdateAvailableDialog(latestVersion, manifest.Notes));
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"[UpdateService] 已是最新版本: {CurrentVersion} >= {latestVersion}");
+                    IsUpdateAvailable = false;
+                    LatestVersion = null;
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                        UpdateAvailabilityChanged?.Invoke(this, false));
+
+                    if (showNoUpdateMessage)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                            MessageBox.Show(
+                                Application.Current.TryFindResource("UpdateDialog.UpToDate") as string
+                                ?? "Your current version is up to date.",
+                                Application.Current.TryFindResource("UpdateDialog.InfoTitle") as string ?? "Info",
+                                MessageBoxButton.OK, MessageBoxImage.Information));
+                    }
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                Debug.WriteLine($"[UpdateService] 网络错误: {ex.Message}");
+                if (showNoUpdateMessage)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                        MessageBox.Show(
+                            Application.Current.TryFindResource("UpdateDialog.CannotDownloadAppcast") as string
+                            ?? "Unable to connect to update server.",
+                            Application.Current.TryFindResource("UpdateDialog.ErrorTitle") as string ?? "Error",
+                            MessageBoxButton.OK, MessageBoxImage.Warning));
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[UpdateService] 检查更新失败: {ex.Message}");
+                if (showNoUpdateMessage)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                        MessageBox.Show(
+                            string.Format(
+                                Application.Current.TryFindResource("UpdateDialog.DownloadError") as string
+                                ?? "Update check failed: {0}", ex.Message),
+                            Application.Current.TryFindResource("UpdateDialog.ErrorTitle") as string ?? "Error",
+                            MessageBoxButton.OK, MessageBoxImage.Warning));
                 }
             }
         }
 
+        /// <summary>
+        /// Downloads and installs the update (cc-switch behavior: download, then run installer).
+        /// </summary>
+        public async Task DownloadAndInstallAsync(IProgress<int>? progress = null)
+        {
+            if (string.IsNullOrEmpty(DownloadUrl))
+            {
+                Debug.WriteLine("[UpdateService] DownloadUrl 为空，无法下载");
+                return;
+            }
+
+            Debug.WriteLine($"[UpdateService] 开始下载: {DownloadUrl}");
+
+            try
+            {
+                _downloadCts = new CancellationTokenSource();
+                var response = await _httpClient.GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead, _downloadCts.Token);
+                response.EnsureSuccessStatusCode();
+
+                var totalBytes = response.Content.Headers.ContentLength ?? -1;
+                var tempFile = Path.Combine(Path.GetTempPath(), $"BlackGoldAncientSword_Setup_v{LatestVersion}.msi");
+
+                await using var contentStream = await response.Content.ReadAsStreamAsync(_downloadCts.Token);
+                await using var fileStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None);
+
+                var buffer = new byte[8192];
+                long totalRead = 0;
+                int bytesRead;
+
+                while ((bytesRead = await contentStream.ReadAsync(buffer, _downloadCts.Token)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), _downloadCts.Token);
+                    totalRead += bytesRead;
+
+                    if (totalBytes > 0 && progress != null)
+                    {
+                        progress.Report((int)(totalRead * 100 / totalBytes));
+                    }
+                }
+
+                Debug.WriteLine($"[UpdateService] 下载完成: {tempFile}");
+
+                // Run the installer (mirrors cc-switch''s tauri updater behavior)
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        var process = new Process
+                        {
+                            StartInfo = new ProcessStartInfo
+                            {
+                                FileName = "msiexec.exe",
+                                Arguments = $"/i \"{tempFile}\" /passive",
+                                UseShellExecute = true
+                            }
+                        };
+                        process.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[UpdateService] 启动安装程序失败: {ex.Message}");
+                        // Fallback: open the file directly
+                        Process.Start(new ProcessStartInfo(tempFile) { UseShellExecute = true });
+                    }
+
+                    // Close the app so the installer can replace files (cc-switch behavior)
+                    Application.Current.Shutdown();
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("[UpdateService] 下载已取消");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[UpdateService] 下载失败: {ex.Message}");
+                Application.Current.Dispatcher.Invoke(() =>
+                    MessageBox.Show(
+                        string.Format(
+                            Application.Current.TryFindResource("UpdateDialog.DownloadError") as string
+                            ?? "Download failed: {0}", ex.Message),
+                        Application.Current.TryFindResource("UpdateDialog.ErrorTitle") as string ?? "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error));
+            }
+        }
+
+        /// <summary>
+        /// Cancels an in-progress download.
+        /// </summary>
+        public void CancelDownload()
+        {
+            _downloadCts?.Cancel();
+        }
 
         public void SetAutoPopupEnabled(bool enabled)
         {
             _autoPopupEnabled = enabled;
         }
 
+        /// <summary>
+        /// Shows an update-available dialog and offers to download/install.
+        /// Mirrors cc-switch''s AboutSection update button behavior.
+        /// </summary>
+        private void ShowUpdateAvailableDialog(string latestVersion, string? notes)
+        {
+            var message = string.Format(
+                Application.Current.TryFindResource("UpdateDialog.VersionInfo") as string
+                ?? "{0} is now available (you have {1}). Would you like to update now?",
+                latestVersion, CurrentVersion);
+
+            var title = Application.Current.TryFindResource("UpdateDialog.SoftwareUpdate") as string
+                        ?? "Software Update";
+
+            var result = MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Information);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                Task.Run(async () => await DownloadAndInstallAsync());
+            }
+        }
+
+        /// <summary>
+        /// Semantic version comparison matching cc-switch''s behavior.
+        /// Strips leading 'v' if present.
+        /// </summary>
+        private static bool IsNewerVersion(string latest, string current)
+        {
+            try
+            {
+                var v1 = new Version(latest.TrimStart('v'));
+                var v2 = new Version(current.TrimStart('v'));
+                return v1 > v2;
+            }
+            catch
+            {
+                // Fallback to string comparison
+                return string.Compare(latest, current, StringComparison.OrdinalIgnoreCase) > 0;
+            }
+        }
+
+        /// <summary>
+        /// Reads the current version from AssemblyInformationalVersionAttribute,
+        /// stripping Git commit hash suffix (mirrors cc-switch''s simple semver).
+        /// </summary>
         private static string GetCurrentVersion()
         {
-            // Read AssemblyInformationalVersionAttribute, strip Git commit hash suffix
             var attr = typeof(UpdateService).Assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
             if (attr != null)
             {
@@ -201,16 +349,17 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             return "0.0.0";
         }
 
-        private static string GetDefaultAppcastUrl()
+        /// <summary>
+        /// cc-switch compatible update endpoint.
+        /// Uses GitHub Releases latest.json pattern:
+        /// https://github.com/{owner}/{repo}/releases/latest/download/latest.json
+        /// </summary>
+        private static string GetLatestJsonUrl()
         {
-            Debug.WriteLine("[UpdateService] GetDefaultAppcastUrl 开始");
-
-            // GitHub 仓库名是固定的，不应依赖 AssemblyProduct（会被 SDK 默认设为项目名 BlackGoldAncientSword.App）
+            // Same pattern as cc-switch: releases/latest/download/latest.json
+            const string repoOwner = "ViewSuSu";
             const string repoName = "BlackGoldAncientSword";
-            var url = $"https://github.com/ViewSuSu/{repoName}/releases/latest/download/appcast.xml";
-
-            Debug.WriteLine($"[UpdateService] Appcast URL: {url}");
-            return url;
+            return $"https://github.com/{repoOwner}/{repoName}/releases/latest/download/latest.json";
         }
     }
 }
