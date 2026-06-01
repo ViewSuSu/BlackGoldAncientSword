@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <ns0:ResourceDictionary xmlns:ns0="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:ns1="clr-namespace:System;assembly=mscorlib" xmlns:ns2="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <ns1:String ns2:Key="App.Title">黑金古刀-永劫助手</ns1:String>
@@ -200,7 +200,7 @@
     <ns1:String ns2:Key="Settings.CheckForUpdates">檢查更新</ns1:String>
     <ns1:String ns2:Key="Settings.UpdateChecking">正在檢查更新...</ns1:String>
     <ns1:String ns2:Key="Settings.NoUpdateAvailable">目前已經是最新版本</ns1:String>
-    <ns1:String ns2:Key="Settings.UpdateAvailable">發現新版本</ns1:String>
+    <ns1:String ns2:Key="Settings.UpdateAvailable">下載最新版</ns1:String>
     <ns1:String ns2:Key="Settings.NewVersionTooltip">發現新版本: {0}，點擊更新</ns1:String>
     <ns1:String ns2:Key="Settings.UpdateCheckFailed">檢查更新失敗，請稍後重試</ns1:String>
     <ns1:String ns2:Key="Settings.UpdateError">更新錯誤: {0}</ns1:String>
@@ -235,7 +235,7 @@
     <ns1:String ns2:Key="UpdateDialog.UpToDate">目前已是最新版本</ns1:String>
     <ns1:String ns2:Key="UpdateDialog.VersionSkipped">您已選擇跳過此版本</ns1:String>
     <ns1:String ns2:Key="UpdateDialog.UnknownInstallerFormat">不支援此更新格式，請手動執行 {0}</ns1:String>
-    <ns1:String ns2:Key="UpdateDialog.ToastMessage">發現新版本</ns1:String>
+    <ns1:String ns2:Key="UpdateDialog.ToastMessage">下載最新版</ns1:String>
     <ns1:String ns2:Key="UpdateDialog.ToastAction">檢視詳情</ns1:String>
     <ns1:String ns2:Key="UpdateDialog.ErrorTitle">錯誤</ns1:String>
     <ns1:String ns2:Key="UpdateDialog.InfoTitle">提示</ns1:String>

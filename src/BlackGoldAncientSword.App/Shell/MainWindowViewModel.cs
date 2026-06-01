@@ -106,12 +106,6 @@ namespace BlackGoldAncientSword.App.Shell
 
         public bool IsLatestVersion => _updateCheckCompleted && !IsUpdateAvailable;
 
-        private double _updateIndicatorOpacity = 1.0;
-        public double UpdateIndicatorOpacity
-        {
-            get => _updateIndicatorOpacity;
-            set => SetProperty(ref _updateIndicatorOpacity, value);
-        }
 
         public bool CanGoBack => _navigation.CanGoBack;
         private bool _canNavigateToPersonal;
@@ -221,7 +215,6 @@ namespace BlackGoldAncientSword.App.Shell
             if (IsUpdateAvailable)
             {
                 _updateCheckCompleted = true;
-                StartBlinkAnimation();
             }
 
             ActivePage = PageNames.HomePage;
@@ -243,48 +236,11 @@ namespace BlackGoldAncientSword.App.Shell
         {
             var d = System.Windows.Application.Current?.Dispatcher;
             if (d != null)
-                d.Invoke(() => { _updateCheckCompleted = true; IsUpdateAvailable = isAvailable; if (isAvailable) StartBlinkAnimation(); });
+                d.Invoke(() => { _updateCheckCompleted = true; IsUpdateAvailable = isAvailable; });
             else
-            { _updateCheckCompleted = true; IsUpdateAvailable = isAvailable; if (isAvailable) StartBlinkAnimation(); }
+            { _updateCheckCompleted = true; IsUpdateAvailable = isAvailable; }
         }
 
-        private DispatcherTimer? _blinkTimer;
-        private bool _blinkIncreasing = true;
-
-        private void StartBlinkAnimation()
-        {
-            if (_blinkTimer != null) return;
-
-            UpdateIndicatorOpacity = 0.5;
-            _blinkIncreasing = true;
-            _blinkTimer = new DispatcherTimer(
-                TimeSpan.FromMilliseconds(50),
-                DispatcherPriority.Normal,
-                (s, e) =>
-                {
-                    var delta = 0.05;
-                    if (_blinkIncreasing)
-                    {
-                        UpdateIndicatorOpacity += delta;
-                        if (UpdateIndicatorOpacity >= 1.0)
-                        {
-                            UpdateIndicatorOpacity = 1.0;
-                            _blinkIncreasing = false;
-                        }
-                    }
-                    else
-                    {
-                        UpdateIndicatorOpacity -= delta;
-                        if (UpdateIndicatorOpacity <= 0.5)
-                        {
-                            UpdateIndicatorOpacity = 0.5;
-                            _blinkIncreasing = true;
-                        }
-                    }
-                },
-                System.Windows.Application.Current.Dispatcher);
-            _blinkTimer.Start();
-        }
 
         /// <summary>
         /// Clean up event subscriptions. Called by MainWindow when closing.
@@ -389,4 +345,3 @@ namespace BlackGoldAncientSword.App.Shell
         }
     }
 }
-
