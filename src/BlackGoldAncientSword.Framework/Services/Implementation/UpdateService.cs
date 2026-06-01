@@ -167,8 +167,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     CustomUIFactory.SuppressDialogs = false;
                     CustomUIFactory.ShowNoUpdateMessage = false;
                     Debug.WriteLine("[UpdateService] 启动时 AutoCheckUpdates=true，使用 CheckForUpdatesAtUserRequest");
-                    // Open browser to GitHub releases instead of NetSparkle dialog
-                    Debug.WriteLine("[UpdateService] CheckForUpdatesAtUserRequest 完成");
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(
+                        () => _sparkle.CheckForUpdatesQuietly());
+                    Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
                 }
                 else
                 {
