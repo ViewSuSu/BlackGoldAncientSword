@@ -154,7 +154,7 @@ namespace BlackGoldAncientSword.App.Shell
             _checkForUpdatesCommand ??= new DelegateCommand(async () =>
             {
                 Debug.WriteLine("[MainWindowVM] CheckForUpdatesCommand 执行，用户主动检查更新");
-                await _updateService.CheckForUpdatesAsync();
+                Process.Start(new ProcessStartInfo("https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest") { UseShellExecute = true });
                 Debug.WriteLine("[MainWindowVM] CheckForUpdatesCommand 完成");
             });
 
