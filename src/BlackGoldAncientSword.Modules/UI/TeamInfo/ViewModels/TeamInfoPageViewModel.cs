@@ -8,6 +8,7 @@ using BlackGoldAncientSword.Framework.Http.Generated;
 using BlackGoldAncientSword.GameMonitor.Models;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
 using BlackGoldAncientSword.Modules.UI.TeamInfo.Services;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Modules.UI.Stats.ViewModels;
 
 namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
@@ -17,6 +18,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private readonly IGameStatusMonitor _gameStatusMonitor;
         private readonly ITeamInfoOcrService _teamInfoOcrService;
         private readonly IPlayerPrefsService _playerPrefsService;
+        private readonly IMainContentNavigationService _navigation;
         private CancellationTokenSource? _ocrLoopCts;
         private bool _isOcrRunning;
         private readonly object _ocrLock = new();        private bool _isHeroSelectionPhase;
@@ -28,11 +30,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public TeamInfoPageViewModel(
             IGameStatusMonitor gameStatusMonitor,
             ITeamInfoOcrService teamInfoOcrService,
-            IPlayerPrefsService playerPrefsService)
+            IPlayerPrefsService playerPrefsService,
+            IMainContentNavigationService navigation)
         {
             _gameStatusMonitor = gameStatusMonitor;
             _teamInfoOcrService = teamInfoOcrService;
             _playerPrefsService = playerPrefsService;
+            _navigation = navigation;
 
             // Always subscribe to game status so TeamInfo can capture hero selection
             // regardless of whether the user has navigated to this page yet
@@ -149,9 +153,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public bool HasDiffRight => TeamMembers.Count >= 3 && MemberHasData(TeamMembers[1]) && MemberHasData(TeamMembers[2]);
 
         public System.Windows.GridLength Col0Width => HasMember0 ? new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) : new System.Windows.GridLength(0);
-        public System.Windows.GridLength Col1Width => HasDiffLeft ? new System.Windows.GridLength(60) : new System.Windows.GridLength(0);
+        public System.Windows.GridLength Col1Width => HasDiffLeft ? new System.Windows.GridLength(80) : new System.Windows.GridLength(0);
         public System.Windows.GridLength Col2Width => HasMember1 ? new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) : new System.Windows.GridLength(0);
-        public System.Windows.GridLength Col3Width => HasDiffRight ? new System.Windows.GridLength(60) : new System.Windows.GridLength(0);
+        public System.Windows.GridLength Col3Width => HasDiffRight ? new System.Windows.GridLength(80) : new System.Windows.GridLength(0);
         public System.Windows.GridLength Col4Width => HasMember2 ? new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) : new System.Windows.GridLength(0);
 
         private bool _isLoading;
@@ -276,6 +280,16 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         {
                             await UpdateTeamMembersAsync(names, ct);
                         });
+
+                        // Wait for all member data to load, then navigate to TeamInfo
+                        while (TeamMembers.Any(m => m.IsLoading) && !ct.IsCancellationRequested)
+                        {
+                            await Task.Delay(300, ct);
+                        }
+                        if (!ct.IsCancellationRequested)
+                        {
+                            _navigation.NavigateTo(PageNames.TeamInfoPage);
+                        }
                     }
                 }
                 catch (OperationCanceledException) { break; }
@@ -388,7 +402,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
                 private static readonly (string Key, string Label, bool IsPercent, string Format)[] StatDefs =
         {
-            ("__rank__", "分数", false, "F0"),
             ("avg_kill", "场均击杀", false, "F1"),
             ("avg_damage", "场均伤害", false, "F0"),
             ("top5_rate", "前五率", true, "F1"),
@@ -405,6 +418,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             ("top5", "前五", false, "F0"),
             ("max_cure", "最佳治疗", false, "F0"),
             ("max_assist", "最佳助攻", false, "F0"),
+            ("__rank__", "分数", false, "F0"),
         };
 
         private static void ComputeDiff(ObservableCollection<MemberDiffItem> target, TeamMemberInfo left, TeamMemberInfo right)

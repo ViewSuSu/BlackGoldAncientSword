@@ -307,10 +307,6 @@ namespace BlackGoldAncientSword.App.Shell
         {
             _currentGameStatus = args.Status;
             RefreshGameStatusText();
-            if (args.Status == GameStatus.HeroSelection)
-            {
-                _navigation.NavigateTo(PageNames.TeamInfoPage);
-            }
         }
 
         private void RefreshGameStatusText()
