@@ -241,13 +241,11 @@ namespace BlackGoldAncientSword.App.Shell
 
         private void OnUpdateAvailabilityChanged(object? sender, bool isAvailable)
         {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-            {
-                _updateCheckCompleted = true;
-                IsUpdateAvailable = isAvailable;
-                if (isAvailable)
-                    StartBlinkAnimation();
-            });
+            var d = System.Windows.Application.Current?.Dispatcher;
+            if (d != null)
+                d.Invoke(() => { _updateCheckCompleted = true; IsUpdateAvailable = isAvailable; if (isAvailable) StartBlinkAnimation(); });
+            else
+            { _updateCheckCompleted = true; IsUpdateAvailable = isAvailable; if (isAvailable) StartBlinkAnimation(); }
         }
 
         private DispatcherTimer? _blinkTimer;
