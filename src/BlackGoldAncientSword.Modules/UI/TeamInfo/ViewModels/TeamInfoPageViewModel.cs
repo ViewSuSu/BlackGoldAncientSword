@@ -23,6 +23,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private bool _isOcrRunning;
         private readonly object _ocrLock = new();        private bool _isHeroSelectionPhase;
         private CancellationTokenSource? _refreshMembersCts;
+        private bool _hasEverHadData;
 
         private static string L(string key, string fallback) =>
             System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
@@ -137,7 +138,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public TeamMemberInfo? Member1 => TeamMembers.Count > 1 ? TeamMembers[1] : null;
         public TeamMemberInfo? Member2 => TeamMembers.Count > 2 ? TeamMembers[2] : null;
 
-        public bool IsWaiting => TeamMembers.Count == 0;
+        public bool IsWaiting => TeamMembers.Count == 0 && !_hasEverHadData;
         public bool HasMember0 => TeamMembers.Count > 0;
         public bool HasMember1 => TeamMembers.Count > 1;
         public bool HasMember2 => TeamMembers.Count > 2;
@@ -311,6 +312,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 names.All(n => TeamMembers.Any(m =>
                     string.Equals(m.UserName, n, StringComparison.OrdinalIgnoreCase))))
                 return;
+
+            // Mark that we have loaded data at least once
+            _hasEverHadData = true;
 
             var existingNames = TeamMembers.Select(m => m.UserName).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var newNames = names.Where(n => !existingNames.Contains(n)).ToArray();
