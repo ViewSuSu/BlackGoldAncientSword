@@ -1,4 +1,4 @@
-using BlackGoldAncientSword.Framework.Core.Attributes;
+﻿using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using NetSparkleUpdater;
 using NetSparkleUpdater.Enums;
@@ -156,8 +156,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 // User-requested check: dispatch to UI thread so NetSparkle''s WPF
                 // controls (ProgressBar, dialogs) are created on the correct thread.
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(
-                    () => _sparkle.CheckForUpdatesAtUserRequest());
-                Debug.WriteLine("[UpdateService] CheckForUpdatesAtUserRequest 完成");
+                    () => _sparkle.CheckForUpdatesQuietly());
+                Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
             }
             else
             {
@@ -167,8 +167,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     CustomUIFactory.SuppressDialogs = false;
                     CustomUIFactory.ShowNoUpdateMessage = false;
                     Debug.WriteLine("[UpdateService] 启动时 AutoCheckUpdates=true，使用 CheckForUpdatesAtUserRequest");
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(
-                        () => _sparkle.CheckForUpdatesAtUserRequest());
+                    // Open browser to GitHub releases instead of NetSparkle dialog
                     Debug.WriteLine("[UpdateService] CheckForUpdatesAtUserRequest 完成");
                 }
                 else
