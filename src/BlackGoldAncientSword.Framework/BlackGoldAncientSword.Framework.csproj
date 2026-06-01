@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Authors>小窗同学</Authors>
@@ -30,4 +30,7 @@
     <AdditionalFiles Include="Http\Definitions\**\*.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="BlackGoldAncientSword.Tests" />
+  </ItemGroup>
 </Project>
