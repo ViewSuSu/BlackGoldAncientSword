@@ -455,24 +455,24 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
             else if (diff > 0)
             {
-                diffText = isPercent ? $"+{diff:F1}%" : $"+{diff}";
+                diffText = isPercent ? $"+{diff:F1}%" : $"+{diff.ToString(fmt)}";
                 color = "#22AA22";
             }
             else
             {
-                diffText = isPercent ? $"{diff:F1}%" : $"{diff}";
+                diffText = isPercent ? $"{diff:F1}%" : $"{diff.ToString(fmt)}";
                 color = "#DD3333";
             }
 
             target.Add(new MemberDiffItem
             {
                 Label = label,
-                LeftValue = isPercent ? $"{leftVal:F1}%" : $"{leftVal}",
-                RightValue = isPercent ? $"{rightVal:F1}%" : $"{rightVal}",
+                LeftValue = isPercent ? $"{leftVal:F1}%" : $"{leftVal.ToString(fmt)}",
+                RightValue = isPercent ? $"{rightVal:F1}%" : $"{rightVal.ToString(fmt)}",
                 DiffText = diffText,
                 DiffColor = color,
                 IsLeftBetter = diff > 0.001,
-                DiffTooltip = leftVal + " vs " + rightVal
+                DiffTooltip = diff.ToString()
             });
         }
 
