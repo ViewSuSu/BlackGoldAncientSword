@@ -6,6 +6,7 @@ using NetSparkleUpdater.Interfaces;
 using NetSparkleUpdater.UI.WPF;
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
@@ -147,38 +148,15 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 Debug.WriteLine("[UpdateService] _sparkle 为 null，跳过检查");
                 return;
-            }
+            // Always use quiet check to avoid NetSparkle dialogs
+            CustomUIFactory.SuppressDialogs = true;
+            CustomUIFactory.ShowNoUpdateMessage = false;
+            await Task.Run(() => _sparkle.CheckForUpdatesQuietly());
+            Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
 
-            if (showNoUpdateMessage)
-            {
-                CustomUIFactory.SuppressDialogs = false;
-                Debug.WriteLine("[UpdateService] 用户主动检查更新 -> CheckForUpdatesAtUserRequest");
-                // User-requested check: dispatch to UI thread so NetSparkle''s WPF
-                // controls (ProgressBar, dialogs) are created on the correct thread.
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(
-                    () => _sparkle.CheckForUpdatesQuietly());
-                Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
-            }
-            else
-            {
-                if (_autoPopupEnabled)
-                {
-                    // 用户开启了自动弹窗，使用 CheckForUpdatesAtUserRequest 以显示更新对话框
-                    CustomUIFactory.SuppressDialogs = false;
-                    CustomUIFactory.ShowNoUpdateMessage = false;
-                    Debug.WriteLine("[UpdateService] 启动时 AutoCheckUpdates=true，使用 CheckForUpdatesAtUserRequest");
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(
-                        () => _sparkle.CheckForUpdatesQuietly());
-                    Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
-                }
-                else
-                {
-                    CustomUIFactory.SuppressDialogs = true;
-                    Debug.WriteLine("[UpdateService] AutoCheckUpdates=false，静默检查");
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(
-                        () => _sparkle.CheckForUpdatesQuietly());
-                    Debug.WriteLine("[UpdateService] CheckForUpdatesQuietly 完成");
-                }
+            // Ensure completion is always reported (NetSparkle may not fire events when versions match)
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                UpdateAvailabilityChanged?.Invoke(this, IsUpdateAvailable));
             }
         }
 
