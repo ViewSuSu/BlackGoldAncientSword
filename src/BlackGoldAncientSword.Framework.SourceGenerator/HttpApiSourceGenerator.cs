@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -77,7 +77,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("    /// <summary>API response interface for extracting error messages</summary>");
             sb.AppendLine("    public interface IApiResponse");
             sb.AppendLine("    {");
-            sb.AppendLine("        int? Code { get; }");
+            sb.AppendLine("        double? Code { get; }");
             sb.AppendLine("        string Msg { get; }");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -378,7 +378,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
 
         private static string ResolveType(string type) => type switch
         {
-            "string" => "string", "int" => "int", "long" => "long",
+            "string" => "string", "int" => "double", "long" => "long",
             "float" => "float", "double" => "double", "bool" => "bool",
             "decimal" => "decimal", "DateTime" => "System.DateTime",
             "Guid" => "System.Guid", _ => type

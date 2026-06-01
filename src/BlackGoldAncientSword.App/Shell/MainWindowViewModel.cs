@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Diagnostics;
@@ -307,6 +307,10 @@ namespace BlackGoldAncientSword.App.Shell
         {
             _currentGameStatus = args.Status;
             RefreshGameStatusText();
+            if (args.Status == GameStatus.HeroSelection)
+            {
+                _navigation.NavigateTo(PageNames.TeamInfoPage);
+            }
         }
 
         private void RefreshGameStatusText()
