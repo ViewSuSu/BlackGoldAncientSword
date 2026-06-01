@@ -482,20 +482,20 @@
                         Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="MouseLeftButtonDown">
-                                <i:InvokeCommandAction Command="{Binding CheckForUpdatesCommand}" />
+                                <i:InvokeCommandAction Command="{Binding NavigateToAnnouncementCommand}" />
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
-                        <Image
-                            Width="14"
-                            Height="14"
-                            Opacity="{Binding UpdateIndicatorOpacity}"
-                            Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/发现新版本.png" />
                         <TextBlock
-                            Margin="3,0,0,0"
+                            Margin="0,0,3,0"
                             VerticalAlignment="Center"
                             FontSize="11"
                             Foreground="#5B8DEF"
                             Text="{DynamicResource Settings.UpdateAvailable}" />
+                        <Image
+                            Width="14"
+                            Height="14"
+                            ToolTip="查看更新日志"
+                            Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/announcement.png" />
                     </StackPanel>
                 </StackPanel>
                 <StackPanel
@@ -583,26 +583,6 @@
                             Width="15"
                             Height="15"
                             Source="/BlackGoldAncientSword.Resources;component/Images/feedback.png"
-                            Stretch="Uniform" />
-                    </Button>
-                    <!--  Announcement  -->
-                    <Button
-                        Width="25"
-                        Height="20"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Cursor="Hand"
-                        ToolTip="{DynamicResource Nav.Announcement}">
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="Click">
-                                <i:InvokeCommandAction Command="{Binding NavigateToAnnouncementCommand}" />
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                        <Image
-                            Width="15"
-                            Height="15"
-                            Source="/BlackGoldAncientSword.Resources;component/Images/announcement.png"
                             Stretch="Uniform" />
                     </Button>
                 </StackPanel>
