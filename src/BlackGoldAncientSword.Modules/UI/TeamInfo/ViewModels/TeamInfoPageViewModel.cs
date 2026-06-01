@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
 using BlackGoldAncientSword.Framework.Core.Consts;
@@ -19,9 +19,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private readonly IPlayerPrefsService _playerPrefsService;
         private CancellationTokenSource? _ocrLoopCts;
         private bool _isOcrRunning;
-        private readonly object _ocrLock = new();
-        private bool _isSubscribed;
-        private bool _isHeroSelectionPhase;
+        private readonly object _ocrLock = new();        private bool _isHeroSelectionPhase;
         private CancellationTokenSource? _refreshMembersCts;
 
         private static string L(string key, string fallback) =>
@@ -35,6 +33,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _gameStatusMonitor = gameStatusMonitor;
             _teamInfoOcrService = teamInfoOcrService;
             _playerPrefsService = playerPrefsService;
+
+            // Always subscribe to game status so TeamInfo can capture hero selection
+            // regardless of whether the user has navigated to this page yet
+            _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
+
             TeamMembers = new ObservableCollection<TeamMemberInfo>();
             Seasons = new ObservableCollection<SeasonInfo>();
             DiffLeft = new ObservableCollection<MemberDiffItem>();
@@ -383,35 +386,46 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             RaisePropertyChanged(nameof(Col3Width));
         }
 
-                private static readonly (string Key, string Label, bool IsPercent)[] StatDefs =
+                private static readonly (string Key, string Label, bool IsPercent, string Format)[] StatDefs =
         {
-            ("avg_kill", "场均击杀", false),
-            ("avg_damage", "场均伤害", false),
-            ("top5_rate", "前五率", true),
-            ("avg_total_live_time", "场均生存", false),
-            ("kd", "KD", false),
-            ("avg_cure", "场均治疗", false),
-            ("avg_assist", "场均助攻", false),
-            ("max_kill", "最佳击杀", false),
-            ("max_damage", "最佳伤害", false),
-            ("max_shock_count", "最多振刀", false),
-            ("win_rate", "第一率", true),
-            ("round", "场次", false),
-            ("win", "第一", false),
-            ("top5", "前五", false),
-            ("max_cure", "最佳治疗", false),
-            ("max_assist", "最佳助攻", false),
+            ("__rank__", "分数", false, "F0"),
+            ("avg_kill", "场均击杀", false, "F1"),
+            ("avg_damage", "场均伤害", false, "F0"),
+            ("top5_rate", "前五率", true, "F1"),
+            ("avg_total_live_time", "场均生存", false, "F0"),
+            ("kd", "KD", false, "F2"),
+            ("avg_cure", "场均治疗", false, "F0"),
+            ("avg_assist", "场均助攻", false, "F1"),
+            ("max_kill", "最佳击杀", false, "F0"),
+            ("max_damage", "最佳伤害", false, "F0"),
+            ("max_shock_count", "最多振刀", false, "F0"),
+            ("win_rate", "第一率", true, "F1"),
+            ("round", "场次", false, "F0"),
+            ("win", "第一", false, "F0"),
+            ("top5", "前五", false, "F0"),
+            ("max_cure", "最佳治疗", false, "F0"),
+            ("max_assist", "最佳助攻", false, "F0"),
         };
 
         private static void ComputeDiff(ObservableCollection<MemberDiffItem> target, TeamMemberInfo left, TeamMemberInfo right)
         {
             foreach (var def in StatDefs)
             {
-                var lv = left.Stats.TryGetValue(def.Key, out var l) ? TryParseDouble(l) : 0;
-                var rv = right.Stats.TryGetValue(def.Key, out var r) ? TryParseDouble(r) : 0;
+                double lv, rv;
+                if (def.Key == "__rank__")
+                {
+                    lv = left.RankScore;
+                    rv = right.RankScore;
+                }
+                else
+                {
+                    lv = left.Stats.TryGetValue(def.Key, out var l) ? TryParseDouble(l) : 0;
+                    rv = right.Stats.TryGetValue(def.Key, out var r) ? TryParseDouble(r) : 0;
+                }
+                
                 AddDiffItem(target, def.Label, lv, rv, def.IsPercent);
             }
-            AddDiffItem(target, "段位分", left.RankScore, right.RankScore, false);
+            
         }
 
         private static void AddDiffItem(ObservableCollection<MemberDiffItem> target, string label, double leftVal, double rightVal, bool isPercent)
@@ -426,20 +440,20 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
             else if (diff > 0)
             {
-                diffText = isPercent ? $"+{diff:F1}%" : $"+{diff:F0}";
+                diffText = isPercent ? $"+{diff:F1}%" : $"+{diff}";
                 color = "#22AA22";
             }
             else
             {
-                diffText = isPercent ? $"{diff:F1}%" : $"{diff:F0}";
+                diffText = isPercent ? $"{diff:F1}%" : $"{diff}";
                 color = "#DD3333";
             }
 
             target.Add(new MemberDiffItem
             {
                 Label = label,
-                LeftValue = isPercent ? $"{leftVal:F1}%" : $"{leftVal:F0}",
-                RightValue = isPercent ? $"{rightVal:F1}%" : $"{rightVal:F0}",
+                LeftValue = isPercent ? $"{leftVal:F1}%" : $"{leftVal}",
+                RightValue = isPercent ? $"{rightVal:F1}%" : $"{rightVal}",
                 DiffText = diffText,
                 DiffColor = color,
                 IsLeftBetter = diff > 0.001
@@ -597,16 +611,16 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             cts = null;
         }
 
-        private static bool IsTianxuanMode(int gameMode) =>
+        private static bool IsTianxuanMode(double gameMode) =>
             gameMode == 1 || gameMode == 12 || gameMode == 2;
 
-        private static string GetRankNameForScore(int score, int gameMode = 0)
+        private static string GetRankNameForScore(double score, int gameMode = 0)
         {
             if (IsTianxuanMode(gameMode))
             {
-                if (score >= 7000) return "\u65e0\u53cc\u4fee\u7f57";
+                if (score >= 7500) return "\u65e0\u91cf\u68b5\u5929";
                 if (score >= 6000) return "\u65e0\u76f8\u9f99\u738b";
-                if (score >= 5000) return "\u65e0\u538c\u4fee\u7f57";
+                if (score >= 5000) return "\u65e0\u53cc\u4fee\u7f57";
                 if (score >= 4500) return "\u65e0\u95f4\u4fee\u7f57";
                 if (score >= 4000) return "\u5760\u65e5";
                 if (score >= 3500) return "\u8680\u6708";
@@ -631,14 +645,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        private static int GetStarCount(int score, int gameMode = 0)
+        private static int GetStarCount(double score, int gameMode = 0)
         {
             if (!IsTianxuanMode(gameMode)) return 0;
             // For ??+ (>=4500): accumulated stars (floor)
-            if (score >= 7000) return (score - 7000) / 100;
-            if (score >= 6000) return (score - 6000) / 100;
-            if (score >= 5000) return (score - 5000) / 100;
-            if (score >= 4500) return (score - 4500) / 100;
+            if (score >= 4500) return (int)((score - 4500) / 100);
             // For ranks below ??: remaining stars to next rank (ceil)
             int[] thresholds = { 4500, 4000, 3500, 3000, 2500, 2000, 1500, 0 };
             for (int t = 0; t < thresholds.Length - 1; t++)
@@ -646,7 +657,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 if (score >= thresholds[t + 1])
                 {
                     var remaining = thresholds[t] - score;
-                    return (remaining + 99) / 100; // ceil division
+                    return (int)((remaining + 99) / 100); // ceil division
                 }
             }
             return 0;
@@ -663,12 +674,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             return secondsStr;
         }
 
-        private static int GetRankTierScore(int score, int gameMode = 0)
+        private static double GetRankTierScore(double score, int gameMode = 0)
         {
             if (!IsTianxuanMode(gameMode)) return score;
-            if (score >= 7000) return (score - 7000) % 100;
-            if (score >= 6000) return (score - 6000) % 100;
-            if (score >= 5000) return (score - 5000) % 100;
             if (score >= 4500) return (score - 4500) % 100;
             if (score >= 4000) return (score - 4000) % 100;
             if (score >= 3500) return (score - 3500) % 100;
@@ -682,12 +690,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         protected override async void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
-
-            if (!_isSubscribed)
-            {
-                _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
-                _isSubscribed = true;
-            }
 
             _ = LoadSeasonsAsync();
 
@@ -733,11 +735,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         {
             StopOcrLoop();
             CancelAndDispose(ref _refreshMembersCts);
-            if (_isSubscribed)
-            {
-                _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
-                _isSubscribed = false;
-            }
+            // Don't unsubscribe - keep listening for game status to capture hero selection proactively
             base.OnNavigatedFromExecute(navigationContext);
         }
     }
@@ -816,8 +814,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             set => SetProperty(ref _rankIcon, value);
         }
 
-        private int _rankScore;
-        public int RankScore
+        private double _rankScore;
+        public double RankScore
         {
             get => _rankScore;
             set => SetProperty(ref _rankScore, value);
@@ -844,29 +842,29 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             set => SetProperty(ref _pageHasStars, value);
         }
 
-        private int _rankTierScore;
-        public int RankTierScore
+        private double _rankTierScore;
+        public double RankTierScore
         {
             get => _rankTierScore;
             set => SetProperty(ref _rankTierScore, value);
         }
 
-        private int _soloRankScore;
-        public int SoloRankScore
+        private double _soloRankScore;
+        public double SoloRankScore
         {
             get => _soloRankScore;
             set => SetProperty(ref _soloRankScore, value);
         }
 
-        private int _duoRankScore;
-        public int DuoRankScore
+        private double _duoRankScore;
+        public double DuoRankScore
         {
             get => _duoRankScore;
             set => SetProperty(ref _duoRankScore, value);
         }
 
-        private int _trioRankScore;
-        public int TrioRankScore
+        private double _trioRankScore;
+        public double TrioRankScore
         {
             get => _trioRankScore;
             set => SetProperty(ref _trioRankScore, value);
