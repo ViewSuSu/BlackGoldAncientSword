@@ -59,6 +59,7 @@ license: MIT
 - 服务接口放在 `Abstractions` 子命名空间，实现放在 `Implementation`
 - ViewModel / View 命名配对，放在对应功能 UI 目录下
 - 禁止 git 回滚操作（`git revert`、`git reset`、`git checkout`），除非明确要求
+- **每次修改后必须 Build**：对代码做任何修改后，必须运行 `dotnet build src/BlackGoldAncientSword.slnx` 确保编译通过（0 error）才可认为修改完成
 
 ## 构建与运行
 
