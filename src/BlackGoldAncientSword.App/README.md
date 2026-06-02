@@ -100,7 +100,6 @@
 <br>
 <br>
 
-
 # 开发者文档
 
 ## 项目架构概览
@@ -338,7 +337,6 @@ API 客户端不手写，而是通过 `BlackGoldAncientSword.Framework.SourceGen
 多语言通过 WPF `ResourceDictionary` 实现，所有 UI 文本定义在 `Strings.xx.xaml` 中。运行时通过 `ILocalizationService.ApplyLanguage()` 动态切换资源字典，无需重启。
 
 ---
-
 
 ## 构建与运行
 
