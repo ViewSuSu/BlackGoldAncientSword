@@ -404,7 +404,7 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 
 ---
 
-## Special Thanks
+### Special Thanks
 
 - WeChat: craftwyrd
 

@@ -417,12 +417,12 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 
 ---
 
-## 特别鸣谢
+### 特别鸣谢
 
 - 微信号：craftwyrd
 
 ---
 
-## 许可证
+### 许可证
 
 本项目基于 [MIT License](LICENSE) 开源。作者：**小窗同学**。
