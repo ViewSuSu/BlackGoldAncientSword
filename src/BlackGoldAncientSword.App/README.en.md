@@ -1,4 +1,4 @@
-# BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
+﻿# BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
 
 > A desktop companion app for querying *NARAKA: BLADEPOINT* player statistics and match data.
 
@@ -63,7 +63,6 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 - **Cache path**: Image cache directory (size display + one-click clear)
 - **Language**: 简体中文 / English / 繁體中文
 - **Close behavior**: Minimize to tray or exit directly
-- **Auto-check updates**: Check for new versions on startup (NetSparkle)
 - **Current version**
 
 ![Settings screenshot](docs/images/04_settings.png)
@@ -84,13 +83,14 @@ Success/error toasts appear in the bottom-right corner (e.g. "Copied", "Cache cl
 
 ### Auto Updates
 
-Powered by NetSparkle. New GitHub Releases are detected in the background. Options: skip version, remind later, or download & install.
+Online update feature has been removed.
 
 ---
 
 <br>
 <br>
 <br>
+
 
 # Developer Guide
 
@@ -107,7 +107,7 @@ Powered by NetSparkle. New GitHub Releases are detected in the background. Optio
      ▼               ▼               ▼
 ┌─────────┐  ┌─────────────┐  ┌───────────┐
 │ Modules │  │  Framework  │  │ Resources │
-│ (7 UI   │  │  (Core +    │  │ (Strings, │
+│ (8 UI   │  │  (Core +    │  │ (Strings, │
 │  Pages) │  │   Services) │  │  Images)  │
 └────┬────┘  └──────┬──────┘  └───────────┘
      │              │
@@ -130,14 +130,14 @@ Powered by NetSparkle. New GitHub Releases are detected in the background. Optio
 | Layer | Project | Responsibility |
 |---|---|---|
 | **Shell** | `BlackGoldAncientSword.App` | App entry, main window, navigation, tray, updates |
-| **UI Modules** | `BlackGoldAncientSword.Modules` | 7 independent page modules, on-demand loading |
+| **UI Modules** | `BlackGoldAncientSword.Modules` | 8 independent page modules, on-demand loading |
 | **Core Framework** | `BlackGoldAncientSword.Framework` | MVVM base, Prism infra, HTTP API, localization, settings |
 | **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | Process detection, log parsing, state machine |
 | **Screen Capture** | `BlackGoldAncientSword.ScreenCapture` | Windows Graphics Capture API via SharpDX |
 | **OCR Engine** | `BlackGoldAncientSword.Ocr` | PaddleOCR-json wrapper |
 | **Resources** | `BlackGoldAncientSword.Resources` | Multi-language XAML resource dictionaries, icons |
 | **Source Gen** | `BlackGoldAncientSword.Framework.SourceGenerator` | Compile-time HTTP client generation from JSON |
-| **Tests** | `BlackGoldAncientSword.Tests` | OCR and screen capture tests |
+| **Tests** | `BlackGoldAncientSword.Tests` | OCR, screen capture, game monitor, and update tests |
 
 ---
 
@@ -154,7 +154,6 @@ Powered by NetSparkle. New GitHub Releases are detected in the background. Optio
 | **Screen Capture** | SharpDX + native WGC DLL (C++) | Game window capture |
 | **OCR** | PaddleOCR-json.exe | Chinese character recognition |
 | **System Tray** | Hardcodet.NotifyIcon.Wpf | Tray icon and context menu |
-| **Auto Update** | NetSparkle 3.1 | Version detection and silent updates |
 | **Packaging** | Self-Contained + PublishSingleFile | Single-file deployment (win-x64) |
 
 ---
@@ -172,25 +171,43 @@ src/
 │
 ├── BlackGoldAncientSword.Framework/        # Core framework
 │   ├── Core/
+│   │   ├── Attributes/
+│   │   │   └── ComponentAttribute.cs            # Custom component marker attribute
 │   │   ├── Bases/ViewModels/ViewModelBase.cs  # MVVM base class (RaisePropertyChanged)
-│   │   ├── Bases/Views/                        # View base class
-│   │   ├── Consts/PageNames.cs                 # Page name constants
+│   │   ├── Bases/Views/UserControlBase.cs      # View base class
+│   │   ├── Consts/
+│   │   │   ├── GlobalConstant.cs                # Global constants
+│   │   │   └── PageNames.cs                     # Page name constants
 │   │   ├── Events/                             # Prism EventAggregator events
+│   │   │   ├── GameStatus.cs                   # Game status enum
+│   │   │   ├── GameStatusChangedEventArgs.cs   # Status change event args
+│   │   │   ├── SettingsChangedEvent.cs         # Settings change event
+│   │   │   └── TipMessageEvent.cs              # Toast message event
 │   │   ├── Extensions/                         # Extension methods
 │   │   └── Infrastructure/                     # Navigation interfaces
+│   │       ├── IMainContentNavigationService.cs  # Nav service interface
+│   │       └── MainContentNavigator.cs          # Nav service implementation
 │   ├── Http/
 │   │   └── Definitions/                        # API JSON definitions → source gen
 │   ├── Services/
+│   │   ├── AppSettings.cs                       # App config data model
+│   │   ├── LanguageOption.cs                    # Language option model
+│   │   ├── SearchHistoryItem.cs                 # Search history model
+│   │   ├── ServiceAutoRegister.cs              # Service auto-registration
 │   │   ├── Abstractions/                       # Service interfaces (7)
 │   │   └── Implementation/                     # Service implementations
 │   ├── Themes/Generic.xaml                     # HandyControl theme
-│   └── UI/Controls/                            # Custom WPF controls
+│   └── UI/Controls/
+│       └── DataGridWrapPanel.cs                # DataGrid wrap panel
 │
 ├── BlackGoldAncientSword.Modules/          # UI page modules
-│   ├── Module/                               # Prism IModule registrations (7)
+│   ├── Mappings/
+│   │   └── BattleMappingRegister.cs          # Mapster mapping registration
+│   ├── Module/                               # Prism IModule registrations (8)
 │   └── UI/
 │       ├── Announcement/                     # Announcement page
 │       ├── ClosePrompt/                      # Close confirmation dialog
+│       ├── Feedback/                         # Feedback page
 │       ├── Home/                             # Home (game status monitor)
 │       ├── Search/                           # Search history
 │       ├── Settings/                         # Settings page
@@ -198,27 +215,55 @@ src/
 │       └── TeamInfo/                         # Team info (OCR + comparison)
 │
 ├── BlackGoldAncientSword.GameMonitor/      # Game monitoring
-│   ├── Models/                               # GameStatus, BattleEventArgs
+│   ├── GameMonitorAutoRegister.cs            # Service auto-registration
+│   ├── GlobalUsing.cs                        # Global usings
+│   ├── Models/                               # BattleEventArgs, PlayerPrefsData
 │   └── Services/
-│       ├── GameLogMonitor.cs                 # Player.log parser
-│       ├── GameStatusMonitor.cs              # Game state machine
-│       └── PlayerPrefsService.cs             # Local user preferences
+│       ├── Abstractions/
+│       │   ├── IGameLogMonitor.cs            # Log monitor interface
+│       │   ├── IGameStatusMonitor.cs         # Status monitor interface
+│       │   └── IPlayerPrefsService.cs        # Preferences service interface
+│       └── Implementation/
+│           ├── GameLogMonitor.cs             # Player.log parser
+│           ├── GameStatusMonitor.cs          # Game state machine
+│           └── PlayerPrefsService.cs         # Local user preferences
 │
 ├── BlackGoldAncientSword.ScreenCapture/     # Screen capture
+│   ├── GlobalUsing.cs                        # Global usings
+│   ├── IScreenCaptureService.cs             # Capture service interface
+│   ├── NativeWgc.cs                          # Native WGC API interop
+│   ├── ScreenCaptureAutoRegister.cs          # Service auto-registration
 │   ├── ScreenCaptureService.cs              # WGC wrapper
-│   └── runtimes/win-x64/native/
+│   ├── ScreenQuadrant.cs                     # Screen quadrant split
+│   ├── WgcInterop.cs                         # WGC COM interop wrapper
+│   └── native/
 │       └── wgc_capture.dll                  # Native C++ capture library
 │
 ├── BlackGoldAncientSword.Ocr/               # OCR engine
-│   └── (PaddleOCR-json.exe wrapper)
+│   ├── GlobalUsing.cs                        # Global usings
+│   ├── IOcrService.cs                        # OCR service interface
+│   ├── JobObjectHelper.cs                    # Child process lifecycle management
+│   ├── OcrAutoRegister.cs                    # Service auto-registration
+│   └── OcrEngine.cs                          # PaddleOCR-json.exe wrapper
 │
 ├── BlackGoldAncientSword.Resources/         # Multi-language resources
+│   ├── Images/                               # UI image resources
 │   └── Themes/
 │       ├── Strings.zh-CN.xaml               # Simplified Chinese
 │       ├── Strings.en.xaml                  # English
 │       └── Strings.zh-TW.xaml               # Traditional Chinese
 │
-└── BlackGoldAncientSword.Tests/             # Test project
+├── BlackGoldAncientSword.Tests/             # Test project
+│   ├── GameMonitor/                          # Game monitor tests
+│   ├── Ocr/                                  # OCR tests
+│   ├── ScreenCapture/                        # Screen capture tests
+│   ├── TestData/                             # Test data
+│   └── Update/                               # Update flow tests
+│
+└── ocr_engine/                               # PaddleOCR-json engine files
+    ├── PaddleOCR-json.exe                    # OCR engine executable
+    ├── models/                               # OCR model files
+    └── *.dll                                 # Runtime dependencies (onnxruntime, OpenCV, etc.)
 ```
 
 ---
@@ -234,7 +279,7 @@ src/
 
 ### 2. On-Demand Module Loading
 
-Each of the 7 UI pages is a Prism `IModule` registered as `OnDemand` in `ModuleCatalogConfigManager`. Modules are only loaded on first navigation, reducing startup time.
+Each of the 8 UI pages is a Prism `IModule` registered as `OnDemand` in `ModuleCatalogConfigManager`. Modules are only loaded on first navigation, reducing startup time.
 
 ```csharp
 // PageNames.cs
@@ -247,6 +292,7 @@ public static class PageNames
     public const string SettingsPage = nameof(SettingsPage);
     public const string AnnouncementPage = nameof(AnnouncementPage);
     public const string ClosePromptPage  = nameof(ClosePromptPage);
+    public const string FeedbackPage     = nameof(FeedbackPage);
 }
 ```
 
@@ -277,10 +323,6 @@ API clients are **not hand-written**. `BlackGoldAncientSword.Framework.SourceGen
 
 Multi-language support via WPF `ResourceDictionary`. All UI text is defined in `Strings.xx.xaml`. `ILocalizationService.ApplyLanguage()` dynamically swaps resource dictionaries at runtime — no restart needed.
 
-### 7. Auto Updates (NetSparkle)
-
-Background checks for new GitHub Releases. Update dialog is fully localized. Three options: skip, remind later, or download & install.
-
 ---
 
 
@@ -308,11 +350,5 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 
 ```powershell
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
-```
-
-
----
-
-## License
 
 MIT License. Author: **小窗同学** (XiaoChuang).
