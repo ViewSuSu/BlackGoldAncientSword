@@ -91,7 +91,6 @@ Online update feature has been removed.
 <br>
 <br>
 
-
 # Developer Guide
 
 ## Architecture Overview
@@ -324,7 +323,6 @@ API clients are **not hand-written**. `BlackGoldAncientSword.Framework.SourceGen
 Multi-language support via WPF `ResourceDictionary`. All UI text is defined in `Strings.xx.xaml`. `ILocalizationService.ApplyLanguage()` dynamically swaps resource dictionaries at runtime — no restart needed.
 
 ---
-
 
 ## Build & Run
 

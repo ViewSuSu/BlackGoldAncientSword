@@ -10,7 +10,6 @@
 
 ---
 
-
 ## 下载 📥
 
 [![Download](https://img.shields.io/badge/下载-最新版本-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest/download/BlackGoldAncientSword-Setup.exe)
@@ -22,7 +21,6 @@
 ## 简介
 
 **黑金古刀-永劫助手**是一款运行在 Windows 上的桌面应用。它可以在游戏过程中自动检测游戏状态、识别队友信息，并实时查询玩家战绩数据。无需切出游戏打开网页，助手将战绩数据直接呈现在桌面端，支持**三排 / 双排 / 单排**及**排位 / 匹配 / 天人**模式的完整数据统计。
-
 
 ## 战绩查询
 
@@ -82,9 +80,7 @@
 - 托盘图标显示在线状态
 - 点击关闭按钮时弹出确认对话框，提醒"退出程序会停止检测游戏"
 
-
 ---
-
 
 ## 常见问题 FAQ 🧐
 
@@ -106,9 +102,7 @@ OCR 识别采用的 OBS 录屏同源技术，可以忽略游戏的遮挡界面�
 
 程序采用**自包含发布（self-contained）**，内置了 .NET 运行时，无需用户额外安装 .NET 环境即可直接运行。此外，程序自带的 OCR 文字识别引擎（PaddleOCR）需要依赖 Intel 数学核心库（mklml.dll，约 88MB）和 OpenCV 计算机视觉库（opencv_world4100.dll，约 62MB）。这两个原生 AI/视觉库连同 .NET 运行时占了安装包的绝大部分体积。没有它们就无法实现队友昵称的自动截图识别，所以"庞大"是必要的代价 😅。
 
-
 ---
-
 
 ## 免责声明 📢
 
@@ -133,11 +127,9 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 在您使用本程序之前，请确保您已经详细阅读、理解并同意免责声明中的条款；同时，请遵守相关游戏规则，共同维护健康和公平的游戏环境。
 
 
-
 ## 点个 Star 支持我们 ⭐
 
 [![Star History Chart](https://api.star-history.com/svg?repos=ViewSuSu/BlackGoldAncientSword&type=Date)](https://star-history.com/#ViewSuSu/BlackGoldAncientSword&Date)
-
 
 ## 反馈与交流
 
@@ -155,7 +147,6 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 <br>
 <br>
 <br>
-
 
 # 开发者文档
 
@@ -395,7 +386,6 @@ API 客户端不手写，而是通过 `BlackGoldAncientSword.Framework.SourceGen
 
 ---
 
-
 ## 构建与运行
 
 ### 环境要求
@@ -423,9 +413,7 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ```
 
-
 ```
-
 
 ---
 
