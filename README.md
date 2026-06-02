@@ -1,4 +1,4 @@
-﻿[中文](README.md) | [English](README.en.md)
+[中文](README.md) | [English](README.en.md)
 
 [![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]()
 
@@ -413,7 +413,6 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ```
 
-```
 
 ---
 
