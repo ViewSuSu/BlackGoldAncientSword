@@ -10,7 +10,6 @@
 
 ---
 
-
 ## Download 📥
 
 [![Download](https://img.shields.io/badge/Download-Latest%20Release-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest/download/BlackGoldAncientSword-Setup.exe)
@@ -22,7 +21,6 @@ Click the button above to directly download the latest .exe package.
 ## Overview
 
 **BlackGoldAncientSword** is a Windows desktop application that automatically detects game status, recognizes teammates, and fetches real-time player stats. No need to alt-tab to a browser — stats are displayed directly on your desktop. Supports **Solo / Duo / Trio** modes and **Ranked / Casual / Immortal** match types.
-
 
 ## Player Stats
 
@@ -75,9 +73,7 @@ Minimize to system tray during gameplay. Right-click the tray icon to restore or
 
 ![Close prompt screenshot](docs/images/05_close_prompt.png)
 
-
 ---
-
 
 ## FAQ 🧐
 
@@ -99,9 +95,7 @@ Additionally, OCR may sometimes fail to recognize certain special characters. If
 
 The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. Additionally, the built-in OCR engine (PaddleOCR) depends on the Intel Math Kernel Library (mklml.dll, ~88MB) and the OpenCV computer vision library (opencv_world4100.dll, ~62MB). These two native AI/vision libraries, together with the .NET runtime, account for the vast majority of the download size. Without them, automatic screenshot recognition of teammate names wouldn't be possible — the "bulk" is a necessary price to pay 😅.
 
-
 ---
-
 
 ## Disclaimer 📢
 
@@ -126,11 +120,9 @@ We reserve the right to modify this disclaimer at any time. Please check this pa
 Before using this program, please ensure you have read, understood, and agreed to the terms of this disclaimer. Please also abide by the relevant game rules and help maintain a healthy and fair gaming environment.
 
 
-
 ## Star Us on GitHub ⭐
 
 [![Star History Chart](https://api.star-history.com/svg?repos=ViewSuSu/BlackGoldAncientSword&type=Date)](https://star-history.com/#ViewSuSu/BlackGoldAncientSword&Date)
-
 
 ## Feedback & Community
 
@@ -148,7 +140,6 @@ Before using this program, please ensure you have read, understood, and agreed t
 <br>
 <br>
 <br>
-
 
 # Developer Guide
 
@@ -383,7 +374,6 @@ Multi-language support via WPF `ResourceDictionary`. All UI text is defined in `
 
 ---
 
-
 ## Build & Run
 
 ### Prerequisites
@@ -410,9 +400,7 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ```
 
-
 ```
-
 
 ---
 
