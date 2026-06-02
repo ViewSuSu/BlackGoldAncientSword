@@ -1,4 +1,4 @@
-[中文](README.md) | [English](README.en.md)
+﻿[中文](README.md) | [English](README.en.md)
 
 [![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]()
 
@@ -65,7 +65,6 @@
 - **缓存路径**：图片缓存目录（含缓存大小显示与一键清理）
 - **语言**：支持 简体中文 / English / 繁體中文
 - **关闭行为**：点击关闭按钮时"最小化到托盘"或"直接退出"
-- **自动检查更新**：启动时检测新版本（基于 NetSparkle）
 - **当前版本**：显示版本号
 
 ![设置截图](docs/images/04_settings.png)
@@ -157,6 +156,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 <br>
 <br>
 
+
 # 开发者文档
 
 ## 项目架构概览
@@ -172,7 +172,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
      ▼               ▼               ▼
 ┌─────────┐  ┌─────────────┐  ┌───────────┐
 │ Modules │  │  Framework  │  │ Resources │
-│ (7 UI   │  │  (Core +    │  │ (Strings, │
+│ (8 UI   │  │  (Core +    │  │ (Strings, │
 │  Pages) │  │   Services) │  │  Images)  │
 └────┬────┘  └──────┬──────┘  └───────────┘
      │              │
@@ -194,14 +194,14 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | 层 | 项目 | 职责 |
 |---|---|---|
 | **Shell（外壳）** | `BlackGoldAncientSword.App` | WPF 应用入口、主窗口、导航、托盘、更新 |
-| **UI 模块** | `BlackGoldAncientSword.Modules` | 7 个独立页面模块，按需加载 |
+| **UI 模块** | `BlackGoldAncientSword.Modules` | 8 个独立页面模块，按需加载 |
 | **核心框架** | `BlackGoldAncientSword.Framework` | MVVM 基类、Prism 基础设施、HTTP API、本地化、设置 |
 | **游戏监控** | `BlackGoldAncientSword.GameMonitor` | 进程检测、游戏日志解析、状态机 |
 | **屏幕捕获** | `BlackGoldAncientSword.ScreenCapture` | Windows Graphics Capture API，SharpDX |
 | **OCR 引擎** | `BlackGoldAncientSword.Ocr` | PaddleOCR-json 封装 |
 | **资源** | `BlackGoldAncientSword.Resources` | 多语言 XAML 资源字典、图标 |
 | **源码生成** | `BlackGoldAncientSword.Framework.SourceGenerator` | 编译时从 JSON 定义生成 HTTP 客户端 |
-| **测试** | `BlackGoldAncientSword.Tests` | OCR 与屏幕捕获测试 |
+| **测试** | `BlackGoldAncientSword.Tests` | OCR、屏幕捕获、游戏监控、更新流程测试 |
 
 ---
 
@@ -218,7 +218,6 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | **屏幕捕获** | SharpDX + 原生 WGC DLL (C++) | 游戏窗口截图 |
 | **OCR** | PaddleOCR-json.exe | 多语言文字识别 |
 | **系统托盘** | Hardcodet.NotifyIcon.Wpf | 托盘图标与菜单 |
-| **自动更新** | NetSparkle 3.1 | 版本检测与静默更新 |
 | **打包** | Self-Contained + PublishSingleFile | 单文件独立部署 (win-x64) |
 
 ---
@@ -236,25 +235,43 @@ src/
 │
 ├── BlackGoldAncientSword.Framework/        # 核心框架
 │   ├── Core/
+│   │   ├── Attributes/
+│   │   │   └── ComponentAttribute.cs            # 自定义组件标记特性
 │   │   ├── Bases/ViewModels/ViewModelBase.cs  # MVVM 基类 (RaisePropertyChanged)
-│   │   ├── Bases/Views/                        # View 基类
-│   │   ├── Consts/PageNames.cs                 # 页面名称常量
+│   │   ├── Bases/Views/UserControlBase.cs      # View 基类
+│   │   ├── Consts/
+│   │   │   ├── GlobalConstant.cs                # 全局常量
+│   │   │   └── PageNames.cs                     # 页面名称常量
 │   │   ├── Events/                             # Prism EventAggregator 事件
+│   │   │   ├── GameStatus.cs                   # 游戏状态枚举
+│   │   │   ├── GameStatusChangedEventArgs.cs   # 状态变更事件参数
+│   │   │   ├── SettingsChangedEvent.cs         # 设置变更事件
+│   │   │   └── TipMessageEvent.cs              # 提示消息事件
 │   │   ├── Extensions/                         # 扩展方法
-│   │   └── Infrastructure/                     # 导航接口等
+│   │   └── Infrastructure/                     # 导航接口与实现
+│   │       ├── IMainContentNavigationService.cs  # 导航服务接口
+│   │       └── MainContentNavigator.cs          # 导航服务实现
 │   ├── Http/
 │   │   └── Definitions/                        # API JSON 定义 → 源码生成
 │   ├── Services/
+│   │   ├── AppSettings.cs                       # 应用配置数据模型
+│   │   ├── LanguageOption.cs                    # 语言选项模型
+│   │   ├── SearchHistoryItem.cs                 # 搜索历史模型
+│   │   ├── ServiceAutoRegister.cs              # 服务自动注册
 │   │   ├── Abstractions/                       # 服务接口 (7个)
 │   │   └── Implementation/                     # 服务实现
 │   ├── Themes/Generic.xaml                     # HandyControl 主题
-│   └── UI/Controls/                            # 自定义 WPF 控件
+│   └── UI/Controls/
+│       └── DataGridWrapPanel.cs                # DataGrid 换行面板
 │
 ├── BlackGoldAncientSword.Modules/          # UI 页面模块
-│   ├── Module/                               # Prism IModule 注册 (7个)
+│   ├── Mappings/
+│   │   └── BattleMappingRegister.cs          # Mapster 映射注册
+│   ├── Module/                               # Prism IModule 注册 (8个)
 │   └── UI/
 │       ├── Announcement/                     # 公告页
 │       ├── ClosePrompt/                      # 关闭确认弹窗
+│       ├── Feedback/                         # 意见反馈页
 │       ├── Home/                             # 首页（游戏状态监控）
 │       ├── Search/                           # 搜索历史
 │       ├── Settings/                         # 设置页
@@ -262,27 +279,55 @@ src/
 │       └── TeamInfo/                         # 队伍信息（OCR识别+对比）
 │
 ├── BlackGoldAncientSword.GameMonitor/      # 游戏监控
-│   ├── Models/                               # GameStatus, BattleEventArgs
+│   ├── GameMonitorAutoRegister.cs            # 服务自动注册
+│   ├── GlobalUsing.cs                        # 全局 using
+│   ├── Models/                               # BattleEventArgs, PlayerPrefsData
 │   └── Services/
-│       ├── GameLogMonitor.cs                 # Player.log 解析
-│       ├── GameStatusMonitor.cs              # 游戏状态状态机
-│       └── PlayerPrefsService.cs             # 本地用户偏好
+│       ├── Abstractions/
+│       │   ├── IGameLogMonitor.cs            # 日志监控接口
+│       │   ├── IGameStatusMonitor.cs         # 状态监控接口
+│       │   └── IPlayerPrefsService.cs        # 偏好服务接口
+│       └── Implementation/
+│           ├── GameLogMonitor.cs             # Player.log 解析
+│           ├── GameStatusMonitor.cs          # 游戏状态状态机
+│           └── PlayerPrefsService.cs         # 本地用户偏好
 │
 ├── BlackGoldAncientSword.ScreenCapture/     # 屏幕捕获
+│   ├── GlobalUsing.cs                        # 全局 using
+│   ├── IScreenCaptureService.cs             # 屏幕捕获服务接口
+│   ├── NativeWgc.cs                          # 原生 WGC API 互操作
+│   ├── ScreenCaptureAutoRegister.cs          # 服务自动注册
 │   ├── ScreenCaptureService.cs              # WGC 封装
-│   └── runtimes/win-x64/native/
+│   ├── ScreenQuadrant.cs                     # 屏幕四象限分割
+│   ├── WgcInterop.cs                         # WGC COM 互操作封装
+│   └── native/
 │       └── wgc_capture.dll                  # 原生 C++ 捕获库
 │
 ├── BlackGoldAncientSword.Ocr/               # OCR 引擎
-│   └── (PaddleOCR-json.exe 封装)
+│   ├── GlobalUsing.cs                        # 全局 using
+│   ├── IOcrService.cs                        # OCR 服务接口
+│   ├── JobObjectHelper.cs                    # 子进程生命周期管理
+│   ├── OcrAutoRegister.cs                    # 服务自动注册
+│   └── OcrEngine.cs                          # PaddleOCR-json.exe 封装
 │
 ├── BlackGoldAncientSword.Resources/         # 多语言资源
+│   ├── Images/                               # UI 图片资源
 │   └── Themes/
 │       ├── Strings.zh-CN.xaml               # 简体中文
 │       ├── Strings.en.xaml                  # English
 │       └── Strings.zh-TW.xaml               # 繁體中文
 │
-└── BlackGoldAncientSword.Tests/             # 测试项目
+├── BlackGoldAncientSword.Tests/             # 测试项目
+│   ├── GameMonitor/                          # 游戏监控测试
+│   ├── Ocr/                                  # OCR 测试
+│   ├── ScreenCapture/                        # 屏幕捕获测试
+│   ├── TestData/                             # 测试数据
+│   └── Update/                               # 更新流程测试
+│
+└── ocr_engine/                               # PaddleOCR-json 引擎文件
+    ├── PaddleOCR-json.exe                    # OCR 引擎可执行文件
+    ├── models/                               # OCR 模型文件
+    └── *.dll                                 # 运行时依赖（onnxruntime、OpenCV 等）
 ```
 
 ---
@@ -300,7 +345,7 @@ src/
 
 ### 2. 模块化加载
 
-7 个 UI 页面各是一个 Prism `IModule`，在 `ModuleCatalogConfigManager` 中配置为 `OnDemand` 模式——首次导航到某页面时才加载对应模块，减少启动时间。
+8 个 UI 页面各是一个 Prism `IModule`，在 `ModuleCatalogConfigManager` 中配置为 `OnDemand` 模式——首次导航到某页面时才加载对应模块，减少启动时间。
 
 ```csharp
 // PageNames.cs
@@ -313,6 +358,7 @@ public static class PageNames
     public const string SettingsPage = nameof(SettingsPage);
     public const string AnnouncementPage = nameof(AnnouncementPage);
     public const string ClosePromptPage  = nameof(ClosePromptPage);
+    public const string FeedbackPage     = nameof(FeedbackPage);
 }
 ```
 
@@ -347,10 +393,6 @@ API 客户端不手写，而是通过 `BlackGoldAncientSword.Framework.SourceGen
 
 多语言通过 WPF `ResourceDictionary` 实现，所有 UI 文本定义在 `Strings.xx.xaml` 中。运行时通过 `ILocalizationService.ApplyLanguage()` 动态切换资源字典，无需重启。
 
-### 7. 自动更新（NetSparkle）
-
-基于 NetSparkleUpdater，在后台线程检测 GitHub Releases。更新对话框文本已全部中文化。支持跳过版本、稍后提醒、下载安装三个选项。
-
 ---
 
 
@@ -379,6 +421,9 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 
 ```powershell
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
+```
+
+
 ```
 
 
