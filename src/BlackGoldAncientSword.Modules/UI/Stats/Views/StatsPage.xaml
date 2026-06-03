@@ -74,7 +74,8 @@
                         BorderThickness="0"
                         Command="{Binding GoBackToMeCommand}"
                         Cursor="Hand"
-                        ToolTip="{DynamicResource Stats.BackToMe}" ToolTipService.ShowOnDisabled="True">
+                        ToolTip="{DynamicResource Stats.BackToMe}"
+                        ToolTipService.ShowOnDisabled="True">
                         <Button.Style>
                             <Style TargetType="Button">
                                 <Setter Property="IsEnabled" Value="True" />
@@ -650,41 +651,65 @@
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="50" />
+                                            <ColumnDefinition />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition />
+                                            <RowDefinition />
+                                        </Grid.RowDefinitions>
                                         <TextBlock
+                                            Grid.Column="0"
+                                            HorizontalAlignment="Left"
                                             VerticalAlignment="Center"
                                             FontSize="12"
                                             FontWeight="SemiBold"
                                             Foreground="#333333"
                                             Text="{Binding RankDisplayText}" />
-                                        <Image
-                                            Width="14"
-                                            Height="14"
-                                            Margin="2,0,0,0"
+                                        <StackPanel
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Left"
+                                            Orientation="Horizontal">
+                                            <Image
+                                                Width="14"
+                                                Height="14"
+                                                Margin="2,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/star_icon.png"
+                                                Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Foreground="#333333"
+                                                Text="{Binding StarCount}"
+                                                Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        </StackPanel>
+                                        <StackPanel
+                                            Grid.Row="1"
+                                            Grid.RowSpan="2"
+                                            HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/star_icon.png"
-                                            Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                        <TextBlock
-                                            VerticalAlignment="Center"
-                                            FontSize="12"
-                                            FontWeight="SemiBold"
-                                            Foreground="#333333"
-                                            Text="{Binding StarCount}"
-                                            Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                        <TextBlock
-                                            Margin="3,0,0,0"
-                                            VerticalAlignment="Center"
-                                            FontSize="10"
-                                            Foreground="Gray"
-                                            Text="{Binding ScoreNumber}"
-                                            Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                        <TextBlock
-                                            Margin="6,0,0,0"
-                                            VerticalAlignment="Center"
-                                            FontSize="11"
-                                            Foreground="{Binding ScoreDiff, Converter={StaticResource ScoreDiffToColorConverter}}"
-                                            Text="{Binding ScoreDiffDisplay}" />
-                                    </StackPanel>
+                                            Orientation="Horizontal">
+                                            <TextBlock
+                                                Margin="3,0,0,0"
+                                                VerticalAlignment="Center"
+                                                FontSize="11"
+                                                FontWeight="ExtraLight"
+                                                Foreground="Gray"
+                                                Text="{Binding ScoreNumber}"
+                                                Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock
+                                                Margin="6,0,0,0"
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Foreground="{Binding ScoreDiff, Converter={StaticResource ScoreDiffToColorConverter}}"
+                                                Text="{Binding ScoreDiffDisplay}" />
+                                        </StackPanel>
+                                    </Grid>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
