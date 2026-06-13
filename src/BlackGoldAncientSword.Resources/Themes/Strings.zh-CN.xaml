@@ -285,6 +285,7 @@
     <!--  TeamOverlay  -->
     <system:String x:Key="TeamOverlay.Title">队伍信息</system:String>
     <system:String x:Key="TeamOverlay.ViewTeamInfo">查看队伍信息</system:String>
+    <system:String x:Key="TeamOverlay.ViewTeamInfoButton">查看详情</system:String>
 
     <!--  Feedback  -->
     <system:String x:Key="Feedback.Title">问题反馈</system:String>

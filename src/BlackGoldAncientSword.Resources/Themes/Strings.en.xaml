@@ -286,6 +286,7 @@
     <!--  TeamOverlay  -->
     <system:String x:Key="TeamOverlay.Title">Team Info</system:String>
     <system:String x:Key="TeamOverlay.ViewTeamInfo">View Team Info</system:String>
+    <system:String x:Key="TeamOverlay.ViewTeamInfoButton">View Details</system:String>
 
     <!--  Feedback  -->
     <system:String x:Key="Feedback.Title">Feedback</system:String>
