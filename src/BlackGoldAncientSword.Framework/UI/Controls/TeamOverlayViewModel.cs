@@ -17,8 +17,10 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             get => _dontShowAgain;
             set
             {
-                if (SetProperty(ref _dontShowAgain, value))
-                    DontShowAgainChanged?.Invoke(this, value);
+                if (_dontShowAgain == value) return;
+                _dontShowAgain = value;
+                RaisePropertyChanged(nameof(DontShowAgain));
+                DontShowAgainChanged?.Invoke(this, value);
             }
         }
 
