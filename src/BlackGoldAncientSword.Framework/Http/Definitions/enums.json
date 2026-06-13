@@ -5,29 +5,32 @@
     {
       "name": "GameMode",
       "namespace": "BlackGoldAncientSword.Framework.Core.Consts",
-      "description": "游戏模式（天选/匹配/天人 × 单双三排），值对应 /api/record/mini-program/stats 的 gameMode 参数",
+      "description": "游戏模式（天选/匹配/天人 × 单双三排 + 娱乐），值对应 /api/record/mini-program/stats 的 gameMode 参数",
       "underlyingType": "int",
       "values": [
-        { "name": "RankSolo",    "value": 1,  "description": "天选单排" },
-        { "name": "RankDuo",     "value": 12, "description": "天选双排" },
-        { "name": "RankTrio",    "value": 2,  "description": "天选三排" },
-        { "name": "MatchSolo",   "value": 6,  "description": "匹配单排" },
-        { "name": "MatchDuo",    "value": 9,  "description": "匹配双排" },
-        { "name": "MatchTrio",   "value": 7,  "description": "匹配三排" },
-        { "name": "TianrenSolo", "value": 4,  "description": "天人单排" },
-        { "name": "TianrenDuo",  "value": 13, "description": "天人双排" },
-        { "name": "TianrenTrio", "value": 5,  "description": "天人三排" }
+        { "name": "RankSolo",    "value": 101, "description": "天选单排" },
+        { "name": "RankDuo",     "value": 102, "description": "天选双排" },
+        { "name": "RankTrio",    "value": 103, "description": "天选三排" },
+        { "name": "MatchSolo",   "value": 201, "description": "匹配单排" },
+        { "name": "MatchDuo",    "value": 202, "description": "匹配双排" },
+        { "name": "MatchTrio",   "value": 203, "description": "匹配三排" },
+        { "name": "TianrenSolo", "value": 403, "description": "天人单排" },
+        { "name": "TianrenDuo",  "value": 402, "description": "天人双排" },
+        { "name": "TianrenTrio", "value": 401, "description": "天人三排" },
+        { "name": "EndlessTrial","value": 303, "description": "无尽试炼" },
+        { "name": "LandBattle",  "value": 301, "description": "地脉之战" }
       ]
     },
     {
       "name": "GameModeCategory",
       "namespace": "BlackGoldAncientSword.Framework.Core.Consts",
-      "description": "模式大类（排位/匹配/娱乐/天人），不区分队伍人数。注：娱乐模式当前 API 无独立 gameMode ID，仅前端分类使用",
+      "description": "模式大类（排位/匹配/娱乐/天人），不区分队伍人数",
       "underlyingType": "int",
       "values": [
         { "name": "Rank",     "value": 1, "description": "天选" },
         { "name": "Match",    "value": 2, "description": "匹配" },
-        { "name": "Tianren",  "value": 3, "description": "天人" }
+        { "name": "Tianren",  "value": 3, "description": "天人" },
+        { "name": "Fun",      "value": 4, "description": "娱乐" }
       ]
     },
     {
@@ -57,16 +60,16 @@
       {
         "name": "GetCategory",
         "returnType": "GameModeCategory",
-        "description": "获取 GameMode 对应的大类（天选/匹配/天人）",
+        "description": "获取 GameMode 对应的大类（天选/匹配/天人/娱乐）",
         "returns": "对应的大类枚举值",
-        "body": "return value switch { GameMode.RankSolo or GameMode.RankDuo or GameMode.RankTrio => GameModeCategory.Rank, GameMode.MatchSolo or GameMode.MatchDuo or GameMode.MatchTrio => GameModeCategory.Match, GameMode.TianrenSolo or GameMode.TianrenDuo or GameMode.TianrenTrio => GameModeCategory.Tianren, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
+        "body": "return value switch { GameMode.RankSolo or GameMode.RankDuo or GameMode.RankTrio => GameModeCategory.Rank, GameMode.MatchSolo or GameMode.MatchDuo or GameMode.MatchTrio => GameModeCategory.Match, GameMode.TianrenSolo or GameMode.TianrenDuo or GameMode.TianrenTrio => GameModeCategory.Tianren, GameMode.EndlessTrial or GameMode.LandBattle => GameModeCategory.Fun, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
       },
       {
         "name": "GetTeamSize",
         "returnType": "TeamSize",
         "description": "获取 GameMode 对应的队伍人数（单排/双排/三排）",
         "returns": "队伍人数枚举值",
-        "body": "return value switch { GameMode.RankSolo or GameMode.MatchSolo or GameMode.TianrenSolo => TeamSize.Solo, GameMode.RankDuo or GameMode.MatchDuo or GameMode.TianrenDuo => TeamSize.Duo, GameMode.RankTrio or GameMode.MatchTrio or GameMode.TianrenTrio => TeamSize.Trio, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
+        "body": "return value switch { GameMode.RankSolo or GameMode.MatchSolo or GameMode.TianrenSolo => TeamSize.Solo, GameMode.RankDuo or GameMode.MatchDuo or GameMode.TianrenDuo => TeamSize.Duo, GameMode.RankTrio or GameMode.MatchTrio or GameMode.TianrenTrio or GameMode.LandBattle => TeamSize.Trio, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
       },
       {
         "name": "FromCategoryAndTeamSize",

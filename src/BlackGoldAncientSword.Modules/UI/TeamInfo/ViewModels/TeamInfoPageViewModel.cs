@@ -1,6 +1,7 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Threading;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Http;
@@ -9,7 +10,10 @@ using BlackGoldAncientSword.GameMonitor.Models;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
 using BlackGoldAncientSword.Modules.UI.TeamInfo.Services;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
+using System.Linq;
+using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.Modules.UI.Stats.ViewModels;
+using BlackGoldAncientSword.Framework.UI.Controls;
 
 namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 {
@@ -19,11 +23,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private readonly ITeamInfoOcrService _teamInfoOcrService;
         private readonly IPlayerPrefsService _playerPrefsService;
         private readonly IMainContentNavigationService _navigation;
+        private readonly ITeamOverlayService _teamOverlayService;
         private CancellationTokenSource? _ocrLoopCts;
         private bool _isOcrRunning;
         private readonly object _ocrLock = new();        private bool _isHeroSelectionPhase;
         private CancellationTokenSource? _refreshMembersCts;
         private bool _hasEverHadData;
+        private bool _overlayShownForThisRound;
 
         private static string L(string key, string fallback) =>
             System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
@@ -32,16 +38,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             IGameStatusMonitor gameStatusMonitor,
             ITeamInfoOcrService teamInfoOcrService,
             IPlayerPrefsService playerPrefsService,
+            ITeamOverlayService teamOverlayService,
             IMainContentNavigationService navigation)
         {
             _gameStatusMonitor = gameStatusMonitor;
             _teamInfoOcrService = teamInfoOcrService;
+            _teamOverlayService = teamOverlayService;
             _playerPrefsService = playerPrefsService;
             _navigation = navigation;
-
-            // Always subscribe to game status so TeamInfo can capture hero selection
-            // regardless of whether the user has navigated to this page yet
-            _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
 
             TeamMembers = new ObservableCollection<TeamMemberInfo>();
             Seasons = new ObservableCollection<SeasonInfo>();
@@ -189,16 +193,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             {
                 case GameStatus.HeroSelection:
                     IsHeroSelectionPhase = true;
+                    _overlayShownForThisRound = false;
                     StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
                     StartOcrLoop();
                     break;
                 case GameStatus.InGame:
                     IsHeroSelectionPhase = false;
+                    _teamOverlayService.Hide();
                     StopOcrLoop();
                     break;
                 case GameStatus.BattleEnded:
                 case GameStatus.Unknown:
                     IsHeroSelectionPhase = false;
+                    _teamOverlayService.Hide();
                     StopOcrLoop();
                     StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
                     TeamMembers.Clear();
@@ -237,25 +244,18 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 var names = await _teamInfoOcrService.RecognizeTeamMembersAsync(CancellationToken.None);
                 if (names.Length > 0)
                 {
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        await UpdateTeamMembersAsync(names, CancellationToken.None);
+                        _ = UpdateTeamMembersAsync(names, CancellationToken.None);
+                    });
 
                         // Force reload all existing members that aren't already loading
                         foreach (var member in TeamMembers.ToList())
                         {
                             if (!member.IsLoading)
                                 RefreshSingleMember(member);
-                        }
-                    });
-
-                        // ?????????????????????
-                        foreach (var member in TeamMembers.ToList())
-                        {
-                            if (!member.IsLoading)
-                                RefreshSingleMember(member);
-                        }
                 }
+            }
             }
             catch (Exception ex)
             {
@@ -277,9 +277,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     if (names.Length > 0 && !ct.IsCancellationRequested)
                     {
                         hasRecognized = true;
-                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-                            await UpdateTeamMembersAsync(names, ct);
+                            _ = UpdateTeamMembersAsync(names, ct);
                         });
 
                         // Wait for all member data to load, then navigate to TeamInfo
@@ -491,7 +491,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             member.IsLoading = true;
             member.StatusText = "";
             var cts = new CancellationTokenSource();
-            _ = LoadMemberDataAsync(member, cts.Token);
+            var token = cts.Token;
+            _ = LoadMemberDataAsync(member, token).ContinueWith(_ => { try { cts.Dispose(); } catch { } }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         private async Task LoadMemberDataAsync(TeamMemberInfo member, CancellationToken ct)
@@ -574,6 +575,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 UpdateDiffs();
                 IsLoading = TeamMembers.Any(m => m.IsLoading);
                 RaiseMemberProperties();
+
+                // 所有成员数据加载完毕时显示覆盖层提示框
+                if (TeamMembers.Count > 0 && TeamMembers.All(m => !m.IsLoading) && !_overlayShownForThisRound)
+                {
+                    _overlayShownForThisRound = true;
+                    var overlayMembers = TeamMembers.Select(m => new TeamOverlayMemberItem
+                    {
+                        UserName = m.UserName,
+                        AvatarUrl = m.AvatarUrl,
+                        RankName = m.RankName
+                    }).ToList();
+                    _teamOverlayService.Show(overlayMembers);
+                }
             }
         }
 
@@ -711,6 +725,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         {
             base.OnNavigatedToExecute(navigationContext);
 
+            // 进入页面时订阅 game status 事件，捕获英雄选择阶段
+            _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
+
             _ = LoadSeasonsAsync();
 
             if (_gameStatusMonitor.CurrentStatus == GameStatus.HeroSelection)
@@ -721,6 +738,16 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
             else
             {
+                // 非英雄选择状态时清除旧队友数据，避免复杂UI（DropShadowEffect + 索引绑定）立即渲染导致卡死
+                if (TeamMembers.Count > 0)
+                {
+                    _hasEverHadData = false;
+                    TeamMembers.Clear();
+                    DiffLeft.Clear();
+                    DiffRight.Clear();
+                    RaiseMemberProperties();
+                }
+
                 IsHeroSelectionPhase = false;
                 if (_gameStatusMonitor.CurrentStatus != GameStatus.InGame)
                     StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
@@ -742,7 +769,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         if (Seasons.Count > 0 && _selectedSeason == null)
                             _selectedSeason = Seasons[0];
                         RaisePropertyChanged(nameof(SelectedSeason));
-                    });
+                    }, DispatcherPriority.Background);
                 }
             }
             catch (Exception ex)
@@ -753,9 +780,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
+            // 离开页面时取消订阅，避免 VM 泄漏
+            _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
+
             StopOcrLoop();
             CancelAndDispose(ref _refreshMembersCts);
-            // Don't unsubscribe - keep listening for game status to capture hero selection proactively
             base.OnNavigatedFromExecute(navigationContext);
         }
     }
@@ -952,3 +981,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             });
     }
 }
+
+
+
+
+

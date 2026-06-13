@@ -1,4 +1,4 @@
-﻿using System.Windows.Threading;
+using System.Windows.Threading;
 using System.Diagnostics;
 using BlackGoldAncientSword.App.Shell;
 using BlackGoldAncientSword.Framework.Core.Events;
@@ -71,8 +71,9 @@ namespace BlackGoldAncientSword.App
                 // 等待异步加载完成，不阻塞 UI 线程
                 await settings.LoadAsync();
                 var updater = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>();
-                updater.SetAutoPopupEnabled(settings.Current.AutoCheckUpdates);
+
                 updater.CheckForUpdatesAsync(showNoUpdateMessage: false).SafeFireAndForget("App.CheckForUpdates");
+
             }
             catch { }
 
@@ -115,5 +116,6 @@ namespace BlackGoldAncientSword.App
         }
     }
 }
+
 
 
