@@ -278,6 +278,7 @@
     <!--  TeamOverlay  -->
     <ns1:String ns2:Key="TeamOverlay.Title">隊伍資訊</ns1:String>
     <ns1:String ns2:Key="TeamOverlay.ViewTeamInfo">查看隊伍資訊</ns1:String>
+    <ns1:String ns2:Key="TeamOverlay.ViewTeamInfoButton">查看詳情</ns1:String>
 
     <!--  Feedback  -->
     <ns1:String ns2:Key="Feedback.Title">問題反饋</ns1:String>
