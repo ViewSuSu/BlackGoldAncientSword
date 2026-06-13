@@ -13,6 +13,8 @@ namespace BlackGoldAncientSword.Framework.Services
 
         public bool AutoCheckUpdates { get; set; } = true;
 
+        public bool ShowTeamOverlayDuringHeroSelection { get; set; } = true;
+
         public static string GetDefaultCachePath()
         {
             var basePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -34,3 +36,4 @@ namespace BlackGoldAncientSword.Framework.Services
         }
     }
 }
+

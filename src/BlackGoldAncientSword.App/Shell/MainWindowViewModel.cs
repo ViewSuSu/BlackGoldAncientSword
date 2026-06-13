@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Diagnostics;
@@ -212,10 +212,8 @@ namespace BlackGoldAncientSword.App.Shell
 
             _updateService.UpdateAvailabilityChanged += OnUpdateAvailabilityChanged;
             IsUpdateAvailable = _updateService.IsUpdateAvailable;
-            if (IsUpdateAvailable)
-            {
-                _updateCheckCompleted = true;
-            }
+            // 默认当前为最新版；若后续检查发现新版本，OnUpdateAvailabilityChanged 会切换 IsUpdateAvailable=true
+            _updateCheckCompleted = true;
 
             ActivePage = PageNames.HomePage;
 

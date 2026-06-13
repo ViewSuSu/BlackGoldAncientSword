@@ -1,7 +1,8 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Generated;
+using System.ComponentModel;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using System.Windows;
 using BlackGoldAncientSword.Framework.Core.Events;
@@ -15,6 +16,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
     {
         private readonly IPlayerPrefsService _playerPrefsService;
         private readonly ITipMessageService _tipMessage;
+        private readonly ILocalizationService _localizationService;
+        private readonly PropertyChangedEventHandler? _onLanguageChangedHandler;
         private CancellationTokenSource? _loadAllCts;
         private CancellationTokenSource? _loadStatsCts;
 
@@ -22,7 +25,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         {
             _playerPrefsService = playerPrefsService;
             _tipMessage = tipMessageService;
-            localizationService.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(localizationService.CurrentLanguage)) { TeamSizes.ResetBindings(); Categories.ResetBindings(); } };
+            _localizationService = localizationService;
+            _onLanguageChangedHandler = OnLanguageChanged;
+            _localizationService.PropertyChanged += _onLanguageChangedHandler;
             Seasons = new ObservableCollection<SeasonInfo>();
             DetailStats = new ObservableCollection<StatEntryItem>();
             RecentBattles = new ObservableCollection<RecentBattleDisplayItem>();
@@ -267,6 +272,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             ["max_cure"] = "Stats.BestHeal",
             ["max_assist"] = "Stats.BestAssists",
             ["max_damage"] = "Stats.BestDamage",
+              ["avg_move_distance"] = "Stats.AvgMoveDistance",
+              ["max_move_distance"] = "Stats.MaxMoveDistance",
         };
 
         private SeasonInfo? _selectedSeason;
@@ -337,6 +344,15 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private string _roleId = string.Empty;
 
+        private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ILocalizationService.CurrentLanguage))
+            {
+                TeamSizes.ResetBindings();
+                Categories.ResetBindings();
+            }
+        }
+
         protected override async void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
@@ -347,6 +363,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
+            if (_localizationService != null && _onLanguageChangedHandler != null)
+                _localizationService.PropertyChanged -= _onLanguageChangedHandler;
             CancelAndDispose(ref _loadAllCts);
             CancelAndDispose(ref _loadStatsCts);
             ClearImageBindings();
@@ -416,7 +434,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             {
                 if (success)
                     _tipMessage.ShowInfo(L("Stats.SearchSuccess", "搜索成功"));
-                else
+                else if (!string.IsNullOrEmpty(_playerPrefsService.Current.PlayerName))
                     _tipMessage.ShowError(L("Stats.SearchError", "搜索失败，请检查网络后重试"));
             }
         }
@@ -426,10 +444,17 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private async System.Threading.Tasks.Task<bool> LoadAllAsync(CancellationToken ct)
         {
+            if (!_playerPrefsService.Current.IsLoaded)
+            {
+                ShowNotFound = true;
+                ClearAllData();
+                return false;
+            }
+
             var localName = _playerPrefsService.Current.PlayerName;
             if (string.IsNullOrEmpty(localName))
             {
-                _tipMessage.ShowError(L("Stats.NoPlayerName", "请先在设置中配置玩家名称"));
+                ClearAllData();
                 return false;
             }
 
@@ -487,23 +512,24 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     for (int i = 0; i < battleItems.Count; i++)
                     {
                         var b = battleItems[i];
+                        var modeCode = (int)(b.Subtype ?? b.GameMode ?? 0);
                         RecentBattles.Add(new RecentBattleDisplayItem
                         {
                             Rank = b.Rank ?? 0,
                             HonorTitles = new ObservableCollection<HonorTitleDisplayItem>(),
                             HeroIcon = b.Hero?.HeroIcon ?? string.Empty,
                             HeroName = b.Hero?.HeroName ?? "Unknown",
-                            GameModeText = FormatGameMode((int)(b.GameMode ?? 0)),
-                            GameModeCategoryText = FormatGameModeCategory((int)(b.GameMode ?? 0)),
-                            GameModeTeamSizeText = FormatGameModeTeamSize((int)(b.GameMode ?? 0)),
-                            GameMode = (int)(b.GameMode ?? 0),
+                            GameModeText = FormatGameMode(modeCode),
+                            GameModeCategoryText = FormatGameModeCategory(modeCode),
+                            GameModeTeamSizeText = FormatGameModeTeamSize(modeCode),
+                            GameMode = modeCode,
                             Kill = (int)(b.Kill ?? 0),
                             Damage = (int)(b.Damage ?? 0),
-                            ScoreNumber = GetRankTierScore((b.RoundRankScore ?? 0), (int)(b.GameMode ?? 0)),
+                            ScoreNumber = GetRankTierScore((b.RoundRankScore ?? 0), modeCode),
                             ScoreDiff = (b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0),
-                            RankDisplayText = GetRankNameForScore((b.RoundRankScore ?? 0), (int)(b.GameMode ?? 0)),
-                            StarCount = GetStarCount((b.RoundRankScore ?? 0), (int)(b.GameMode ?? 0)),
-                            HasStars = IsTianxuanMode((int)(b.GameMode ?? 0)) && (b.RoundRankScore ?? 0) >= 4500,
+                            RankDisplayText = GetRankNameForScore((b.RoundRankScore ?? 0), modeCode),
+                            StarCount = GetStarCount((b.RoundRankScore ?? 0), modeCode),
+                            HasStars = IsTianxuanMode(modeCode) && (b.RoundRankScore ?? 0) >= 4500,
                             ScoreDiffDisplay = FormatScoreDiff((b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0)),
                             BattleTime = FormatUnixTime(b.BattleEndTime ?? 0)
                         });
@@ -577,7 +603,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             StatsProgress = 0;
             try
             {
-                var gameMode = ResolveGameMode(_selectedCategory, _selectedTeamSize);
+                var gameMode = GameModeExtensions.FromCategoryAndTeamSize(_selectedCategory, _selectedTeamSize);
 
                 var stats = await NarakaApiClient.GetPlayerStatsAsync(
                     _roleId, SelectedSeason.Code, gameMode, ct);
@@ -711,24 +737,18 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private static string FormatGameModeCategory(int gameMode)
         {
-            var enumValue = gameMode switch
+            if (Enum.IsDefined(typeof(GameMode), gameMode))
             {
-                1 => GameModeCategory.Rank,
-                12 => GameModeCategory.Rank,
-                2 => GameModeCategory.Rank,
-                6 => GameModeCategory.Match,
-                9 => GameModeCategory.Match,
-                7 => GameModeCategory.Match,
-                4 => GameModeCategory.Tianren,
-                13 => GameModeCategory.Tianren,
-                5 => GameModeCategory.Tianren,
-                _ => (GameModeCategory?)null
-            };
-
-            if (enumValue.HasValue)
-            {
-                var key = "GameMode." + enumValue.Value.ToString();
-                return Application.Current?.TryFindResource(key) as string ?? enumValue.Value.ToString();
+                try
+                {
+                    var category = ((GameMode)gameMode).GetCategory();
+                    var key = "GameMode." + category.ToString();
+                    return Application.Current?.TryFindResource(key) as string ?? category.ToString();
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    return Application.Current?.TryFindResource("GameMode.Unknown") as string ?? "Unknown";
+                }
             }
 
             return Application.Current?.TryFindResource("GameMode.Unknown") as string ?? "Unknown";
@@ -736,29 +756,22 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private static string FormatGameModeTeamSize(int gameMode)
         {
-            var enumValue = gameMode switch
+            if (Enum.IsDefined(typeof(GameMode), gameMode))
             {
-                1 => TeamSize.Solo,
-                12 => TeamSize.Duo,
-                2 => TeamSize.Trio,
-                6 => TeamSize.Solo,
-                9 => TeamSize.Duo,
-                7 => TeamSize.Trio,
-                4 => TeamSize.Solo,
-                13 => TeamSize.Duo,
-                5 => TeamSize.Trio,
-                _ => (TeamSize?)null
-            };
-
-            if (enumValue.HasValue)
-            {
-                var key = "GameMode." + enumValue.Value.ToString();
-                return Application.Current?.TryFindResource(key) as string ?? enumValue.Value.ToString();
+                try
+                {
+                    var teamSize = ((GameMode)gameMode).GetTeamSize();
+                    var key = "GameMode." + teamSize.ToString();
+                    return Application.Current?.TryFindResource(key) as string ?? teamSize.ToString();
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    return string.Empty;
+                }
             }
 
             return Application.Current?.TryFindResource("GameMode.Unknown") as string ?? "Unknown";
         }
-
         private static string FormatUnixTime(long unixMilliseconds)
         {
             try
@@ -795,7 +808,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
         private static bool IsTianxuanMode(double gameMode)
         {
-            return gameMode == 1 || gameMode == 12 || gameMode == 2;
+            var mode = (int)gameMode; return Enum.IsDefined(typeof(GameMode), mode) && ((GameMode)mode).GetCategory() == GameModeCategory.Rank;
         }
 
         private static string GetRankNameForScore(double score, int gameMode = 0)
@@ -911,4 +924,3 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             System.Windows.Application.Current?.TryFindResource("GameMode." + Value.ToString()) as string ?? Value.ToString();
     }
 }
-

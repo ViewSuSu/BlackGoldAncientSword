@@ -1,6 +1,8 @@
+using System;
+
 namespace BlackGoldAncientSword.Framework.Core.Bases.ViewModels
 {
-    public abstract class ViewModelBase : BindableBase, INavigationAware, IActiveAware
+    public abstract class ViewModelBase : BindableBase, INavigationAware, IActiveAware, IDisposable
     {
         protected readonly IEventAggregator eventAggregator;
         protected readonly IRegionManager regionManager;
@@ -37,5 +39,20 @@ namespace BlackGoldAncientSword.Framework.Core.Bases.ViewModels
         protected virtual void OnNavigatedToExecute(NavigationContext navigationContext) { }
 
         public void OnNavigatedTo(NavigationContext navigationContext) => OnNavigatedToExecute(navigationContext);
+
+        private bool _disposed;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            if (disposing) { }
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

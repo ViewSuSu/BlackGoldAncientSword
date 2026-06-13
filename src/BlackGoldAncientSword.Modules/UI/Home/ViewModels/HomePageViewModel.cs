@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Windows.Threading;
 using BlackGoldAncientSword.GameMonitor.Models;
@@ -59,6 +59,7 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
         }
 
         private bool _monitorStarted;
+        private bool _isSubscribed;
         private async void OnTimerTick(object? sender, EventArgs e)
         {
             var found = IsNarakaProcessRunning();
@@ -68,14 +69,16 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
                 IsLoading = false;
                 StatusText = L("Home.Status.GameStarted", "游戏启动成功");
                 StatusHint = L("Home.Status.GameDetected", "永劫无间进程已检测到");
-                if (!_monitorStarted)
+                if (!_isSubscribed)
                 {
-                    _monitorStarted = true;
+                    _isSubscribed = true;
                     _gameLogMonitor.BattleJoined += OnBattleJoined;
                     _gameLogMonitor.BattleStarted += OnBattleStarted;
                     _gameLogMonitor.BattleEnded += OnBattleEnded;
-                    await _gameLogMonitor.StartAsync();
-                    _gameStatusMonitor.Start();
+                    try { await _gameLogMonitor.StartAsync(); }
+                    catch (Exception ex) { Debug.WriteLine($"[HomePage] GameLogMonitor start error: {ex.Message}"); }
+                    try { _gameStatusMonitor.Start(); }
+                    catch (Exception ex) { Debug.WriteLine($"[HomePage] GameStatusMonitor start error: {ex.Message}"); }
                 }
             }
             else if (!found && IsGameRunning)
@@ -84,9 +87,9 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
                 IsLoading = true;
                 StatusText = L("Home.Status.WaitingForGame", "等待游戏启动");
                 StatusHint = string.Empty;
-                if (_monitorStarted)
+                if (_isSubscribed)
                 {
-                    _monitorStarted = false;
+                    _isSubscribed = false;
                     _gameLogMonitor.BattleJoined -= OnBattleJoined;
                     _gameLogMonitor.BattleStarted -= OnBattleStarted;
                     _gameLogMonitor.BattleEnded -= OnBattleEnded;
