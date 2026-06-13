@@ -494,7 +494,7 @@
                         <Image
                             Width="14"
                             Height="14"
-                            ToolTip="查看更新日志"
+                            ToolTip="{DynamicResource MainWindow.ViewUpdateLog}"
                             Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/announcement.png" />
                     </StackPanel>
                 </StackPanel>
@@ -551,7 +551,7 @@
                                         Margin="0,0,0,6"
                                         FontSize="13"
                                         FontWeight="Bold"
-                                        Text="联系作者" />
+                                        Text="{DynamicResource MainWindow.ContactAuthor}" />
                                     <TextBox
                                         MinWidth="160"
                                         Padding="0"
@@ -560,7 +560,7 @@
                                         FontSize="12"
                                         Foreground="#333333"
                                         IsReadOnly="True"
-                                        Text="微信号：Yyu16147" />
+                                        Text="{DynamicResource MainWindow.WeChatInfo}" />
                                 </StackPanel>
                             </Border>
                         </Popup>

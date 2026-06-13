@@ -33,28 +33,39 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Close button (top-right) -->
-            <Button
-                Grid.Row="0"
-                Width="22"
-                Height="22"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Padding="0"
-                Background="Transparent"
-                BorderThickness="0"
-                Command="{Binding CloseCommand}"
-                Cursor="Hand"
-                ToolTip="关闭">
-                <Path
-                    Width="10"
-                    Height="10"
-                    HorizontalAlignment="Center"
+            <!-- Title + Close button -->
+            <Grid Grid.Row="0" Margin="0,2,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Grid.Column="0"
                     VerticalAlignment="Center"
-                    Data="M0,0 L10,10 M10,0 L0,10"
-                    Stroke="#888888"
-                    StrokeThickness="1.5" />
-            </Button>
+                    FontSize="13"
+                    FontWeight="SemiBold"
+                    Foreground="#CCCCCC"
+                    Text="{DynamicResource TeamInfo.Title}" />
+                <Button
+                    Grid.Column="1"
+                    Width="22"
+                    Height="22"
+                    Padding="0"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Command="{Binding CloseCommand}"
+                    Cursor="Hand"
+                    ToolTip="{DynamicResource TitleBar.Close}">
+                    <Path
+                        Width="10"
+                        Height="10"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Data="M0,0 L10,10 M10,0 L0,10"
+                        Stroke="#888888"
+                        StrokeThickness="1.5" />
+                </Button>
+            </Grid>
 
             <!-- Team members area -->
             <ItemsControl
@@ -102,18 +113,41 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <!-- DontShowAgain checkbox (bottom-left) -->
-            <CheckBox
-                Grid.Row="2"
-                Margin="4,0,0,2"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Bottom"
-                Background="Transparent"
-                BorderBrush="#666666"
-                Content="{DynamicResource TeamOverlay.DontShowAgain}"
-                FontSize="11"
-                Foreground="#999999"
-                IsChecked="{Binding DontShowAgain}" />
+            <!-- Checkbox + TeamInfo button (bottom row) -->
+            <Grid Grid.Row="2" Margin="4,0,4,2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <CheckBox
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    BorderBrush="#666666"
+                    Content="{DynamicResource TeamOverlay.DontShowAgain}"
+                    FontSize="11"
+                    Foreground="#999999"
+                    IsChecked="{Binding DontShowAgain}" />
+                <Button
+                    Grid.Column="2"
+                    Width="Auto"
+                    Height="20"
+                    Padding="6,0"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Command="{Binding NavigateToTeamInfoCommand}"
+                    Cursor="Hand"
+                    ToolTip="{DynamicResource TeamOverlay.ViewTeamInfo}">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="#5B8DEF"
+                        TextDecorations="Underline"
+                        Text="{DynamicResource TeamInfo.Title}" />
+                </Button>
+            </Grid>
         </Grid>
     </Border>
 </Window>

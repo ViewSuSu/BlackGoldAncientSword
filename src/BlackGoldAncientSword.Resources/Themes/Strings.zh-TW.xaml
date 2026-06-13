@@ -263,8 +263,35 @@
     <ns1:String ns2:Key="TeamInfo.LoadFailed">載入失敗</ns1:String>
     <ns1:String ns2:Key="TeamInfo.LoadError">載入錯誤</ns1:String>
     <ns1:String ns2:Key="TeamInfo.QueryFailed">查詢失敗</ns1:String>
-    <ns1:String ns2:Key="TeamInfo.RefreshOcr">重新識別隊伍資訊</ns1:String>
-    <ns1:String ns2:Key="TeamOverlay.DontShowAgain">是否不再提示</ns1:String>
+   <ns1:String ns2:Key="TeamInfo.RefreshOcr">重新識別隊伍資訊</ns1:String>
+   <ns1:String ns2:Key="TeamOverlay.DontShowAgain">是否不再提示</ns1:String>
+
+    <!--  MainWindow - Contact & Update Log  -->
+    <ns1:String ns2:Key="MainWindow.ViewUpdateLog">檢視更新日誌</ns1:String>
+    <ns1:String ns2:Key="MainWindow.ContactAuthor">聯繫作者</ns1:String>
+    <ns1:String ns2:Key="MainWindow.WeChatInfo">微信號：Yyu16147</ns1:String>
+
+
+    <!--  TeamInfo - Player Stats Navigation  -->
+    <ns1:String ns2:Key="TeamInfo.ViewPlayerStats">查看該玩家詳細戰績</ns1:String>
+
+    <!--  TeamOverlay  -->
+    <ns1:String ns2:Key="TeamOverlay.Title">隊伍資訊</ns1:String>
+    <ns1:String ns2:Key="TeamOverlay.ViewTeamInfo">查看隊伍資訊</ns1:String>
+
+    <!--  Feedback  -->
+    <ns1:String ns2:Key="Feedback.Title">問題反饋</ns1:String>
+    <ns1:String ns2:Key="Feedback.ClientGroupTitle">客戶端問題反饋群</ns1:String>
+    <ns1:String ns2:Key="Feedback.ClientGroupQQ">①群：146088141</ns1:String>
+    <ns1:String ns2:Key="Feedback.DataGroupTitle">數據問題反饋群</ns1:String>
+    <ns1:String ns2:Key="Feedback.BotDescription">QQ群機器人也可以查戰績</ns1:String>
+    <ns1:String ns2:Key="Feedback.DataGroup1">①群：476074617</ns1:String>
+    <ns1:String ns2:Key="Feedback.DataGroup2">②群：649891198</ns1:String>
+    <ns1:String ns2:Key="Feedback.DataGroup3">③群：966720321</ns1:String>
+    <ns1:String ns2:Key="Feedback.QQEntryRequirement">QQ等級超過32（兩個太陽）的自動審核進群，小號不給進</ns1:String>
+    <ns1:String ns2:Key="Feedback.WebTitle">網頁端</ns1:String>
+    <ns1:String ns2:Key="Feedback.GitHubTitle">GitHub</ns1:String>
+    <ns1:String ns2:Key="Feedback.Close">關閉</ns1:String>
 </ns0:ResourceDictionary>
 
 
