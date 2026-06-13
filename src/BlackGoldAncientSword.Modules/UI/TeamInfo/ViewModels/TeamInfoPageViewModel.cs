@@ -327,7 +327,17 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             foreach (var name in newNames)
             {
                 ct.ThrowIfCancellationRequested();
-                var member = new TeamMemberInfo { UserName = name, IsLoading = true, RefreshAction = RefreshSingleMember };
+                var member = new TeamMemberInfo
+                {
+                    UserName = name,
+                    IsLoading = true,
+                    RefreshAction = RefreshSingleMember,
+                    NavigateToStatsAction = username =>
+                    {
+                        _playerPrefsService.Current.PlayerName = username;
+                        _navigation.NavigateTo(PageNames.StatsPage);
+                    }
+                };
                 TeamMembers.Add(member);
                 _ = LoadMemberDataAsync(member, CancellationToken.None);
             }
@@ -979,8 +989,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     .Publish(new TipMessageWithHighlightArgs(
                         System.Windows.Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "\u590d\u5236\u6210\u529f"));
             });
+
+        public System.Action<string>? NavigateToStatsAction { get; set; }
+
+        private DelegateCommand? _navigateToStatsCommand;
+        public DelegateCommand NavigateToStatsCommand =>
+            _navigateToStatsCommand ??= new DelegateCommand(() =>
+            {
+                NavigateToStatsAction?.Invoke(UserName);
+            });
+
     }
 }
+
 
 
 

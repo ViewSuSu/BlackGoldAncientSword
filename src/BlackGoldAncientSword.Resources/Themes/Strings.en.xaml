@@ -271,8 +271,35 @@
     <system:String x:Key="TeamInfo.LoadFailed">Load failed</system:String>
     <system:String x:Key="TeamInfo.LoadError">Load error</system:String>
     <system:String x:Key="TeamInfo.QueryFailed">Query Failed</system:String>
-    <system:String x:Key="TeamInfo.RefreshOcr">Re-identify team info</system:String>
-    <system:String x:Key="TeamOverlay.DontShowAgain">Don't show again</system:String>
+   <system:String x:Key="TeamInfo.RefreshOcr">Re-identify team info</system:String>
+   <system:String x:Key="TeamOverlay.DontShowAgain">Don't show again</system:String>
+
+    <!--  MainWindow - Contact & Update Log  -->
+    <system:String x:Key="MainWindow.ViewUpdateLog">View Update Log</system:String>
+    <system:String x:Key="MainWindow.ContactAuthor">Contact Author</system:String>
+    <system:String x:Key="MainWindow.WeChatInfo">WeChat: Yyu16147</system:String>
+
+
+    <!--  TeamInfo - Player Stats Navigation  -->
+    <system:String x:Key="TeamInfo.ViewPlayerStats">View detailed stats</system:String>
+
+    <!--  TeamOverlay  -->
+    <system:String x:Key="TeamOverlay.Title">Team Info</system:String>
+    <system:String x:Key="TeamOverlay.ViewTeamInfo">View Team Info</system:String>
+
+    <!--  Feedback  -->
+    <system:String x:Key="Feedback.Title">Feedback</system:String>
+    <system:String x:Key="Feedback.ClientGroupTitle">Client Feedback Group</system:String>
+    <system:String x:Key="Feedback.ClientGroupQQ">Group 1: 146088141</system:String>
+    <system:String x:Key="Feedback.DataGroupTitle">Data Feedback Group</system:String>
+    <system:String x:Key="Feedback.BotDescription">QQ bot can also query stats</system:String>
+    <system:String x:Key="Feedback.DataGroup1">Group 1: 476074617</system:String>
+    <system:String x:Key="Feedback.DataGroup2">Group 2: 649891198</system:String>
+    <system:String x:Key="Feedback.DataGroup3">Group 3: 966720321</system:String>
+    <system:String x:Key="Feedback.QQEntryRequirement">QQ level 32+ (two suns) auto-approve, alt accounts not allowed</system:String>
+    <system:String x:Key="Feedback.WebTitle">Web</system:String>
+    <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
+    <system:String x:Key="Feedback.Close">Close</system:String>
 </ResourceDictionary>
 
 

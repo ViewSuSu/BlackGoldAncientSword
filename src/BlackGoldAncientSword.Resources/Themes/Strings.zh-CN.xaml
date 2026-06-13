@@ -270,8 +270,35 @@
     <system:String x:Key="TeamInfo.LoadFailed">加载失败</system:String>
     <system:String x:Key="TeamInfo.LoadError">加载出错</system:String>
     <system:String x:Key="TeamInfo.QueryFailed">查询失败</system:String>
-    <system:String x:Key="TeamInfo.RefreshOcr">重新识别队伍信息</system:String>
-    <system:String x:Key="TeamOverlay.DontShowAgain">是否不再提示</system:String>
+   <system:String x:Key="TeamInfo.RefreshOcr">重新识别队伍信息</system:String>
+   <system:String x:Key="TeamOverlay.DontShowAgain">是否不再提示</system:String>
+
+    <!--  MainWindow - Contact & Update Log  -->
+    <system:String x:Key="MainWindow.ViewUpdateLog">查看更新日志</system:String>
+    <system:String x:Key="MainWindow.ContactAuthor">联系作者</system:String>
+    <system:String x:Key="MainWindow.WeChatInfo">微信号：Yyu16147</system:String>
+
+
+    <!--  TeamInfo - Player Stats Navigation  -->
+    <system:String x:Key="TeamInfo.ViewPlayerStats">查看该玩家详细战绩</system:String>
+
+    <!--  TeamOverlay  -->
+    <system:String x:Key="TeamOverlay.Title">队伍信息</system:String>
+    <system:String x:Key="TeamOverlay.ViewTeamInfo">查看队伍信息</system:String>
+
+    <!--  Feedback  -->
+    <system:String x:Key="Feedback.Title">问题反馈</system:String>
+    <system:String x:Key="Feedback.ClientGroupTitle">客户端问题反馈群</system:String>
+    <system:String x:Key="Feedback.ClientGroupQQ">①群：146088141</system:String>
+    <system:String x:Key="Feedback.DataGroupTitle">数据问题反馈群</system:String>
+    <system:String x:Key="Feedback.BotDescription">QQ群机器人也可以查战绩</system:String>
+    <system:String x:Key="Feedback.DataGroup1">①群：476074617</system:String>
+    <system:String x:Key="Feedback.DataGroup2">②群：649891198</system:String>
+    <system:String x:Key="Feedback.DataGroup3">③群：966720321</system:String>
+    <system:String x:Key="Feedback.QQEntryRequirement">QQ等级超过32（两个太阳）的自动审核进群，小号不给进</system:String>
+    <system:String x:Key="Feedback.WebTitle">网页端</system:String>
+    <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
+    <system:String x:Key="Feedback.Close">关闭</system:String>
 </ResourceDictionary>
 
 
