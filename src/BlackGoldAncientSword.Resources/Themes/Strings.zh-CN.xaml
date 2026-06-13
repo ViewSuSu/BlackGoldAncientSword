@@ -1,4 +1,4 @@
-﻿<ResourceDictionary
+<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:system="clr-namespace:System;assembly=mscorlib">
@@ -56,6 +56,7 @@
     <system:String x:Key="Stats.RecentBattles">最近10场对局</system:String>
     <system:String x:Key="Stats.LoadError">加载战绩失败，请检查网络后重试。</system:String>
     <system:String x:Key="Stats.NoPlayerName">请先在设置中配置玩家名称</system:String>
+    <system:String x:Key="Stats.GameNotInstalled">您目前未下载游戏</system:String>
     <system:String x:Key="Stats.PlayerNotFound">未找到该玩家，请检查名称是否正确</system:String>
     <system:String x:Key="Stats.CopyNickname">复制昵称</system:String>
     <system:String x:Key="Stats.CopyUID">复制UID</system:String>
@@ -182,6 +183,7 @@
 
     <!--  Settings - Close Behavior  -->
     <system:String x:Key="Settings.Category.CloseBehavior">关闭行为</system:String>
+    <system:String x:Key="Settings.Category.TeamOverlay">英雄选择提示</system:String>
     <system:String x:Key="Settings.CloseBehavior.Description">设置点击关闭按钮时的默认行为</system:String>
     <system:String x:Key="Settings.CloseBehavior.Ask">每次询问</system:String>
     <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到任务栏</system:String>
@@ -211,12 +213,10 @@
     <system:String x:Key="Settings.CurrentVersionLatest">当前版本（最新）: {0}</system:String>
 
     <!--  更新  -->
-    <system:String x:Key="Settings.AutoUpdate">更新</system:String>
-
-    <!--  检测更新  -->
+<!--  检测更新  -->
     <system:String x:Key="MainWindow.CheckForUpdates">检测更新</system:String>
     <system:String x:Key="MainWindow.CheckForUpdates.ToolTip">检查是否有新版本</system:String>
-    <system:String x:Key="Settings.AutoCheckUpdates">启动时检测新版本</system:String>
+<system:String x:Key="Settings.ShowTeamOverlayDuringHeroSelection">英雄选择时显示队伍提示</system:String>
     <!--  更新对话框 - NetSparkle UI 中文本地化  -->
 
     <!--  更新对话框 - NetSparkle UI 中文本地化  -->
@@ -271,4 +271,8 @@
     <system:String x:Key="TeamInfo.LoadError">加载出错</system:String>
     <system:String x:Key="TeamInfo.QueryFailed">查询失败</system:String>
     <system:String x:Key="TeamInfo.RefreshOcr">重新识别队伍信息</system:String>
+    <system:String x:Key="TeamOverlay.DontShowAgain">是否不再提示</system:String>
 </ResourceDictionary>
+
+
+

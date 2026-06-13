@@ -96,7 +96,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             // Update detected
             _sparkle.UpdateDetected += (_, args) =>
             {
-                var latestVer = args.LatestVersion?.Version ?? "";
+                var latestVer = NormalizeVersion(args.LatestVersion?.Version ?? "");
                 Debug.WriteLine($"[UpdateService] UpdateDetected 事件触发，最新版本: {latestVer}, 当前版本: {CurrentVersion}");
 
                 // Reset suppression flag on each detection cycle
@@ -225,6 +225,17 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
             Debug.WriteLine($"[UpdateService] Appcast URL: {url}");
             return url;
+        }
+
+        /// <summary>
+        /// 规范化版本字符串：去掉 Git tag 常用的 "v" 前缀（如 "v1.0.0" → "1.0.0"），
+        /// 确保与本地 AssemblyInformationalVersion 格式一致后进行比较。
+        /// </summary>
+        private static string NormalizeVersion(string version)
+        {
+            if (version.Length > 0 && (version[0] == 'v' || version[0] == 'V'))
+                return version[1..];
+            return version;
         }
     }
 }

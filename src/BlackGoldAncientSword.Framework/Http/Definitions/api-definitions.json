@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "./api-definitions.schema.json",
   "baseUrl": "https://desktop.naraka.drivod.top",
   "defaultHeaders": {
@@ -266,7 +266,7 @@
     },
     {
       "id": "GetGameModes",
-      "description": "查询游戏模式列表（天选/匹配/天人 单双三排）",
+      "description": "查询游戏模式列表（天选/匹配/天人 单双三排 + 娱乐模式）",
       "method": "GET",
       "path": "/api/record/game-modes",
       "responseBody": {
@@ -294,6 +294,15 @@
               },
               "dataSource": {
                 "type": "string"
+              },
+              "modeType": {
+                "type": "string"
+              },
+              "teamMode": {
+                "type": "int"
+              },
+              "battleTid": {
+                "type": "int"
               }
             }
           }
@@ -350,6 +359,9 @@
                     "type": "long"
                   },
                   "gameMode": {
+                    "type": "int"
+                  },
+                  "subtype": {
                     "type": "int"
                   },
                   "kill": {
