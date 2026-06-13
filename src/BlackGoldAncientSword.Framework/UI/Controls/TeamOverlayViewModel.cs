@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
+using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.Framework.UI.Controls
 {
@@ -23,6 +25,7 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
         public bool HasMembers => Members.Count > 0;
 
         public DelegateCommand CloseCommand { get; }
+        public DelegateCommand NavigateToTeamInfoCommand { get; }
 
         public event EventHandler? CloseRequested;
         public event EventHandler<bool>? DontShowAgainChanged;
@@ -30,6 +33,12 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
         public TeamOverlayViewModel()
         {
             CloseCommand = new DelegateCommand(() => CloseRequested?.Invoke(this, EventArgs.Empty));
+            NavigateToTeamInfoCommand = new DelegateCommand(() =>
+            {
+                var navigation = containerProvider.Resolve<IMainContentNavigationService>();
+                navigation.NavigateTo(PageNames.TeamInfoPage);
+                CloseRequested?.Invoke(this, EventArgs.Empty);
+            });
         }
 
         public void UpdateMembers(IList<TeamOverlayMemberItem> members)
