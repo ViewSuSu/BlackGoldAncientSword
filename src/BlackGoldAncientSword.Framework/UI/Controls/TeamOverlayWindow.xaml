@@ -156,7 +156,7 @@
                         VerticalAlignment="Center"
                         FontSize="11"
                         Foreground="#5B8DEF"
-                        Text="{DynamicResource TeamInfo.Title}"
+                        Text="{DynamicResource TeamOverlay.ViewTeamInfoButton}"
                         TextDecorations="Underline" />
                 </Button>
             </Grid>
