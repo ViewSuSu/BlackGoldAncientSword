@@ -8,28 +8,48 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
         public string UserName
         {
             get => _userName;
-            set => SetProperty(ref _userName, value);
+            set
+            {
+                if (_userName == value) return;
+                _userName = value;
+                RaisePropertyChanged(nameof(UserName));
+            }
         }
 
         private string _avatarUrl = string.Empty;
         public string AvatarUrl
         {
             get => _avatarUrl;
-            set => SetProperty(ref _avatarUrl, value);
+            set
+            {
+                if (_avatarUrl == value) return;
+                _avatarUrl = value;
+                RaisePropertyChanged(nameof(AvatarUrl));
+            }
         }
 
         private string _rankName = string.Empty;
         public string RankName
         {
             get => _rankName;
-            set => SetProperty(ref _rankName, value);
+            set
+            {
+                if (_rankName == value) return;
+                _rankName = value;
+                RaisePropertyChanged(nameof(RankName));
+            }
         }
 
         private bool _isLoading;
         public bool IsLoading
         {
             get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
+            set
+            {
+                if (_isLoading == value) return;
+                _isLoading = value;
+                RaisePropertyChanged(nameof(IsLoading));
+            }
         }
     }
 }
