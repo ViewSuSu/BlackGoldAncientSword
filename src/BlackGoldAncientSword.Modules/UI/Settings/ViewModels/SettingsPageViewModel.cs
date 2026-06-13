@@ -140,17 +140,17 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             }
         }
 
-        public bool AutoCheckUpdates
+
+        public bool ShowTeamOverlayDuringHeroSelection
         {
-            get => _settings.Current.AutoCheckUpdates;
+            get => _settings.Current.ShowTeamOverlayDuringHeroSelection;
             set
             {
-                _settings.Current.AutoCheckUpdates = value;
+                _settings.Current.ShowTeamOverlayDuringHeroSelection = value;
                 RaisePropertyChanged();
                 DebouncedSave();
             }
         }
-
         public SettingsPageViewModel(
             ISettingsService settings,
             ILocalizationService localization,
@@ -174,7 +174,6 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         {
             RaisePropertyChanged(nameof(SelectedCloseBehavior));
             RaisePropertyChanged(nameof(RememberCloseBehavior));
-            RaisePropertyChanged(nameof(AutoCheckUpdates));
             base.OnNavigatedToExecute(navigationContext);
         }
 
@@ -314,4 +313,3 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             System.Windows.Application.Current?.TryFindResource(DisplayNameResourceKey) as string ?? DisplayNameResourceKey;
     }
 }
-
