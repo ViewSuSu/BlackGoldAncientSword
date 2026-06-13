@@ -1,4 +1,4 @@
----
+﻿---
 name: git-commit
 description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，则执行完整的发版流程：commit+push 当前分支 → 合并到 release → push release → 切回原分支。
 ---
@@ -43,9 +43,19 @@ git commit -m "<message>"
 Push 前必须设置代理，push 后清理。详见 `git-proxy` 技能：
 
 ```powershell
+# 设置代理（http.proxy + https.proxy + 环境变量，与 GitHub Desktop 共用系统代理配置）
 git config --local http.proxy http://127.0.0.1:9098
+git config --local https.proxy http://127.0.0.1:9098
+$env:HTTP_PROXY = "http://127.0.0.1:9098"
+$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+
+# 推送
 git push origin <current-branch>
+
+# 清理代理
 git config --local --unset http.proxy
+git config --local --unset https.proxy
+Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
 
 ## 原则
@@ -64,9 +74,21 @@ git config --local --unset http.proxy
 ```powershell
 git checkout release
 git merge <source-branch>
+
+# 设置代理
 git config --local http.proxy http://127.0.0.1:9098
+git config --local https.proxy http://127.0.0.1:9098
+$env:HTTP_PROXY = "http://127.0.0.1:9098"
+$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+
+# 推送 release 分支
 git push origin release
+
+# 清理代理
 git config --local --unset http.proxy
+git config --local --unset https.proxy
+Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
+
 git checkout <source-branch>
 ```
 
