@@ -1,5 +1,5 @@
 using BlackGoldAncientSword.Framework.UI.Controls;
-
+using System;
 using System.Collections.Generic;
 
 namespace BlackGoldAncientSword.Framework.Services.Abstractions
@@ -8,6 +8,8 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
     {
         void Show(IList<TeamOverlayMemberItem> members);
         void Hide();
+
+        Action? RefreshAction { get; set; }
+        event Action? Dismissed;
     }
 }
-

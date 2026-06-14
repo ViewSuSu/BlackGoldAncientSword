@@ -1,4 +1,4 @@
-﻿[中文](README.md) | [English](README.en.md)
+[中文](README.md) | [English](README.en.md)
 
 [![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]()
 
@@ -94,6 +94,10 @@ Additionally, OCR may sometimes fail to recognize certain special characters. If
 **Q: Why is the installer / program so large (200MB+)?**
 
 The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. Additionally, the built-in OCR engine (PaddleOCR) depends on the Intel Math Kernel Library (mklml.dll, ~88MB) and the OpenCV computer vision library (opencv_world4100.dll, ~62MB). These two native AI/vision libraries, together with the .NET runtime, account for the vast majority of the download size. Without them, automatic screenshot recognition of teammate names wouldn't be possible — the "bulk" is a necessary price to pay 😅.
+
+**Q: Why do I see a yellow border around my screen when entering hero selection?**
+
+The yellow border is a visual indicator that the app is capturing the screen and recognizing teammate information. This is normal behavior — no need to worry.
 
 ---
 

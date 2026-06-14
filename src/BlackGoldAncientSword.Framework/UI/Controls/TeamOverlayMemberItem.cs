@@ -40,6 +40,66 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             }
         }
 
+        private string _rankIcon = string.Empty;
+        public string RankIcon
+        {
+            get => _rankIcon;
+            set
+            {
+                if (_rankIcon == value) return;
+                _rankIcon = value;
+                RaisePropertyChanged(nameof(RankIcon));
+            }
+        }
+
+        private string _pageRankName = string.Empty;
+        public string PageRankName
+        {
+            get => _pageRankName;
+            set
+            {
+                if (_pageRankName == value) return;
+                _pageRankName = value;
+                RaisePropertyChanged(nameof(PageRankName));
+            }
+        }
+
+        private int _pageStarCount;
+        public int PageStarCount
+        {
+            get => _pageStarCount;
+            set
+            {
+                if (_pageStarCount == value) return;
+                _pageStarCount = value;
+                RaisePropertyChanged(nameof(PageStarCount));
+            }
+        }
+
+        private bool _pageHasStars;
+        public bool PageHasStars
+        {
+            get => _pageHasStars;
+            set
+            {
+                if (_pageHasStars == value) return;
+                _pageHasStars = value;
+                RaisePropertyChanged(nameof(PageHasStars));
+            }
+        }
+
+        private double _rankTierScore;
+        public double RankTierScore
+        {
+            get => _rankTierScore;
+            set
+            {
+                if (_rankTierScore == value) return;
+                _rankTierScore = value;
+                RaisePropertyChanged(nameof(RankTierScore));
+            }
+        }
+
         private bool _isLoading;
         public bool IsLoading
         {

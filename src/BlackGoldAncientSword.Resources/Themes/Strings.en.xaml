@@ -212,6 +212,7 @@
 
     <!--  Settings - Close Behavior  -->
     <system:String x:Key="Settings.Category.CloseBehavior">Close Behavior</system:String>
+    <system:String x:Key="Settings.CopyTeamOverlayName">Copy name</system:String>
     <system:String x:Key="Settings.Category.TeamOverlay">Team Overlay</system:String>
     <system:String x:Key="Settings.CloseBehavior.Description">Set the default behavior when clicking the close button</system:String>
     <system:String x:Key="Settings.CloseBehavior.Ask">Ask every time</system:String>
@@ -302,6 +303,7 @@
     <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
     <system:String x:Key="Feedback.Close">Close</system:String>
 </ResourceDictionary>
+
 
 
 

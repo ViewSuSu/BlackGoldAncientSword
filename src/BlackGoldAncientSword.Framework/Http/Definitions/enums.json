@@ -8,17 +8,70 @@
       "description": "游戏模式（天选/匹配/天人 × 单双三排 + 娱乐），值对应 /api/record/mini-program/stats 的 gameMode 参数",
       "underlyingType": "int",
       "values": [
-        { "name": "RankSolo",    "value": 101, "description": "天选单排" },
-        { "name": "RankDuo",     "value": 102, "description": "天选双排" },
-        { "name": "RankTrio",    "value": 103, "description": "天选三排" },
-        { "name": "MatchSolo",   "value": 201, "description": "匹配单排" },
-        { "name": "MatchDuo",    "value": 202, "description": "匹配双排" },
-        { "name": "MatchTrio",   "value": 203, "description": "匹配三排" },
-        { "name": "TianrenSolo", "value": 403, "description": "天人单排" },
-        { "name": "TianrenDuo",  "value": 402, "description": "天人双排" },
-        { "name": "TianrenTrio", "value": 401, "description": "天人三排" },
-        { "name": "EndlessTrial","value": 303, "description": "无尽试炼" },
-        { "name": "LandBattle",  "value": 301, "description": "地脉之战" }
+        {
+          "name": "RankSolo",
+          "value": 101,
+          "description": "天选单排",
+          "battleApiCode": 1
+        },
+        {
+          "name": "RankDuo",
+          "value": 102,
+          "description": "天选双排",
+          "battleApiCode": 12
+        },
+        {
+          "name": "RankTrio",
+          "value": 103,
+          "description": "天选三排",
+          "battleApiCode": 2
+        },
+        {
+          "name": "MatchSolo",
+          "value": 201,
+          "description": "匹配单排",
+          "battleApiCode": 6
+        },
+        {
+          "name": "MatchDuo",
+          "value": 202,
+          "description": "匹配双排",
+          "battleApiCode": 9
+        },
+        {
+          "name": "MatchTrio",
+          "value": 203,
+          "description": "匹配三排",
+          "battleApiCode": 7
+        },
+        {
+          "name": "TianrenSolo",
+          "value": 403,
+          "description": "天人单排",
+          "battleApiCode": 4
+        },
+        {
+          "name": "TianrenDuo",
+          "value": 402,
+          "description": "天人双排",
+          "battleApiCode": 13
+        },
+        {
+          "name": "TianrenTrio",
+          "value": 401,
+          "description": "天人三排",
+          "battleApiCode": 5
+        },
+        {
+          "name": "EndlessTrial",
+          "value": 303,
+          "description": "无尽试炼"
+        },
+        {
+          "name": "LandBattle",
+          "value": 301,
+          "description": "地脉之战"
+        }
       ]
     },
     {
@@ -27,10 +80,26 @@
       "description": "模式大类（排位/匹配/娱乐/天人），不区分队伍人数",
       "underlyingType": "int",
       "values": [
-        { "name": "Rank",     "value": 1, "description": "天选" },
-        { "name": "Match",    "value": 2, "description": "匹配" },
-        { "name": "Tianren",  "value": 3, "description": "天人" },
-        { "name": "Fun",      "value": 4, "description": "娱乐" }
+        {
+          "name": "Rank",
+          "value": 1,
+          "description": "天选"
+        },
+        {
+          "name": "Match",
+          "value": 2,
+          "description": "匹配"
+        },
+        {
+          "name": "Tianren",
+          "value": 3,
+          "description": "天人"
+        },
+        {
+          "name": "Fun",
+          "value": 4,
+          "description": "娱乐"
+        }
       ]
     },
     {
@@ -39,9 +108,21 @@
       "description": "队伍人数",
       "underlyingType": "int",
       "values": [
-        { "name": "Solo", "value": 1, "description": "单排" },
-        { "name": "Duo",  "value": 2, "description": "双排" },
-        { "name": "Trio", "value": 3, "description": "三排" }
+        {
+          "name": "Solo",
+          "value": 1,
+          "description": "单排"
+        },
+        {
+          "name": "Duo",
+          "value": 2,
+          "description": "双排"
+        },
+        {
+          "name": "Trio",
+          "value": 3,
+          "description": "三排"
+        }
       ]
     },
     {
@@ -50,8 +131,16 @@
       "description": "数据来源",
       "underlyingType": "int",
       "values": [
-        { "name": "MiniProgram", "value": 1, "description": "小程序数据源" },
-        { "name": "HeyBox",      "value": 2, "description": "小黑盒数据源" }
+        {
+          "name": "MiniProgram",
+          "value": 1,
+          "description": "小程序数据源"
+        },
+        {
+          "name": "HeyBox",
+          "value": 2,
+          "description": "小黑盒数据源"
+        }
       ]
     }
   ],
@@ -76,12 +165,27 @@
         "isStatic": true,
         "returnType": "GameMode",
         "parameters": [
-          { "name": "category", "type": "GameModeCategory", "description": "模式大类：天选/匹配/天人" },
-          { "name": "size", "type": "TeamSize", "description": "队伍人数：单排/双排/三排" }
+          {
+            "name": "category",
+            "type": "GameModeCategory",
+            "description": "模式大类：天选/匹配/天人"
+          },
+          {
+            "name": "size",
+            "type": "TeamSize",
+            "description": "队伍人数：单排/双排/三排"
+          }
         ],
         "description": "通过模式大类与队伍人数组合为具体的 GameMode 枚举值",
         "returns": "组合后的 GameMode 枚举值，如 RankTrio、MatchSolo 等",
         "body": "return (category, size) switch { (GameModeCategory.Rank, TeamSize.Solo) => GameMode.RankSolo, (GameModeCategory.Rank, TeamSize.Duo) => GameMode.RankDuo, (GameModeCategory.Rank, TeamSize.Trio) => GameMode.RankTrio, (GameModeCategory.Match, TeamSize.Solo) => GameMode.MatchSolo, (GameModeCategory.Match, TeamSize.Duo) => GameMode.MatchDuo, (GameModeCategory.Match, TeamSize.Trio) => GameMode.MatchTrio, (GameModeCategory.Tianren, TeamSize.Solo) => GameMode.TianrenSolo, (GameModeCategory.Tianren, TeamSize.Duo) => GameMode.TianrenDuo, (GameModeCategory.Tianren, TeamSize.Trio) => GameMode.TianrenTrio, _ => throw new ArgumentException($\"未知组合: {category} + {size}\") };"
+      },
+      {
+        "name": "IsRankMode",
+        "returnType": "bool",
+        "description": "判断 GameMode 是否属于天选排位模式",
+        "returns": "如果是天选排位模式则返回 true",
+        "body": "return value switch { GameMode.RankSolo or GameMode.RankDuo or GameMode.RankTrio => true, _ => false };"
       }
     ]
   }

@@ -151,6 +151,17 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 DebouncedSave();
             }
         }
+
+        private DelegateCommand? _copyTeamOverlayNameCommand;
+        public DelegateCommand CopyTeamOverlayNameCommand =>
+            _copyTeamOverlayNameCommand ??= new DelegateCommand(() =>
+            {
+                var name = Application.Current?.TryFindResource("Settings.Category.TeamOverlay") as string ?? "英雄选择时出现右下角弹窗";
+                Clipboard.SetText(name);
+                eventAggregator.GetEvent<TipMessageEvent>()
+                    .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "复制成功"));
+            });
+
         public SettingsPageViewModel(
             ISettingsService settings,
             ILocalizationService localization,
@@ -313,3 +324,4 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             System.Windows.Application.Current?.TryFindResource(DisplayNameResourceKey) as string ?? DisplayNameResourceKey;
     }
 }
+

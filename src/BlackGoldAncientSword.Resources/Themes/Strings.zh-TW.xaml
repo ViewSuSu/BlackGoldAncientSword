@@ -181,6 +181,7 @@
 
     
     <ns1:String ns2:Key="Settings.Category.CloseBehavior">關閉行為</ns1:String>
+    <ns1:String ns2:Key="Settings.CopyTeamOverlayName">複製名稱</ns1:String>
     <ns1:String ns2:Key="Settings.Category.TeamOverlay">英雄選擇提示</ns1:String>
     <ns1:String ns2:Key="Settings.CloseBehavior.Description">設定點擊關閉按鈕時的預設行為</ns1:String>
     <ns1:String ns2:Key="Settings.CloseBehavior.Ask">每次詢問</ns1:String>
@@ -294,5 +295,6 @@
     <ns1:String ns2:Key="Feedback.GitHubTitle">GitHub</ns1:String>
     <ns1:String ns2:Key="Feedback.Close">關閉</ns1:String>
 </ns0:ResourceDictionary>
+
 
 

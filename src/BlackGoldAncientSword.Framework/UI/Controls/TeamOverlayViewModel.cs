@@ -28,13 +28,16 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
 
         public DelegateCommand CloseCommand { get; }
         public DelegateCommand NavigateToTeamInfoCommand { get; }
+        public DelegateCommand RefreshCommand { get; }
 
         public event EventHandler? CloseRequested;
         public event EventHandler<bool>? DontShowAgainChanged;
+        public event EventHandler? RefreshRequested;
 
         public TeamOverlayViewModel()
         {
             CloseCommand = new DelegateCommand(() => CloseRequested?.Invoke(this, EventArgs.Empty));
+            RefreshCommand = new DelegateCommand(() => RefreshRequested?.Invoke(this, EventArgs.Empty));
             NavigateToTeamInfoCommand = new DelegateCommand(() =>
             {
                 var navigation = containerProvider.Resolve<IMainContentNavigationService>();
@@ -55,6 +58,11 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
                     UserName = m.UserName,
                     AvatarUrl = m.AvatarUrl,
                     RankName = m.RankName,
+                    RankIcon = m.RankIcon,
+                    PageRankName = m.PageRankName,
+                    PageStarCount = m.PageStarCount,
+                    PageHasStars = m.PageHasStars,
+                    RankTierScore = m.RankTierScore,
                     IsLoading = m.IsLoading
                 });
             }
