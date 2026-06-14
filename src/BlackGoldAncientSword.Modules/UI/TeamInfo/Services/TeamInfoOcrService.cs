@@ -1,7 +1,5 @@
 using System.Diagnostics;
-using System.Windows.Media;
 using System.IO;
-using System.Windows.Media.Imaging;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Ocr;
 using BlackGoldAncientSword.ScreenCapture;
@@ -129,13 +127,13 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             Array.Copy(rawBgra, (cropY + row) * srcStride + cropX * 4,
                        cropped, row * dstStride, dstStride);
 
-        var bitmap = BitmapSource.Create(
-            cropW, cropH, 96, 96,
-            PixelFormats.Bgra32, null, cropped, dstStride);
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var bmp = new System.Drawing.Bitmap(cropW, cropH, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        var rect = new System.Drawing.Rectangle(0, 0, cropW, cropH);
+        var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        System.Runtime.InteropServices.Marshal.Copy(cropped, 0, bmpData.Scan0, cropped.Length);
+        bmp.UnlockBits(bmpData);
         using var ms = new MemoryStream();
-        encoder.Save(ms);
+        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
         return (ms.ToArray(), cropW, cropH);
     }
 
@@ -168,13 +166,13 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         for (int i = 0; i < cropped.Length; i++)
             cropped[i] = (byte)(255 - cropped[i]);
 
-        var bitmap = BitmapSource.Create(
-            cropW, cropH, 96, 96,
-            PixelFormats.Bgra32, null, cropped, dstStride);
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var bmp = new System.Drawing.Bitmap(cropW, cropH, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        var rect = new System.Drawing.Rectangle(0, 0, cropW, cropH);
+        var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        System.Runtime.InteropServices.Marshal.Copy(cropped, 0, bmpData.Scan0, cropped.Length);
+        bmp.UnlockBits(bmpData);
         using var ms = new MemoryStream();
-        encoder.Save(ms);
+        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
         return (ms.ToArray(), cropW, cropH);
     }
 }

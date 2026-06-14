@@ -83,7 +83,7 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             var dpiScaleY = source?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
 
             Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            Arrange(new Rect(0, 0, DesiredSize.Width, DesiredSize.Height));
+            Arrange(new Rect(0, 0, Width, Height));
             UpdateLayout();
 
             Left = (workArea.Right / dpiScaleX) - ActualWidth - 8;
@@ -109,3 +109,4 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
         }
     }
 }
+

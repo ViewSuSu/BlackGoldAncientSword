@@ -23,6 +23,7 @@ namespace BlackGoldAncientSword.App.Shell
         private readonly BlackGoldAncientSword.Framework.Services.Abstractions.ILocalizationService _localization;
         private readonly IGameStatusMonitor _gameStatusMonitor;
         private readonly IGameLogMonitor _gameLogMonitor;
+        private readonly DateTime _startupTime = DateTime.UtcNow;
         private bool _isContactPopupOpen;
         public bool IsContactPopupOpen
         {
@@ -284,6 +285,18 @@ namespace BlackGoldAncientSword.App.Shell
         {
             _currentGameStatus = args.Status;
             RefreshGameStatusText();
+
+            // 英雄选择阶段自动导航到队伍信息页，确保 OCR 识别启动，
+            // 无论用户当前在哪个页面。
+            // 如果已经在 TeamInfoPage，MainContentNavigator 会自动跳过重复导航。
+            // 程序启动后延迟 3 秒才启用自动导航，避免启动时游戏已在英雄选择中
+            // 立刻跳转到队伍信息页，用户看不到启动页。
+            // 如果用户后来才启动游戏进入英雄选择，3 秒早已过去，导航正常触发。
+            if (args.Status == GameStatus.HeroSelection &&
+                (DateTime.UtcNow - _startupTime).TotalSeconds > 3)
+            {
+                _navigation.NavigateTo(PageNames.TeamInfoPage);
+            }
         }
 
         private void RefreshGameStatusText()

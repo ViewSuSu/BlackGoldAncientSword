@@ -183,7 +183,8 @@
 
     <!--  Settings - Close Behavior  -->
     <system:String x:Key="Settings.Category.CloseBehavior">关闭行为</system:String>
-    <system:String x:Key="Settings.Category.TeamOverlay">英雄选择提示</system:String>
+    <system:String x:Key="Settings.CopyTeamOverlayName">复制名称</system:String>
+    <system:String x:Key="Settings.Category.TeamOverlay">英雄选择时出现右下角弹窗</system:String>
     <system:String x:Key="Settings.CloseBehavior.Description">设置点击关闭按钮时的默认行为</system:String>
     <system:String x:Key="Settings.CloseBehavior.Ask">每次询问</system:String>
     <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到任务栏</system:String>
@@ -271,7 +272,7 @@
     <system:String x:Key="TeamInfo.LoadError">加载出错</system:String>
     <system:String x:Key="TeamInfo.QueryFailed">查询失败</system:String>
    <system:String x:Key="TeamInfo.RefreshOcr">重新识别队伍信息</system:String>
-   <system:String x:Key="TeamOverlay.DontShowAgain">是否不再提示</system:String>
+   <system:String x:Key="TeamOverlay.DontShowAgain">不再显示</system:String>
 
     <!--  MainWindow - Contact & Update Log  -->
     <system:String x:Key="MainWindow.ViewUpdateLog">查看更新日志</system:String>
@@ -301,6 +302,7 @@
     <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
     <system:String x:Key="Feedback.Close">关闭</system:String>
 </ResourceDictionary>
+
 
 
 

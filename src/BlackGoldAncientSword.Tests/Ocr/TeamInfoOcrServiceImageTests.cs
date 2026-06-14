@@ -100,4 +100,66 @@ public class TeamInfoOcrServiceImageTests
         engine.Dispose();
         capture.Dispose();
     }
+
+    [Fact]
+    public void Screenshot_英雄选择环节_识别截图三个队友名字()
+    {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        var imagePath = @"C:\Users\16147\Pictures\Screenshots\屏幕截图 2026-06-14 143108.png";
+        Assert.True(File.Exists(imagePath), $"截图文件不存在: {imagePath}");
+
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.UriSource = new Uri(imagePath);
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.EndInit();
+
+        int fullWidth = bitmap.PixelWidth;
+        int fullHeight = bitmap.PixelHeight;
+        var stride = (fullWidth * bitmap.Format.BitsPerPixel + 7) / 8;
+        var rawBgra = new byte[stride * fullHeight];
+        bitmap.CopyPixels(rawBgra, stride, 0);
+
+        Console.WriteLine($"截图尺寸: {fullWidth}x{fullHeight}");
+
+        OcrEngine? engine = null;
+        try
+        {
+            engine = new OcrEngine();
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"OCR 引擎初始化失败: {ex.Message}");
+            return;
+        }
+
+        try
+        {
+            var labels = new[] { "左侧", "中间", "右侧" };
+
+            for (int i = 0; i < TeamRegions.Length; i++)
+            {
+                var (pngBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
+                    rawBgra, fullWidth, fullHeight, TeamRegions[i]);
+
+                if (pngBytes == null)
+                {
+                    Console.WriteLine($"区域 {labels[i]}: 裁剪失败");
+                    continue;
+                }
+
+                var results = engine.Recognize(pngBytes);
+                var rawText = string.Join("", results.Select(r => r.Text));
+                var name = rawText.Trim().Replace(" ", "");
+                var detail = string.Join(" | ", results.Select(r => $"'{r.Text}'({r.Confidence:F2})"));
+
+                Console.WriteLine($"区域 {labels[i]} ({cropW}x{cropH}): 识别结果=[{name}]  详情=[{detail}]");
+            }
+        }
+        finally
+        {
+            engine?.Dispose();
+        }
+    }
 }

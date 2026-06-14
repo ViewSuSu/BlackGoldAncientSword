@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 
@@ -167,7 +167,8 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         {
             var desc = new SharpDX.Direct3D11.Texture2DDescription { Width = w, Height = h, MipLevels = 1, ArraySize = 1, Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm, SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0), Usage = SharpDX.Direct3D11.ResourceUsage.Staging, BindFlags = SharpDX.Direct3D11.BindFlags.None, CpuAccessFlags = SharpDX.Direct3D11.CpuAccessFlags.Read, OptionFlags = SharpDX.Direct3D11.ResourceOptionFlags.None };
             var st = new SharpDX.Direct3D11.Texture2D(_sharpDxDevice!, desc);
-            _sharpDxCtx!.CopyResource(st, s.QueryInterface<SharpDX.Direct3D11.Texture2D>());
+            using var srcTexture = s.QueryInterface<SharpDX.Direct3D11.Texture2D>();
+            _sharpDxCtx!.CopyResource(st, srcTexture);
             var map = _sharpDxCtx.MapSubresource(st, 0, SharpDX.Direct3D11.MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
             try
             {
@@ -215,7 +216,16 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     }
 
     private static byte[] BgraToPng(byte[] d, int w, int h)
-    { using var ms = new MemoryStream(); var enc = new System.Windows.Media.Imaging.PngBitmapEncoder(); enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(System.Windows.Media.Imaging.BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgra32, null, d, w * 4))); enc.Save(ms); return ms.ToArray(); }
+    {
+    using var bmp = new System.Drawing.Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+    var rect = new System.Drawing.Rectangle(0, 0, w, h);
+    var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+    System.Runtime.InteropServices.Marshal.Copy(d, 0, bmpData.Scan0, d.Length);
+    bmp.UnlockBits(bmpData);
+    using var ms = new MemoryStream();
+    bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+    return ms.ToArray();
+}
 
     /// <summary>
     /// 检测窗口是否处于有标题栏的窗口化模式（WS_CAPTION 样式）。
@@ -384,15 +394,15 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     private static byte[] PngToBgra(byte[] pngBytes, out int width, out int height)
     {
         using var ms = new MemoryStream(pngBytes);
-        var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
-            ms, System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
-            System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
-        var frame = decoder.Frames[0];
-        width = frame.PixelWidth;
-        height = frame.PixelHeight;
+        using var bmp = new System.Drawing.Bitmap(ms);
+        width = bmp.Width;
+        height = bmp.Height;
+        var rect = new System.Drawing.Rectangle(0, 0, width, height);
+        var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         int stride = width * 4;
         var bgra = new byte[stride * height];
-        frame.CopyPixels(bgra, stride, 0);
+        Marshal.Copy(bmpData.Scan0, bgra, 0, bgra.Length);
+        bmp.UnlockBits(bmpData);
         return bgra;
     }
     public void Dispose()
@@ -403,3 +413,4 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     }
     void ThrowIfDisposed() { if (_disposed) throw new ObjectDisposedException(nameof(ScreenCaptureService)); }
 }
+
