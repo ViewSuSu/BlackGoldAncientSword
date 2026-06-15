@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
-using System.Windows.Threading;
+using System.Threading;
+using System.Threading.Tasks;
+using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.GameMonitor.Models;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
 
@@ -8,25 +10,25 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
 {
     public class HomePageViewModel : ViewModelBase
     {
-        private static string L(string key, string fallback) =>
-            System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
-
         private const int PollIntervalMs = 2000;
-        private readonly DispatcherTimer _processTimer;
         private readonly IGameLogMonitor _gameLogMonitor;
         private readonly IGameStatusMonitor _gameStatusMonitor;
-        
-        public HomePageViewModel(IGameLogMonitor gameLogMonitor, IGameStatusMonitor gameStatusMonitor)
+        private readonly IUIDispatcher _uiDispatcher;
+        private readonly ILocalizedTextProvider _localizedText;
+        private CancellationTokenSource? _processCheckCts;
+
+        public HomePageViewModel(
+            IGameLogMonitor gameLogMonitor,
+            IGameStatusMonitor gameStatusMonitor,
+            IUIDispatcher uiDispatcher,
+            ILocalizedTextProvider localizedText)
         {
             _gameLogMonitor = gameLogMonitor;
             _gameStatusMonitor = gameStatusMonitor;
-            _processTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(PollIntervalMs)
-            };
-            _processTimer.Tick += OnTimerTick;
+            _uiDispatcher = uiDispatcher;
+            _localizedText = localizedText;
 
-            StatusText = L("Home.Status.WaitingForGame", "等待游戏启动");
+            StatusText = _localizedText.Get("Home.Status.WaitingForGame", "等待游戏启动");
             IsLoading = true;
         }
 
@@ -34,41 +36,62 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
         public string StatusText
         {
             get => _statusText;
-            set => SetProperty(ref _statusText, value);
+            set
+            {
+                if (_statusText == value) return;
+                _statusText = value;
+                RaisePropertyChanged(nameof(StatusText));
+            }
         }
 
         private string _statusHint = string.Empty;
         public string StatusHint
         {
             get => _statusHint;
-            set => SetProperty(ref _statusHint, value);
+            set
+            {
+                if (_statusHint == value) return;
+                _statusHint = value;
+                RaisePropertyChanged(nameof(StatusHint));
+            }
         }
 
         private bool _isGameRunning;
         public bool IsGameRunning
         {
             get => _isGameRunning;
-            set => SetProperty(ref _isGameRunning, value);
+            set
+            {
+                if (_isGameRunning == value) return;
+                _isGameRunning = value;
+                RaisePropertyChanged(nameof(IsGameRunning));
+            }
         }
 
         private bool _isLoading;
         public bool IsLoading
         {
             get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
+            set
+            {
+                if (_isLoading == value) return;
+                _isLoading = value;
+                RaisePropertyChanged(nameof(IsLoading));
+            }
         }
 
-        private bool _monitorStarted;
         private bool _isSubscribed;
-        private async void OnTimerTick(object? sender, EventArgs e)
+        // 不再是事件 handler，由 RunProcessCheckLoopAsync 显式 await 调用；
+        // 返回 Task 让异常能在 caller 处被捕获，避免 async void 心智负担。
+        private async Task OnTimerTick()
         {
             var found = IsNarakaProcessRunning();
             if (found && !IsGameRunning)
             {
                 IsGameRunning = true;
                 IsLoading = false;
-                StatusText = L("Home.Status.GameStarted", "游戏启动成功");
-                StatusHint = L("Home.Status.GameDetected", "永劫无间进程已检测到");
+                StatusText = _localizedText.Get("Home.Status.GameStarted", "游戏启动成功");
+                StatusHint = _localizedText.Get("Home.Status.GameDetected", "永劫无间进程已检测到");
                 if (!_isSubscribed)
                 {
                     _isSubscribed = true;
@@ -85,7 +108,7 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
             {
                 IsGameRunning = false;
                 IsLoading = true;
-                StatusText = L("Home.Status.WaitingForGame", "等待游戏启动");
+                StatusText = _localizedText.Get("Home.Status.WaitingForGame", "等待游戏启动");
                 StatusHint = string.Empty;
                 if (_isSubscribed)
                 {
@@ -102,13 +125,13 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
         private void OnBattleJoined(object? sender, BattleEventArgs args)
         {
             _gameStatusMonitor.NotifyStatus(GameStatus.HeroSelection);
-            StatusHint = string.Format(L("Home.Status.HeroSelection", "英雄选择中 (RoomId: {0})"), args.RoomId);
+            StatusHint = string.Format(_localizedText.Get("Home.Status.HeroSelection", "英雄选择中 (RoomId: {0})"), args.RoomId);
         }
 
         private void OnBattleStarted(object? sender, BattleEventArgs args)
         {
             _gameStatusMonitor.NotifyStatus(GameStatus.InGame);
-            StatusHint = string.Format(L("Home.Status.InGame", "对局中 (BattleId: {0})"), args.BattleId);
+            StatusHint = string.Format(_localizedText.Get("Home.Status.InGame", "对局中 (BattleId: {0})"), args.BattleId);
         }
 
         private void OnBattleEnded(object? sender, BattleEventArgs args)
@@ -137,15 +160,54 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
             return false;
         }
 
+        private void StartProcessCheckLoop()
+        {
+            _processCheckCts?.Cancel();
+            _processCheckCts?.Dispose();
+            _processCheckCts = new CancellationTokenSource();
+            _ = RunProcessCheckLoopAsync(_processCheckCts.Token);
+        }
+
+        private async Task RunProcessCheckLoopAsync(CancellationToken ct)
+        {
+            try
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    // marshal 回 UI 线程执行 OnTimerTick；通过 Func<Task> 重载让 OnTimerTick 内部异常能被本方法 try 捕获
+                    await _uiDispatcher.InvokeAsync(() => OnTimerTick()).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromMilliseconds(PollIntervalMs), ct).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 正常退出
+            }
+        }
+
+        private void StopProcessCheckLoop()
+        {
+            _processCheckCts?.Cancel();
+            _processCheckCts?.Dispose();
+            _processCheckCts = null;
+        }
+
         protected override void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
-            _processTimer.Start();
+            StartProcessCheckLoop();
         }
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
-            _processTimer.Stop();
+            StopProcessCheckLoop();
+            if (_isSubscribed)
+            {
+                _isSubscribed = false;
+                _gameLogMonitor.BattleJoined -= OnBattleJoined;
+                _gameLogMonitor.BattleStarted -= OnBattleStarted;
+                _gameLogMonitor.BattleEnded -= OnBattleEnded;
+            }
             base.OnNavigatedFromExecute(navigationContext);
         }
     }

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Newtonsoft.Json;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Extensions;
@@ -57,7 +59,10 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                         foreach (var item in items) History.Add(item);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(SearchHistoryService)}] LoadAsync failed: {ex.Message}");
+            }
         }
 
         private async Task SaveAsync()
@@ -71,7 +76,10 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 var json = JsonConvert.SerializeObject(History.ToList(), Formatting.Indented);
                 await System.IO.File.WriteAllTextAsync(FilePath, json);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(SearchHistoryService)}] SaveAsync failed: {ex.Message}");
+            }
         }
     }
 }

@@ -106,7 +106,12 @@ namespace BlackGoldAncientSword.App.Shell
                         return;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Settings 服务异常会让关闭行为静默回退到"直接退出"，丢失"最小化到托盘"语义；
+                // 至少留诊断让用户知道"为什么我设了最小化但点 X 还是直接退出"。
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] OnClosing settings resolve failed: {ex.Message}");
+            }
 
             _isExiting = true;
         }

@@ -25,22 +25,20 @@ public class OcrEngine : IOcrService, IDisposable
     }
 
     /// <inheritdoc />
+    [Obsolete("使用 RecognizeAsync 替代；同步桥接保留仅为接口兼容，存在 ThreadPool 饥饿风险")]
     public List<OcrResult> Recognize(string imagePath)
     {
-        var json = InvokeOcr(imagePath);
-        return ParseResults(json);
+        // 同步 API 通过桥接 async 实现，保持单一执行通路。
+        return RecognizeAsync(imagePath).GetAwaiter().GetResult();
     }
 
     /// <inheritdoc />
     public async Task<List<OcrResult>> RecognizeAsync(string imagePath)
     {
-        return await Task.Run(() => Recognize(imagePath));
-    }
-
-    /// <inheritdoc />
-    public List<OcrResult> Recognize(byte[] imageBytes)
-    {
-        return RecognizeAsync(imageBytes).GetAwaiter().GetResult();
+        // ConfigureAwait(false)：同步桥接 Recognize(string) 通过 GetAwaiter().GetResult() 调用本方法，
+        // 若 UI 线程同步等待会因捕获 SynchronizationContext 而死锁。
+        var json = await InvokeOcrAsync(imagePath, CancellationToken.None).ConfigureAwait(false);
+        return ParseResults(json);
     }
 
     /// <inheritdoc />
@@ -49,8 +47,8 @@ public class OcrEngine : IOcrService, IDisposable
         var tmpPath = Path.GetTempFileName();
         try
         {
-            await File.WriteAllBytesAsync(tmpPath, imageBytes);
-            return Recognize(tmpPath);
+            await File.WriteAllBytesAsync(tmpPath, imageBytes).ConfigureAwait(false);
+            return await RecognizeAsync(tmpPath).ConfigureAwait(false);
         }
         finally
         {
@@ -62,28 +60,25 @@ public class OcrEngine : IOcrService, IDisposable
     /// <inheritdoc />
     public string RecognizeText(string imagePath)
     {
+        // RecognizeText(string) 自身也是同步桥接 API，但接口要求保留；
+        // 局部抑制 CS0618：本调用站点对同步桥接的依赖已被上层 Obsolete 标记暴露。
+#pragma warning disable CS0618
         var results = Recognize(imagePath);
+#pragma warning restore CS0618
         return string.Join("\n", results.Select(r => r.Text));
     }
 
     /// <inheritdoc />
     public async Task<string> RecognizeTextAsync(string imagePath)
     {
-        var results = await RecognizeAsync(imagePath);
-        return string.Join("\n", results.Select(r => r.Text));
-    }
-
-    /// <inheritdoc />
-    public string RecognizeText(byte[] imageBytes)
-    {
-        var results = Recognize(imageBytes);
+        var results = await RecognizeAsync(imagePath).ConfigureAwait(false);
         return string.Join("\n", results.Select(r => r.Text));
     }
 
     /// <inheritdoc />
     public async Task<string> RecognizeTextAsync(byte[] imageBytes)
     {
-        var results = await RecognizeAsync(imageBytes);
+        var results = await RecognizeAsync(imageBytes).ConfigureAwait(false);
         return string.Join("\n", results.Select(r => r.Text));
     }
 
@@ -91,12 +86,7 @@ public class OcrEngine : IOcrService, IDisposable
     //  子进程调用 PaddleOCR-json.exe
     // ═══════════════════════════════════════════════
 
-    private string InvokeOcr(string imagePath)
-    {
-        return InvokeOcrInternal(imagePath);
-    }
-
-    private string InvokeOcrInternal(string imagePath)
+    private async Task<string> InvokeOcrAsync(string imagePath, CancellationToken ct)
     {
         var psi = new ProcessStartInfo
         {
@@ -117,17 +107,31 @@ public class OcrEngine : IOcrService, IDisposable
 
             _jobObject.AssignProcess(process.Handle);
 
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask = process.StandardError.ReadToEndAsync();
+            var outputTask = process.StandardOutput.ReadToEndAsync(ct);
+            var errorTask = process.StandardError.ReadToEndAsync(ct);
 
-            if (!process.WaitForExit(30_000))
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
+            try
             {
-                process.Kill();
+                await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // entireProcessTree:true 防止 PaddleOCR-json.exe 派生的子进程残留（.NET 5+ 支持）
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch (Exception killEx) when (killEx is not OutOfMemoryException and not StackOverflowException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[{nameof(OcrEngine)}] Kill PaddleOCR 进程失败（可能已退出）: {killEx.Message}");
+                }
                 throw new TimeoutException("PaddleOCR-json.exe 执行超时（30 秒）");
             }
 
-            var output = outputTask.Result;
-            var error = errorTask.Result;
+            var output = await outputTask.ConfigureAwait(false);
+            var error = await errorTask.ConfigureAwait(false);
 
             if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(output))
             {
@@ -137,7 +141,7 @@ public class OcrEngine : IOcrService, IDisposable
 
             return output;
         }
-        catch (Exception ex) when (ex is not InvalidOperationException and not TimeoutException)
+        catch (Exception ex) when (ex is not InvalidOperationException and not TimeoutException and not OperationCanceledException)
         {
             throw new InvalidOperationException(
                 $"调用 PaddleOCR-json.exe 失败: {_engineExe}", ex);

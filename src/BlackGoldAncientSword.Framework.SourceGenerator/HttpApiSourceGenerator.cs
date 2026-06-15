@@ -78,7 +78,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("    public interface IApiResponse");
             sb.AppendLine("    {");
             sb.AppendLine("        double? Code { get; }");
-            sb.AppendLine("        string Msg { get; }");
+            sb.AppendLine("        string? Msg { get; }");
             sb.AppendLine("    }");
             sb.AppendLine();
 

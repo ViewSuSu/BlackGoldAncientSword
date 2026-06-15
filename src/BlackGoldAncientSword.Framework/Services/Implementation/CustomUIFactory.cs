@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Collections.Generic;
 using NetSparkleUpdater;
 using NetSparkleUpdater.Interfaces;
 using NetSparkleUpdater.UI.WPF;
@@ -374,17 +373,53 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         #endregion
     }
 
+    /// <summary>
+    /// "自定义 UI 接管" 模式下的 <see cref="IUpdateAvailable"/> 占位实现。
+    /// <para>
+    /// 本项目通过 <c>SparkleUpdater.CheckForUpdatesQuietly()</c> 静默检查更新，
+    /// 由 <c>UpdateService</c> 监听 <c>UpdateDetected</c> / <c>UpdateCheckFinished</c> 事件，
+    /// 自行维护 <c>IsUpdateAvailable</c> 状态并通过 <c>UpdateAvailabilityChanged</c>
+    /// 通知 <c>MainWindowViewModel</c>，由 XAML 绑定渲染更新提示。
+    /// </para>
+    /// <para>
+    /// 因此 NetSparkle 在静默模式下既<b>不会调用</b> <see cref="Show"/>，
+    /// 也<b>不会订阅</b> <see cref="UserResponded"/>、不会读取 <see cref="CurrentItem"/>。
+    /// 当 <see cref="CustomUIFactory.SuppressDialogs"/> 为 <c>true</c> 时，
+    /// <see cref="CustomUIFactory.CreateUpdateAvailableWindow"/> 返回本占位以避免
+    /// NetSparkle 原生窗口被构造出来（即使框架在异常路径中尝试创建）。
+    /// </para>
+    /// <para>
+    /// 所有成员均为空实现 / 吞订阅；<see cref="CurrentItem"/> 因接口签名为非 nullable
+    /// 故保留 <c>null!</c> —— 它不会被 NetSparkle 读取。
+    /// </para>
+    /// </summary>
     internal sealed class SuppressedUpdateAvailable : IUpdateAvailable
     {
         public bool Displayed { get; set; }
         public NetSparkleUpdater.Enums.UpdateAvailableResult Result { get; set; }
-        public AppCastItem? CurrentItem { get; set; }
-        public event UserRespondedToUpdate? UserResponded;
+
+        /// <summary>占位字段：NetSparkle 在静默模式下不会读取，仅为满足接口签名。</summary>
+        public AppCastItem CurrentItem { get; set; } = null!;
+
+        /// <summary>占位事件：静默模式下 NetSparkle 不会订阅，订阅者也不会被回调。</summary>
+        public event UserRespondedToUpdate? UserResponded { add { } remove { } }
+
+        /// <summary>占位：静默模式下 NetSparkle 不会调用 Show，UI 由 MainWindowViewModel 驱动。</summary>
         public void Show() { }
+
+        /// <summary>占位：无对应原生窗口需要关闭。</summary>
         public void Close() { }
+
+        /// <summary>占位：无 ReleaseNotes 控件。</summary>
         public void HideReleaseNotes() { }
+
+        /// <summary>占位：无 RemindMeLater 按钮。</summary>
         public void HideRemindMeLaterButton() { }
+
+        /// <summary>占位：无 Skip 按钮。</summary>
         public void HideSkipButton() { }
+
+        /// <summary>占位：无原生窗口需要置顶。</summary>
         public void BringToFront() { }
     }
 }

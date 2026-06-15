@@ -36,7 +36,7 @@ public class OcrServiceTests
     }
 
     [Fact]
-    public void IOcrService_Mock_Recognize_ReturnsExpected()
+    public async Task IOcrService_Mock_RecognizeAsync_ReturnsExpected()
     {
         var mock = new Mock<IOcrService>();
         var expected = new List<OcrResult>
@@ -44,9 +44,9 @@ public class OcrServiceTests
             new() { Text = "test", Confidence = 0.99 },
         };
 
-        mock.Setup(m => m.Recognize("test.png")).Returns(expected);
+        mock.Setup(m => m.RecognizeAsync("test.png")).ReturnsAsync(expected);
 
-        var results = mock.Object.Recognize("test.png");
+        var results = await mock.Object.RecognizeAsync("test.png");
 
         Assert.Single(results);
         Assert.Equal("test", results[0].Text);
@@ -54,15 +54,15 @@ public class OcrServiceTests
     }
 
     [Fact]
-    public void IOcrService_Mock_RecognizeBytes_ReturnsExpected()
+    public async Task IOcrService_Mock_RecognizeBytes_ReturnsExpected()
     {
         var mock = new Mock<IOcrService>();
         var testBytes = new byte[] { 1, 2, 3 };
 
-        mock.Setup(m => m.Recognize(testBytes))
-            .Returns(new List<OcrResult>());
+        mock.Setup(m => m.RecognizeAsync(testBytes))
+            .ReturnsAsync(new List<OcrResult>());
 
-        var results = mock.Object.Recognize(testBytes);
+        var results = await mock.Object.RecognizeAsync(testBytes);
 
         Assert.NotNull(results);
         Assert.Empty(results);
