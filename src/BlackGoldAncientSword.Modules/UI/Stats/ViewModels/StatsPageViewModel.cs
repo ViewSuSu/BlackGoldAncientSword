@@ -4,10 +4,9 @@ using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Generated;
 using System.ComponentModel;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
-using System.Windows;
 using BlackGoldAncientSword.Framework.Core.Events;
 using System.Collections.Generic;
-using BlackGoldAncientSword.Framework.Services.Abstractions;
+using BlackGoldAncientSword.Modules.UI.Stats.Services;
 
 
 namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
@@ -17,15 +16,33 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         private readonly IPlayerPrefsService _playerPrefsService;
         private readonly ITipMessageService _tipMessage;
         private readonly ILocalizationService _localizationService;
+        private readonly IClipboardService _clipboard;
+        private readonly PlayerStatsLoader _playerStatsLoader;
+        private readonly BattleListLoader _battleListLoader;
+        private readonly IUIDispatcher _uiDispatcher;
+        private readonly ILocalizedTextProvider _localizedText;
         private readonly PropertyChangedEventHandler? _onLanguageChangedHandler;
         private CancellationTokenSource? _loadAllCts;
         private CancellationTokenSource? _loadStatsCts;
 
-        public StatsPageViewModel(IPlayerPrefsService playerPrefsService, ILocalizationService localizationService, ITipMessageService tipMessageService)
+        public StatsPageViewModel(
+            IPlayerPrefsService playerPrefsService,
+            ILocalizationService localizationService,
+            ITipMessageService tipMessageService,
+            IClipboardService clipboard,
+            PlayerStatsLoader playerStatsLoader,
+            BattleListLoader battleListLoader,
+            IUIDispatcher uiDispatcher,
+            ILocalizedTextProvider localizedText)
         {
             _playerPrefsService = playerPrefsService;
             _tipMessage = tipMessageService;
             _localizationService = localizationService;
+            _clipboard = clipboard;
+            _playerStatsLoader = playerStatsLoader;
+            _battleListLoader = battleListLoader;
+            _uiDispatcher = uiDispatcher;
+            _localizedText = localizedText;
             _onLanguageChangedHandler = OnLanguageChanged;
             _localizationService.PropertyChanged += _onLanguageChangedHandler;
             Seasons = new ObservableCollection<SeasonInfo>();
@@ -40,8 +57,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             get => _userName;
             set
             {
-                if (SetProperty(ref _userName, value))
-                    RaisePropertyChanged(nameof(IsLocalUser));
+                if (_userName == value) return;
+                _userName = value;
+                RaisePropertyChanged(nameof(UserName));
+                RaisePropertyChanged(nameof(IsLocalUser));
             }
         }
 
@@ -49,37 +68,57 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string UID
         {
             get => _uid;
-            set => SetProperty(ref _uid, value);
+            set
+            {
+                if (_uid == value) return;
+                _uid = value;
+                RaisePropertyChanged(nameof(UID));
+            }
         }
 
         private string _level = string.Empty;
         public string Level
         {
             get => _level;
-            set => SetProperty(ref _level, value);
+            set
+            {
+                if (_level == value) return;
+                _level = value;
+                RaisePropertyChanged(nameof(Level));
+            }
         }
 
         private string _avatarUrl = string.Empty;
         public string AvatarUrl
         {
             get => _avatarUrl;
-            set => SetProperty(ref _avatarUrl, value);
+            set
+            {
+                if (_avatarUrl == value) return;
+                _avatarUrl = value;
+                RaisePropertyChanged(nameof(AvatarUrl));
+            }
         }
 
         private DelegateCommand? _copyUserNameCommand;
         public DelegateCommand CopyUserNameCommand =>
             _copyUserNameCommand ??= new DelegateCommand(() =>
             {
-                Clipboard.SetText(UserName);
+                _clipboard.TrySetText(UserName);
                 eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "复制成功"));
+                    .Publish(new TipMessageWithHighlightArgs(_localizedText.Get("Stats.CopySuccess", "复制成功")));
             });
 
         private string _searchText = string.Empty;
         public string SearchText
         {
             get => _searchText;
-            set => SetProperty(ref _searchText, value);
+            set
+            {
+                if (_searchText == value) return;
+                _searchText = value;
+                RaisePropertyChanged(nameof(SearchText));
+            }
         }
 
         private DelegateCommand? _searchCommand;
@@ -116,9 +155,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public DelegateCommand CopyUIDCommand =>
             _copyUIDCommand ??= new DelegateCommand(() =>
             {
-                Clipboard.SetText(UID);
+                _clipboard.TrySetText(UID);
                 eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "复制成功"));
+                    .Publish(new TipMessageWithHighlightArgs(_localizedText.Get("Stats.CopySuccess", "复制成功")));
             });
 
         private DelegateCommand? _refreshAllCommand;
@@ -131,63 +170,108 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string RankName
         {
             get => _rankName;
-            set => SetProperty(ref _rankName, value);
+            set
+            {
+                if (_rankName == value) return;
+                _rankName = value;
+                RaisePropertyChanged(nameof(RankName));
+            }
         }
 
         private string _rankIcon = string.Empty;
         public string RankIcon
         {
             get => _rankIcon;
-            set => SetProperty(ref _rankIcon, value);
+            set
+            {
+                if (_rankIcon == value) return;
+                _rankIcon = value;
+                RaisePropertyChanged(nameof(RankIcon));
+            }
         }
 
         private double _rankScore;
         public double RankScore
         {
             get => _rankScore;
-            set => SetProperty(ref _rankScore, value);
+            set
+            {
+                if (_rankScore == value) return;
+                _rankScore = value;
+                RaisePropertyChanged(nameof(RankScore));
+            }
         }
 
         private string _rankLevel = string.Empty;
         public string RankLevel
         {
             get => _rankLevel;
-            set => SetProperty(ref _rankLevel, value);
+            set
+            {
+                if (_rankLevel == value) return;
+                _rankLevel = value;
+                RaisePropertyChanged(nameof(RankLevel));
+            }
         }
 
         private string _rankDisplayWithStars = string.Empty;
         public string RankDisplayWithStars
         {
             get => _rankDisplayWithStars;
-            set => SetProperty(ref _rankDisplayWithStars, value);
+            set
+            {
+                if (_rankDisplayWithStars == value) return;
+                _rankDisplayWithStars = value;
+                RaisePropertyChanged(nameof(RankDisplayWithStars));
+            }
         }
 
         private double _rankTierScore;
         public double RankTierScore
         {
             get => _rankTierScore;
-            set => SetProperty(ref _rankTierScore, value);
+            set
+            {
+                if (_rankTierScore == value) return;
+                _rankTierScore = value;
+                RaisePropertyChanged(nameof(RankTierScore));
+            }
         }
 
         private string _pageRankName = string.Empty;
         public string PageRankName
         {
             get => _pageRankName;
-            set => SetProperty(ref _pageRankName, value);
+            set
+            {
+                if (_pageRankName == value) return;
+                _pageRankName = value;
+                RaisePropertyChanged(nameof(PageRankName));
+            }
         }
 
         private int _pageStarCount;
         public int PageStarCount
         {
             get => _pageStarCount;
-            set => SetProperty(ref _pageStarCount, value);
+            set
+            {
+                if (_pageStarCount == value) return;
+                _pageStarCount = value;
+                RaisePropertyChanged(nameof(PageStarCount));
+            }
         }
 
         private bool _pageHasStars;
         public bool PageHasStars
         {
             get => _pageHasStars;
-            set => SetProperty(ref _pageHasStars, value);
+            set
+            {
+                if (_pageHasStars == value) return;
+                _pageHasStars = value;
+                RaisePropertyChanged(nameof(PageHasStars));
+            }
         }
 
         // === Rank Stats ===
@@ -195,28 +279,48 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string TotalGames
         {
             get => _totalGames;
-            set => SetProperty(ref _totalGames, value);
+            set
+            {
+                if (_totalGames == value) return;
+                _totalGames = value;
+                RaisePropertyChanged(nameof(TotalGames));
+            }
         }
 
         private string _topOneCount = "0";
         public string TopOneCount
         {
             get => _topOneCount;
-            set => SetProperty(ref _topOneCount, value);
+            set
+            {
+                if (_topOneCount == value) return;
+                _topOneCount = value;
+                RaisePropertyChanged(nameof(TopOneCount));
+            }
         }
 
         private string _topFiveCount = "0";
         public string TopFiveCount
         {
             get => _topFiveCount;
-            set => SetProperty(ref _topFiveCount, value);
+            set
+            {
+                if (_topFiveCount == value) return;
+                _topFiveCount = value;
+                RaisePropertyChanged(nameof(TopFiveCount));
+            }
         }
 
         private string _avgDamage = "0";
         public string AvgDamage
         {
             get => _avgDamage;
-            set => SetProperty(ref _avgDamage, value);
+            set
+            {
+                if (_avgDamage == value) return;
+                _avgDamage = value;
+                RaisePropertyChanged(nameof(AvgDamage));
+            }
         }
 
         // === Filters ===
@@ -226,8 +330,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             get => _selectedCategory;
             set
             {
-                if (SetProperty(ref _selectedCategory, value))
-                    RefreshStats();
+                if (_selectedCategory == value) return;
+                _selectedCategory = value;
+                RaisePropertyChanged(nameof(SelectedCategory));
+                RefreshStats();
             }
         }
 
@@ -237,8 +343,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             get => _selectedTeamSize;
             set
             {
-                if (SetProperty(ref _selectedTeamSize, value))
-                    RefreshStats();
+                if (_selectedTeamSize == value) return;
+                _selectedTeamSize = value;
+                RaisePropertyChanged(nameof(SelectedTeamSize));
+                RefreshStats();
             }
         }
 
@@ -282,8 +390,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             get => _selectedSeason;
             set
             {
-                if (SetProperty(ref _selectedSeason, value))
-                    RefreshStats();
+                if (_selectedSeason == value) return;
+                _selectedSeason = value;
+                RaisePropertyChanged(nameof(SelectedSeason));
+                RefreshStats();
             }
         }
 
@@ -297,49 +407,84 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public bool IsPlayerInfoLoading
         {
             get => _isPlayerInfoLoading;
-            set => SetProperty(ref _isPlayerInfoLoading, value);
+            set
+            {
+                if (_isPlayerInfoLoading == value) return;
+                _isPlayerInfoLoading = value;
+                RaisePropertyChanged(nameof(IsPlayerInfoLoading));
+            }
         }
 
         private double _playerInfoProgress;
         public double PlayerInfoProgress
         {
             get => _playerInfoProgress;
-            set => SetProperty(ref _playerInfoProgress, value);
+            set
+            {
+                if (_playerInfoProgress == value) return;
+                _playerInfoProgress = value;
+                RaisePropertyChanged(nameof(PlayerInfoProgress));
+            }
         }
 
         private bool _isRecentBattlesLoading;
         public bool IsRecentBattlesLoading
         {
             get => _isRecentBattlesLoading;
-            set => SetProperty(ref _isRecentBattlesLoading, value);
+            set
+            {
+                if (_isRecentBattlesLoading == value) return;
+                _isRecentBattlesLoading = value;
+                RaisePropertyChanged(nameof(IsRecentBattlesLoading));
+            }
         }
 
         private double _recentBattlesProgress;
         public double RecentBattlesProgress
         {
             get => _recentBattlesProgress;
-            set => SetProperty(ref _recentBattlesProgress, value);
+            set
+            {
+                if (_recentBattlesProgress == value) return;
+                _recentBattlesProgress = value;
+                RaisePropertyChanged(nameof(RecentBattlesProgress));
+            }
         }
 
         private bool _isStatsLoading;
         public bool IsStatsLoading
         {
             get => _isStatsLoading;
-            set => SetProperty(ref _isStatsLoading, value);
+            set
+            {
+                if (_isStatsLoading == value) return;
+                _isStatsLoading = value;
+                RaisePropertyChanged(nameof(IsStatsLoading));
+            }
         }
 
         private double _statsProgress;
         public double StatsProgress
         {
             get => _statsProgress;
-            set => SetProperty(ref _statsProgress, value);
+            set
+            {
+                if (_statsProgress == value) return;
+                _statsProgress = value;
+                RaisePropertyChanged(nameof(StatsProgress));
+            }
         }
 
         private bool _showNotFound;
         public bool ShowNotFound
         {
             get => _showNotFound;
-            set => SetProperty(ref _showNotFound, value);
+            set
+            {
+                if (_showNotFound == value) return;
+                _showNotFound = value;
+                RaisePropertyChanged(nameof(ShowNotFound));
+            }
         }
 
         private string _roleId = string.Empty;
@@ -353,12 +498,13 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
         }
 
-        protected override async void OnNavigatedToExecute(NavigationContext navigationContext)
+        protected override void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
             RaisePropertyChanged(nameof(IsLocalUser));
             SearchText = _playerPrefsService.Current.PlayerName;
-            await RefreshAllAsync();
+            // 基类签名为 void，无法 await。fire-and-forget；RefreshAllAsync 内部已有 try/catch 兜底。
+            _ = RefreshAllAsync();
         }
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
@@ -439,8 +585,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
         }
 
-        private static string L(string key, string fallback) =>
-            System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
+        private string L(string key, string fallback) => _localizedText.Get(key, fallback);
 
         private async System.Threading.Tasks.Task<bool> LoadAllAsync(CancellationToken ct)
         {
@@ -467,20 +612,25 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
             try
             {
-                var search = await NarakaApiClient.SearchRecordAsync(localName, ct);
+                var search = await _playerStatsLoader.SearchRoleByNameAsync(localName, ct);
                 if (search?.Data == null) { ShowNotFound = true; ClearAllData(); _tipMessage.ShowError(search?.Msg ?? L("Stats.LoadError", "加载战绩失败，请检查网络后重试。")); return false; }
                 _roleId = search.Data.RoleIdSimple ?? string.Empty;
                 if (string.IsNullOrEmpty(_roleId)) { ShowNotFound = true; ClearAllData(); _tipMessage.ShowError(L("Stats.PlayerNotFound", "未找到该玩家，请检查名称是否正确")); return false; }
 
                 // Fire all three requests in parallel
-                var userInfoTask = NarakaApiClient.GetUserInfoAsync(_roleId, ct);
-                var seasonsTask = NarakaApiClient.QuerySeasonsAsync(ct);
-                var battlesTask = NarakaApiClient.GetRecentBattlesAsync(_roleId, ct: ct);
+                var userInfoTask = _playerStatsLoader.FetchUserInfoAsync(_roleId, ct);
+                var seasonsTask = _playerStatsLoader.FetchSeasonsAsync(ct);
+                var battlesTask = _battleListLoader.FetchBattleListAsync(_roleId, ct);
 
                 await System.Threading.Tasks.Task.WhenAll(userInfoTask, seasonsTask, battlesTask);
                 ct.ThrowIfCancellationRequested();
 
-                var battlesResult = battlesTask.Result;
+                // 用 await 而非 .Result：
+                // 1) .Result 会把 TaskCanceledException 重新包装成 AggregateException，
+                //    导致下游 `catch (OperationCanceledException)` 漏接；
+                // 2) await 与上面的 userInfoTask/seasonsTask 取值方式一致，异常类型对称。
+                // 此时 WhenAll 已完成，await 不会再产生续接调度开销。
+                var battlesResult = await battlesTask;
                 // Process userInfo and seasons first (fast responses)
                 var userInfo = await userInfoTask;
                 if (userInfo?.Code == 200 && userInfo.Data != null)
@@ -545,8 +695,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
             catch (OperationCanceledException)
             {
-                // Navigation away or filter changed 鈥?not an error
-                            return false;
+                // 导航离开或过滤条件已变更——不是错误
+                return false;
             }
             catch (Exception ex)
             {
@@ -565,33 +715,37 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         private async System.Threading.Tasks.Task FetchHonorTitlesSeriallyAsync(
             System.Collections.Generic.List<RecentBattleItem> battleItems, CancellationToken ct)
         {
-            for (int i = 0; i < battleItems.Count; i++)
-            {
-                if (ct.IsCancellationRequested) return;
-                await FetchAndUpdateHonorTitlesAsync(battleItems[i].BattleId.ToString(), i, ct);
-            }
-        }
-
-        private async System.Threading.Tasks.Task FetchAndUpdateHonorTitlesAsync(
-            string battleId, int index, CancellationToken ct)
-        {
             try
             {
-                var detail = await NarakaApiClient.GetBattleDetailAsync(_roleId, battleId, ct);
-                if (detail?.Code == 200 && detail.Data?.HonorTitles != null && index < RecentBattles.Count)
-                {
-                    var existing = RecentBattles[index].HonorTitles;
-                    existing.Clear();
-                    foreach (var t in detail.Data.HonorTitles.Adapt<List<HonorTitleDisplayItem>>())
-                        existing.Add(t);
-                }
-                RecentBattlesProgress = Math.Min(100, RecentBattlesProgress + 10);
+                await _battleListLoader.FetchHonorTitlesForListAsync(
+                    _roleId,
+                    battleItems,
+                    (index, titles) => { _ = _uiDispatcher.InvokeAsync(() => ApplyHonorTitlesToBattle(index, titles)); },
+                    ct);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[StatsPage] FetchAndUpdateHonorTitlesAsync failed: {ex}");
+                System.Diagnostics.Debug.WriteLine($"[{nameof(StatsPageViewModel)}] FetchHonorTitlesSeriallyAsync failed: {ex}");
             }
+        }
+
+        /// <summary>
+        /// 把单条对局拉回的 HonorTitles 映射到对应 UI Item。
+        /// 映射逻辑保留在 VM：这是从 DTO 到 UI Item 的转换，属于显示层职责。
+        /// </summary>
+        private void ApplyHonorTitlesToBattle(int index, HonorTitleInfo[] titles)
+        {
+            if (index < 0 || index >= RecentBattles.Count) return;
+
+            var existing = RecentBattles[index].HonorTitles;
+            existing.Clear();
+            if (titles.Length > 0)
+            {
+                foreach (var t in titles.Adapt<List<HonorTitleDisplayItem>>())
+                    existing.Add(t);
+            }
+            RecentBattlesProgress = Math.Min(100, RecentBattlesProgress + 10);
         }
 
         private async System.Threading.Tasks.Task LoadStatsAsync(CancellationToken ct)
@@ -605,7 +759,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             {
                 var gameMode = GameModeExtensions.FromCategoryAndTeamSize(_selectedCategory, _selectedTeamSize);
 
-                var stats = await NarakaApiClient.GetPlayerStatsAsync(
+                var stats = await _playerStatsLoader.FetchPlayerStatsAsync(
                     _roleId, SelectedSeason.Code, gameMode, ct);
 
                 if (stats?.Data == null) { _tipMessage.ShowError(stats?.Msg ?? L("Stats.LoadError", "加载战绩失败，请检查网络后重试。")); return; }
@@ -673,11 +827,11 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
         
-        private static string FormatStatLabel(string? key, string? fallbackName)
+        private string FormatStatLabel(string? key, string? fallbackName)
         {
             if (!string.IsNullOrEmpty(key) && StatKeyToResourceKey.TryGetValue(key, out var resourceKey))
             {
-                return Application.Current?.TryFindResource(resourceKey) as string ?? fallbackName ?? key;
+                return _localizedText.Get(resourceKey, fallbackName ?? key);
             }
             return fallbackName ?? key ?? string.Empty;
         }
@@ -696,20 +850,20 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             return "0";
         }
 
-        private static string FormatSurvivalTime(string secondsStr)
+        private string FormatSurvivalTime(string secondsStr)
         {
             if (double.TryParse(secondsStr, out double seconds))
             {
                 var minutes = (int)(seconds / 60);
                 var remainSeconds = (int)(seconds % 60);
-                var minUnit = Application.Current?.TryFindResource("Stats.Minute") as string ?? "分";
-                var secUnit = Application.Current?.TryFindResource("Stats.Second") as string ?? "秒";
+                var minUnit = _localizedText.Get("Stats.Minute", "分");
+                var secUnit = _localizedText.Get("Stats.Second", "秒");
                 return $"{minutes}{minUnit}{remainSeconds:D2}{secUnit}";
             }
             return secondsStr;
         }
 
-        private static string FormatGameMode(int gameMode)
+        private string FormatGameMode(int gameMode)
         {
             var enumValue = gameMode switch
             {
@@ -728,14 +882,14 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             if (enumValue.HasValue)
             {
                 var key = "GameMode." + enumValue.Value.ToString();
-                return Application.Current?.TryFindResource(key) as string ?? enumValue.Value.ToString();
+                return _localizedText.Get(key, enumValue.Value.ToString());
             }
 
-            var unknownKey = Application.Current?.TryFindResource("GameMode.Unknown") as string ?? "Unknown";
+            var unknownKey = _localizedText.Get("GameMode.Unknown", "Unknown");
             return $"{unknownKey}({gameMode})";
         }
 
-        private static string FormatGameModeCategory(int gameMode)
+        private string FormatGameModeCategory(int gameMode)
         {
             if (Enum.IsDefined(typeof(GameMode), gameMode))
             {
@@ -743,18 +897,18 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 {
                     var category = ((GameMode)gameMode).GetCategory();
                     var key = "GameMode." + category.ToString();
-                    return Application.Current?.TryFindResource(key) as string ?? category.ToString();
+                    return _localizedText.Get(key, category.ToString());
                 }
                 catch (ArgumentOutOfRangeException)
                 {
-                    return Application.Current?.TryFindResource("GameMode.Unknown") as string ?? "Unknown";
+                    return _localizedText.Get("GameMode.Unknown", "Unknown");
                 }
             }
 
-            return Application.Current?.TryFindResource("GameMode.Unknown") as string ?? "Unknown";
+            return _localizedText.Get("GameMode.Unknown", "Unknown");
         }
 
-        private static string FormatGameModeTeamSize(int gameMode)
+        private string FormatGameModeTeamSize(int gameMode)
         {
             if (Enum.IsDefined(typeof(GameMode), gameMode))
             {
@@ -762,7 +916,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 {
                     var teamSize = ((GameMode)gameMode).GetTeamSize();
                     var key = "GameMode." + teamSize.ToString();
-                    return Application.Current?.TryFindResource(key) as string ?? teamSize.ToString();
+                    return _localizedText.Get(key, teamSize.ToString());
                 }
                 catch (ArgumentOutOfRangeException)
                 {
@@ -770,7 +924,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 }
             }
 
-            return Application.Current?.TryFindResource("GameMode.Unknown") as string ?? "Unknown";
+            return _localizedText.Get("GameMode.Unknown", "Unknown");
         }
         private static string FormatUnixTime(long unixMilliseconds)
         {
@@ -779,39 +933,19 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 var dt = DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds).LocalDateTime;
                 return dt.ToString("yyyy/MM/dd HH:mm");
             }
-            catch { return string.Empty; }
-        }
-
-        
-        private static GameMode ResolveGameMode(GameModeCategory category, TeamSize size)
-        {
-            return (category, size) switch
+            catch (Exception ex)
             {
-                (GameModeCategory.Rank, TeamSize.Solo) => GameMode.RankSolo,
-                (GameModeCategory.Rank, TeamSize.Duo) => GameMode.RankDuo,
-                (GameModeCategory.Rank, TeamSize.Trio) => GameMode.RankTrio,
-                (GameModeCategory.Match, TeamSize.Solo) => GameMode.MatchSolo,
-                (GameModeCategory.Match, TeamSize.Duo) => GameMode.MatchDuo,
-                (GameModeCategory.Match, TeamSize.Trio) => GameMode.MatchTrio,
-                (GameModeCategory.Tianren, TeamSize.Solo) => GameMode.TianrenSolo,
-                (GameModeCategory.Tianren, TeamSize.Duo) => GameMode.TianrenDuo,
-                (GameModeCategory.Tianren, TeamSize.Trio) => GameMode.TianrenTrio,
-                _ => GameMode.RankTrio
-            };
+                System.Diagnostics.Debug.WriteLine($"[{nameof(StatsPageViewModel)}] FormatUnixTime failed for {unixMilliseconds}: {ex.Message}");
+                return string.Empty;
+            }
         }
 
-        private static string FormatScore(double begin, double round)
-        {
-            var diff = round - begin;
-            var sign = diff >= 0 ? "+" : "";
-            return string.Format("{0} -> {1} ({2}{3})", begin, round, sign, diff);
-        }
         private static bool IsTianxuanMode(double gameMode)
         {
             var mode = (int)gameMode; return Enum.IsDefined(typeof(GameMode), mode) && ((GameMode)mode).GetCategory() == GameModeCategory.Rank;
         }
 
-        private static string GetRankNameForScore(double score, int gameMode = 0)
+        private string GetRankNameForScore(double score, int gameMode = 0)
         {
             if (IsTianxuanMode(gameMode))
             {
@@ -855,7 +989,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             return "(" + sign + diff + ")";
         }
 
-        private static string FormatPageRankDisplay(double score, int gameMode = 0)
+        private string FormatPageRankDisplay(double score, int gameMode = 0)
         {
             var rankName = GetRankNameForScore(score, gameMode);
             var stars = GetStarCount(score, gameMode);

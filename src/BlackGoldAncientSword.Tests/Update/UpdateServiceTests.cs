@@ -68,25 +68,26 @@ public class UpdateServiceTests
     }
 
     /// <summary>
-    /// Before the check completes, neither indicator should show.
+    /// 在 UpdateService 完成任何检查之前，IsUpdateAvailable 必须为 false——
+    /// 这是"既未发现更新、也未确认最新"的初始指示器状态。
     /// </summary>
+    /// <remarks>
+    /// 直接 new UpdateService() 会在构造函数中触发 WPF pack URI 与 SparkleUpdater 初始化，
+    /// 在无 WPF 宿主的 xUnit 进程下会抛异常，因此使用 RuntimeHelpers.GetUninitializedObject
+    /// 绕过构造函数，仅断言被测类型上 IsUpdateAvailable 自动属性的字段默认值。
+    /// 这确保断言真正绑定到生产代码 UpdateService 的属性，而非局部变量。
+    ///
+    /// 不断言 IsLatestVersion：该属性派生自 MainWindowViewModel（在 App 程序集内），
+    /// 测试项目未引用 App，且 ViewModel 构造依赖 7 个 Prism/服务接口，超出本测试范围。
+    /// </remarks>
     [Fact]
     public void BeforeCheck_NeitherIndicatorShows()
     {
-        bool updateCheckCompleted = false;
-        bool isUpdateAvailable = false;
-        bool isLatestVersion = false;
+        var sut = (UpdateService)System.Runtime.CompilerServices.RuntimeHelpers
+            .GetUninitializedObject(typeof(UpdateService));
 
-        void OnUpdateAvailabilityChanged(bool available)
-        {
-            updateCheckCompleted = true;
-            isUpdateAvailable = available;
-            isLatestVersion = updateCheckCompleted && !isUpdateAvailable;
-        }
-
-        // Before any event fires
-        Assert.False(updateCheckCompleted, "Check not yet completed");
-        Assert.False(isUpdateAvailable, "No update detected yet");
-        Assert.False(isLatestVersion, "Not showing '(最新)' yet");
+        Assert.False(sut.IsUpdateAvailable,
+            $"{nameof(UpdateService.IsUpdateAvailable)} 在检查前应为 false");
+        Assert.Null(sut.LatestVersion);
     }
 }

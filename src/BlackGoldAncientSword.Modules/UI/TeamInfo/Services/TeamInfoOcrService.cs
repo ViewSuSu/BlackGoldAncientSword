@@ -75,11 +75,16 @@ public class TeamInfoOcrService : ITeamInfoOcrService
                 await System.IO.File.WriteAllBytesAsync(tempPath, pngBytes, ct);
                 tempFiles.Add(tempPath);
             }
-            catch { }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                // 临时图片写盘失败：不计入 tempFiles 自然跳过清理，但需留诊断（磁盘满/权限/路径无效）。
+                Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] temp file write failed (region={regionIndex}): {ex.Message}");
+            }
 
             try
             {
-                var text = await Task.Run(() => _ocr.RecognizeText(pngBytes), ct);
+                var text = await _ocr.RecognizeTextAsync(pngBytes).ConfigureAwait(false);
                 var name = text.Replace(" ", "").Replace("\n", "").Replace("\r", "").Trim();
                 if (!string.IsNullOrWhiteSpace(name))
                     names.Add(name);
@@ -87,7 +92,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TeamInfoOcr] OCR error: {ex.Message}");
+                Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] OCR error: {ex.Message}");
             }
 
             regionIndex++;

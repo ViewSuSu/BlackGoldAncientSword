@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using Newtonsoft.Json;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Extensions;
@@ -60,8 +62,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     };
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.WriteLine($"[{nameof(SettingsService)}] LoadAsync failed: {ex.Message}");
                 Current = new AppSettings();
             }
         }
@@ -80,7 +83,10 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 var json = JsonConvert.SerializeObject(Current, Formatting.Indented);
                 await System.IO.File.WriteAllTextAsync(FilePath, json);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(SettingsService)}] SaveAsync failed: {ex.Message}");
+            }
         }
     }
 }

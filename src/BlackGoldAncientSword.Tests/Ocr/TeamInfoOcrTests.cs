@@ -28,7 +28,7 @@ public class TeamInfoOcrTests
     private static readonly string[] RegionLabels = { "left", "middle", "right" };
 
     [Fact]
-    public void Recognize_HeroSelectionTeamInfo_IdentifiesThreeTeammateNames()
+    public async Task Recognize_HeroSelectionTeamInfo_IdentifiesThreeTeammateNames()
     {
         var imagePath = Path.Combine(TestDataPath, "hero_selection_team.png");
         Assert.True(File.Exists(imagePath), $"测试图片不存在: {imagePath}");
@@ -72,10 +72,10 @@ public class TeamInfoOcrTests
 
                 // 保存裁剪图片用于调试
                 var cropPath = Path.Combine(TestDataPath, $"crop_{RegionLabels[i]}.png");
-                File.WriteAllBytes(cropPath, pngBytes);
+                await File.WriteAllBytesAsync(cropPath, pngBytes);
 
                 // OCR 识别
-                var results = engine.Recognize(cropPath);
+                var results = await engine.RecognizeAsync(cropPath);
                 var rawText = string.Join("", results.Select(r => r.Text));
                 var name = rawText.Trim().Replace(" ", "");
 

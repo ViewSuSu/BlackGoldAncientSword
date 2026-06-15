@@ -1,7 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Windows;
-using System.Windows.Threading;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Http;
@@ -20,34 +18,47 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
     public class TeamInfoPageViewModel : ViewModelBase
     {
         private readonly IGameStatusMonitor _gameStatusMonitor;
-        private readonly ITeamInfoOcrService _teamInfoOcrService;
         private readonly IPlayerPrefsService _playerPrefsService;
         private readonly IMainContentNavigationService _navigation;
         private readonly ITeamOverlayService _teamOverlayService;
+        private readonly IUIDispatcher _uiDispatcher;
+        private readonly IClipboardService _clipboard;
+        private readonly TeamOcrCoordinator _ocrCoordinator;
+        private readonly TeamMemberLoader _memberLoader;
+        private readonly ILocalizedTextProvider _localizedText;
         private CancellationTokenSource? _ocrLoopCts;
         private bool _isOcrRunning;
-        private readonly object _ocrLock = new();        private bool _isHeroSelectionPhase;
+        private readonly object _ocrLock = new();
+        private bool _isHeroSelectionPhase;
         private CancellationTokenSource? _refreshMembersCts;
         private CancellationTokenSource? _refreshOcrCts;
         private bool _hasEverHadData;
         private bool _overlayShownForThisRound;
         private bool _overlayDismissedThisRound;
 
-        private static string L(string key, string fallback) =>
-            System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
+        // 通过 ILocalizedTextProvider 访问字符串本地化资源，避免 VM 直接依赖 System.Windows.Application。
+        private string L(string key, string fallback) => _localizedText.Get(key, fallback);
 
         public TeamInfoPageViewModel(
             IGameStatusMonitor gameStatusMonitor,
-            ITeamInfoOcrService teamInfoOcrService,
             IPlayerPrefsService playerPrefsService,
             ITeamOverlayService teamOverlayService,
-            IMainContentNavigationService navigation)
+            IMainContentNavigationService navigation,
+            IUIDispatcher uiDispatcher,
+            IClipboardService clipboard,
+            TeamOcrCoordinator ocrCoordinator,
+            TeamMemberLoader memberLoader,
+            ILocalizedTextProvider localizedText)
         {
             _gameStatusMonitor = gameStatusMonitor;
-            _teamInfoOcrService = teamInfoOcrService;
             _teamOverlayService = teamOverlayService;
             _playerPrefsService = playerPrefsService;
             _navigation = navigation;
+            _uiDispatcher = uiDispatcher;
+            _clipboard = clipboard;
+            _ocrCoordinator = ocrCoordinator;
+            _memberLoader = memberLoader;
+            _localizedText = localizedText;
 
             TeamMembers = new ObservableCollection<TeamMemberInfo>();
             Seasons = new ObservableCollection<SeasonInfo>();
@@ -55,6 +66,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             DiffRight = new ObservableCollection<MemberDiffItem>();
             _selectedTeamSize = TeamSize.Trio;
             _selectedCategory = GameModeCategory.Rank;
+            // _statusText 不能用字段初始化器调 L()，因为 _localizedText 此时还未注入。
+            _statusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
         }
 
         // === Filters ===
@@ -66,8 +79,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             get => _selectedSeason;
             set
             {
-                if (SetProperty(ref _selectedSeason, value))
-                    RefreshTeamMemberData();
+                if (_selectedSeason == value) return;
+                _selectedSeason = value;
+                RaisePropertyChanged(nameof(SelectedSeason));
+                RefreshTeamMemberData();
             }
         }
 
@@ -77,8 +92,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             get => _selectedTeamSize;
             set
             {
-                if (SetProperty(ref _selectedTeamSize, value))
-                    RefreshTeamMemberData();
+                if (_selectedTeamSize == value) return;
+                _selectedTeamSize = value;
+                RaisePropertyChanged(nameof(SelectedTeamSize));
+                RefreshTeamMemberData();
             }
         }
 
@@ -88,8 +105,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             get => _selectedCategory;
             set
             {
-                if (SetProperty(ref _selectedCategory, value))
-                    RefreshTeamMemberData();
+                if (_selectedCategory == value) return;
+                _selectedCategory = value;
+                RaisePropertyChanged(nameof(SelectedCategory));
+                RefreshTeamMemberData();
             }
         }
 
@@ -120,7 +139,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public static System.ComponentModel.BindingList<GameModeCategoryOption> Categories { get; } =
             new(new[] { new GameModeCategoryOption(GameModeCategory.Rank), new GameModeCategoryOption(GameModeCategory.Match), new GameModeCategoryOption(GameModeCategory.Tianren) });
 
-        
+
         // === Members ===
         public ObservableCollection<TeamMemberInfo> TeamMembers { get; }
 
@@ -144,24 +163,31 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public bool HasDiffLeft => TeamMembers.Count >= 2 && MemberHasData(TeamMembers[0]) && MemberHasData(TeamMembers[1]);
         public bool HasDiffRight => TeamMembers.Count >= 3 && MemberHasData(TeamMembers[1]) && MemberHasData(TeamMembers[2]);
 
-        public System.Windows.GridLength Col0Width => HasMember0 ? new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) : new System.Windows.GridLength(0);
-        public System.Windows.GridLength Col1Width => HasDiffLeft ? new System.Windows.GridLength(80) : new System.Windows.GridLength(0);
-        public System.Windows.GridLength Col2Width => HasMember1 ? new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) : new System.Windows.GridLength(0);
-        public System.Windows.GridLength Col3Width => HasDiffRight ? new System.Windows.GridLength(80) : new System.Windows.GridLength(0);
-        public System.Windows.GridLength Col4Width => HasMember2 ? new System.Windows.GridLength(1, System.Windows.GridUnitType.Star) : new System.Windows.GridLength(0);
+        // ColXWidth (GridLength) 属性已移除：View code-behind 改为监听 HasMember*/HasDiff* 五个 bool
+        // 直接构造 GridLength 写入 ColumnDefinitions[].Width，VM 因此不再依赖 System.Windows 类型。
 
         private bool _isLoading;
         public bool IsLoading
         {
             get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
+            set
+            {
+                if (_isLoading == value) return;
+                _isLoading = value;
+                RaisePropertyChanged(nameof(IsLoading));
+            }
         }
 
-        private string _statusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
+        private string _statusText = string.Empty;
         public string StatusText
         {
             get => _statusText;
-            set => SetProperty(ref _statusText, value);
+            set
+            {
+                if (_statusText == value) return;
+                _statusText = value;
+                RaisePropertyChanged(nameof(StatusText));
+            }
         }
 
         public bool IsHeroSelectionPhase
@@ -169,12 +195,30 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             get => _isHeroSelectionPhase;
             set
             {
-                if (SetProperty(ref _isHeroSelectionPhase, value))
-                    RaisePropertyChanged(nameof(IsHeroSelectionPhase));
+                if (_isHeroSelectionPhase == value) return;
+                _isHeroSelectionPhase = value;
+                RaisePropertyChanged(nameof(IsHeroSelectionPhase));
             }
         }
 
-        private async void OnGameStatusRecognized(object? sender, GameStatusChangedEventArgs args)
+        private void OnGameStatusRecognized(object? sender, GameStatusChangedEventArgs args)
+        {
+            // GameStatusRecognized 可能从 ThreadPool 触发（GameLogMonitor 的 FileSystemWatcher.OnLogChanged
+            // 走 Task.Run → 同步 raise BattleStarted/Ended/Joined → MainWindowViewModel/HomePageViewModel
+            // 同步调 _gameStatusMonitor.NotifyStatus → 同步 raise GameStatusRecognized）。
+            // 下方 HandleGameStatusOnUiThread 会修改 ObservableCollection（TeamMembers.Clear/DiffLeft.Clear/DiffRight.Clear），
+            // ObservableCollection.CollectionChanged 跨线程触发会让 WPF ItemsControl 抛
+            // NotSupportedException 撕崩 UI 线程。务必在方法入口 marshal 回 UI 线程。
+            if (!_uiDispatcher.CheckAccess())
+            {
+                _ = _uiDispatcher.InvokeAsync(() => HandleGameStatusOnUiThread(sender, args));
+                return;
+            }
+
+            HandleGameStatusOnUiThread(sender, args);
+        }
+
+        private void HandleGameStatusOnUiThread(object? sender, GameStatusChangedEventArgs args)
         {
             switch (args.Status)
             {
@@ -208,14 +252,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private void StartOcrLoop()
         {
+            // Token 必须在 lock 内取出：单 UI 线程下虽然 Stop/Start 不会并发，
+            // 但写成 lock 外读 `_ocrLoopCts!.Token` 会让"如果有人并发 Stop"
+            // 的场景命中 NullReferenceException（CancelAndDispose 把 ref 置 null）。
+            // 在 lock 内取出 CancellationToken（struct），离 lock 后即可安全使用。
+            CancellationToken ct;
             lock (_ocrLock)
             {
                 if (_isOcrRunning) return;
                 _isOcrRunning = true;
                 CancelAndDispose(ref _ocrLoopCts);
                 _ocrLoopCts = new CancellationTokenSource();
+                ct = _ocrLoopCts.Token;
             }
-            var ct = _ocrLoopCts!.Token;
             _ = OcrLoopAsync(ct);
         }
 
@@ -246,13 +295,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             {
                 StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
 
-                var names = await _teamInfoOcrService.RecognizeTeamMembersAsync(ct);
+                var names = await _ocrCoordinator.RecognizeOnceAsync(ct);
                 ct.ThrowIfCancellationRequested();
 
                 if (names.Length == 0) return;
 
                 // 在 UI 线程上更新成员列表
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     _hasEverHadData = true;
 
@@ -266,7 +315,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     {
                         if (existingNames.Contains(name)) continue;
 
-                        var member = new TeamMemberInfo
+                        var member = new TeamMemberInfo(_clipboard, _localizedText)
                         {
                             UserName = name,
                             IsLoading = true,
@@ -289,17 +338,17 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
                     ReorderMembersForLocalUser();
                     RaiseMemberProperties();
-                }, System.Windows.Threading.DispatcherPriority.Normal, ct);
+                });
 
                 // 从 UI 线程启动所有 LoadMemberDataAsync，确保 SynchronizationContext 正确
                 var tasks = new List<Task>();
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     foreach (var member in TeamMembers)
                     {
                         tasks.Add(LoadMemberDataAsync(member, ct));
                     }
-                }, System.Windows.Threading.DispatcherPriority.Normal, ct);
+                });
 
                 await Task.WhenAll(tasks);
             }
@@ -317,49 +366,81 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         /// <summary>
         /// 覆盖层弹窗请求刷新时的回调。重置覆盖层标志后走完整的 OCR 刷新流程，
         /// 刷新完成后覆盖层会自动重新显示。
+        /// <para>
+        /// **async void 安全契约**：本方法被 ITeamOverlayService.RefreshAction (Action 类型) 持有调用，
+        /// 必须保持 async void 签名。<see cref="RefreshOcrOnceAsync"/> 内部完整 try/catch 兜底所有 await 异常，
+        /// 修改时**不得把抛出语义移出该 try/catch**——否则异常会直接冲到 SynchronizationContext，
+        /// 由 App.xaml.cs 的 DispatcherUnhandledException 接管并向用户弹错。
+        /// 如需返回 Task，必须同步把 RefreshAction 类型改为 Func&lt;Task&gt; 并审计所有调用方。
+        /// </para>
         /// </summary>
         private async void RefreshFromOverlay()
         {
-            _overlayShownForThisRound = false;
-            await RefreshOcrOnceAsync();
+            try
+            {
+                _overlayShownForThisRound = false;
+                await RefreshOcrOnceAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}.{nameof(RefreshFromOverlay)}] {ex}");
+            }
         }
+
         private async Task OcrLoopAsync(CancellationToken ct)
         {
-            // 首次截图前等待 2s，确保英雄选择界面稳定
-            try { await Task.Delay(2000, ct); } catch (OperationCanceledException) { return; }
-
-            bool hasRecognized = false;
-            while (!ct.IsCancellationRequested && !hasRecognized)
+            try
             {
-                try
-                {
-                    var names = await _teamInfoOcrService.RecognizeTeamMembersAsync(ct);
-                    if (names.Length > 0 && !ct.IsCancellationRequested)
-                    {
-                        hasRecognized = true;
-                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            _ = UpdateTeamMembersAsync(names, ct);
-                        });
+                var names = await _ocrCoordinator.WaitForFirstRecognitionAsync(
+                    initialDelay: TimeSpan.FromSeconds(2),
+                    retryInterval: TimeSpan.Zero,
+                    ct);
 
-                        // Wait for all member data to load, then navigate to TeamInfo
-                        while (TeamMembers.Any(m => m.IsLoading) && !ct.IsCancellationRequested)
-                        {
-                            await Task.Delay(300, ct);
-                        }
-                        // 数据已在单例 ViewModel 中，保留已加载的数据，无需重新导航
-                    }
-                }
-                catch (OperationCanceledException) { break; }
-                catch (Exception ex)
+                if (ct.IsCancellationRequested || names.Length == 0) return;
+
+                await _uiDispatcher.InvokeAsync(() =>
                 {
-                    Debug.WriteLine($"[TeamInfo] OCR loop error: {ex.Message}");
+                    // InvokeAsync 委托签名是 Action，无法 await。fire-and-forget 但通过 SafeUpdateTeamMembers
+                    // 包一层 try/catch，避免 OperationCanceledException / 其他异常变成 UnobservedTaskException。
+                    _ = SafeUpdateTeamMembers(names, ct);
+                });
+
+                // Wait for all member data to load, then navigate to TeamInfo
+                while (TeamMembers.Any(m => m.IsLoading) && !ct.IsCancellationRequested)
+                {
+                    await Task.Delay(300, ct);
                 }
+                // 数据已在单例 ViewModel 中，保留已加载的数据，无需重新导航
             }
-
-            // 识别完成后停止 OCR 循环
-            if (hasRecognized)
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[TeamInfo] OCR loop error: {ex.Message}");
+            }
+            finally
+            {
                 StopOcrLoop();
+            }
+        }
+
+        /// <summary>
+        /// fire-and-forget 包装：捕获 <see cref="UpdateTeamMembersAsync"/> 异常以避免
+        /// UnobservedTaskException（OperationCanceledException 视为正常取消）。
+        /// </summary>
+        private async Task SafeUpdateTeamMembers(string[] names, CancellationToken ct)
+        {
+            try
+            {
+                await UpdateTeamMembersAsync(names, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // 正常取消，无需上报
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}.{nameof(SafeUpdateTeamMembers)}] {ex}");
+            }
         }
 
         private async Task UpdateTeamMembersAsync(string[] names, CancellationToken ct)
@@ -384,7 +465,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             foreach (var name in newNames)
             {
                 ct.ThrowIfCancellationRequested();
-                var member = new TeamMemberInfo
+                var member = new TeamMemberInfo(_clipboard, _localizedText)
                 {
                     UserName = name,
                     IsLoading = true,
@@ -396,7 +477,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     }
                 };
                 TeamMembers.Add(member);
-                _ = LoadMemberDataAsync(member, CancellationToken.None);
+                _ = LoadMemberDataAsync(member, ct);
             }
 
             ReorderMembersForLocalUser();
@@ -467,11 +548,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             RaisePropertyChanged(nameof(HasDiffLeft));
             RaisePropertyChanged(nameof(HasDiffRight));
-            RaisePropertyChanged(nameof(Col1Width));
-            RaisePropertyChanged(nameof(Col3Width));
         }
 
-                private static readonly (string Key, string Label, bool IsPercent, string Format)[] StatDefs =
+        private static readonly (string Key, string Label, bool IsPercent, string Format)[] StatDefs =
         {
             ("avg_kill", "场均击杀", false, "F1"),
             ("avg_damage", "场均伤害", false, "F0"),
@@ -507,10 +586,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     lv = left.Stats.TryGetValue(def.Key, out var l) ? TryParseDouble(l) : 0;
                     rv = right.Stats.TryGetValue(def.Key, out var r) ? TryParseDouble(r) : 0;
                 }
-                
+
                 AddDiffItem(target, def.Label, lv, rv, def.IsPercent);
             }
-            
+
         }
 
         private static void AddDiffItem(ObservableCollection<MemberDiffItem> target, string label, double leftVal, double rightVal, bool isPercent)
@@ -557,9 +636,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         {
             member.IsLoading = true;
             member.StatusText = "";
-            var cts = new CancellationTokenSource();
-            var token = cts.Token;
-            _ = LoadMemberDataAsync(member, token).ContinueWith(_ => { try { cts.Dispose(); } catch { } }, TaskContinuationOptions.ExecuteSynchronously);
+            // 不创建 CTS：原实现的 cts 从未调 Cancel，仅作为 token 来源然后 Dispose，等于 dead code。
+            // 单成员刷新场景目前无取消需求；如未来需要"刷新整个团队时取消正在进行的单成员刷新"，
+            // 应改为引入 member-scoped token 或复用 _refreshMembersCts，而非孤立的占位 CTS。
+            _ = LoadMemberDataAsync(member, CancellationToken.None);
         }
 
         private async Task LoadMemberDataAsync(TeamMemberInfo member, CancellationToken ct)
@@ -569,165 +649,108 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             try
             {
-                // Step 1: Search player record -- background thread (ConfigureAwait(false))
-                var search = await NarakaApiClient.SearchRecordAsync(userName, ct).ConfigureAwait(false);
-                if (search?.Data == null || string.IsNullOrEmpty(search.Data.RoleIdSimple))
+                // Step 1-4: 调 Loader 在后台线程拉数据；返回 DTO 后回 UI 线程逐批写回属性。
+                var loaded = await _memberLoader.LoadAsync(
+                    userName,
+                    _selectedSeason?.Code,
+                    _selectedCategory,
+                    _selectedTeamSize,
+                    ct).ConfigureAwait(false);
+
+                if (loaded.Failed)
                 {
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    await _uiDispatcher.InvokeAsync(() =>
                     {
                         member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
-                    }, System.Windows.Threading.DispatcherPriority.Background, ct);
+                    });
                     return;
                 }
 
-                var roleId = search.Data.RoleIdSimple;
-
-                // Step 2: Get user info -- background thread
-                var userInfo = await NarakaApiClient.GetUserInfoAsync(roleId, ct).ConfigureAwait(false);
-                if (userInfo?.Code != 200 || userInfo.Data == null)
-                {
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
-                    }, System.Windows.Threading.DispatcherPriority.Background, ct);
-                    return;
-                }
-
-                // Step 3: Collect user info data into local variables (background thread, no UI access)
-                var d = userInfo.Data;
-                var newUserName = d.Role?.RoleName ?? d.NickName ?? userName;
-                var newLevel = "Lv." + (d.Role?.RoleLevel ?? 0).ToString();
-                var newUid = d.Role?.Uid ?? "";
-                var newAvatarUrl = d.Role?.HeadIcon ?? "";
-                var newSoloRankScore = d.SurviveSingleGrade ?? 0;
-                var newDuoRankScore = d.SurviveDoubleGrade ?? 0;
-                var newTrioRankScore = d.SurviveTriplexGrade ?? 0;
-
-                // Step 4: Get stats -- background thread
-                var seasonId = _selectedSeason?.Code ?? d.CurrentSeasonId;
-                var gameMode = GameModeExtensions.FromCategoryAndTeamSize(_selectedCategory, _selectedTeamSize);
-                var stats = await NarakaApiClient.GetPlayerStatsAsync(roleId, seasonId, gameMode, ct).ConfigureAwait(false);
-
-                // Step 5: Collect stats data into local variables (background thread, no UI access)
-                var statsDict = new Dictionary<string, string>();
-                string? killCount = null, top5Rate = null, damagePlayer = null, surviveTime = null;
-                string? rankName = null, rankIcon = null;
-                double rankScore = 0;
-                string? pageRankName = null;
-                int pageStarCount = 0;
-                bool pageHasStars = false;
-                double rankTierScore = 0;
-
-                if (stats?.Code == 200 && stats.Data?.Stats != null)
-                {
-                    foreach (var stat in stats.Data.Stats)
-                    {
-                        if (stat.Key == null) continue;
-                        var val = stat.Value ?? "-";
-                        statsDict[stat.Key] = val;
-                        switch (stat.Key)
-                        {
-                            case "avg_kill": killCount = val; break;
-                            case "top5_rate": top5Rate = val; break;
-                            case "avg_damage": damagePlayer = val; break;
-                            case "avg_total_live_time": surviveTime = FormatSurvivalTime(val); break;
-                        }
-                    }
-
-                    if (stats.Data.Grade != null)
-                    {
-                        rankName = stats.Data.Grade.GradeName ?? "";
-                        rankIcon = stats.Data.Grade.GradeIcon ?? "";
-                        rankScore = stats.Data.Grade.GradeScore ?? 0;
-                        var gm = (int)gameMode;
-                        pageRankName = GetRankNameForScore(rankScore, gm);
-                        pageStarCount = GetStarCount(rankScore, gm);
-                        pageHasStars = ((GameMode)gm).IsRankMode() && rankScore >= 4500;
-                        rankTierScore = GetRankTierScore(rankScore, gm);
-                    }
-                }
-
-                // Step 6a: Dispatch member properties in smaller batches so the UI thread
+                // Step 6: Dispatch member properties in smaller batches so the UI thread
                 // can service input/paint between batches instead of blocking on one big dispatch.
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
-                    member.UserName = newUserName;
-                    member.Level = newLevel;
-                    member.UID = newUid;
-                    member.AvatarUrl = newAvatarUrl;
-                }, System.Windows.Threading.DispatcherPriority.Background, ct);
+                    member.UserName = loaded.UserName;
+                    member.Level = loaded.Level;
+                    member.UID = loaded.UID;
+                    member.AvatarUrl = loaded.AvatarUrl;
+                });
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
-                    member.SoloRankScore = newSoloRankScore;
-                    member.DuoRankScore = newDuoRankScore;
-                    member.TrioRankScore = newTrioRankScore;
-                    member.KillCount = killCount ?? member.KillCount;
-                    member.Top5Rate = top5Rate ?? member.Top5Rate;
-                    member.DamagePlayer = damagePlayer ?? member.DamagePlayer;
-                    member.SurviveTime = surviveTime ?? member.SurviveTime;
-                }, System.Windows.Threading.DispatcherPriority.Background, ct);
+                    member.SoloRankScore = loaded.SoloRankScore;
+                    member.DuoRankScore = loaded.DuoRankScore;
+                    member.TrioRankScore = loaded.TrioRankScore;
+                    member.KillCount = loaded.Stats?.AvgKill ?? member.KillCount;
+                    member.Top5Rate = loaded.Stats?.Top5Rate ?? member.Top5Rate;
+                    member.DamagePlayer = loaded.Stats?.AvgDamage ?? member.DamagePlayer;
+                    member.SurviveTime = loaded.Stats?.SurviveTime ?? member.SurviveTime;
+                });
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
-                    member.RankName = rankName ?? member.RankName;
-                    member.RankIcon = rankIcon ?? member.RankIcon;
-                    member.RankScore = rankScore;
-                    member.PageRankName = pageRankName ?? member.PageRankName;
-                    member.PageStarCount = pageStarCount;
-                    member.PageHasStars = pageHasStars;
-                    member.RankTierScore = rankTierScore;
-                }, System.Windows.Threading.DispatcherPriority.Background, ct);
+                    var s = loaded.Stats;
+                    member.RankName = s?.RankName ?? member.RankName;
+                    member.RankIcon = s?.RankIcon ?? member.RankIcon;
+                    member.RankScore = s?.RankScore ?? 0;
+                    member.PageRankName = s?.PageRankName ?? member.PageRankName;
+                    member.PageStarCount = s?.PageStarCount ?? 0;
+                    member.PageHasStars = s?.PageHasStars ?? false;
+                    member.RankTierScore = s?.RankTierScore ?? 0;
+                });
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.Stats.Clear();
-                    foreach (var kv in statsDict)
-                        member.Stats[kv.Key] = kv.Value;
-                }, System.Windows.Threading.DispatcherPriority.Background, ct);
+                    if (loaded.Stats != null)
+                    {
+                        foreach (var kv in loaded.Stats.Stats)
+                            member.Stats[kv.Key] = kv.Value;
+                    }
+                });
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.StatusText = "";
-                }, System.Windows.Threading.DispatcherPriority.Background, ct);
+                });
             }
             catch (OperationCanceledException)
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.IsLoading = false;
-                }, System.Windows.Threading.DispatcherPriority.Background, CancellationToken.None);
+                });
                 return;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("[TeamInfo] Load member error: " + ex.Message);
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
-                }, System.Windows.Threading.DispatcherPriority.Background, CancellationToken.None);
+                });
             }
             // Final cleanup: dispatch UI updates in smaller batches so the UI thread
             // can service input/paint between batches instead of blocking on one big dispatch.
             try
             {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.IsLoading = false;
-                }, System.Windows.Threading.DispatcherPriority.Background, CancellationToken.None);
+                });
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     UpdateDiffs();
-                }, System.Windows.Threading.DispatcherPriority.Background, CancellationToken.None);
+                });
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     IsLoading = TeamMembers.Any(m => m.IsLoading);
                     RaiseMemberProperties();
-                }, System.Windows.Threading.DispatcherPriority.Background, CancellationToken.None);
+                });
 
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     // 所有成员数据加载完毕时显示覆盖层提示框
                     if (TeamMembers.Count >= 2 && TeamMembers.All(m => !m.IsLoading) && !_overlayShownForThisRound && !_overlayDismissedThisRound)
@@ -747,21 +770,22 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         _teamOverlayService.Show(overlayMembers);
                         _teamOverlayService.RefreshAction = RefreshFromOverlay;
                     }
-                }, System.Windows.Threading.DispatcherPriority.Background, CancellationToken.None);
+                });
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("[TeamInfo] Final cleanup error: " + ex.Message);
                 try
                 {
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    await _uiDispatcher.InvokeAsync(() =>
                     {
                         member.IsLoading = false;
-                    }, System.Windows.Threading.DispatcherPriority.Background, CancellationToken.None);
+                    });
                 }
                 catch { }
             }
         }
+
         private void UpdateOverlayMembers()
         {
             if (_overlayDismissedThisRound) return;
@@ -803,10 +827,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             {
                 if (string.IsNullOrEmpty(member.UID)) continue;
                 member.IsLoading = true;
-                tasks.Add(Task.Run(async () =>
-                {
-                    await LoadMemberDataAsync(member, ct);
-                }, ct));
+                // LoadMemberDataAsync 自身已是异步方法（ConfigureAwait(false) + UIDispatcher.InvokeAsync），
+                // 无需再用 Task.Run 多嵌一层 ThreadPool；直接收集 Task 即可。
+                tasks.Add(LoadMemberDataAsync(member, ct));
             }
             if (tasks.Count > 0)
                 await Task.WhenAll(tasks);
@@ -822,98 +845,20 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             RaisePropertyChanged(nameof(HasMember1));
             RaisePropertyChanged(nameof(HasMember2));
             RaisePropertyChanged(nameof(HasThreeMembers));
-            RaisePropertyChanged(nameof(Col0Width));
-            RaisePropertyChanged(nameof(Col1Width));
-            RaisePropertyChanged(nameof(Col2Width));
-            RaisePropertyChanged(nameof(Col3Width));
-            RaisePropertyChanged(nameof(Col4Width));
         }
 
         private static void CancelAndDispose(ref CancellationTokenSource? cts)
         {
             if (cts == null) return;
-            try { cts.Cancel(); } catch { }
+            try { cts.Cancel(); }
+            catch (Exception ex) { Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}] CancelAndDispose Cancel failed: {ex.Message}"); }
             cts.Dispose();
             cts = null;
         }
 
-        
-
-        private static string GetRankNameForScore(double score, int gameMode = 0)
+        protected override void OnNavigatedToExecute(NavigationContext navigationContext)
         {
-            if (((GameMode)gameMode).IsRankMode())
-            {
-                if (score >= 7500) return "\u65e0\u91cf\u68b5\u5929";
-                if (score >= 6000) return "\u65e0\u76f8\u9f99\u738b";
-                if (score >= 5000) return "\u65e0\u53cc\u4fee\u7f57";
-                if (score >= 4500) return "\u65e0\u95f4\u4fee\u7f57";
-                if (score >= 4000) return "\u5760\u65e5";
-                if (score >= 3500) return "\u8680\u6708";
-                if (score >= 3000) return "\u9668\u661f";
-                if (score >= 2500) return "\u94c2\u91d1";
-                if (score >= 2000) return "\u9ec4\u91d1";
-                if (score >= 1500) return "\u767d\u94f6";
-                return "\u9752\u94dc";
-            }
-            else
-            {
-                if (score >= 7000) return "\u65e0\u95f4\u6cf0\u6597";
-                if (score >= 6500) return "\u5fa1\u5929\u5c0a\u8005";
-                if (score >= 6000) return "\u52ab\u865a\u5723\u4e3b";
-                if (score >= 5500) return "\u7a79\u82cd\u9b42\u9996";
-                if (score >= 5000) return "\u65e5\u66dc\u540d\u5bbf";
-                if (score >= 4500) return "\u661f\u6708\u5b97\u5e08";
-                if (score >= 4000) return "\u4e91\u96fe\u6b66\u5723";
-                if (score >= 3500) return "\u9876\u7ea7\u9ad8\u624b";
-                if (score >= 3000) return "\u51e1\u5c18\u6b66\u5e08";
-                return "\u51e1\u5c18\u6b66\u5e08";
-            }
-        }
-
-        private static int GetStarCount(double score, int gameMode = 0)
-        {
-            if (!((GameMode)gameMode).IsRankMode()) return 0;
-            // For ??+ (>=4500): accumulated stars (floor)
-            if (score >= 4500) return (int)((score - 4500) / 100);
-            // For ranks below ??: remaining stars to next rank (ceil)
-            int[] thresholds = { 4500, 4000, 3500, 3000, 2500, 2000, 1500, 0 };
-            for (int t = 0; t < thresholds.Length - 1; t++)
-            {
-                if (score >= thresholds[t + 1])
-                {
-                    var remaining = thresholds[t] - score;
-                    return (int)((remaining + 99) / 100); // ceil division
-                }
-            }
-            return 0;
-        }
-
-        private static string FormatSurvivalTime(string secondsStr)
-        {
-            if (double.TryParse(secondsStr, out double seconds))
-            {
-                var minutes = (int)(seconds / 60);
-                var remainSeconds = (int)(seconds % 60);
-                return $"{minutes}分{remainSeconds:D2}秒";
-            }
-            return secondsStr;
-        }
-
-        private static double GetRankTierScore(double score, int gameMode = 0)
-        {
-            if (!((GameMode)gameMode).IsRankMode()) return score;
-            if (score >= 4500) return (score - 4500) % 100;
-            if (score >= 4000) return (score - 4000) % 100;
-            if (score >= 3500) return (score - 3500) % 100;
-            if (score >= 3000) return (score - 3000) % 100;
-            if (score >= 2500) return (score - 2500) % 100;
-            if (score >= 2000) return (score - 2000) % 100;
-            if (score >= 1500) return (score - 1500) % 100;
-            return score % 100;
-        }
-
-        protected override async void OnNavigatedToExecute(NavigationContext navigationContext)
-        {
+            // 基类签名为 void，非事件 handler，禁止误标 async；页面初始化仅触发 fire-and-forget 异步任务即可。
             base.OnNavigatedToExecute(navigationContext);
 
             // 进入页面时订阅 game status 事件，捕获英雄选择阶段
@@ -962,7 +907,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 var seasonsResp = await NarakaApiClient.QuerySeasonsAsync();
                 if (seasonsResp?.Data != null)
                 {
-                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    await _uiDispatcher.InvokeAsync(() =>
                     {
                         Seasons.Clear();
                         foreach (var s in seasonsResp.Data)
@@ -970,7 +915,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         if (Seasons.Count > 0 && _selectedSeason == null)
                             _selectedSeason = Seasons[0];
                         RaisePropertyChanged(nameof(SelectedSeason));
-                    }, DispatcherPriority.Background);
+                    });
                 }
             }
             catch (Exception ex)
@@ -981,8 +926,16 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
-            // 离开页面时取消订阅，避免 VM 泄漏
+            // 离开页面时取消订阅，避免 VM 泄漏。
+            // 注意：OnNavigatedToExecute 中订阅了两个事件，必须**一一对称解绑**：
+            //   - _gameStatusMonitor.GameStatusRecognized
+            //   - _teamOverlayService.Dismissed  ← 之前漏解，每次进出页面累加一个 handler
+            //     N 次导航后 OnOverlayDismissed 会被触发 N 次，且 VM 永不被 GC 释放。
+            // 同理 _teamOverlayService.RefreshAction 也持有 VM 的方法回调（RefreshFromOverlay），
+            // overlay service 是单例，必须在此对称清空，防止 VM 通过委托被外部单例长期持引用。
             _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
+            _teamOverlayService.Dismissed -= OnOverlayDismissed;
+            _teamOverlayService.RefreshAction = null;
 
             StopOcrLoop();
             CancelAndDispose(ref _refreshMembersCts);
@@ -1004,32 +957,66 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
     public class TeamMemberInfo : ViewModelBase
     {
+        private readonly IClipboardService? _clipboard;
+        private readonly ILocalizedTextProvider? _localizedText;
+
+        /// <summary>
+        /// 默认 ctor 仅供 d:DesignInstance 等设计时反射用；运行时所有 TeamMemberInfo 必须走 ctor(IClipboardService, ILocalizedTextProvider)。
+        /// </summary>
+        public TeamMemberInfo() { }
+
+        public TeamMemberInfo(IClipboardService clipboard, ILocalizedTextProvider localizedText)
+        {
+            _clipboard = clipboard;
+            _localizedText = localizedText;
+        }
+
         private string _userName = string.Empty;
         public string UserName
         {
             get => _userName;
-            set => SetProperty(ref _userName, value);
+            set
+            {
+                if (_userName == value) return;
+                _userName = value;
+                RaisePropertyChanged(nameof(UserName));
+            }
         }
 
         private string _uid = string.Empty;
         public string UID
         {
             get => _uid;
-            set => SetProperty(ref _uid, value);
+            set
+            {
+                if (_uid == value) return;
+                _uid = value;
+                RaisePropertyChanged(nameof(UID));
+            }
         }
 
         private string _level = string.Empty;
         public string Level
         {
             get => _level;
-            set => SetProperty(ref _level, value);
+            set
+            {
+                if (_level == value) return;
+                _level = value;
+                RaisePropertyChanged(nameof(Level));
+            }
         }
 
         private string _avatarUrl = string.Empty;
         public string AvatarUrl
         {
             get => _avatarUrl;
-            set => SetProperty(ref _avatarUrl, value);
+            set
+            {
+                if (_avatarUrl == value) return;
+                _avatarUrl = value;
+                RaisePropertyChanged(nameof(AvatarUrl));
+            }
         }
 
         private string _statusText = string.Empty;
@@ -1038,8 +1025,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             get => _statusText;
             set
             {
-                if (SetProperty(ref _statusText, value))
-                    RaisePropertyChanged(nameof(HasStatusError));
+                if (_statusText == value) return;
+                _statusText = value;
+                RaisePropertyChanged(nameof(StatusText));
+                RaisePropertyChanged(nameof(HasStatusError));
             }
         }
 
@@ -1049,77 +1038,132 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public bool IsLoading
         {
             get => _isLoading;
-            set => SetProperty(ref _isLoading, value);
+            set
+            {
+                if (_isLoading == value) return;
+                _isLoading = value;
+                RaisePropertyChanged(nameof(IsLoading));
+            }
         }
 
         private string _rankName = string.Empty;
         public string RankName
         {
             get => _rankName;
-            set => SetProperty(ref _rankName, value);
+            set
+            {
+                if (_rankName == value) return;
+                _rankName = value;
+                RaisePropertyChanged(nameof(RankName));
+            }
         }
 
         private string _rankIcon = string.Empty;
         public string RankIcon
         {
             get => _rankIcon;
-            set => SetProperty(ref _rankIcon, value);
+            set
+            {
+                if (_rankIcon == value) return;
+                _rankIcon = value;
+                RaisePropertyChanged(nameof(RankIcon));
+            }
         }
 
         private double _rankScore;
         public double RankScore
         {
             get => _rankScore;
-            set => SetProperty(ref _rankScore, value);
+            set
+            {
+                if (_rankScore == value) return;
+                _rankScore = value;
+                RaisePropertyChanged(nameof(RankScore));
+            }
         }
 
         private string _pageRankName = string.Empty;
         public string PageRankName
         {
             get => _pageRankName;
-            set => SetProperty(ref _pageRankName, value);
+            set
+            {
+                if (_pageRankName == value) return;
+                _pageRankName = value;
+                RaisePropertyChanged(nameof(PageRankName));
+            }
         }
 
         private int _pageStarCount;
         public int PageStarCount
         {
             get => _pageStarCount;
-            set => SetProperty(ref _pageStarCount, value);
+            set
+            {
+                if (_pageStarCount == value) return;
+                _pageStarCount = value;
+                RaisePropertyChanged(nameof(PageStarCount));
+            }
         }
 
         private bool _pageHasStars;
         public bool PageHasStars
         {
             get => _pageHasStars;
-            set => SetProperty(ref _pageHasStars, value);
+            set
+            {
+                if (_pageHasStars == value) return;
+                _pageHasStars = value;
+                RaisePropertyChanged(nameof(PageHasStars));
+            }
         }
 
         private double _rankTierScore;
         public double RankTierScore
         {
             get => _rankTierScore;
-            set => SetProperty(ref _rankTierScore, value);
+            set
+            {
+                if (_rankTierScore == value) return;
+                _rankTierScore = value;
+                RaisePropertyChanged(nameof(RankTierScore));
+            }
         }
 
         private double _soloRankScore;
         public double SoloRankScore
         {
             get => _soloRankScore;
-            set => SetProperty(ref _soloRankScore, value);
+            set
+            {
+                if (_soloRankScore == value) return;
+                _soloRankScore = value;
+                RaisePropertyChanged(nameof(SoloRankScore));
+            }
         }
 
         private double _duoRankScore;
         public double DuoRankScore
         {
             get => _duoRankScore;
-            set => SetProperty(ref _duoRankScore, value);
+            set
+            {
+                if (_duoRankScore == value) return;
+                _duoRankScore = value;
+                RaisePropertyChanged(nameof(DuoRankScore));
+            }
         }
 
         private double _trioRankScore;
         public double TrioRankScore
         {
             get => _trioRankScore;
-            set => SetProperty(ref _trioRankScore, value);
+            set
+            {
+                if (_trioRankScore == value) return;
+                _trioRankScore = value;
+                RaisePropertyChanged(nameof(TrioRankScore));
+            }
         }
 
         // Stats dictionary: key -> display value
@@ -1129,28 +1173,48 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public string KillCount
         {
             get => _killCount;
-            set => SetProperty(ref _killCount, value);
+            set
+            {
+                if (_killCount == value) return;
+                _killCount = value;
+                RaisePropertyChanged(nameof(KillCount));
+            }
         }
 
         private string _top5Rate = string.Empty;
         public string Top5Rate
         {
             get => _top5Rate;
-            set => SetProperty(ref _top5Rate, value);
+            set
+            {
+                if (_top5Rate == value) return;
+                _top5Rate = value;
+                RaisePropertyChanged(nameof(Top5Rate));
+            }
         }
 
         private string _damagePlayer = string.Empty;
         public string DamagePlayer
         {
             get => _damagePlayer;
-            set => SetProperty(ref _damagePlayer, value);
+            set
+            {
+                if (_damagePlayer == value) return;
+                _damagePlayer = value;
+                RaisePropertyChanged(nameof(DamagePlayer));
+            }
         }
 
         private string _surviveTime = string.Empty;
         public string SurviveTime
         {
             get => _surviveTime;
-            set => SetProperty(ref _surviveTime, value);
+            set
+            {
+                if (_surviveTime == value) return;
+                _surviveTime = value;
+                RaisePropertyChanged(nameof(SurviveTime));
+            }
         }
 
         public System.Action<TeamMemberInfo>? RefreshAction { get; set; }
@@ -1162,24 +1226,27 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 RefreshAction?.Invoke(this);
             });
 
+        // 通过 ILocalizedTextProvider 访问字符串本地化资源，避免 VM 直接依赖 System.Windows.Application。
+        // 设计时默认 ctor 可能没有 provider，此时回退到中文 fallback。
+        private string CopySuccessText() =>
+            _localizedText?.Get("Stats.CopySuccess", "复制成功") ?? "复制成功";
+
         private DelegateCommand? _copyUserNameCommand;
         public DelegateCommand CopyUserNameCommand =>
             _copyUserNameCommand ??= new DelegateCommand(() =>
             {
-                System.Windows.Clipboard.SetText(UserName);
+                _clipboard?.TrySetText(UserName);
                 eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(
-                        System.Windows.Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "\u590d\u5236\u6210\u529f"));
+                    .Publish(new TipMessageWithHighlightArgs(CopySuccessText()));
             });
 
         private DelegateCommand? _copyUIDCommand;
         public DelegateCommand CopyUIDCommand =>
             _copyUIDCommand ??= new DelegateCommand(() =>
             {
-                System.Windows.Clipboard.SetText(UID);
+                _clipboard?.TrySetText(UID);
                 eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(
-                        System.Windows.Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "\u590d\u5236\u6210\u529f"));
+                    .Publish(new TipMessageWithHighlightArgs(CopySuccessText()));
             });
 
         public System.Action<string>? NavigateToStatsAction { get; set; }
@@ -1193,12 +1260,3 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
     }
 }
-
-
-
-
-
-
-
-
-

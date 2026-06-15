@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using System;
+using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
@@ -50,9 +52,10 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     System.IO.FileShare.None, bufferSize: 4096, useAsync: true);
                 await stream.CopyToAsync(fileStream);
             }
-            catch
+            catch (Exception ex)
             {
-                // 缓存写入失败不影响主流程
+                // 缓存写入失败不影响主流程，但记录便于诊断
+                Debug.WriteLine($"[{nameof(ImageCacheService)}] WriteCacheAsync failed: {ex.Message}");
             }
         }
 
@@ -71,8 +74,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     return System.IO.Directory.EnumerateFiles(_cachePath, "*", System.IO.SearchOption.AllDirectories)
                         .Sum(f => new System.IO.FileInfo(f).Length);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Debug.WriteLine($"[{nameof(ImageCacheService)}] GetCacheSizeBytesAsync failed: {ex.Message}");
                     return 0L;
                 }
             });
@@ -95,9 +99,10 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     foreach (var dir in System.IO.Directory.GetDirectories(_cachePath))
                         System.IO.Directory.Delete(dir, true);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // 清空失败不影响主流程
+                    // 清空失败不影响主流程，但记录便于诊断
+                    Debug.WriteLine($"[{nameof(ImageCacheService)}] ClearCacheAsync failed: {ex.Message}");
                 }
             });
         }

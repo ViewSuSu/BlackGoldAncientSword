@@ -40,6 +40,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
     [Component(ComponentLifetime.Singleton)]
     public class UpdateService : IUpdateService
     {
+        private readonly IUIDispatcher _uiDispatcher;
         private SparkleUpdater? _sparkle;
         private bool _autoPopupEnabled;
 
@@ -57,8 +58,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public event System.EventHandler<bool>? UpdateAvailabilityChanged;
 
-        public UpdateService()
+        public UpdateService(IUIDispatcher uiDispatcher)
         {
+            _uiDispatcher = uiDispatcher;
             Debug.WriteLine("[UpdateService] 构造函数开始");
 
             CurrentVersion = GetCurrentVersion();
@@ -173,7 +175,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
             try
             {
-                _sparkle.CheckForUpdatesQuietly();
+                // 保留 await：NetSparkle 3.x 返回 Task<UpdateInfo>；内部 UpdateDetected/UpdateCheckFinished 事件
+                // 在 await 完成前已同步触发并经 SafeInvoke 调度，await 后续代码不会重复触发 PropertyChanged。
+                await _sparkle.CheckForUpdatesQuietly();
             }
             catch (Exception ex)
             {
@@ -188,14 +192,15 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             // This fixes the bug where "(最新)" doesn't show when versions match
             SafeInvoke(() => UpdateAvailabilityChanged?.Invoke(this, IsUpdateAvailable));
         }
-        private static void SafeInvoke(Action action)
+        private void SafeInvoke(Action action)
         {
-            var dispatcher = System.Windows.Application.Current?.Dispatcher;
-            if (dispatcher != null)
-                dispatcher.Invoke(action);
-            else
+            if (_uiDispatcher.CheckAccess())
                 action();
-                        }
+            else
+                // fire-and-forget：BeginInvoke 不等待结果，避免后台线程同步等 UI Dispatcher 导致死锁。
+                // 事件回调（IsUpdateAvailable 设值 + UpdateAvailabilityChanged 触发）不需要等结果。
+                _uiDispatcher.BeginInvoke(action);
+        }
 
         public void SetAutoPopupEnabled(bool enabled)
         {
