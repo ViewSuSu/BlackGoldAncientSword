@@ -28,7 +28,7 @@ public class TeamInfoOcrTests
     private static readonly string[] RegionLabels = { "left", "middle", "right" };
 
     [Fact]
-    public void Recognize_英雄选择队伍信息_识别三个队友名字()
+    public void Recognize_HeroSelectionTeamInfo_IdentifiesThreeTeammateNames()
     {
         var imagePath = Path.Combine(TestDataPath, "hero_selection_team.png");
         Assert.True(File.Exists(imagePath), $"测试图片不存在: {imagePath}");

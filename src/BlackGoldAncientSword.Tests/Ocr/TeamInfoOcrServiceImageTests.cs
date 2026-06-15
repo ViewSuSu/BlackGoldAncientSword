@@ -102,7 +102,7 @@ public class TeamInfoOcrServiceImageTests
     }
 
     [Fact]
-    public void Screenshot_英雄选择环节_识别截图三个队友名字()
+    public void Screenshot_HeroSelectionPhase_IdentifiesThreeTeammateNamesFromImage()
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
 
