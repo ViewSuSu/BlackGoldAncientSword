@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Windows;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Extensions;
@@ -12,6 +11,7 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
     public class AnnouncementPageViewModel : ViewModelBase
     {
         private readonly IGitHubReleaseService _releaseService;
+        private readonly IUIDispatcher _uiDispatcher;
 
         public ObservableCollection<UpdateHistoryItem> UpdateHistory { get; } = new();
 
@@ -26,9 +26,10 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
             }
         }
 
-        public AnnouncementPageViewModel(IGitHubReleaseService releaseService)
+        public AnnouncementPageViewModel(IGitHubReleaseService releaseService, IUIDispatcher uiDispatcher)
         {
             _releaseService = releaseService;
+            _uiDispatcher = uiDispatcher;
             IsLoading = true;
             LoadReleasesAsync().SafeFireAndForget("Announcement.LoadReleases");
         }
@@ -38,7 +39,7 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
             try
             {
                 var releases = await _releaseService.GetReleasesAsync();
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     UpdateHistory.Clear();
                     foreach (var r in releases)
@@ -54,7 +55,7 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
             }
             catch (Exception)
             {
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                await _uiDispatcher.InvokeAsync(() =>
                 {
                     IsLoading = false;
                 });

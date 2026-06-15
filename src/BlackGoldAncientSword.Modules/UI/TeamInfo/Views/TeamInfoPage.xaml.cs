@@ -26,15 +26,18 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Views
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            // ColXWidth (GridLength) 属性已从 VM 中移除以解除对 System.Windows 的硬耦合。
+            // 列宽 = 简单 bool 表达：HasMember0/HasMember1/HasMember2/HasDiffLeft/HasDiffRight。
+            // View code-behind 监听这 5 个 bool 的变化即可重新构造 ColumnDefinitions[].Width。
             if (sender is TeamInfoPageViewModel vm)
             {
                 switch (e.PropertyName)
                 {
-                    case nameof(TeamInfoPageViewModel.Col0Width):
-                    case nameof(TeamInfoPageViewModel.Col1Width):
-                    case nameof(TeamInfoPageViewModel.Col2Width):
-                    case nameof(TeamInfoPageViewModel.Col3Width):
-                    case nameof(TeamInfoPageViewModel.Col4Width):
+                    case nameof(TeamInfoPageViewModel.HasMember0):
+                    case nameof(TeamInfoPageViewModel.HasMember1):
+                    case nameof(TeamInfoPageViewModel.HasMember2):
+                    case nameof(TeamInfoPageViewModel.HasDiffLeft):
+                    case nameof(TeamInfoPageViewModel.HasDiffRight):
                         SyncColumnWidths(vm);
                         break;
                 }
@@ -44,11 +47,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Views
         private void SyncColumnWidths(TeamInfoPageViewModel vm)
         {
             if (MainContentGrid.ColumnDefinitions.Count < 5) return;
-            MainContentGrid.ColumnDefinitions[0].Width = vm.Col0Width;
-            MainContentGrid.ColumnDefinitions[1].Width = vm.Col1Width;
-            MainContentGrid.ColumnDefinitions[2].Width = vm.Col2Width;
-            MainContentGrid.ColumnDefinitions[3].Width = vm.Col3Width;
-            MainContentGrid.ColumnDefinitions[4].Width = vm.Col4Width;
+            MainContentGrid.ColumnDefinitions[0].Width = vm.HasMember0 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+            MainContentGrid.ColumnDefinitions[1].Width = vm.HasDiffLeft ? new GridLength(80) : new GridLength(0);
+            MainContentGrid.ColumnDefinitions[2].Width = vm.HasMember1 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+            MainContentGrid.ColumnDefinitions[3].Width = vm.HasDiffRight ? new GridLength(80) : new GridLength(0);
+            MainContentGrid.ColumnDefinitions[4].Width = vm.HasMember2 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
         }
     }
 }

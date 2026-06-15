@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Windows;
 using Microsoft.Win32;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
@@ -13,18 +12,19 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
 {
     public class SettingsPageViewModel : ViewModelBase
     {
-        private static string L(string key, string fallback) =>
-            System.Windows.Application.Current?.TryFindResource(key) as string ?? fallback;
+        private string L(string key, string fallback) => _localizedText.Get(key, fallback);
         private readonly ISettingsService _settings;
         private readonly ILocalizationService _localization;
+        private readonly ILocalizedTextProvider _localizedText;
         private readonly IMainContentNavigationService _navigation;
         private readonly IImageCacheService _cacheService;
         private readonly IUpdateService _updateService;
+        private readonly IClipboardService _clipboard;
 
         private System.Threading.Timer? _saveTimer;
         private const int SaveDebounceMs = 300;
 
-        /// <summary>鐎点倖鍎肩换婊勭┍濠靛棛鎽犻柨娑樿嫰閹酣鐛崜浣哄彋闁哄啫鐖煎Λ鍧楀礃閸涙壆绠剧紓渚囧幒閹便劑寮ㄩ柅娑滅濞戞挴鍋撴繛鍡忊偓鍐叉櫢闁烩晜菧閳?/summary>
+        /// <summary>属性变更后防抖保存：300ms 内的多次属性变更只触发一次实际写盘，避免拖动滑块/输入路径时频繁 IO。</summary>
         private void DebouncedSave()
         {
             _saveTimer?.Dispose();
@@ -40,8 +40,9 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             get => _dataPath;
             set
             {
-                if (!SetProperty(ref _dataPath, value))
-                    return;
+                if (_dataPath == value) return;
+                _dataPath = value;
+                RaisePropertyChanged(nameof(DataPath));
 
                 if (!string.IsNullOrWhiteSpace(value) && !System.IO.Directory.Exists(value))
                     return;
@@ -57,8 +58,9 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             get => _cachePath;
             set
             {
-                if (!SetProperty(ref _cachePath, value))
-                    return;
+                if (_cachePath == value) return;
+                _cachePath = value;
+                RaisePropertyChanged(nameof(CachePath));
 
                 if (!string.IsNullOrWhiteSpace(value) && !System.IO.Directory.Exists(value))
                     return;
@@ -73,7 +75,12 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         public string CacheSizeText
         {
             get => _cacheSizeText;
-            set => SetProperty(ref _cacheSizeText, value);
+            set
+            {
+                if (_cacheSizeText == value) return;
+                _cacheSizeText = value;
+                RaisePropertyChanged(nameof(CacheSizeText));
+            }
         }
 
         public string DefaultPath => Framework.Services.AppSettings.GetDefaultPath();
@@ -88,7 +95,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             get => _localization.CurrentLanguage;
             set
             {
-                _localization.ApplyLanguage(Application.Current.Resources, value);
+                _localization.ApplyLanguage(value);
                 _localization.CurrentLanguage = value;
                 _settings.Current.Language = value;
                 DebouncedSave();
@@ -156,25 +163,29 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         public DelegateCommand CopyTeamOverlayNameCommand =>
             _copyTeamOverlayNameCommand ??= new DelegateCommand(() =>
             {
-                var name = Application.Current?.TryFindResource("Settings.Category.TeamOverlay") as string ?? "英雄选择时出现右下角弹窗";
-                Clipboard.SetText(name);
+                var name = _localizedText.Get("Settings.Category.TeamOverlay", "英雄选择时出现右下角弹窗");
+                _clipboard.TrySetText(name);
                 eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(Application.Current?.TryFindResource("Stats.CopySuccess") as string ?? "复制成功"));
+                    .Publish(new TipMessageWithHighlightArgs(_localizedText.Get("Stats.CopySuccess", "复制成功")));
             });
 
         public SettingsPageViewModel(
             ISettingsService settings,
             ILocalizationService localization,
+            ILocalizedTextProvider localizedText,
             IMainContentNavigationService navigation,
             IImageCacheService cacheService,
-            IUpdateService updateService)
+            IUpdateService updateService,
+            IClipboardService clipboard)
         {
             _settings = settings;
             _localization = localization;
+            _localizedText = localizedText;
             _navigation = navigation;
             _cacheService = cacheService;
             _updateService = updateService;
-            Debug.WriteLine($"[SettingsPageVM] UpdateService 瀹稿弶鏁為崗銉礉瑜版挸澧犻悧鍫熸拱: {_updateService.CurrentVersion}");
+            _clipboard = clipboard;
+            Debug.WriteLine($"[{nameof(SettingsPageViewModel)}] UpdateService 注入成功，当前版本: {_updateService.CurrentVersion}");
 
             _dataPath = _settings.Current.DataSavePath;
             _cachePath = _settings.Current.CachePath;
@@ -206,6 +217,8 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                     return;
                 }
 
+                // BCL 限制：Directory.EnumerateFiles / FileInfo.Length 均无原生 async 等价物（截至 .NET 10），
+                // 此处属于元数据级遍历，使用 Task.Run 将同步遍历卸载到线程池以避免阻塞 UI 线程。
                 var size = await System.Threading.Tasks.Task.Run(() =>
                 {
                     if (!System.IO.Directory.Exists(path))
@@ -218,7 +231,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                         catch { }
                     }
                     return total;
-                });
+                }).ConfigureAwait(false);
 
                 CacheSizeText = size switch
                 {
@@ -238,19 +251,27 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         public DelegateCommand BrowseDataPathCommand =>
             _browseDataPathCommand ??= new DelegateCommand(async () =>
             {
-                var dialog = new OpenFolderDialog
+                // async DelegateCommand 等价 async void：必须顶层 try/catch 兜底，否则异常冒泡 DispatcherUnhandledException
+                try
                 {
-                    Title = L("Settings.BrowseDataPath", "Select data save path"),
-                    InitialDirectory = string.IsNullOrWhiteSpace(DataPath) ? DefaultPath : DataPath
-                };
-                if (dialog.ShowDialog() == true)
-                {
-                    var oldPath = _settings.Current.DataSavePath;
-                    DataPath = dialog.FolderName;
-                    if (!string.IsNullOrWhiteSpace(oldPath) && !string.Equals(oldPath, DataPath, System.StringComparison.OrdinalIgnoreCase))
+                    var dialog = new OpenFolderDialog
                     {
-                        await MigrateFolderAsync(oldPath, DataPath);
+                        Title = L("Settings.BrowseDataPath", "Select data save path"),
+                        InitialDirectory = string.IsNullOrWhiteSpace(DataPath) ? DefaultPath : DataPath
+                    };
+                    if (dialog.ShowDialog() == true)
+                    {
+                        var oldPath = _settings.Current.DataSavePath;
+                        DataPath = dialog.FolderName;
+                        if (!string.IsNullOrWhiteSpace(oldPath) && !string.Equals(oldPath, DataPath, System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            await MigrateFolderAsync(oldPath, DataPath);
+                        }
                     }
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+                {
+                    Debug.WriteLine($"[{nameof(SettingsPageViewModel)}.{nameof(BrowseDataPathCommand)}] {ex}");
                 }
             });
 
@@ -259,19 +280,26 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         public DelegateCommand BrowseCachePathCommand =>
             _browseCachePathCommand ??= new DelegateCommand(async () =>
             {
-                var dialog = new OpenFolderDialog
+                try
                 {
-                    Title = L("Settings.BrowseCachePath", "Select cache path"),
-                    InitialDirectory = string.IsNullOrWhiteSpace(CachePath) ? DefaultCachePath : CachePath
-                };
-                if (dialog.ShowDialog() == true)
-                {
-                    var oldPath = _settings.Current.CachePath;
-                    CachePath = dialog.FolderName;
-                    if (!string.IsNullOrWhiteSpace(oldPath) && !string.Equals(oldPath, CachePath, System.StringComparison.OrdinalIgnoreCase))
+                    var dialog = new OpenFolderDialog
                     {
-                        await MigrateFolderAsync(oldPath, CachePath);
+                        Title = L("Settings.BrowseCachePath", "Select cache path"),
+                        InitialDirectory = string.IsNullOrWhiteSpace(CachePath) ? DefaultCachePath : CachePath
+                    };
+                    if (dialog.ShowDialog() == true)
+                    {
+                        var oldPath = _settings.Current.CachePath;
+                        CachePath = dialog.FolderName;
+                        if (!string.IsNullOrWhiteSpace(oldPath) && !string.Equals(oldPath, CachePath, System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            await MigrateFolderAsync(oldPath, CachePath);
+                        }
                     }
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+                {
+                    Debug.WriteLine($"[{nameof(SettingsPageViewModel)}.{nameof(BrowseCachePathCommand)}] {ex}");
                 }
             });
 
@@ -280,14 +308,24 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         public DelegateCommand ClearCacheCommand =>
             _clearCacheCommand ??= new DelegateCommand(async () =>
             {
-                await _cacheService.ClearCacheAsync();
-                await RefreshCacheSizeAsync();
-                eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(L("Settings.CacheCleared", "Cache cleared")));
+                try
+                {
+                    await _cacheService.ClearCacheAsync();
+                    await RefreshCacheSizeAsync();
+                    eventAggregator.GetEvent<TipMessageEvent>()
+                        .Publish(new TipMessageWithHighlightArgs(L("Settings.CacheCleared", "Cache cleared")));
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+                {
+                    Debug.WriteLine($"[{nameof(SettingsPageViewModel)}.{nameof(ClearCacheCommand)}] {ex}");
+                }
             });
 
         private static async System.Threading.Tasks.Task MigrateFolderAsync(string oldPath, string newPath)
         {
+            // BCL 限制：File.Move / File.Delete / Directory.CreateDirectory / Directory.Move / Directory.Delete /
+            // Directory.EnumerateFiles / Directory.EnumerateDirectories 均无原生 async 等价物（截至 .NET 10），
+            // 均为文件系统元数据级操作，使用 Task.Run 卸载到线程池以避免阻塞 UI 线程。
             await System.Threading.Tasks.Task.Run(() =>
             {
                 try
@@ -312,7 +350,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                     }
                 }
                 catch { }
-            });
+            }).ConfigureAwait(false);
         }
     }
 

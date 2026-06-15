@@ -9,6 +9,6 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
         string CurrentLanguage { get; set; }
         ObservableCollection<LanguageOption> AvailableLanguages { get; }
 
-        void ApplyLanguage(System.Windows.ResourceDictionary appResources, string language);
+        void ApplyLanguage(string language);
     }
 }

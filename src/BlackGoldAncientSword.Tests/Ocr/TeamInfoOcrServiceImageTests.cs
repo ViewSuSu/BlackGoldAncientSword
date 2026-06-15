@@ -15,7 +15,7 @@ public class TeamInfoOcrServiceImageTests
     };
 
     [Fact]
-    public void LiveCapture_TeamInfo_OCR_PrintResults()
+    public async Task LiveCapture_TeamInfo_OCR_PrintResults()
     {
         // 确保控制台 UTF-8 输出
         Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -83,7 +83,7 @@ public class TeamInfoOcrServiceImageTests
                 continue;
             }
 
-            var results = engine.Recognize(pngBytes);
+            var results = await engine.RecognizeAsync(pngBytes);
             var name = string.Join("", results.Select(r => r.Text)).Trim().Replace(" ", "");
             var detail = string.Join(" | ", results.Select(r => $"'{r.Text}'(置信度:{r.Confidence:F2})"));
 
@@ -102,7 +102,7 @@ public class TeamInfoOcrServiceImageTests
     }
 
     [Fact]
-    public void Screenshot_HeroSelectionPhase_IdentifiesThreeTeammateNamesFromImage()
+    public async Task Screenshot_HeroSelectionPhase_IdentifiesThreeTeammateNamesFromImage()
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
 
@@ -149,7 +149,7 @@ public class TeamInfoOcrServiceImageTests
                     continue;
                 }
 
-                var results = engine.Recognize(pngBytes);
+                var results = await engine.RecognizeAsync(pngBytes);
                 var rawText = string.Join("", results.Select(r => r.Text));
                 var name = rawText.Trim().Replace(" ", "");
                 var detail = string.Join(" | ", results.Select(r => $"'{r.Text}'({r.Confidence:F2})"));
