@@ -1,7 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using Newtonsoft.Json;
+using System.Text.Json;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Extensions;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
@@ -11,6 +11,18 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
     [Component(ComponentLifetime.Singleton)]
     internal class SearchHistoryService : ISearchHistoryService
     {
+        private static readonly JsonSerializerOptions _readOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
+
+        private static readonly JsonSerializerOptions _writeOptions = new()
+        {
+            WriteIndented = true
+        };
+
         public ObservableCollection<SearchHistoryItem> History { get; } = new();
 
         private string FilePath
@@ -54,7 +66,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 if (System.IO.File.Exists(FilePath))
                 {
                     var json = await System.IO.File.ReadAllTextAsync(FilePath);
-                    var items = JsonConvert.DeserializeObject<List<SearchHistoryItem>>(json);
+                    var items = JsonSerializer.Deserialize<List<SearchHistoryItem>>(json, _readOptions);
                     if (items != null)
                         foreach (var item in items) History.Add(item);
                 }
@@ -73,7 +85,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
                     System.IO.Directory.CreateDirectory(dir);
 
-                var json = JsonConvert.SerializeObject(History.ToList(), Formatting.Indented);
+                var json = JsonSerializer.Serialize(History.ToList(), _writeOptions);
                 await System.IO.File.WriteAllTextAsync(FilePath, json);
             }
             catch (Exception ex)

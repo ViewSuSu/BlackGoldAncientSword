@@ -17,6 +17,13 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
+            // 与 HttpApiSourceGenerator 一致：仅在 Client 模式下生成枚举，避免在 Tests 项目重复生成与 Framework 同名枚举冲突
+            var modeProvider = context.AnalyzerConfigOptionsProvider
+                .Select(static (options, _) =>
+                    options.GlobalOptions.TryGetValue("build_property.BgaSourceGenMode", out var mode) && !string.IsNullOrWhiteSpace(mode)
+                        ? mode
+                        : "Client");
+
             var enumFiles = context.AdditionalTextsProvider
                 .Where(static file =>
                     file.Path.EndsWith("enums.json", StringComparison.OrdinalIgnoreCase))
@@ -27,11 +34,16 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 })
                 .Where(static text => !string.IsNullOrWhiteSpace(text));
 
-            context.RegisterSourceOutput(enumFiles, GenerateAllEnums);
+            var combined = enumFiles.Combine(modeProvider);
+            context.RegisterSourceOutput(combined, GenerateAllEnums);
         }
 
-        private void GenerateAllEnums(SourceProductionContext context, string json)
+        private void GenerateAllEnums(SourceProductionContext context, (string json, string mode) input)
         {
+            var (json, mode) = input;
+            if (!string.Equals(mode, "Client", StringComparison.OrdinalIgnoreCase))
+                return;
+
             try
             {
                 var root = JsonSerializer.Deserialize<EnumDefinitionsRoot>(json, JsonOptions);
