@@ -1,6 +1,6 @@
 using System;
 using System.Diagnostics;
-using Newtonsoft.Json;
+using System.Text.Json;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Extensions;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
@@ -10,6 +10,18 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
     [Component(ComponentLifetime.Singleton)]
     internal class SettingsService : ISettingsService
     {
+        private static readonly JsonSerializerOptions _readOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
+
+        private static readonly JsonSerializerOptions _writeOptions = new()
+        {
+            WriteIndented = true
+        };
+
         public AppSettings Current { get; private set; } = new();
 
         private string FilePath => System.IO.Path.Combine(
@@ -50,7 +62,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 if (System.IO.File.Exists(FilePath))
                 {
                     var json = await System.IO.File.ReadAllTextAsync(FilePath);
-                    Current = JsonConvert.DeserializeObject<AppSettings>(json) ?? new AppSettings();
+                    Current = JsonSerializer.Deserialize<AppSettings>(json, _readOptions) ?? new AppSettings();
                 }
                 else
                 {
@@ -80,7 +92,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
                     System.IO.Directory.CreateDirectory(dir);
 
-                var json = JsonConvert.SerializeObject(Current, Formatting.Indented);
+                var json = JsonSerializer.Serialize(Current, _writeOptions);
                 await System.IO.File.WriteAllTextAsync(FilePath, json);
             }
             catch (Exception ex)
