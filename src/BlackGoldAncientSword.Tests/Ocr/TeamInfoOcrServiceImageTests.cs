@@ -59,20 +59,11 @@ public class TeamInfoOcrServiceImageTests
 
         // 3. 裁剪三个队友名字区域并 OCR
         var engine = new OcrEngine();
-        var labels = new[] { "left", "middle", "right" };
         var labelNames = new[] { "左侧", "中间", "右侧" };
         var ocrResults = new System.Text.StringBuilder();
 
         for (int i = 0; i < TeamRegions.Length; i++)
         {
-            // 保存原始裁剪图（无反色）供视觉检查
-            var (rawPng, _, _) = TeamInfoOcrService.CropRegion(
-                rawBgra, fullWidth, fullHeight, TeamRegions[i]);
-            if (rawPng != null)
-            {
-                File.WriteAllBytes(Path.Combine(desktop, $"LiveCapture_Crop_{labels[i]}.png"), rawPng);
-            }
-
             // OCR 使用反色版本
             var (pngBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
                 rawBgra, fullWidth, fullHeight, TeamRegions[i]);

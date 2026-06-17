@@ -54,10 +54,9 @@ public class TeamInfoOcrService : ITeamInfoOcrService
 
         if (fullWidth <= 0 || fullHeight <= 0) return Array.Empty<string>();
 
-        var tempDir = OcrTempDir;
-        try { System.IO.Directory.CreateDirectory(tempDir); } catch { }
-
-        var tempFiles = new List<string>();
+        // OCR 已通过 image_base64 直接喂 stdin（OcrEngine 常驻进程模式），
+        // 不再需要为每个 region 落盘 PNG 再删除——这是旧 fork-per-recognize 实现的遗留双 IO，
+        // 每轮 3 region = 3 次写 + 3 次删，热路径上是纯浪费。
         var names = new List<string>();
         var regionIndex = 0;
         foreach (var region in TeamRegions)
@@ -66,21 +65,6 @@ public class TeamInfoOcrService : ITeamInfoOcrService
 
             var (pngBytes, _, _) = CropAndInvert(rawBgra, fullWidth, fullHeight, region);
             if (pngBytes == null) { regionIndex++; continue; }
-
-            // Save temp screenshot for debug / cache clear cleanup
-            try
-            {
-                var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                var tempPath = System.IO.Path.Combine(tempDir, $"ocr_r{regionIndex}_{ts}.png");
-                await System.IO.File.WriteAllBytesAsync(tempPath, pngBytes, ct);
-                tempFiles.Add(tempPath);
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
-            {
-                // 临时图片写盘失败：不计入 tempFiles 自然跳过清理，但需留诊断（磁盘满/权限/路径无效）。
-                Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] temp file write failed (region={regionIndex}): {ex.Message}");
-            }
 
             try
             {
@@ -92,54 +76,13 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] OCR error: {ex.Message}");
+                Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] OCR error (region={regionIndex}): {ex.Message}");
             }
 
             regionIndex++;
         }
 
-        // Clean up temp files from this cycle
-        foreach (var f in tempFiles)
-        {
-            try { System.IO.File.Delete(f); } catch { }
-        }
-
         return names.Distinct().ToArray();
-    }
-
-    /// <summary>
-    /// 裁剪指定区域并编码为 PNG（无反色），用于视觉检查。
-    /// </summary>
-    public static (byte[]? pngBytes, int cropW, int cropH) CropRegion(
-        byte[] rawBgra, int fullWidth, int fullHeight, OcrRegion region)
-    {
-        var cropX = (int)(region.X * fullWidth);
-        var cropY = (int)(region.Y * fullHeight);
-        var cropW = (int)(region.Width * fullWidth);
-        var cropH = (int)(region.Height * fullHeight);
-
-        cropX = Math.Max(0, cropX);
-        cropY = Math.Max(0, cropY);
-        cropW = Math.Min(cropW, fullWidth - cropX);
-        cropH = Math.Min(cropH, fullHeight - cropY);
-
-        if (cropW <= 0 || cropH <= 0) return (null, 0, 0);
-
-        var cropped = new byte[cropW * cropH * 4];
-        int srcStride = fullWidth * 4;
-        int dstStride = cropW * 4;
-        for (int row = 0; row < cropH; row++)
-            Array.Copy(rawBgra, (cropY + row) * srcStride + cropX * 4,
-                       cropped, row * dstStride, dstStride);
-
-        using var bmp = new System.Drawing.Bitmap(cropW, cropH, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-        var rect = new System.Drawing.Rectangle(0, 0, cropW, cropH);
-        var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-        System.Runtime.InteropServices.Marshal.Copy(cropped, 0, bmpData.Scan0, cropped.Length);
-        bmp.UnlockBits(bmpData);
-        using var ms = new MemoryStream();
-        bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-        return (ms.ToArray(), cropW, cropH);
     }
 
     /// <summary>
