@@ -64,17 +64,17 @@ public class TeamInfoOcrServiceImageTests
 
         for (int i = 0; i < TeamRegions.Length; i++)
         {
-            // OCR 使用反色版本
-            var (pngBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
+            // OCR 使用反色版本（BMP 编码，PaddleOCR-json 走 OpenCV imdecode 通吃）
+            var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
                 rawBgra, fullWidth, fullHeight, TeamRegions[i]);
 
-            if (pngBytes == null)
+            if (imageBytes == null)
             {
                 Console.WriteLine($"区域 {labelNames[i]}: 裁剪失败");
                 continue;
             }
 
-            var results = await engine.RecognizeAsync(pngBytes);
+            var results = await engine.RecognizeAsync(imageBytes);
             var name = string.Join("", results.Select(r => r.Text)).Trim().Replace(" ", "");
             var detail = string.Join(" | ", results.Select(r => $"'{r.Text}'(置信度:{r.Confidence:F2})"));
 
@@ -90,6 +90,141 @@ public class TeamInfoOcrServiceImageTests
 
         engine.Dispose();
         capture.Dispose();
+    }
+
+    /// <summary>
+    /// 验证 OcrEngine（手写常驻进程实现）能够对一张已知含中文文本的截图成功识别。
+    /// 走整张图（不做裁剪），断言至少识别出几个明显存在的字符串作为冒烟测试。
+    /// </summary>
+    [Fact]
+    public async Task FullScreenshot_OcrEngine_RecognizesKnownChineseText()
+    {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        var imagePath = @"C:\Users\16147\Pictures\Screenshots\屏幕截图 2026-06-14 143108.png";
+        Assert.True(File.Exists(imagePath), $"截图文件不存在: {imagePath}");
+
+        // 整张 PNG 字节直接喂给 OcrEngine（PaddleOCR-json 内部走 OpenCV imdecode 通吃 PNG）。
+        var imageBytes = await File.ReadAllBytesAsync(imagePath);
+
+        using var engine = new OcrEngine();
+        var results = await engine.RecognizeAsync(imageBytes);
+
+        Assert.NotEmpty(results);
+        var allText = string.Join(" / ", results.Select(r => r.Text));
+        Console.WriteLine($"识别出 {results.Count} 行文本：");
+        foreach (var r in results)
+            Console.WriteLine($"  '{r.Text}' (置信度 {r.Confidence:F2})");
+
+        string[] anchors = { "英雄", "使用", "张起灵", "外观" };
+        var hitCount = anchors.Count(a => allText.Contains(a));
+        Assert.True(hitCount > 0, $"未识别到任何已知锚点 ({string.Join(", ", anchors)})。实际识别结果：{allText}");
+    }
+
+    /// <summary>
+    /// 性能基准：单图整张 OCR 连续 N 次。
+    /// 首次包含模型加载（约 600~1500 ms），后续仅推理。统计 min/avg/median/max。
+    /// 仅在本地观察用，不做硬断言；走 Trace.WriteLine 同时也写 Console，便于在测试日志中检索。
+    /// </summary>
+    [Fact]
+    public async Task Benchmark_OcrEngine_FullImage_Repeated()
+    {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        const int Iterations = 20;
+
+        var imagePath = @"C:\Users\16147\Pictures\Screenshots\屏幕截图 2026-06-14 143108.png";
+        Assert.True(File.Exists(imagePath), $"截图文件不存在: {imagePath}");
+
+        var imageBytes = await File.ReadAllBytesAsync(imagePath);
+        using var engine = new OcrEngine();
+
+        // 预热：首次包含模型加载，单独记录。
+        var coldSw = System.Diagnostics.Stopwatch.StartNew();
+        var firstResults = await engine.RecognizeAsync(imageBytes);
+        coldSw.Stop();
+        Assert.NotEmpty(firstResults);
+
+        // 稳态测量。
+        var samples = new long[Iterations];
+        for (int i = 0; i < Iterations; i++)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var r = await engine.RecognizeAsync(imageBytes);
+            sw.Stop();
+            samples[i] = sw.ElapsedMilliseconds;
+            Assert.NotEmpty(r);
+        }
+
+        Array.Sort(samples);
+        var min = samples[0];
+        var max = samples[^1];
+        var median = samples[samples.Length / 2];
+        var avg = samples.Average();
+
+        Console.WriteLine($"[Bench] 整图 ({imageBytes.Length:N0} bytes) × {Iterations}");
+        Console.WriteLine($"  冷启动 (含模型加载): {coldSw.ElapsedMilliseconds} ms");
+        Console.WriteLine($"  稳态: min={min} ms  avg={avg:F1} ms  median={median} ms  max={max} ms");
+        Console.WriteLine($"  全部样本: [{string.Join(", ", samples)}]");
+    }
+
+    /// <summary>
+    /// 性能基准：模拟 TeamInfoOcrService 实际场景 —— 一轮 3 region 串行裁剪 + OCR，跑 N 轮。
+    /// 用 LiveCapture 测试同款 BMP 反色管线，统计每轮总耗时。
+    /// </summary>
+    [Fact]
+    public async Task Benchmark_OcrEngine_ThreeRegions_PerRound()
+    {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        const int Rounds = 10;
+
+        var imagePath = @"C:\Users\16147\Pictures\Screenshots\屏幕截图 2026-06-14 143108.png";
+        Assert.True(File.Exists(imagePath), $"截图文件不存在: {imagePath}");
+
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.UriSource = new Uri(imagePath);
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.EndInit();
+
+        int fullWidth = bitmap.PixelWidth;
+        int fullHeight = bitmap.PixelHeight;
+        var stride = (fullWidth * bitmap.Format.BitsPerPixel + 7) / 8;
+        var rawBgra = new byte[stride * fullHeight];
+        bitmap.CopyPixels(rawBgra, stride, 0);
+
+        using var engine = new OcrEngine();
+
+        // 预热一轮：触发模型加载，不计时。
+        foreach (var region in TeamRegions)
+        {
+            var (bytes, _, _) = TeamInfoOcrService.CropAndInvert(rawBgra, fullWidth, fullHeight, region);
+            if (bytes != null) await engine.RecognizeAsync(bytes);
+        }
+
+        // 稳态测量。
+        var samples = new long[Rounds];
+        for (int round = 0; round < Rounds; round++)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var region in TeamRegions)
+            {
+                var (bytes, _, _) = TeamInfoOcrService.CropAndInvert(rawBgra, fullWidth, fullHeight, region);
+                if (bytes != null) await engine.RecognizeAsync(bytes);
+            }
+            sw.Stop();
+            samples[round] = sw.ElapsedMilliseconds;
+        }
+
+        Array.Sort(samples);
+        var min = samples[0];
+        var max = samples[^1];
+        var median = samples[samples.Length / 2];
+        var avg = samples.Average();
+
+        Console.WriteLine($"[Bench] 3 region 一轮 × {Rounds} 轮（同 TeamInfoOcrService 路径）");
+        Console.WriteLine($"  稳态: min={min} ms  avg={avg:F1} ms  median={median} ms  max={max} ms");
+        Console.WriteLine($"  每轮: [{string.Join(", ", samples)}]");
+        Console.WriteLine($"  每 region 均摊: avg={avg / 3:F1} ms");
     }
 
     [Fact]
@@ -131,16 +266,16 @@ public class TeamInfoOcrServiceImageTests
 
             for (int i = 0; i < TeamRegions.Length; i++)
             {
-                var (pngBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
+                var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
                     rawBgra, fullWidth, fullHeight, TeamRegions[i]);
 
-                if (pngBytes == null)
+                if (imageBytes == null)
                 {
                     Console.WriteLine($"区域 {labels[i]}: 裁剪失败");
                     continue;
                 }
 
-                var results = await engine.RecognizeAsync(pngBytes);
+                var results = await engine.RecognizeAsync(imageBytes);
                 var rawText = string.Join("", results.Select(r => r.Text));
                 var name = rawText.Trim().Replace(" ", "");
                 var detail = string.Join(" | ", results.Select(r => $"'{r.Text}'({r.Confidence:F2})"));

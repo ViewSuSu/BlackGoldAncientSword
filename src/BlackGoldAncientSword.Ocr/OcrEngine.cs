@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -27,12 +28,21 @@ public class OcrEngine : IOcrService, IDisposable
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private Process? _process;
-    private StreamWriter? _stdin;
+    private Stream? _stdinStream;
     private StreamReader? _stdout;
     private bool _disposed;
 
     /// <summary>单次请求超时上限。进程卡死时不会无限阻塞调用方。</summary>
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>JSON 属性名 "image_base64" 的 UTF-8 字节字面量（编译期常量，零分配）。</summary>
+    private static ReadOnlySpan<byte> ImageBase64PropName => "image_base64"u8;
+
+    /// <summary>优雅退出指令 + 换行（PaddleOCR-json 按行解析 stdin）。</summary>
+    private static readonly byte[] ExitCommand = Encoding.UTF8.GetBytes("{\"exit\":1}\n");
+
+    /// <summary>请求结束的换行字节（JSON 后追加，与旧 WriteLine 行为等价）。</summary>
+    private static readonly byte[] NewlineBytes = new byte[] { (byte)'\n' };
 
     /// <param name="engineDir">ocr_engine 目录路径（含 PaddleOCR-json.exe），为空则自动查找。</param>
     public OcrEngine(string? engineDir = null)
@@ -49,10 +59,8 @@ public class OcrEngine : IOcrService, IDisposable
             return new List<OcrResult>();
 
         // image_base64 模式：图片字节直接通过 stdin 管道传输，零磁盘 IO。
-        var base64 = Convert.ToBase64String(imageBytes);
-        var payload = new Dictionary<string, string> { ["image_base64"] = base64 };
-        var request = JsonSerializer.Serialize(payload);
-        var json = await SendRequestAsync(request, CancellationToken.None).ConfigureAwait(false);
+        // Utf8JsonWriter 直接把 byte[] base64 编码成 UTF-8 字节写到 buffer，全程不产生中间 string。
+        var json = await SendImageRequestAsync(imageBytes, CancellationToken.None).ConfigureAwait(false);
         return ParseResults(json);
     }
 
@@ -63,16 +71,52 @@ public class OcrEngine : IOcrService, IDisposable
         return string.Join("\n", results.Select(r => r.Text));
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// 实现：仅启动子进程并完成 stdin/stdout 管道连接,真正的模型加载在 PaddleOCR-json 接到
+    /// 首个 image_base64 请求时才发生。因此预热同时压一张 1×1 透明 BMP 触发 det/cls/rec 模型加载,
+    /// 把约 600~1500 ms 的冷启动成本摊到 App 启动阶段而非业务首次调用。
+    /// </remarks>
+    public async Task PrewarmAsync(CancellationToken ct = default)
+    {
+        // 若进程已经活着,模型必然已加载过(首次推理结束就驻留在内存),直接返回。
+        if (_process is { HasExited: false } && _stdinStream != null && _stdout != null)
+            return;
+
+        // 触发一次最小推理(1×1 BMP),走和正常请求完全相同的代码路径,
+        // 拿到响应后即认为模型加载完成。返回值丢弃。
+        await SendImageRequestAsync(MinimalBmp, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>1×1 32bpp 黑色 BMP,用于预热推理触发模型加载。</summary>
+    private static readonly byte[] MinimalBmp = BuildMinimalBmp();
+
+    private static byte[] BuildMinimalBmp()
+    {
+        // BITMAPFILEHEADER (14) + BITMAPINFOHEADER (40) + 1×1×4 像素 = 58 字节
+        var bmp = new byte[58];
+        var span = bmp.AsSpan();
+        span[0] = (byte)'B'; span[1] = (byte)'M';
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(span.Slice(2, 4), 58);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(span.Slice(10, 4), 54);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(span.Slice(14, 4), 40);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(span.Slice(18, 4), 1);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(span.Slice(22, 4), -1);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt16LittleEndian(span.Slice(26, 2), 1);
+        System.Buffers.Binary.BinaryPrimitives.WriteInt16LittleEndian(span.Slice(28, 2), 32);
+        return bmp;
+    }
+
     // ═══════════════════════════════════════════════
     //  常驻进程 IPC（stdin/stdout 单工请求-响应）
     // ═══════════════════════════════════════════════
 
     /// <summary>
-    /// 发送一个请求 JSON 行到 stdin，读取一行响应 JSON。
+    /// 把图片字节作为 image_base64 请求写入 stdin，读取一行响应 JSON。
     /// gate 保证同一时间只有一个请求/响应对在管道里，
     /// 任何 IPC 异常都会触发 <see cref="ResetProcess"/>，下次调用自动重启进程。
     /// </summary>
-    private async Task<string> SendRequestAsync(string requestJson, CancellationToken ct)
+    private async Task<string> SendImageRequestAsync(byte[] imageBytes, CancellationToken ct)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -86,8 +130,7 @@ public class OcrEngine : IOcrService, IDisposable
 
             try
             {
-                await _stdin!.WriteLineAsync(requestJson.AsMemory(), timeoutToken).ConfigureAwait(false);
-                await _stdin.FlushAsync(timeoutToken).ConfigureAwait(false);
+                await WriteImageRequestAsync(imageBytes, timeoutToken).ConfigureAwait(false);
                 return await ReadJsonLineAsync(timeoutToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -112,6 +155,37 @@ public class OcrEngine : IOcrService, IDisposable
                 catch (ObjectDisposedException) { /* Dispose 与请求竞态时容忍 */ }
             }
         }
+    }
+
+    /// <summary>
+    /// 把 {"image_base64":"..."} 请求行直接写到 stdin 管道。
+    /// <para>
+    /// 旧实现路径：byte[] → Convert.ToBase64String (≈67KB string) → Dictionary → JsonSerializer.Serialize (再一份 67KB string)
+    /// → StreamWriter.WriteLineAsync (char→UTF8 转码缓冲) = 三份大块堆分配 + 一次编码转换。
+    /// </para>
+    /// <para>
+    /// 新实现：Utf8JsonWriter 直接把 byte[] 流式 Base64 编码到 ArrayBufferWriter（一份缓冲），再单次 WriteAsync 到 stdin BaseStream。
+    /// </para>
+    /// </summary>
+    private async Task WriteImageRequestAsync(byte[] imageBytes, CancellationToken ct)
+    {
+        // Base64 输出大约是原长的 4/3，再加 JSON 框架字节（约 30B），预留点余量避免反复扩容。
+        var initialCapacity = (imageBytes.Length * 4 / 3) + 64;
+        var bufferWriter = new ArrayBufferWriter<byte>(initialCapacity);
+
+        using (var writer = new Utf8JsonWriter(bufferWriter))
+        {
+            writer.WriteStartObject();
+            writer.WriteBase64String(ImageBase64PropName, imageBytes);
+            writer.WriteEndObject();
+            // Utf8JsonWriter.Dispose 会 Flush 内部缓冲到 bufferWriter
+        }
+
+        var stream = _stdinStream!;
+        await stream.WriteAsync(bufferWriter.WrittenMemory, ct).ConfigureAwait(false);
+        // PaddleOCR-json 按行读 stdin，必须追加换行符。
+        await stream.WriteAsync(NewlineBytes, ct).ConfigureAwait(false);
+        await stream.FlushAsync(ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -140,7 +214,7 @@ public class OcrEngine : IOcrService, IDisposable
     /// </summary>
     private Task EnsureRunningAsync(CancellationToken ct)
     {
-        if (_process is { HasExited: false } && _stdin != null && _stdout != null)
+        if (_process is { HasExited: false } && _stdinStream != null && _stdout != null)
             return Task.CompletedTask;
 
         // 进程已死 / 字段不一致 → 清理残留后重启。
@@ -179,7 +253,8 @@ public class OcrEngine : IOcrService, IDisposable
         _ = DrainStderrAsync(proc);
 
         _process = proc;
-        _stdin = proc.StandardInput;
+        // 直接持 BaseStream 跳过 StreamWriter 的 char→UTF8 转码缓冲：请求负载本身就是 UTF-8 字节。
+        _stdinStream = proc.StandardInput.BaseStream;
         _stdout = proc.StandardOutput;
         return Task.CompletedTask;
     }
@@ -207,7 +282,7 @@ public class OcrEngine : IOcrService, IDisposable
     /// </summary>
     private void ResetProcess()
     {
-        try { _stdin?.Dispose(); }
+        try { _stdinStream?.Dispose(); }
         catch (Exception ex) { Debug.WriteLine($"[{nameof(OcrEngine)}] dispose stdin failed: {ex.Message}"); }
 
         try { _stdout?.Dispose(); }
@@ -223,7 +298,7 @@ public class OcrEngine : IOcrService, IDisposable
         try { _process?.Dispose(); }
         catch (Exception ex) { Debug.WriteLine($"[{nameof(OcrEngine)}] dispose process failed: {ex.Message}"); }
 
-        _stdin = null;
+        _stdinStream = null;
         _stdout = null;
         _process = null;
     }
@@ -319,12 +394,12 @@ public class OcrEngine : IOcrService, IDisposable
         {
             // 优雅退出：发送 exit 命令，等待最多 500 ms 让进程自行收尾；
             // 超时则下方 ResetProcess 通过 Kill 强制终止。
-            if (_process is { HasExited: false } && _stdin != null)
+            if (_process is { HasExited: false } && _stdinStream != null)
             {
                 try
                 {
-                    _stdin.WriteLine("{\"exit\":1}");
-                    _stdin.Flush();
+                    _stdinStream.Write(ExitCommand, 0, ExitCommand.Length);
+                    _stdinStream.Flush();
                     _process.WaitForExit(500);
                 }
                 catch (Exception ex)
