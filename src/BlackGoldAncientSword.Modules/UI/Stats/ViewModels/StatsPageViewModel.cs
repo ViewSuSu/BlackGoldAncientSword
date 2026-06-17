@@ -509,12 +509,24 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
-            if (_localizationService != null && _onLanguageChangedHandler != null)
-                _localizationService.PropertyChanged -= _onLanguageChangedHandler;
+            // 语言事件订阅在 ctor 中绑定、在 Dispose 中解绑——单例 VM 跨多次导航复用同一实例，
+            // 不能在此处解绑：原实现首次离开页面后再回来时，本地化资源切换不会再触发统计标签刷新。
             CancelAndDispose(ref _loadAllCts);
             CancelAndDispose(ref _loadStatsCts);
             ClearImageBindings();
             base.OnNavigatedFromExecute(navigationContext);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_localizationService != null && _onLanguageChangedHandler != null)
+                    _localizationService.PropertyChanged -= _onLanguageChangedHandler;
+                CancelAndDispose(ref _loadAllCts);
+                CancelAndDispose(ref _loadStatsCts);
+            }
+            base.Dispose(disposing);
         }
 
         private async void RefreshStats()

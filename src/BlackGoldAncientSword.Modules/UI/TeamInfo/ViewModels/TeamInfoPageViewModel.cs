@@ -32,6 +32,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private bool _isHeroSelectionPhase;
         private CancellationTokenSource? _refreshMembersCts;
         private CancellationTokenSource? _refreshOcrCts;
+        private CancellationTokenSource? _loadSeasonsCts;
+        // 已成功加载赛季后不再重复请求；后续切换页面也复用既有数据。
+        private bool _seasonsLoaded;
         private bool _hasEverHadData;
         private bool _overlayShownForThisRound;
         private bool _overlayDismissedThisRound;
@@ -870,6 +873,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _teamOverlayService.Dismissed += OnOverlayDismissed;
 
             _ = LoadSeasonsAsync();
+            // 注：LoadSeasonsAsync 内部已做"已成功加载则跳过"防抖；
+            // 高频导航不会反复触发 HTTP 请求与 in-flight state machine 堆积。
 
             if (_gameStatusMonitor.CurrentStatus == GameStatus.HeroSelection)
             {
@@ -906,25 +911,42 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private async Task LoadSeasonsAsync()
         {
+            // 已成功加载过赛季列表：直接复用现有数据，不再发起新请求。
+            // 否则 N 次导航 → N 次重复 HTTP 调用，dump 中会残留多个 in-flight state machine。
+            if (_seasonsLoaded) return;
+
+            // 上一次还未完成就再次进入：取消旧请求，避免并发 HTTP 与并发写 Seasons。
+            CancelAndDispose(ref _loadSeasonsCts);
+            _loadSeasonsCts = new CancellationTokenSource();
+            var ct = _loadSeasonsCts.Token;
+
             try
             {
-                var seasonsResp = await NarakaApiClient.QuerySeasonsAsync();
+                var seasonsResp = await NarakaApiClient.QuerySeasonsAsync().ConfigureAwait(false);
+                if (ct.IsCancellationRequested) return;
+
                 if (seasonsResp?.Data != null)
                 {
                     await _uiDispatcher.InvokeAsync(() =>
                     {
+                        if (ct.IsCancellationRequested) return;
                         Seasons.Clear();
                         foreach (var s in seasonsResp.Data)
                             Seasons.Add(s);
                         if (Seasons.Count > 0 && _selectedSeason == null)
                             _selectedSeason = Seasons[0];
                         RaisePropertyChanged(nameof(SelectedSeason));
+                        _seasonsLoaded = true;
                     });
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // 离开页面或被新请求取代——正常路径，不报错。
+            }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TeamInfo] Load seasons error: {ex.Message}");
+                Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}.{nameof(LoadSeasonsAsync)}] Load seasons error: {ex.Message}");
             }
         }
 
@@ -944,6 +966,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             StopOcrLoop();
             CancelAndDispose(ref _refreshMembersCts);
             CancelAndDispose(ref _refreshOcrCts);
+            // _loadSeasonsCts 也要在离开页面时取消：留它在 in-flight 不会立即崩，但下次再进页面
+            // 会被新的 CancelAndDispose 替换，相当于多保留一个不必要的 HTTP/state machine 引用。
+            CancelAndDispose(ref _loadSeasonsCts);
             base.OnNavigatedFromExecute(navigationContext);
         }
     }
