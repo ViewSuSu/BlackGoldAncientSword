@@ -62,7 +62,9 @@
 - **数据保存路径**：战绩数据的本地存储目录（支持自定义 + 旧数据自动迁移）
 - **缓存路径**：图片缓存目录（含缓存大小显示与一键清理）
 - **语言**：支持 简体中文 / English / 繁體中文
-- **关闭行为**：点击关闭按钮时"最小化到托盘"或"直接退出"
+- **关闭行为**：点击关闭按钮时的默认行为，可选"每次询问 / 最小化到任务栏 / 最小化到系统托盘 / 直接退出"，并支持记住选项
+- **英雄选择时的右下角队伍提示弹窗**：开关控制
+- **检查更新**：手动检查与下载新版本
 - **当前版本**：显示版本号
 
 ![设置截图](docs/images/04_settings.png)
@@ -209,9 +211,9 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | **MVVM 框架** | Prism 8.1 (DryIoc) | DI 容器、区域导航、模块化 |
 | **HTTP** | 编译时源码生成器 | 从 JSON 定义自动生成 API 客户端 |
 | **对象映射** | Mapster 7.4 | DTO ↔ ViewModel |
-| **JSON** | Newtonsoft.Json 13 | 序列化 / 反序列化 |
+| **JSON** | System.Text.Json (含源码生成上下文) | 序列化 / 反序列化（已全量替换 Newtonsoft.Json） |
 | **屏幕捕获** | SharpDX + 原生 WGC DLL (C++) | 游戏窗口截图 |
-| **OCR** | PaddleOCR-json.exe | 多语言文字识别 |
+| **OCR** | PaddleOCR-json.exe（常驻子进程） | 多语言文字识别 |
 | **系统托盘** | Hardcodet.NotifyIcon.Wpf | 托盘图标与菜单 |
 | **打包** | Self-Contained + PublishSingleFile | 单文件独立部署 (win-x64) |
 
@@ -232,8 +234,10 @@ src/
 │   ├── Core/
 │   │   ├── Attributes/
 │   │   │   └── ComponentAttribute.cs            # 自定义组件标记特性
-│   │   ├── Bases/ViewModels/ViewModelBase.cs  # MVVM 基类 (RaisePropertyChanged)
-│   │   ├── Bases/Views/UserControlBase.cs      # View 基类
+│   │   ├── Bases/
+│   │   │   ├── PrismApplicationBase.cs        # Prism 应用基类
+│   │   │   ├── ViewModels/ViewModelBase.cs    # MVVM 基类 (RaisePropertyChanged)
+│   │   │   └── Views/UserControlBase.cs       # View 基类
 │   │   ├── Consts/
 │   │   │   ├── GlobalConstant.cs                # 全局常量
 │   │   │   └── PageNames.cs                     # 页面名称常量
@@ -242,18 +246,19 @@ src/
 │   │   │   ├── GameStatusChangedEventArgs.cs   # 状态变更事件参数
 │   │   │   ├── SettingsChangedEvent.cs         # 设置变更事件
 │   │   │   └── TipMessageEvent.cs              # 提示消息事件
-│   │   ├── Extensions/                         # 扩展方法
+│   │   ├── Extensions/                         # 扩展方法与 Value Converter
 │   │   └── Infrastructure/                     # 导航接口与实现
 │   │       ├── IMainContentNavigationService.cs  # 导航服务接口
 │   │       └── MainContentNavigator.cs          # 导航服务实现
 │   ├── Http/
-│   │   └── Definitions/                        # API JSON 定义 → 源码生成
+│   │   ├── Definitions/                        # API JSON 定义 → 源码生成
+│   │   └── JsonFlexibleStringConverter.cs      # System.Text.Json 容错转换器
 │   ├── Services/
 │   │   ├── AppSettings.cs                       # 应用配置数据模型
 │   │   ├── LanguageOption.cs                    # 语言选项模型
 │   │   ├── SearchHistoryItem.cs                 # 搜索历史模型
 │   │   ├── ServiceAutoRegister.cs              # 服务自动注册
-│   │   ├── Abstractions/                       # 服务接口 (7个)
+│   │   ├── Abstractions/                       # 服务接口 (12个)
 │   │   └── Implementation/                     # 服务实现
 │   ├── Themes/Generic.xaml                     # HandyControl 主题
 │   └── UI/Controls/
@@ -272,6 +277,7 @@ src/
 │       ├── Settings/                         # 设置页
 │       ├── Stats/                            # 战绩查询
 │       └── TeamInfo/                         # 队伍信息（OCR识别+对比）
+│           └── Services/                     # 含 TeamInfoOcrService、TeamOcrCoordinator
 │
 ├── BlackGoldAncientSword.GameMonitor/      # 游戏监控
 │   ├── GameMonitorAutoRegister.cs            # 服务自动注册
@@ -314,6 +320,7 @@ src/
 │
 ├── BlackGoldAncientSword.Tests/             # 测试项目
 │   ├── GameMonitor/                          # 游戏监控测试
+│   ├── Http/                                 # HTTP / JSON 容错测试
 │   ├── Ocr/                                  # OCR 测试
 │   ├── ScreenCapture/                        # 屏幕捕获测试
 │   ├── TestData/                             # 测试数据
@@ -359,7 +366,7 @@ public static class PageNames
 
 ### 3. 游戏状态监控（GameMonitor）
 
-`GameLogMonitor` 通过**定时轮询 Player.log** 文件来检测游戏事件：
+`GameLogMonitor` 采用 **FileSystemWatcher + 定时轮询双保险** 监听 Player.log 文件变更：内部将职责拆分为 `LogReader`（文件读取）、`LogPoller`（轮询循环）、`BattleStateMachine`（战局状态机），自身仅作为 facade 编排生命周期与事件分发。监测到的事件：
 
 - `BattleJoined` — 进入英雄选择（解析日志中的 RoomId）
 - `BattleStarted` — 对局开始（解析 BattleId）
@@ -375,9 +382,9 @@ public static class PageNames
 
 1. `GameStatusMonitor` 检测到 `HeroSelection` 状态
 2. `TeamInfoPageViewModel` 启动 OCR 轮询循环
-3. `ScreenCaptureService` 通过 **Windows Graphics Capture API**（原生 C++ DLL → SharpDX D3D11）截取游戏窗口
-4. `OcrService` 调用 **PaddleOCR-json.exe** 进程识别截图中的文字
-5. `TeamInfoOcrService` 解析 OCR 结果，提取队友昵称
+3. `ScreenCaptureService` 通过 **Windows Graphics Capture API**（原生 C++ DLL → SharpDX D3D11）截取游戏窗口，使用 `ArrayPool` 复用全帧缓冲，按 `ScreenQuadrant` 切出三个 region 拼图
+4. `OcrEngine` 与 **PaddleOCR-json.exe** 之间是**单例常驻子进程 + stdin/stdout 管道 + image_base64 零磁盘 IO**：模型仅在首次调用 `PrewarmAsync` 时加载（约 600~1500 ms），后续每次识别只跑推理（约 100~250 ms）；`JobObject` 保证宿主退出时子进程被 OS 兜底清理
+5. `TeamInfoOcrService` / `TeamOcrCoordinator` 解析 OCR 结果，提取队友昵称
 6. 调用战绩 API 查询每个队友的数据，并排展示
 
 ### 5. HTTP API 源码生成
