@@ -391,9 +391,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         {
             try
             {
+                // retryInterval=Zero 时会变成"识别失败立刻重试"的零休眠死循环：
+                // 一旦英雄选择阶段 OCR 拿不到队友名（例如分辨率不匹配、UI 还没绘出），
+                // 每秒会反复触发 3 次 PaddleOCR 推理 + 全屏抓取，把 CPU 与磁盘打满。
+                // 800 ms 在人类感知上等同立刻，但 CPU 占用立刻降一个数量级。
                 var names = await _ocrCoordinator.WaitForFirstRecognitionAsync(
                     initialDelay: TimeSpan.FromSeconds(2),
-                    retryInterval: TimeSpan.Zero,
+                    retryInterval: TimeSpan.FromMilliseconds(800),
                     ct);
 
                 if (ct.IsCancellationRequested || names.Length == 0) return;

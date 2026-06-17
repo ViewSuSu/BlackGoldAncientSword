@@ -1,4 +1,4 @@
-﻿using BlackGoldAncientSword.Ocr;
+using BlackGoldAncientSword.Ocr;
 using Moq;
 
 namespace BlackGoldAncientSword.Tests.Ocr;
@@ -36,24 +36,6 @@ public class OcrServiceTests
     }
 
     [Fact]
-    public async Task IOcrService_Mock_RecognizeAsync_ReturnsExpected()
-    {
-        var mock = new Mock<IOcrService>();
-        var expected = new List<OcrResult>
-        {
-            new() { Text = "test", Confidence = 0.99 },
-        };
-
-        mock.Setup(m => m.RecognizeAsync("test.png")).ReturnsAsync(expected);
-
-        var results = await mock.Object.RecognizeAsync("test.png");
-
-        Assert.Single(results);
-        Assert.Equal("test", results[0].Text);
-        Assert.Equal(0.99, results[0].Confidence);
-    }
-
-    [Fact]
     public async Task IOcrService_Mock_RecognizeBytes_ReturnsExpected()
     {
         var mock = new Mock<IOcrService>();
@@ -69,14 +51,15 @@ public class OcrServiceTests
     }
 
     [Fact]
-    public void IOcrService_Mock_RecognizeText_ReturnsConcatenated()
+    public async Task IOcrService_Mock_RecognizeTextBytes_ReturnsConcatenated()
     {
         var mock = new Mock<IOcrService>();
+        var testBytes = new byte[] { 1, 2, 3 };
 
-        mock.Setup(m => m.RecognizeText("test.png"))
-            .Returns("Hello World");
+        mock.Setup(m => m.RecognizeTextAsync(testBytes))
+            .ReturnsAsync("Hello World");
 
-        var text = mock.Object.RecognizeText("test.png");
+        var text = await mock.Object.RecognizeTextAsync(testBytes);
 
         Assert.Equal("Hello World", text);
     }
