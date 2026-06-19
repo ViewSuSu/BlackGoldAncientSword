@@ -36,6 +36,15 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         }
 
         /// <summary>
+        /// 强制重新从 settings.json 加载配置，不做缓存，覆盖 Current。
+        /// </summary>
+        public async Task ReloadAsync()
+        {
+            _loadTask = null;
+            await LoadAsync();
+        }
+
+        /// <summary>
         /// 异步从 settings.json 加载配置。可多次调用，内部缓存 Task 避免重复加载。
         /// </summary>
         public Task LoadAsync()
