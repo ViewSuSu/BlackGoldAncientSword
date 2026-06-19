@@ -21,6 +21,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public Action? RefreshAction { get; set; }
         public event Action? Dismissed;
+        public event Action? NavigateToTeamInfoRequested;
 
         public void Show(IList<TeamOverlayMemberItem> members)
         {
@@ -47,6 +48,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             _viewModel.DontShowAgainChanged += OnDontShowAgainChanged;
             _viewModel.RefreshRequested += OnRefreshRequested;
             _viewModel.CloseRequested += OnOverlayDismissed;
+            _viewModel.NavigateToTeamInfoRequested += OnNavigateToTeamInfoRequested;
             _window = new TeamOverlayWindow(_viewModel);
         }
 
@@ -67,6 +69,11 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         private void OnOverlayDismissed(object? sender, EventArgs e)
         {
             Dismissed?.Invoke();
+        }
+
+        private void OnNavigateToTeamInfoRequested(object? sender, EventArgs e)
+        {
+            NavigateToTeamInfoRequested?.Invoke();
         }
     }
 }
