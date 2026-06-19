@@ -36,8 +36,21 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             new LanguageOption { Code = "en",    DisplayName = "English" },
         };
 
-        public void ApplyLanguage(ResourceDictionary appResources, string language)
+        /// <summary>
+        /// 切换语言资源字典。
+        /// 线程契约：**必须在 UI 线程调用**。修改 <see cref="Application.Current"/>.Resources.MergedDictionaries
+        /// 在 WPF 内部不是线程安全的，方法首部使用 <see cref="DispatcherObject.VerifyAccess"/> 强制断言；
+        /// 后台线程调用会立即抛 <see cref="InvalidOperationException"/>。
+        /// </summary>
+        public void ApplyLanguage(string language)
         {
+            var app = Application.Current;
+            if (app == null) return;
+            app.Dispatcher?.VerifyAccess();
+
+            var appResources = app.Resources;
+            if (appResources == null) return;
+
             var uri = new Uri(string.Format(StringDictUri, language), UriKind.Relative);
             var newDict = new ResourceDictionary { Source = uri };
 

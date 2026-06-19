@@ -1,4 +1,4 @@
-﻿<bases:UserControlBase
+<bases:UserControlBase
     x:Class="BlackGoldAncientSword.Modules.UI.TeamInfo.Views.TeamInfoPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -319,42 +319,117 @@
                             Text="{Binding Member2.StatusText}"
                             TextTrimming="CharacterEllipsis" />
                     </Border>
-                    <hc:SearchBar
+                    <Grid
                         Grid.Row="0"
                         Grid.Column="0"
-                        Height="28"
-                        Margin="12,2,12,8"
-                        hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
-                        hc:TitleElement.Title="{DynamicResource Search.Title}"
-                        hc:TitleElement.TitlePlacement="Left"
-                        Command="{Binding Member0.SearchMemberCommand}"
-                        Style="{StaticResource SearchBarExtend}"
-                        Text="{Binding Member0.UserName, UpdateSourceTrigger=PropertyChanged}"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <hc:SearchBar
+                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <hc:SearchBar
+                            Grid.Column="0"
+                            Height="28"
+                            Margin="12,2,8,8"
+                            hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
+                            hc:TitleElement.Title="{DynamicResource Search.Title}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            Command="{Binding Member0.SearchMemberCommand}"
+                            Style="{StaticResource SearchBarExtend}"
+                            Text="{Binding Member0.UserName, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button
+                            Grid.Column="1"
+                            Width="Auto"
+                            Height="28"
+                            Margin="0,2,12,8"
+                            Padding="8,0"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Command="{Binding Member0.NavigateToStatsCommand}"
+                            Cursor="Hand"
+                            ToolTip="{DynamicResource TeamInfo.ViewPlayerStats}">
+                            <TextBlock
+                                Text="{DynamicResource Nav.Detail}"
+                                FontSize="12"
+                                Foreground="#4A90D9"
+                                TextDecorations="Underline" />
+                        </Button>
+                    </Grid>
+                    <Grid
                         Grid.Row="0"
                         Grid.Column="2"
-                        Height="28"
-                        Margin="12,2,12,8"
-                        hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
-                        hc:TitleElement.Title="{DynamicResource Search.Title}"
-                        hc:TitleElement.TitlePlacement="Left"
-                        Command="{Binding Member1.SearchMemberCommand}"
-                        Style="{StaticResource SearchBarExtend}"
-                        Text="{Binding Member1.UserName, UpdateSourceTrigger=PropertyChanged}"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <hc:SearchBar
+                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <hc:SearchBar
+                            Grid.Column="0"
+                            Height="28"
+                            Margin="12,2,8,8"
+                            hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
+                            hc:TitleElement.Title="{DynamicResource Search.Title}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            Command="{Binding Member1.SearchMemberCommand}"
+                            Style="{StaticResource SearchBarExtend}"
+                            Text="{Binding Member1.UserName, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button
+                            Grid.Column="1"
+                            Width="Auto"
+                            Height="28"
+                            Margin="0,2,12,8"
+                            Padding="8,0"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Command="{Binding Member1.NavigateToStatsCommand}"
+                            Cursor="Hand"
+                            ToolTip="{DynamicResource TeamInfo.ViewPlayerStats}">
+                            <TextBlock
+                                Text="{DynamicResource Nav.Detail}"
+                                FontSize="12"
+                                Foreground="#4A90D9"
+                                TextDecorations="Underline" />
+                        </Button>
+                    </Grid>
+                    <Grid
                         Grid.Row="0"
                         Grid.Column="4"
-                        Height="28"
-                        Margin="12,2,12,8"
-                        hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
-                        hc:TitleElement.Title="{DynamicResource Search.Title}"
-                        hc:TitleElement.TitlePlacement="Left"
-                        Command="{Binding Member2.SearchMemberCommand}"
-                        Style="{StaticResource SearchBarExtend}"
-                        Text="{Binding Member2.UserName, UpdateSourceTrigger=PropertyChanged}"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <hc:SearchBar
+                            Grid.Column="0"
+                            Height="28"
+                            Margin="12,2,8,8"
+                            hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
+                            hc:TitleElement.Title="{DynamicResource Search.Title}"
+                            hc:TitleElement.TitlePlacement="Left"
+                            Command="{Binding Member2.SearchMemberCommand}"
+                            Style="{StaticResource SearchBarExtend}"
+                            Text="{Binding Member2.UserName, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button
+                            Grid.Column="1"
+                            Width="Auto"
+                            Height="28"
+                            Margin="0,2,12,8"
+                            Padding="8,0"
+                            VerticalAlignment="Center"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Command="{Binding Member2.NavigateToStatsCommand}"
+                            Cursor="Hand"
+                            ToolTip="{DynamicResource TeamInfo.ViewPlayerStats}">
+                            <TextBlock
+                                Text="{DynamicResource Nav.Detail}"
+                                FontSize="12"
+                                Foreground="#4A90D9"
+                                TextDecorations="Underline" />
+                        </Button>
+                    </Grid>
                     <Grid
                         Grid.Row="1"
                         Grid.Column="0"

@@ -7,6 +7,10 @@
     <LangVersion>latest</LangVersion>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    <!-- 控制 SourceGenerator 行为：Tests 模式生成 HTTP API 测试代码（GeneratedApiClientTests 等），并跳过 DTO/Client 生成 -->
+    <BgaSourceGenMode>Tests</BgaSourceGenMode>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,6 +35,17 @@
     <ProjectReference Include="..\BlackGoldAncientSword.Ocr\BlackGoldAncientSword.Ocr.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.Modules\BlackGoldAncientSword.Modules.csproj" />
+    <!-- 引入 SourceGenerator 作为 Analyzer，结合 BgaSourceGenMode=Tests 触发 HttpApiTestSourceGenerator -->
+    <ProjectReference Include="..\BlackGoldAncientSword.Framework.SourceGenerator\BlackGoldAncientSword.Framework.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- 复用 Framework 项目里的同一份 api-definitions.json 作为 AdditionalFiles，确保 DTO/Client/测试由同一份定义驱动 -->
+  <ItemGroup>
+    <AdditionalFiles Include="..\BlackGoldAncientSword.Framework\Http\Definitions\**\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="BgaSourceGenMode" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,4 +55,3 @@
     </Content>
   </ItemGroup>
 </Project>
-

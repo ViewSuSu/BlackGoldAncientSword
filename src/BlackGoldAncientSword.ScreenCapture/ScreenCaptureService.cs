@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 
@@ -95,7 +95,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         var crop = CalcCrop(clientW, clientH, quadrants);
         crop.x += borderOffsetX;
         crop.y += titleBarOffsetY;
-        Console.WriteLine($"[SC] Win=({wr.Left},{wr.Top}) {winW}x{winH} Client={clientW}x{clientH} TitleBarY={titleBarOffsetY} BorderX={borderOffsetX} Crop=({crop.x},{crop.y} {crop.w}x{crop.h})");
+        Debug.WriteLine($"[SC] Win=({wr.Left},{wr.Top}) {winW}x{winH} Client={clientW}x{clientH} TitleBarY={titleBarOffsetY} BorderX={borderOffsetX} Crop=({crop.x},{crop.y} {crop.w}x{crop.h})");
 
         // 1. Native WGC DLL (occlusion-free)
         if (_nativeWgcAvailable)
@@ -103,10 +103,10 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
             try
             {
                 var capResult = NativeWgc.Capture(hwnd, winW, winH, crop);
-                if (capResult != null) { var (data, cw, ch) = capResult.Value; Console.WriteLine("[SC] Native WGC OK"); return BgraToPng(data, cw, ch); }
+                if (capResult != null) { var (data, cw, ch) = capResult.Value; Debug.WriteLine("[SC] Native WGC OK"); return BgraToPng(data, cw, ch); }
             }
-            catch (DllNotFoundException) { Console.WriteLine("[SC] wgc_capture.dll not found"); _nativeWgcAvailable = false; }
-            catch (Exception ex) { Console.WriteLine($"[SC] Native WGC: {ex.Message}"); }
+            catch (DllNotFoundException) { Debug.WriteLine("[SC] wgc_capture.dll not found"); _nativeWgcAvailable = false; }
+            catch (Exception ex) { Debug.WriteLine($"[SC] Native WGC: {ex.Message}"); }
         }
 
         // 2. COM vtable WGC (occlusion-free, if interop available)
@@ -114,13 +114,34 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         {
             return CaptureViaWgcCom(hwnd, winW, winH, crop);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
-            Console.WriteLine($"[SC] COM WGC failed ({ex.GetType().Name}: {ex.Message}), GDI fallback...");
+            Debug.WriteLine($"[SC] COM WGC failed ({ex.GetType().Name}: {ex.Message}), GDI fallback...");
         }
 
         // 3. GDI fallback
         return CaptureViaGdi(hwnd, wr, winW, winH, crop);
+    }
+
+    /// <summary>
+    /// 把完整 BGRA 帧按客户区(去标题栏 + 16:9 黑边)裁剪到目标小数组。
+    /// 给 CaptureFullRaw 这一类"只想要游戏画面"的快路径用,
+    /// 避免 Native 内"裁一次" + 上层"再裁一次"的双重拷贝。
+    /// </summary>
+    private static byte[] CropFromFullFrame(byte[] fullBgra, int fullW, int fullH,
+        int cropX, int cropY, int cropW, int cropH)
+    {
+        // 边界保护：分辨率缩放后裁剪框可能略超出真实帧大小。
+        if (cropX < 0) cropX = 0;
+        if (cropY < 0) cropY = 0;
+        if (cropX + cropW > fullW) cropW = fullW - cropX;
+        if (cropY + cropH > fullH) cropH = fullH - cropY;
+        var result = new byte[cropW * cropH * 4];
+        int srcStride = fullW * 4;
+        int dstStride = cropW * 4;
+        for (int y = 0; y < cropH; y++)
+            Array.Copy(fullBgra, (cropY + y) * srcStride + cropX * 4, result, y * dstStride, dstStride);
+        return result;
     }
 
     private byte[] CaptureViaWgcCom(IntPtr hwnd, int w, int h, (int x, int y, int w, int h) c)
@@ -141,9 +162,13 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         finally
         {
             if (dxgi != IntPtr.Zero) Marshal.Release(dxgi);
+            // surf 与 dxgi 是两个独立的 COM 引用：GetDxgiInterface 内部对 surface 做 QueryInterface
+            // 再 GetInterface(out dxgi)，按 COM 规约 GetInterface 必返回新 AddRef 的指针，因此 dxgi
+            // 不持有 surf 的引用所有权。SharpDX.DXGI.Surface(dxgiPtr).Dispose() 只释放 dxgi，与 surf 无关。
+            // 故 surf 必须无条件 Release，否则每帧泄漏一个 D3D 表面/纹理 COM 引用与显存。
             if (surf != IntPtr.Zero) Marshal.Release(surf);
             if (frame != IntPtr.Zero) Marshal.Release(frame);
-            if (sess != IntPtr.Zero) { try { WgcInterop.StopCapture(sess); } catch { } Marshal.Release(sess); }
+            if (sess != IntPtr.Zero) { try { WgcInterop.StopCapture(sess); } catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException) { Debug.WriteLine($"[{nameof(ScreenCaptureService)}] StopCapture failed: {ex.Message}"); } Marshal.Release(sess); }
             if (pool != IntPtr.Zero) Marshal.Release(pool);
             if (item != IntPtr.Zero) Marshal.Release(item);
         }
@@ -162,60 +187,121 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
 
     private byte[] ReadDxgiSurface(IntPtr dxgiPtr, int w, int h, (int x, int y, int w, int h) c)
     {
-        var s = new SharpDX.DXGI.Surface(dxgiPtr);
+        using var s = new SharpDX.DXGI.Surface(dxgiPtr);
+        var desc = new SharpDX.Direct3D11.Texture2DDescription { Width = w, Height = h, MipLevels = 1, ArraySize = 1, Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm, SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0), Usage = SharpDX.Direct3D11.ResourceUsage.Staging, BindFlags = SharpDX.Direct3D11.BindFlags.None, CpuAccessFlags = SharpDX.Direct3D11.CpuAccessFlags.Read, OptionFlags = SharpDX.Direct3D11.ResourceOptionFlags.None };
+        using var st = new SharpDX.Direct3D11.Texture2D(_sharpDxDevice!, desc);
+        using var srcTexture = s.QueryInterface<SharpDX.Direct3D11.Texture2D>();
+        _sharpDxCtx!.CopyResource(st, srcTexture);
+        bool mapped = false;
         try
         {
-            var desc = new SharpDX.Direct3D11.Texture2DDescription { Width = w, Height = h, MipLevels = 1, ArraySize = 1, Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm, SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0), Usage = SharpDX.Direct3D11.ResourceUsage.Staging, BindFlags = SharpDX.Direct3D11.BindFlags.None, CpuAccessFlags = SharpDX.Direct3D11.CpuAccessFlags.Read, OptionFlags = SharpDX.Direct3D11.ResourceOptionFlags.None };
-            var st = new SharpDX.Direct3D11.Texture2D(_sharpDxDevice!, desc);
-            _sharpDxCtx!.CopyResource(st, s.QueryInterface<SharpDX.Direct3D11.Texture2D>());
             var map = _sharpDxCtx.MapSubresource(st, 0, SharpDX.Direct3D11.MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
-            try
-            {
-                int stride = map.RowPitch;
-                var fd = new byte[w * h * 4];
-                if (stride == w * 4) Marshal.Copy(map.DataPointer, fd, 0, fd.Length);
-                else for (int y = 0; y < h; y++) Marshal.Copy(map.DataPointer + y * stride, fd, y * w * 4, w * 4);
-                var r = new byte[c.w * c.h * 4]; int fs = w * 4, cs = c.w * 4;
-                for (int y = 0; y < c.h; y++) Array.Copy(fd, (c.y + y) * fs + c.x * 4, r, y * cs, cs);
-                return BgraToPng(r, c.w, c.h);
-            }
-            finally { _sharpDxCtx.UnmapSubresource(st, 0); st.Dispose(); }
+            mapped = true;
+            int stride = map.RowPitch;
+            var fd = new byte[w * h * 4];
+            if (stride == w * 4) Marshal.Copy(map.DataPointer, fd, 0, fd.Length);
+            else for (int y = 0; y < h; y++) Marshal.Copy(map.DataPointer + y * stride, fd, y * w * 4, w * 4);
+            var r = new byte[c.w * c.h * 4]; int fs = w * 4, cs = c.w * 4;
+            for (int y = 0; y < c.h; y++) Array.Copy(fd, (c.y + y) * fs + c.x * 4, r, y * cs, cs);
+            return BgraToPng(r, c.w, c.h);
         }
-        finally { s.Dispose(); }
+        finally
+        {
+            if (mapped) _sharpDxCtx.UnmapSubresource(st, 0);
+        }
     }
 
     private static byte[] CaptureViaGdi(IntPtr hwnd, RECT wr, int w, int h, (int x, int y, int w, int h) c)
     {
-        IntPtr hdcW = GetWindowDC(hwnd); if (hdcW == IntPtr.Zero) throw new InvalidOperationException("GetWindowDC");
-        IntPtr hdcM = CreateCompatibleDC(hdcW), hbmp = CreateCompatibleBitmap(hdcW, w, h), ho = SelectObject(hdcM, hbmp);
+        // 异常路径的 GDI 资源安全释放：hbmp / hdcM 任一存在都必须在异常时释放，
+        // 否则 fallback 路径每秒被高频触发后会耗尽进程 GDI 句柄上限（默认 10000）。
+        IntPtr hdcW = GetWindowDC(hwnd);
+        if (hdcW == IntPtr.Zero) throw new InvalidOperationException("GetWindowDC");
+
+        IntPtr hdcM = IntPtr.Zero;
+        IntPtr hbmp = IntPtr.Zero;
+        IntPtr hoPrev = IntPtr.Zero;
         try
         {
+            hdcM = CreateCompatibleDC(hdcW);
+            if (hdcM == IntPtr.Zero) throw new InvalidOperationException("CreateCompatibleDC");
+            hbmp = CreateCompatibleBitmap(hdcW, w, h);
+            if (hbmp == IntPtr.Zero) throw new InvalidOperationException("CreateCompatibleBitmap");
+            hoPrev = SelectObject(hdcM, hbmp);
+
             bool printed = PrintWindow(hwnd, hdcM, 0x2);
-            if (!printed) { ReleaseDC(hwnd, hdcW); hdcW = IntPtr.Zero; IntPtr hdcS = GetDC(IntPtr.Zero); try { if (!BitBlt(hdcM, 0, 0, w, h, hdcS, wr.Left, wr.Top, 0x40CC0020) && !BitBlt(hdcM, 0, 0, w, h, hdcS, wr.Left, wr.Top, 0x00CC0020)) throw new InvalidOperationException("BitBlt"); } finally { ReleaseDC(IntPtr.Zero, hdcS); } }
+            if (!printed)
+            {
+                ReleaseDC(hwnd, hdcW);
+                hdcW = IntPtr.Zero;
+                IntPtr hdcS = GetDC(IntPtr.Zero);
+                try
+                {
+                    if (!BitBlt(hdcM, 0, 0, w, h, hdcS, wr.Left, wr.Top, 0x40CC0020) &&
+                        !BitBlt(hdcM, 0, 0, w, h, hdcS, wr.Left, wr.Top, 0x00CC0020))
+                        throw new InvalidOperationException("BitBlt");
+                }
+                finally { ReleaseDC(IntPtr.Zero, hdcS); }
+            }
+
+            return BitmapToPng(hbmp, w, h, c);
         }
-        finally { SelectObject(hdcM, ho); DeleteDC(hdcM); if (hdcW != IntPtr.Zero) ReleaseDC(hwnd, hdcW); }
-        try { return BitmapToPng(hbmp, w, h, c); }
-        finally { DeleteObject(hbmp); }
+        finally
+        {
+            // SelectObject 失败时返回 HGDI_ERROR ((IntPtr)(-1))，不能拿它去 restore
+            IntPtr HGDI_ERROR = new IntPtr(-1);
+            if (hdcM != IntPtr.Zero)
+            {
+                if (hoPrev != IntPtr.Zero && hoPrev != HGDI_ERROR) SelectObject(hdcM, hoPrev);
+                DeleteDC(hdcM);
+            }
+            if (hbmp != IntPtr.Zero) DeleteObject(hbmp);
+            if (hdcW != IntPtr.Zero) ReleaseDC(hwnd, hdcW);
+        }
     }
 
     private static byte[] BitmapToPng(IntPtr hbmp, int w, int h, (int x, int y, int w, int h) c)
     {
         IntPtr hdcS = GetDC(IntPtr.Zero);
+        if (hdcS == IntPtr.Zero) throw new InvalidOperationException("GetDC");
+        IntPtr hdcM = IntPtr.Zero;
+        IntPtr ho2 = IntPtr.Zero;
         try
         {
-            IntPtr hdcM = CreateCompatibleDC(hdcS); IntPtr ho2 = SelectObject(hdcM, hbmp);
+            hdcM = CreateCompatibleDC(hdcS);
+            if (hdcM == IntPtr.Zero) throw new InvalidOperationException("CreateCompatibleDC");
+            ho2 = SelectObject(hdcM, hbmp);
             var bi = new BITMAPINFO { biHeader = new BITMAPINFOHEADER { biSize = Marshal.SizeOf<BITMAPINFOHEADER>(), biWidth = w, biHeight = -h, biPlanes = 1, biBitCount = 32 } };
-            var fp = new byte[w * h * 4]; if (GetDIBits(hdcM, hbmp, 0, (uint)h, fp, ref bi, 0) == 0) throw new InvalidOperationException("GetDIBits");
-            SelectObject(hdcM, ho2); DeleteDC(hdcM);
+            var fp = new byte[w * h * 4];
+            if (GetDIBits(hdcM, hbmp, 0, (uint)h, fp, ref bi, 0) == 0) throw new InvalidOperationException("GetDIBits");
             var r = new byte[c.w * c.h * 4]; int fs = w * 4, cs = c.w * 4;
             for (int y = 0; y < c.h; y++) Array.Copy(fp, (c.y + y) * fs + c.x * 4, r, y * cs, cs);
             return BgraToPng(r, c.w, c.h);
         }
-        finally { ReleaseDC(IntPtr.Zero, hdcS); }
+        finally
+        {
+            // SelectObject 失败时返回 HGDI_ERROR ((IntPtr)(-1))，不能拿它去 restore
+            IntPtr HGDI_ERROR = new IntPtr(-1);
+            if (hdcM != IntPtr.Zero)
+            {
+                if (ho2 != IntPtr.Zero && ho2 != HGDI_ERROR) SelectObject(hdcM, ho2);
+                DeleteDC(hdcM);
+            }
+            ReleaseDC(IntPtr.Zero, hdcS);
+        }
     }
 
     private static byte[] BgraToPng(byte[] d, int w, int h)
-    { using var ms = new MemoryStream(); var enc = new System.Windows.Media.Imaging.PngBitmapEncoder(); enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(System.Windows.Media.Imaging.BitmapSource.Create(w, h, 96, 96, System.Windows.Media.PixelFormats.Bgra32, null, d, w * 4))); enc.Save(ms); return ms.ToArray(); }
+    {
+    using var bmp = new System.Drawing.Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+    var rect = new System.Drawing.Rectangle(0, 0, w, h);
+    var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+    System.Runtime.InteropServices.Marshal.Copy(d, 0, bmpData.Scan0, d.Length);
+    bmp.UnlockBits(bmpData);
+    using var ms = new MemoryStream();
+    bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+    return ms.ToArray();
+}
 
     /// <summary>
     /// 检测窗口是否处于有标题栏的窗口化模式（WS_CAPTION 样式）。
@@ -339,29 +425,45 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
             }
         }
 
-        Console.WriteLine($"[SC] CaptureFullRaw: Win=({wr.Left},{wr.Top}) {winW}x{winH} Client={cropW}x{cropH} TitleBarY={cropY}");
+        Debug.WriteLine($"[SC] CaptureFullRaw: Win=({wr.Left},{wr.Top}) {winW}x{winH} Client={cropW}x{cropH} TitleBarY={cropY}");
 
-        // 1. Native WGC DLL
+        // 1. Native WGC DLL —— 单次拷贝路径：
+        //    Native 只拿完整 BGRA(ArrayPool 复用 buffer),裁剪在托管侧做,
+        //    避免旧路径"Native 裁一次 + 上层若再 region 裁则又一次"的双重拷贝。
         if (_nativeWgcAvailable)
         {
             try
             {
-                var capResult = NativeWgc.Capture(hwnd, winW, winH, (cropX, cropY, cropW, cropH));
-                if (capResult != null)
+                if (NativeWgc.CaptureRaw(hwnd, out var pooledFull, out _, out int fw, out int fh))
                 {
-                    var (data, w, h) = capResult.Value;
-                    width = w;
-                    height = h;
-                    Console.WriteLine($"[SC] CaptureFullRaw: Native WGC OK {w}x{h}");
-                    return data;
+                    try
+                    {
+                        // 按 native 真实帧尺寸缩放客户区坐标(窗口分辨率 ≠ 帧分辨率时)。
+                        double scaleX = (double)fw / winW;
+                        double scaleY = (double)fh / winH;
+                        int sx = (int)(cropX * scaleX);
+                        int sy = (int)(cropY * scaleY);
+                        int sw = (int)(cropW * scaleX);
+                        int sh = (int)(cropH * scaleY);
+
+                        var data = CropFromFullFrame(pooledFull, fw, fh, sx, sy, sw, sh);
+                        width = sw;
+                        height = sh;
+                        Debug.WriteLine($"[SC] CaptureFullRaw: Native WGC OK {sw}x{sh}");
+                        return data;
+                    }
+                    finally
+                    {
+                        NativeWgc.ReturnRawBuffer(pooledFull);
+                    }
                 }
             }
-            catch (DllNotFoundException) { Console.WriteLine("[SC] wgc_capture.dll not found"); _nativeWgcAvailable = false; }
-            catch (Exception ex) { Console.WriteLine($"[SC] Native WGC: {ex.Message}"); }
+            catch (DllNotFoundException) { Debug.WriteLine("[SC] wgc_capture.dll not found"); _nativeWgcAvailable = false; }
+            catch (Exception ex) { Debug.WriteLine($"[SC] Native WGC: {ex.Message}"); }
         }
 
         // 2. Fallback: CaptureWindow 已通过 CaptureFrameInternal 排除标题栏和黑边
-        Console.WriteLine("[SC] CaptureFullRaw: falling back to PNG decode path");
+        Debug.WriteLine("[SC] CaptureFullRaw: falling back to PNG decode path");
         var pngBytes = CaptureWindow(hwnd);
         return PngToBgra(pngBytes, out width, out height);
     }
@@ -384,15 +486,15 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     private static byte[] PngToBgra(byte[] pngBytes, out int width, out int height)
     {
         using var ms = new MemoryStream(pngBytes);
-        var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
-            ms, System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
-            System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
-        var frame = decoder.Frames[0];
-        width = frame.PixelWidth;
-        height = frame.PixelHeight;
+        using var bmp = new System.Drawing.Bitmap(ms);
+        width = bmp.Width;
+        height = bmp.Height;
+        var rect = new System.Drawing.Rectangle(0, 0, width, height);
+        var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         int stride = width * 4;
         var bgra = new byte[stride * height];
-        frame.CopyPixels(bgra, stride, 0);
+        Marshal.Copy(bmpData.Scan0, bgra, 0, bgra.Length);
+        bmp.UnlockBits(bmpData);
         return bgra;
     }
     public void Dispose()
@@ -403,3 +505,4 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
     }
     void ThrowIfDisposed() { if (_disposed) throw new ObjectDisposedException(nameof(ScreenCaptureService)); }
 }
+

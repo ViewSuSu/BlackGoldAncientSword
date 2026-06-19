@@ -1,28 +1,34 @@
-﻿using System.Text;
-using System.Text.Json;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 
 namespace BlackGoldAncientSword.Framework.SourceGenerator
 {
+    /// <summary>
+    /// 基于 api-definitions.json 生成 HTTP DTO 与静态客户端 NarakaApiClient。
+    /// 仅在 MSBuild 属性 BgaSourceGenMode 为 "Client"（默认）时生成。
+    /// </summary>
     [Generator]
     internal class HttpApiSourceGenerator : IIncrementalGenerator
     {
-        private static readonly JsonSerializerOptions JsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
+        private const string ModeClient = "Client";
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // Read RootNamespace from MSBuild, e.g. "BlackGoldAncientSword.Framework"
+            // 读取 RootNamespace
             var rootNsProvider = context.AnalyzerConfigOptionsProvider
                 .Select(static (options, _) =>
                     options.GlobalOptions.TryGetValue("build_property.RootNamespace", out var ns)
                         ? ns
                         : "RootNamespace");
+
+            // 读取 BgaSourceGenMode（默认 Client）
+            var modeProvider = context.AnalyzerConfigOptionsProvider
+                .Select(static (options, _) =>
+                    options.GlobalOptions.TryGetValue("build_property.BgaSourceGenMode", out var mode) && !string.IsNullOrWhiteSpace(mode)
+                        ? mode
+                        : ModeClient);
 
             var jsonFiles = context.AdditionalTextsProvider
                 .Where(static file =>
@@ -35,20 +41,26 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 })
                 .Where(static text => !string.IsNullOrWhiteSpace(text));
 
-            var combined = jsonFiles.Combine(rootNsProvider);
+            var combined = jsonFiles.Combine(rootNsProvider).Combine(modeProvider);
 
             context.RegisterSourceOutput(combined, GenerateAllSources);
         }
 
-        private void GenerateAllSources(SourceProductionContext context, (string json, string rootNs) input)
+        private void GenerateAllSources(SourceProductionContext context, ((string json, string rootNs) inner, string mode) input)
         {
-            var (json, rootNs) = input;
+            var (json, rootNs) = input.inner;
+            var mode = input.mode;
+
+            // 仅在 Client 模式下生成 DTO/Client；Tests 模式跳过避免与 Framework 重复定义
+            if (!string.Equals(mode, ModeClient, StringComparison.OrdinalIgnoreCase))
+                return;
+
             var httpNs = $"{rootNs}.Http";
             var generatedNs = $"{httpNs}.Generated";
 
             try
             {
-                var root = JsonSerializer.Deserialize<ApiDefinitionsRoot>(json, JsonOptions);
+                var root = ApiDefinitionsParser.Parse(json);
                 if (root == null || root.Apis.Count == 0) return;
 
                 GenerateDtos(context, root, generatedNs);
@@ -78,7 +90,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("    public interface IApiResponse");
             sb.AppendLine("    {");
             sb.AppendLine("        double? Code { get; }");
-            sb.AppendLine("        string Msg { get; }");
+            sb.AppendLine("        string? Msg { get; }");
             sb.AppendLine("    }");
             sb.AppendLine();
 
@@ -110,9 +122,9 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("using System.Net.Http;");
             sb.AppendLine("using System.Net.Http.Json;");
             sb.AppendLine("using System.Text;");
+            sb.AppendLine("using System.Text.Json;");
             sb.AppendLine("using System.Threading;");
             sb.AppendLine("using System.Threading.Tasks;");
-            sb.AppendLine("using Newtonsoft.Json;");
             sb.AppendLine($"using {generatedNs};");
             if (enumTypeNames.Count > 0)
                 sb.AppendLine("using BlackGoldAncientSword.Framework.Core.Consts;");
@@ -121,6 +133,22 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("{");
             sb.AppendLine("    public static class NarakaApiClient");
             sb.AppendLine("    {");
+            sb.AppendLine("        /// <summary>");
+            sb.AppendLine("        /// 全局 JSON 序列化选项（与 Newtonsoft 默认宽松行为对齐）：");
+            sb.AppendLine("        /// - PropertyNameCaseInsensitive：忽略字段名大小写差异");
+            sb.AppendLine("        /// - NumberHandling.AllowReadingFromString：兼容后端把数字写成字符串的响应（如 \"code\": \"200\"）");
+            sb.AppendLine("        /// - JsonFlexibleStringConverter：兼容后端 string 字段返回 number/bool（如 stats[].value 既可能是 247 也可能是 \"4.9%\"）");
+            sb.AppendLine("        /// - DTO 已通过 [JsonPropertyName] 显式标注 camelCase，无需设置全局 PropertyNamingPolicy");
+            sb.AppendLine("        /// </summary>");
+            sb.AppendLine("        public static readonly JsonSerializerOptions JsonOptions = new()");
+            sb.AppendLine("        {");
+            sb.AppendLine("            PropertyNameCaseInsensitive = true,");
+            sb.AppendLine("            ReadCommentHandling = JsonCommentHandling.Skip,");
+            sb.AppendLine("            AllowTrailingCommas = true,");
+            sb.AppendLine("            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString,");
+            sb.AppendLine("            Converters = { new JsonFlexibleStringConverter() }");
+            sb.AppendLine("        };");
+            sb.AppendLine();
             sb.AppendLine($"        private static readonly HttpClient _http = new()");
             sb.AppendLine("        {");
             sb.AppendLine($"            BaseAddress = new Uri(\"{root.BaseUrl}\"),");
@@ -146,25 +174,25 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine();
             sb.AppendLine("        private static async Task<TRes> PostAsync<TReq, TRes>(string url, TReq body, CancellationToken ct)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var r = await _http.PostAsJsonAsync(url, body, ct).ConfigureAwait(false);");
+            sb.AppendLine("            var r = await _http.PostAsJsonAsync(url, body, JsonOptions, ct).ConfigureAwait(false);");
             sb.AppendLine("            return await ReadApiResponseAsync<TRes>(r, ct).ConfigureAwait(false);");
             sb.AppendLine("        }");
             sb.AppendLine();
             sb.AppendLine("        private static async Task PostVoidAsync<TReq>(string url, TReq body, CancellationToken ct)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var r = await _http.PostAsJsonAsync(url, body, ct).ConfigureAwait(false);");
+            sb.AppendLine("            var r = await _http.PostAsJsonAsync(url, body, JsonOptions, ct).ConfigureAwait(false);");
             sb.AppendLine("            r.EnsureSuccessStatusCode();");
             sb.AppendLine("        }");
             sb.AppendLine();
             sb.AppendLine("        private static async Task<TRes> PutAsync<TReq, TRes>(string url, TReq body, CancellationToken ct)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var r = await _http.PutAsJsonAsync(url, body, ct).ConfigureAwait(false);");
+            sb.AppendLine("            var r = await _http.PutAsJsonAsync(url, body, JsonOptions, ct).ConfigureAwait(false);");
             sb.AppendLine("            return await ReadApiResponseAsync<TRes>(r, ct).ConfigureAwait(false);");
             sb.AppendLine("        }");
             sb.AppendLine();
             sb.AppendLine("        private static async Task PutVoidAsync<TReq>(string url, TReq body, CancellationToken ct)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var r = await _http.PutAsJsonAsync(url, body, ct).ConfigureAwait(false);");
+            sb.AppendLine("            var r = await _http.PutAsJsonAsync(url, body, JsonOptions, ct).ConfigureAwait(false);");
             sb.AppendLine("            r.EnsureSuccessStatusCode();");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -182,7 +210,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine();
             sb.AppendLine("        private static async Task<TRes> PatchAsync<TReq, TRes>(string url, TReq body, CancellationToken ct)");
             sb.AppendLine("        {");
-            sb.AppendLine("            var c = new StringContent(JsonConvert.SerializeObject(body), Encoding.UTF8, \"application/json\");");
+            sb.AppendLine("            var c = new StringContent(JsonSerializer.Serialize(body, JsonOptions), Encoding.UTF8, \"application/json\");");
             sb.AppendLine("            var r = await _http.PatchAsync(url, c, ct).ConfigureAwait(false);");
             sb.AppendLine("            return await ReadApiResponseAsync<TRes>(r, ct).ConfigureAwait(false);");
             sb.AppendLine("        }");
@@ -195,7 +223,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("                var apiMsg = TryExtractApiError(body);");
             sb.AppendLine("                throw new HttpRequestException(apiMsg ?? $\"HTTP {(int)r.StatusCode}: {body}\");");
             sb.AppendLine("            }");
-            sb.AppendLine("            var result = JsonConvert.DeserializeObject<T>(body)!;");
+            sb.AppendLine("            var result = JsonSerializer.Deserialize<T>(body, JsonOptions)!;");
             sb.AppendLine("            if (result is IApiResponse apiResp && apiResp.Code != 200)");
             sb.AppendLine("                throw new InvalidOperationException(apiResp.Msg ?? $\"API returned code {apiResp.Code}\");");
             sb.AppendLine("            return result;");
@@ -205,8 +233,15 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("        {");
             sb.AppendLine("            try");
             sb.AppendLine("            {");
-            sb.AppendLine("                var err = JsonConvert.DeserializeAnonymousType(body, new { msg = \"\" });");
-            sb.AppendLine("                return !string.IsNullOrEmpty(err?.msg) ? err.msg : null;");
+            sb.AppendLine("                using var doc = JsonDocument.Parse(body);");
+            sb.AppendLine("                if (doc.RootElement.ValueKind == JsonValueKind.Object &&");
+            sb.AppendLine("                    doc.RootElement.TryGetProperty(\"msg\", out var msgEl) &&");
+            sb.AppendLine("                    msgEl.ValueKind == JsonValueKind.String)");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    var msg = msgEl.GetString();");
+            sb.AppendLine("                    return !string.IsNullOrEmpty(msg) ? msg : null;");
+            sb.AppendLine("                }");
+            sb.AppendLine("                return null;");
             sb.AppendLine("            }");
             sb.AppendLine("            catch { return null; }");
             sb.AppendLine("        }");
@@ -239,15 +274,15 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             {
                 foreach (var pp in api.PathParameters)
                 {
-                    var pt = ResolveType(pp.Value);
-                    var isRef = IsReferenceType(pp.Value);
+                    var pt = ApiDefinitionsParser.ResolveType(pp.Value);
+                    var isRef = ApiDefinitionsParser.IsReferenceType(pp.Value);
                     parameters.Add($"{pt}{(isRef ? "?" : "")} {pp.Key}");
                 }
             }
             if (api.QueryParameters != null && api.QueryParameters.Count > 0)
             {
                 foreach (var qp in api.QueryParameters)
-                    parameters.Add($"{ResolveType(qp.Value)}? {qp.Key} = null");
+                    parameters.Add($"{ApiDefinitionsParser.ResolveType(qp.Value)}? {qp.Key} = null");
             }
             if (hasBody)
                 parameters.Add($"{reqType}? body = null");
@@ -260,10 +295,10 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             // Parameters
             if (api.PathParameters != null)
                 foreach (var pp in api.PathParameters)
-                    sb.AppendLine($"        /// <param name=\"{pp.Key}\">{GetParamDescription(pp.Key)}</param>");
+                    sb.AppendLine($"        /// <param name=\"{pp.Key}\">{ApiDefinitionsParser.GetParamDescription(pp.Key)}</param>");
             if (api.QueryParameters != null)
                 foreach (var qp in api.QueryParameters)
-                    sb.AppendLine($"        /// <param name=\"{qp.Key}\">{GetParamDescription(qp.Key)}</param>");
+                    sb.AppendLine($"        /// <param name=\"{qp.Key}\">{ApiDefinitionsParser.GetParamDescription(qp.Key)}</param>");
             if (hasBody)
                 sb.AppendLine($"        /// <param name=\"body\">请求体</param>");
             sb.AppendLine($"        /// <param name=\"ct\">取消令牌</param>");
@@ -284,7 +319,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 sb.AppendLine($"            var qp = new Dictionary<string, string?>();");
                 foreach (var qp in api.QueryParameters)
                 {
-                    var t = ResolveType(qp.Value);
+                    var t = ApiDefinitionsParser.ResolveType(qp.Value);
                     var isEnum = enumTypeNames.Contains(t);
                     var ns = t != "string" && !isEnum;
                     if (isEnum)
@@ -348,84 +383,16 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             foreach (var prop in type.Properties)
             {
                 var jsonName = prop.Key;
-                var propName = ToPascalCase(jsonName);
-                var propType = ResolveType(prop.Value.Type);
-                var isRef = IsReferenceType(prop.Value.Type);
+                var propName = ApiDefinitionsParser.ToPascalCase(jsonName);
+                var propType = ApiDefinitionsParser.ResolveType(prop.Value.Type);
+                var isRef = ApiDefinitionsParser.IsReferenceType(prop.Value.Type);
                 var nullable = isRef || prop.Value.Nullable != false;
                 var jsonAttrName = prop.Value.JsonName ?? jsonName;
-                sb.AppendLine($"{indent}    [Newtonsoft.Json.JsonProperty(\"{jsonAttrName}\")]");
+                sb.AppendLine($"{indent}    [System.Text.Json.Serialization.JsonPropertyName(\"{jsonAttrName}\")]");
                 sb.AppendLine($"{indent}    public {propType}{(nullable ? "?" : "")} {propName} {{ get; set; }}");
             }
             sb.AppendLine($"{indent}}}");
             sb.AppendLine();
-        }
-
-        private static string ToPascalCase(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return name;
-            return char.ToUpperInvariant(name[0]) + name.Substring(1);
-        }
-
-        private static string GetParamDescription(string paramName) => paramName switch
-        {
-            "roleId" => "玩家角色ID（小程序 roleId）",
-            "seasonId" => "赛季ID，通过 QuerySeasons 接口获取",
-            "gameMode" => "游戏模式ID，见 GameMode 枚举定义",
-            "battleId" => "对局ID，通过 GetRecentBattles 接口获取",
-            "name" => "搜索关键词（玩家昵称或角色ID）",
-            _ => $"参数 {paramName}"
-        };
-
-        private static string ResolveType(string type) => type switch
-        {
-            "string" => "string", "int" => "double", "long" => "long",
-            "float" => "float", "double" => "double", "bool" => "bool",
-            "decimal" => "decimal", "DateTime" => "System.DateTime",
-            "Guid" => "System.Guid", _ => type
-        };
-
-        private static bool IsReferenceType(string type)
-        {
-            if (type == "string" || type.StartsWith("List<") || type.StartsWith("Dictionary<")) return true;
-            if (type == "int" || type == "long" || type == "float" || type == "double" ||
-                type == "bool" || type == "decimal" || type == "System.DateTime" ||
-                type == "System.Guid" || type == "DateTime" || type == "Guid") return false;
-            return true;
-        }
-
-        private class ApiDefinitionsRoot
-        {
-            public string BaseUrl { get; set; } = string.Empty;
-            public Dictionary<string, string> DefaultHeaders { get; set; } = new();
-            public List<string> EnumTypeNames { get; set; } = new();
-            public List<ApiEndpointDefinition> Apis { get; set; } = new();
-        }
-
-        private class ApiEndpointDefinition
-        {
-            public string Id { get; set; } = string.Empty;
-            public string Description { get; set; } = string.Empty;
-            public string Method { get; set; } = "GET";
-            public string Path { get; set; } = string.Empty;
-            public Dictionary<string, string> PathParameters { get; set; } = new();
-            public Dictionary<string, string> QueryParameters { get; set; } = new();
-            public Dictionary<string, string> Headers { get; set; } = new();
-            public TypeDefinition? RequestBody { get; set; }
-            public TypeDefinition? ResponseBody { get; set; }
-        }
-
-        private class TypeDefinition
-        {
-            public string Type { get; set; } = string.Empty;
-            public Dictionary<string, PropertyDefinition> Properties { get; set; } = new();
-            public Dictionary<string, TypeDefinition> NestedTypes { get; set; } = new();
-        }
-
-        private class PropertyDefinition
-        {
-            public string Type { get; set; } = "string";
-            public bool? Nullable { get; set; }
-            public string? JsonName { get; set; }
         }
     }
 }

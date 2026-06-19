@@ -1,4 +1,4 @@
-﻿[中文](README.md) | [English](README.en.md)
+[中文](README.md) | [English](README.en.md)
 
 [![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]()
 
@@ -58,7 +58,9 @@ When entering hero selection, the app captures the screen and recognizes teammat
 - **Data path**: Local storage directory for stats (customizable, with auto-migration)
 - **Cache path**: Image cache directory (size display + one-click clear)
 - **Language**: 简体中文 / English / 繁體中文
-- **Close behavior**: Minimize to tray or exit directly
+- **Close behavior**: Default action when clicking the close button — choose from *Ask every time / Minimize to taskbar / Minimize to system tray / Exit directly*, with a "remember choice" option
+- **Team overlay during hero selection**: Toggle the bottom-right teammate popup
+- **Check for updates**: Manually check and download new releases
 - **Current version**
 
 ![Settings screenshot](docs/images/04_settings.png)
@@ -94,6 +96,10 @@ Additionally, OCR may sometimes fail to recognize certain special characters. If
 **Q: Why is the installer / program so large (200MB+)?**
 
 The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. Additionally, the built-in OCR engine (PaddleOCR) depends on the Intel Math Kernel Library (mklml.dll, ~88MB) and the OpenCV computer vision library (opencv_world4100.dll, ~62MB). These two native AI/vision libraries, together with the .NET runtime, account for the vast majority of the download size. Without them, automatic screenshot recognition of teammate names wouldn't be possible — the "bulk" is a necessary price to pay 😅.
+
+**Q: Why do I see a yellow border around my screen when entering hero selection?**
+
+The yellow border is a visual indicator that the app is capturing the screen and recognizing teammate information. This is normal behavior — no need to worry.
 
 ---
 
@@ -199,9 +205,9 @@ Before using this program, please ensure you have read, understood, and agreed t
 | **MVVM** | Prism 8.1 (DryIoc) | DI container, region navigation, modularization |
 | **HTTP** | Compile-time source generator | Auto-generate typed API clients from JSON definitions |
 | **Mapping** | Mapster 7.4 | DTO ↔ ViewModel |
-| **JSON** | Newtonsoft.Json 13 | Serialization / deserialization |
+| **JSON** | System.Text.Json (with source-generated context) | Serialization / deserialization (fully replaced Newtonsoft.Json) |
 | **Screen Capture** | SharpDX + native WGC DLL (C++) | Game window capture |
-| **OCR** | PaddleOCR-json.exe | Chinese character recognition |
+| **OCR** | PaddleOCR-json.exe (long-lived child process) | Multi-language text recognition |
 | **System Tray** | Hardcodet.NotifyIcon.Wpf | Tray icon and context menu |
 | **Packaging** | Self-Contained + PublishSingleFile | Single-file deployment (win-x64) |
 
@@ -222,8 +228,10 @@ src/
 │   ├── Core/
 │   │   ├── Attributes/
 │   │   │   └── ComponentAttribute.cs            # Custom component marker attribute
-│   │   ├── Bases/ViewModels/ViewModelBase.cs  # MVVM base class (RaisePropertyChanged)
-│   │   ├── Bases/Views/UserControlBase.cs      # View base class
+│   │   ├── Bases/
+│   │   │   ├── PrismApplicationBase.cs        # Prism application base class
+│   │   │   ├── ViewModels/ViewModelBase.cs    # MVVM base class (RaisePropertyChanged)
+│   │   │   └── Views/UserControlBase.cs       # View base class
 │   │   ├── Consts/
 │   │   │   ├── GlobalConstant.cs                # Global constants
 │   │   │   └── PageNames.cs                     # Page name constants
@@ -232,18 +240,19 @@ src/
 │   │   │   ├── GameStatusChangedEventArgs.cs   # Status change event args
 │   │   │   ├── SettingsChangedEvent.cs         # Settings change event
 │   │   │   └── TipMessageEvent.cs              # Toast message event
-│   │   ├── Extensions/                         # Extension methods
+│   │   ├── Extensions/                         # Extension methods & value converters
 │   │   └── Infrastructure/                     # Navigation interfaces
 │   │       ├── IMainContentNavigationService.cs  # Nav service interface
 │   │       └── MainContentNavigator.cs          # Nav service implementation
 │   ├── Http/
-│   │   └── Definitions/                        # API JSON definitions → source gen
+│   │   ├── Definitions/                        # API JSON definitions → source gen
+│   │   └── JsonFlexibleStringConverter.cs      # System.Text.Json fault-tolerant converter
 │   ├── Services/
 │   │   ├── AppSettings.cs                       # App config data model
 │   │   ├── LanguageOption.cs                    # Language option model
 │   │   ├── SearchHistoryItem.cs                 # Search history model
 │   │   ├── ServiceAutoRegister.cs              # Service auto-registration
-│   │   ├── Abstractions/                       # Service interfaces (7)
+│   │   ├── Abstractions/                       # Service interfaces (12)
 │   │   └── Implementation/                     # Service implementations
 │   ├── Themes/Generic.xaml                     # HandyControl theme
 │   └── UI/Controls/
@@ -262,6 +271,7 @@ src/
 │       ├── Settings/                         # Settings page
 │       ├── Stats/                            # Player stats
 │       └── TeamInfo/                         # Team info (OCR + comparison)
+│           └── Services/                     # Contains TeamInfoOcrService, TeamOcrCoordinator
 │
 ├── BlackGoldAncientSword.GameMonitor/      # Game monitoring
 │   ├── GameMonitorAutoRegister.cs            # Service auto-registration
@@ -304,6 +314,7 @@ src/
 │
 ├── BlackGoldAncientSword.Tests/             # Test project
 │   ├── GameMonitor/                          # Game monitor tests
+│   ├── Http/                                 # HTTP / JSON fault-tolerance tests
 │   ├── Ocr/                                  # OCR tests
 │   ├── ScreenCapture/                        # Screen capture tests
 │   ├── TestData/                             # Test data
@@ -347,7 +358,7 @@ public static class PageNames
 
 ### 3. Game Status Monitoring (GameMonitor)
 
-`GameLogMonitor` polls `Player.log` at intervals to detect game events:
+`GameLogMonitor` watches `Player.log` using **`FileSystemWatcher` plus a polling fallback**. Internally the responsibilities are split into `LogReader` (file IO), `LogPoller` (poll loop) and `BattleStateMachine` (battle state); the monitor itself is just a façade that orchestrates lifetime and event dispatch. Detected events:
 
 - `BattleJoined` — hero selection (parses RoomId from log)
 - `BattleStarted` — match start (parses BattleId)
@@ -359,10 +370,10 @@ public static class PageNames
 
 1. `GameStatusMonitor` detects `HeroSelection` state
 2. `TeamInfoPageViewModel` starts OCR polling loop
-3. `ScreenCaptureService` captures game window via **Windows Graphics Capture API** (native C++ DLL → SharpDX D3D11)
-4. `OcrService` spawns **PaddleOCR-json.exe** to recognize text
-5. `TeamInfoOcrService` parses OCR output and extracts teammate nicknames
-6. Stats API is queried for each teammate, displayed side-by-side
+3. `ScreenCaptureService` captures the game window via **Windows Graphics Capture API** (native C++ DLL → SharpDX D3D11), reusing full-frame buffers from `ArrayPool` and slicing three regions via `ScreenQuadrant` into a single composite image
+4. `OcrEngine` talks to **PaddleOCR-json.exe** as a **singleton long-lived child process** over stdin/stdout pipes using `image_base64` (zero disk IO). Models load once on the first `PrewarmAsync` call (~600–1500 ms); subsequent calls only run inference (~100–250 ms). A `JobObject` guarantees the child is reaped by the OS if the host crashes
+5. `TeamInfoOcrService` / `TeamOcrCoordinator` parse the OCR output and extract teammate nicknames
+6. The stats API is queried for each teammate and displayed side-by-side
 
 ### 5. Source-Generated HTTP Client
 
