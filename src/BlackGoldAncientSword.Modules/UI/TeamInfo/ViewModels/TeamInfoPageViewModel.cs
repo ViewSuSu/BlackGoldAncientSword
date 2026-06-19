@@ -9,6 +9,7 @@ using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
 using BlackGoldAncientSword.Modules.UI.TeamInfo.Services;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using System.Linq;
+using System.Runtime;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.Modules.UI.Stats.ViewModels;
 using BlackGoldAncientSword.Framework.UI.Controls;
@@ -249,6 +250,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     _teamOverlayService.Hide();
                      StopOcrLoop();
                      CancelAndDispose(ref _refreshOcrCts);
+                    ClearImageMemoryCaches();
                     break;
                 case GameStatus.BattleEnded:
                     IsHeroSelectionPhase = false;
@@ -256,6 +258,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     _teamOverlayService.Hide();
                      StopOcrLoop();
                      CancelAndDispose(ref _refreshOcrCts);
+                    ClearImageMemoryCaches();
                     StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
                      if (TeamMembers.Count > 0)
                      {
@@ -272,6 +275,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                      StopOcrLoop();
                     StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
                      if (TeamMembers.Count > 0)
+                    ClearImageMemoryCaches();
                      {
                          _hasEverHadData = false;
                          _ocrDataLoadedSuccessfully = false;
@@ -878,6 +882,16 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             RaisePropertyChanged(nameof(HasThreeMembers));
         }
 
+        private static void ClearImageMemoryCaches()
+        {
+            // 清除 UrlToImageSourceConverter 的 BitmapImage 缓存
+            UrlToImageSourceConverter.ClearCache();
+            // 强制第 2 代 GC 回收，确保 WPF 非托管 BitmapImage 解码内存被释放
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+        }
+
         private static void CancelAndDispose(ref CancellationTokenSource? cts)
         {
             if (cts == null) return;
@@ -1316,6 +1330,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
     }
 }
+
 
 
 

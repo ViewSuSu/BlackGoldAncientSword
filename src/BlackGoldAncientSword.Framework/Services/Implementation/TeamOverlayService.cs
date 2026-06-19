@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using BlackGoldAncientSword.Framework.Core.Attributes;
-using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.Framework.Core.Extensions;
+using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.Framework.UI.Controls;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
@@ -37,7 +37,12 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         public void Hide()
         {
             if (_window != null)
+            {
+                // 清除图片绑定 URL，释放对 BitmapImage 的引用
+                // 让 WPF 非托管 MIL 解码内存可被回收
+                _viewModel?.ClearImageBindings();
                 _window.Hide();
+            }
         }
 
         private void EnsureWindowCreated()
