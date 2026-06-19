@@ -39,7 +39,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <!--  Title + Refresh + Close button  -->
-            <Grid Grid.Row="0" Margin="0,2,0,4">
+            <Grid Grid.Row="0" x:Name="TitleBarGrid" Margin="0,2,0,4" MouseLeftButtonDown="TitleBarGrid_OnMouseLeftButtonDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -249,3 +249,4 @@
         </Grid>
     </Border>
 </Window>
+

@@ -11,5 +11,6 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
 
         Action? RefreshAction { get; set; }
         event Action? Dismissed;
+        event Action? NavigateToTeamInfoRequested;
     }
 }

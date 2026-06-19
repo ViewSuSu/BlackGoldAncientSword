@@ -71,6 +71,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _selectedCategory = GameModeCategory.Rank;
             // _statusText 不能用字段初始化器调 L()，因为 _localizedText 此时还未注入。
             _statusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
+
+            // 构造函数中永久订阅（不依赖页面导航），确保进入英雄选择后立即启动 OCR 识别
+            _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
+            _teamOverlayService.Dismissed += OnOverlayDismissed;
         }
 
         // === Filters ===
@@ -231,16 +235,16 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
                     StartOcrLoop();
                     break;
-                case GameStatus.InGame:
-                    IsHeroSelectionPhase = false;
-                    _teamOverlayService.Hide();
-                    CancelAndDispose(ref _refreshOcrCts);
-                    break;
-                case GameStatus.Unknown:
-                    IsHeroSelectionPhase = false;
-                    _teamOverlayService.Hide();
-                    CancelAndDispose(ref _refreshOcrCts);
-                    StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
+               case GameStatus.InGame:
+                   IsHeroSelectionPhase = false;
+                   _teamOverlayService.Hide();
+                    StopOcrLoop();
+                   break;
+               case GameStatus.Unknown:
+                   IsHeroSelectionPhase = false;
+                   _teamOverlayService.Hide();
+                    StopOcrLoop();
+                   StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
                     if (TeamMembers.Count > 0)
                     {
                         _hasEverHadData = false;
@@ -673,18 +677,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     return;
                 }
 
-                // Step 6: Dispatch member properties in smaller batches so the UI thread
-                // can service input/paint between batches instead of blocking on one big dispatch.
+                // Step 6: 合并所有属性更新为单一批，降低 UI 线程队列压力
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.UserName = loaded.UserName;
                     member.Level = loaded.Level;
                     member.UID = loaded.UID;
                     member.AvatarUrl = loaded.AvatarUrl;
-                });
-
-                await _uiDispatcher.InvokeAsync(() =>
-                {
                     member.SoloRankScore = loaded.SoloRankScore;
                     member.DuoRankScore = loaded.DuoRankScore;
                     member.TrioRankScore = loaded.TrioRankScore;
@@ -692,10 +691,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     member.Top5Rate = loaded.Stats?.Top5Rate ?? member.Top5Rate;
                     member.DamagePlayer = loaded.Stats?.AvgDamage ?? member.DamagePlayer;
                     member.SurviveTime = loaded.Stats?.SurviveTime ?? member.SurviveTime;
-                });
-
-                await _uiDispatcher.InvokeAsync(() =>
-                {
                     var s = loaded.Stats;
                     member.RankName = s?.RankName ?? member.RankName;
                     member.RankIcon = s?.RankIcon ?? member.RankIcon;
@@ -704,20 +699,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     member.PageStarCount = s?.PageStarCount ?? 0;
                     member.PageHasStars = s?.PageHasStars ?? false;
                     member.RankTierScore = s?.RankTierScore ?? 0;
-                });
-
-                await _uiDispatcher.InvokeAsync(() =>
-                {
                     member.Stats.Clear();
                     if (loaded.Stats != null)
                     {
                         foreach (var kv in loaded.Stats.Stats)
                             member.Stats[kv.Key] = kv.Value;
                     }
-                });
-
-                await _uiDispatcher.InvokeAsync(() =>
-                {
                     member.StatusText = "";
                 });
             }
@@ -737,28 +724,16 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
                 });
             }
-            // Final cleanup: dispatch UI updates in smaller batches so the UI thread
-            // can service input/paint between batches instead of blocking on one big dispatch.
+            // Final cleanup: 合并为单一批，避免 UI 线程队列堆积
             try
             {
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.IsLoading = false;
-                });
-
-                await _uiDispatcher.InvokeAsync(() =>
-                {
                     UpdateDiffs();
-                });
-
-                await _uiDispatcher.InvokeAsync(() =>
-                {
                     IsLoading = TeamMembers.Any(m => m.IsLoading);
                     RaiseMemberProperties();
-                });
 
-                await _uiDispatcher.InvokeAsync(() =>
-                {
                     // 所有成员数据加载完毕时显示覆盖层提示框
                     if (TeamMembers.Count >= 2 && TeamMembers.All(m => !m.IsLoading) && !_overlayShownForThisRound && !_overlayDismissedThisRound)
                     {
@@ -823,17 +798,28 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             CancelAndDispose(ref _refreshMembersCts);
             _refreshMembersCts = new CancellationTokenSource();
             var ct = _refreshMembersCts.Token;
-            _ = RefreshMembersAsync(ct);
+            // Task.Run 将整个刷新流程推到 ThreadPool，避免 UI 线程上的同步启动开销
+            _ = Task.Run(() => RefreshMembersAsync(ct), ct);
         }
 
         private async Task RefreshMembersAsync(CancellationToken ct)
         {
             var members = TeamMembers.ToList();
+
+            // 在 UI 线程上设置加载状态，确保 WPF 绑定跨线程安全
+            await _uiDispatcher.InvokeAsync(() =>
+            {
+                foreach (var member in members)
+                {
+                    if (string.IsNullOrEmpty(member.UID)) continue;
+                    member.IsLoading = true;
+                }
+            });
+
             var tasks = new List<Task>();
             foreach (var member in members)
             {
                 if (string.IsNullOrEmpty(member.UID)) continue;
-                member.IsLoading = true;
                 // LoadMemberDataAsync 自身已是异步方法（ConfigureAwait(false) + UIDispatcher.InvokeAsync），
                 // 无需再用 Task.Run 多嵌一层 ThreadPool；直接收集 Task 即可。
                 tasks.Add(LoadMemberDataAsync(member, ct));
@@ -868,10 +854,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // 基类签名为 void，非事件 handler，禁止误标 async；页面初始化仅触发 fire-and-forget 异步任务即可。
             base.OnNavigatedToExecute(navigationContext);
 
-            // 进入页面时订阅 game status 事件，捕获英雄选择阶段
-            _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
-            _teamOverlayService.Dismissed += OnOverlayDismissed;
-
+            // 事件订阅已在构造函数中永久完成，页面导航不再重复订阅
             _ = LoadSeasonsAsync();
             // 注：LoadSeasonsAsync 内部已做"已成功加载则跳过"防抖；
             // 高频导航不会反复触发 HTTP 请求与 in-flight state machine 堆积。
@@ -952,24 +935,30 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
-            // 离开页面时取消订阅，避免 VM 泄漏。
-            // 注意：OnNavigatedToExecute 中订阅了两个事件，必须**一一对称解绑**：
-            //   - _gameStatusMonitor.GameStatusRecognized
-            //   - _teamOverlayService.Dismissed  ← 之前漏解，每次进出页面累加一个 handler
-            //     N 次导航后 OnOverlayDismissed 会被触发 N 次，且 VM 永不被 GC 释放。
-            // 同理 _teamOverlayService.RefreshAction 也持有 VM 的方法回调（RefreshFromOverlay），
-            // overlay service 是单例，必须在此对称清空，防止 VM 通过委托被外部单例长期持引用。
-            _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
-            _teamOverlayService.Dismissed -= OnOverlayDismissed;
+            // 离开页面时清理页面级操作和事件订阅。
+            // _gameStatusMonitor.GameStatusRecognized / _teamOverlayService.Dismissed 是构造函数中永久订阅的，
+            // 离开页面不解绑——后台 OCR 和右下角弹窗在任意页面都需要正常工作。
+            // 但 _teamOverlayService.RefreshAction 持有 VM 的方法回调（RefreshFromOverlay），
+            // overlay service 是单例，必须在此清空，防止 VM 通过委托被外部单例长期持引用。
+            // 注意：OCR 循环由游戏状态驱动，不在此处 Stop（否则离开 TeamInfo 页面后后台识别会中断）。
             _teamOverlayService.RefreshAction = null;
 
-            StopOcrLoop();
             CancelAndDispose(ref _refreshMembersCts);
             CancelAndDispose(ref _refreshOcrCts);
             // _loadSeasonsCts 也要在离开页面时取消：留它在 in-flight 不会立即崩，但下次再进页面
             // 会被新的 CancelAndDispose 替换，相当于多保留一个不必要的 HTTP/state machine 引用。
             CancelAndDispose(ref _loadSeasonsCts);
             base.OnNavigatedFromExecute(navigationContext);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
+                _teamOverlayService.Dismissed -= OnOverlayDismissed;
+            }
+            base.Dispose(disposing);
         }
     }
 
@@ -1289,3 +1278,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
     }
 }
+
+
+
+
+
