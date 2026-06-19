@@ -343,6 +343,113 @@ namespace BlackGoldAncientSword.App.Shell
             sb.Begin();
         }
 
+
+        private void TrayMenu_ContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<ISettingsService>();
+
+            TrayLangZhCN.IsChecked = settings.Current.Language == "zh-CN";
+            TrayLangZhTW.IsChecked = settings.Current.Language == "zh-TW";
+            TrayLangEn.IsChecked = settings.Current.Language == "en";
+
+            TrayCloseMinToTaskbar.IsChecked = settings.Current.CloseBehavior == "MinimizeToTaskbar";
+            TrayCloseExitDirectly.IsChecked = settings.Current.CloseBehavior == "ExitDirectly";
+
+            TrayRememberCloseBehavior.IsChecked = settings.Current.CloseBehaviorRemembered;
+            TrayShowTeamOverlay.IsChecked = settings.Current.ShowTeamOverlayDuringHeroSelection;
+        }
+
+        private void TrayMenu_Language_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not System.Windows.Controls.RadioButton rb) return;
+            if (rb.IsChecked != true) return;
+
+            var localization = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<ILocalizationService>();
+            var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<ISettingsService>();
+
+            var langCode = rb.Name switch
+            {
+                nameof(TrayLangZhCN) => "zh-CN",
+                nameof(TrayLangZhTW) => "zh-TW",
+                nameof(TrayLangEn) => "en",
+                _ => (string?)null
+            };
+            if (langCode == null) return;
+
+            localization.ApplyLanguage(langCode);
+            localization.CurrentLanguage = langCode;
+            settings.Current.Language = langCode;
+            _ = settings.SaveAsync();
+
+            TrayLangZhCN.IsChecked = langCode == "zh-CN";
+            TrayLangZhTW.IsChecked = langCode == "zh-TW";
+            TrayLangEn.IsChecked = langCode == "en";
+        }
+
+        private void TrayMenu_CloseBehavior_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not System.Windows.Controls.RadioButton rb) return;
+
+            var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<ISettingsService>();
+
+            var behavior = rb.Name switch
+            {
+                nameof(TrayCloseMinToTaskbar) => "MinimizeToTaskbar",
+                nameof(TrayCloseExitDirectly) => "ExitDirectly",
+                _ => (string?)null
+            };
+            if (behavior == null) return;
+
+            settings.Current.CloseBehavior = behavior;
+            _ = settings.SaveAsync();
+
+            TrayCloseMinToTaskbar.IsChecked = behavior == "MinimizeToTaskbar";
+            TrayCloseExitDirectly.IsChecked = behavior == "ExitDirectly";
+        }
+
+        private void TrayMenu_ShowTeamOverlay_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not System.Windows.Controls.CheckBox cb) return;
+            var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<ISettingsService>();
+            settings.Current.ShowTeamOverlayDuringHeroSelection = cb.IsChecked == true;
+            _ = settings.SaveAsync();
+            TrayShowTeamOverlay.IsChecked = settings.Current.ShowTeamOverlayDuringHeroSelection;
+        }
+
+        private void TrayMenu_RememberCloseBehavior_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not System.Windows.Controls.CheckBox cb) return;
+            var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<ISettingsService>();
+            settings.Current.CloseBehaviorRemembered = cb.IsChecked == true;
+            _ = settings.SaveAsync();
+            TrayRememberCloseBehavior.IsChecked = settings.Current.CloseBehaviorRemembered;
+        }
+
+        private void TrayMenu_ItemText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not FrameworkElement textElement) return;
+            if (textElement.Parent is not Grid grid) return;
+
+            foreach (var child in grid.Children)
+            {
+                if (child is System.Windows.Controls.RadioButton rb)
+                {
+                    rb.IsChecked = true;
+                    rb.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                    e.Handled = true;
+                    return;
+                }
+
+                if (child is System.Windows.Controls.CheckBox cb)
+                {
+                    cb.IsChecked = !cb.IsChecked;
+                    cb.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
         private void OnNavigateToTeamInfoRequested()
         {
             RestoreFromTray();

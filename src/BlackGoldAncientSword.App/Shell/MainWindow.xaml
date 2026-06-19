@@ -678,7 +678,7 @@
             ToolTipText="{DynamicResource App.Title}"
             TrayMouseDoubleClick="TrayIcon_TrayMouseDoubleClick">
             <tb:TaskbarIcon.ContextMenu>
-                <ContextMenu>
+                <ContextMenu Opened="TrayMenu_ContextMenu_Opened">
                     <MenuItem Header="{Binding GameStatusText}" IsEnabled="False">
                         <MenuItem.Style>
                             <Style TargetType="MenuItem">
@@ -695,6 +695,98 @@
                     <MenuItem Click="TrayMenu_Settings_Click" Header="{DynamicResource Nav.Settings}" />
                     <MenuItem Click="TrayMenu_Stats_Click" Header="{DynamicResource Nav.Stats}" />
                     <MenuItem Click="TrayMenu_TeamInfo_Click" Header="{DynamicResource TeamInfo.Title}" />
+                    <!--  Language submenu  -->
+                    <MenuItem Header="{DynamicResource Settings.Category.Language}">
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayLangZhCN" GroupName="TrayLanguageGroup" Click="TrayMenu_Language_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="中文简体" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayLangZhTW" GroupName="TrayLanguageGroup" Click="TrayMenu_Language_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="中文繁體" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayLangEn" GroupName="TrayLanguageGroup" Click="TrayMenu_Language_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="English" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                    </MenuItem>
+                    <!--  Close Behavior submenu  -->
+                    <MenuItem Header="{DynamicResource Settings.Category.CloseBehavior}">
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayCloseMinToTaskbar" GroupName="TrayCloseBehaviorGroup" Click="TrayMenu_CloseBehavior_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Settings.CloseBehavior.MinimizeToTaskbar}" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayCloseExitDirectly" GroupName="TrayCloseBehaviorGroup" Click="TrayMenu_CloseBehavior_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Settings.CloseBehavior.ExitDirectly}" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox x:Name="TrayRememberCloseBehavior" Click="TrayMenu_RememberCloseBehavior_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Settings.CloseBehavior.RememberChoice}" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem StaysOpenOnClick="True">
+                        <MenuItem.Header>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox x:Name="TrayShowTeamOverlay" Click="TrayMenu_ShowTeamOverlay_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Settings.ShowTeamOverlayDuringHeroSelection}" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                            </Grid>
+                        </MenuItem.Header>
+                    </MenuItem>
                     <Separator />
                     <MenuItem Click="TrayMenu_Exit_Click" Header="{DynamicResource TitleBar.Close}" />
                 </ContextMenu>
