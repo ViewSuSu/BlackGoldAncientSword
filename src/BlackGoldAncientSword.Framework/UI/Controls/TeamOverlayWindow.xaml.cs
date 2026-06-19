@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace BlackGoldAncientSword.Framework.UI.Controls
@@ -46,20 +47,18 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             _viewModel = viewModel;
             DataContext = _viewModel;
             InitializeComponent();
-            SourceInitialized += OnSourceInitialized;
 
-            _viewModel.CloseRequested += OnCloseRequested;
+            WeakEventManager<Window, EventArgs>.AddHandler(
+                this, nameof(SourceInitialized), OnSourceInitialized);
+            WeakEventManager<TeamOverlayViewModel, EventArgs>.AddHandler(
+                _viewModel, nameof(TeamOverlayViewModel.CloseRequested), OnCloseRequested);
         }
 
         private void OnSourceInitialized(object? sender, EventArgs e)
         {
             PositionOnGameMonitor();
-            LocationChanged += (_, _) => { };
-        }
-
-        private void OnCloseRequested(object? sender, EventArgs e)
-        {
-            Hide();
+            WeakEventManager<Window, EventArgs>.AddHandler(
+                this, nameof(LocationChanged), OnLocationChanged);
         }
 
         /// <summary>
@@ -107,6 +106,25 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
                 foreach (var p in procs) p.Dispose();
             }
         }
+
+        /// <summary>
+        /// 标题栏鼠标按下时拖动窗口。
+        /// </summary>
+        private void TitleBarGrid_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                DragMove();
+            }
+        }
+
+        private void OnCloseRequested(object? sender, EventArgs e)
+        {
+            Hide();
+        }
+
+        private void OnLocationChanged(object? sender, EventArgs e)
+        {
+        }
     }
 }
-

@@ -13,6 +13,7 @@ using Prism.Regions;
 using BlackGoldAncientSword.Framework.Core.Bases;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
+using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.App.Shell
 {
@@ -55,12 +56,16 @@ namespace BlackGoldAncientSword.App.Shell
                 new FrameworkPropertyMetadata(200));
         }
 
-        public MainWindow()
+        private readonly ITeamOverlayService _teamOverlayService;
+
+        public MainWindow(ITeamOverlayService teamOverlayService)
         {
+            _teamOverlayService = teamOverlayService;
             InitializeComponent();
             SourceInitialized += OnSourceInitialized;
             StateChanged += OnWindowStateChanged;
             Closing += OnWindowClosing;
+            _teamOverlayService.NavigateToTeamInfoRequested += OnNavigateToTeamInfoRequested;
         }
 
         public void MinimizeToTray()
@@ -368,6 +373,11 @@ namespace BlackGoldAncientSword.App.Shell
             };
 
             sb.Begin();
+        }
+
+        private void OnNavigateToTeamInfoRequested()
+        {
+            RestoreFromTray();
         }
     }
 }

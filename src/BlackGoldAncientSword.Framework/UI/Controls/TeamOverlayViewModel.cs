@@ -31,6 +31,7 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
         public DelegateCommand RefreshCommand { get; }
 
         public event EventHandler? CloseRequested;
+        public event EventHandler? NavigateToTeamInfoRequested;
         public event EventHandler<bool>? DontShowAgainChanged;
         public event EventHandler? RefreshRequested;
 
@@ -40,6 +41,7 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             RefreshCommand = new DelegateCommand(() => RefreshRequested?.Invoke(this, EventArgs.Empty));
             NavigateToTeamInfoCommand = new DelegateCommand(() =>
             {
+                NavigateToTeamInfoRequested?.Invoke(this, EventArgs.Empty);
                 var navigation = containerProvider.Resolve<IMainContentNavigationService>();
                 navigation.NavigateTo(PageNames.TeamInfoPage);
                 CloseRequested?.Invoke(this, EventArgs.Empty);
