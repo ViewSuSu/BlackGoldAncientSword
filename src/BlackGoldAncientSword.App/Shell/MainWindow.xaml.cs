@@ -238,42 +238,9 @@ namespace BlackGoldAncientSword.App.Shell
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<Framework.Services.Abstractions.ISettingsService>();
-                var moduleManager = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<IModuleManager>();
-                var regionManager = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<IRegionManager>();
-
-                // If remembered, perform saved action directly
-                if (settings.Current.CloseBehaviorRemembered)
-                {
-                    switch (settings.Current.CloseBehavior)
-                    {
-                        case "MinimizeToTaskbar":
-                            WindowState = WindowState.Minimized;
-                            return;
-                        case "MinimizeToTray":
-                            Hide();
-                            return;
-                        case "ExitDirectly":
-                            _isExiting = true;
-                            Close();
-                            return;
-                    }
-                }
-
-                // Show close prompt overlay
-                var moduleName = "ClosePromptModule";
-                try { moduleManager.LoadModule(moduleName); } catch { }
-                regionManager.RequestNavigate(
-                    Framework.Core.Consts.GlobalConstant.ClosePromptRegion,
-                    Framework.Core.Consts.PageNames.ClosePromptPage);
-            }
-            catch
-            {
-                // Fallback: just close if anything goes wrong
-                Close();
-            }
+            // 直接终止进程，不执行任何优雅清理。
+            // JobObject (JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE) 保证子进程 (PaddleOCR-json.exe) 被 OS 自动清理。
+            System.Diagnostics.Process.GetCurrentProcess().Kill();
         }
 
         private void ToastItemBorder_Loaded(object sender, RoutedEventArgs e)
@@ -350,8 +317,9 @@ namespace BlackGoldAncientSword.App.Shell
 
         private void TrayMenu_Exit_Click(object sender, RoutedEventArgs e)
         {
-            _isExiting = true;
-            Close();
+            // 直接终止进程，不执行任何优雅清理。
+            // JobObject (JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE) 保证子进程 (PaddleOCR-json.exe) 被 OS 自动清理。
+            System.Diagnostics.Process.GetCurrentProcess().Kill();
         }
 
 

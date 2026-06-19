@@ -38,6 +38,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private bool _hasEverHadData;
         private bool _overlayShownForThisRound;
         private bool _overlayDismissedThisRound;
+        /// <summary>
+        /// 标记 OCR 是否已成功完成至少一轮完整识别（识别 + 数据加载）。
+        /// 用于 <see cref="StartOcrLoop"/> 的保护性判断：已有有效数据时不再重复启动轮询循环，
+        /// 但用户仍可通过刷新按钮手动触发单次重新识别。
+        /// 在游戏状态变为 Unknown 时重置。
+        /// </summary>
+        private bool _ocrDataLoadedSuccessfully;
 
         // 通过 ILocalizedTextProvider 访问字符串本地化资源，避免 VM 直接依赖 System.Windows.Application。
         private string L(string key, string fallback) => _localizedText.Get(key, fallback);
@@ -239,6 +246,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                    IsHeroSelectionPhase = false;
                    _teamOverlayService.Hide();
                     StopOcrLoop();
+                    CancelAndDispose(ref _refreshOcrCts);
                    break;
                case GameStatus.Unknown:
                    IsHeroSelectionPhase = false;
@@ -248,6 +256,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     if (TeamMembers.Count > 0)
                     {
                         _hasEverHadData = false;
+                        _ocrDataLoadedSuccessfully = false;
                         TeamMembers.Clear();
                         DiffLeft.Clear();
                         DiffRight.Clear();
@@ -259,6 +268,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private void StartOcrLoop()
         {
+            // 如果上一轮已成功完成完整识别（有 UID、数据已加载），不再重复启动 OCR 轮询。
+            // 用户仍可通过右上角的刷新按钮手动触发单次识别（RefreshOcrCommand → RefreshOcrOnceAsync）。
+            if (_ocrDataLoadedSuccessfully)
+            {
+                Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}] Skip OCR loop: valid data already loaded.");
+                return;
+            }
+
             // Token 必须在 lock 内取出：单 UI 线程下虽然 Stop/Start 不会并发，
             // 但写成 lock 外读 `_ocrLoopCts!.Token` 会让"如果有人并发 Stop"
             // 的场景命中 NullReferenceException（CancelAndDispose 把 ref 置 null）。
@@ -358,6 +375,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 });
 
                 await Task.WhenAll(tasks);
+                _ocrDataLoadedSuccessfully = true;
             }
             catch (OperationCanceledException)
             {
@@ -738,6 +756,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     if (TeamMembers.Count >= 2 && TeamMembers.All(m => !m.IsLoading) && !_overlayShownForThisRound && !_overlayDismissedThisRound)
                     {
                         _overlayShownForThisRound = true;
+                        _ocrDataLoadedSuccessfully = true;
                         var overlayMembers = TeamMembers.Select(m => new TeamOverlayMemberItem
                         {
                             UserName = m.UserName,
@@ -753,6 +772,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         _teamOverlayService.RefreshAction = RefreshFromOverlay;
                     }
                 });
+                _ocrDataLoadedSuccessfully = true;
             }
             catch (Exception ex)
             {
