@@ -239,29 +239,47 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 case GameStatus.HeroSelection:
                     IsHeroSelectionPhase = true;
                     _overlayShownForThisRound = false;
+                    _overlayDismissedThisRound = false;
+                    _ocrDataLoadedSuccessfully = false;
                     StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
                     StartOcrLoop();
                     break;
-               case GameStatus.InGame:
-                   IsHeroSelectionPhase = false;
-                   _teamOverlayService.Hide();
-                    StopOcrLoop();
-                    CancelAndDispose(ref _refreshOcrCts);
-                   break;
-               case GameStatus.Unknown:
-                   IsHeroSelectionPhase = false;
-                   _teamOverlayService.Hide();
-                    StopOcrLoop();
-                   StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
-                    if (TeamMembers.Count > 0)
-                    {
-                        _hasEverHadData = false;
-                        _ocrDataLoadedSuccessfully = false;
-                        TeamMembers.Clear();
-                        DiffLeft.Clear();
-                        DiffRight.Clear();
-                        RaiseMemberProperties();
-                    }
+                case GameStatus.InGame:
+                    IsHeroSelectionPhase = false;
+                    _teamOverlayService.Hide();
+                     StopOcrLoop();
+                     CancelAndDispose(ref _refreshOcrCts);
+                    break;
+                case GameStatus.BattleEnded:
+                    IsHeroSelectionPhase = false;
+                    _ocrDataLoadedSuccessfully = false;
+                    _teamOverlayService.Hide();
+                     StopOcrLoop();
+                     CancelAndDispose(ref _refreshOcrCts);
+                    StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
+                     if (TeamMembers.Count > 0)
+                     {
+                         _hasEverHadData = false;
+                         TeamMembers.Clear();
+                         DiffLeft.Clear();
+                         DiffRight.Clear();
+                         RaiseMemberProperties();
+                     }
+                    break;
+                case GameStatus.Unknown:
+                    IsHeroSelectionPhase = false;
+                    _teamOverlayService.Hide();
+                     StopOcrLoop();
+                    StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
+                     if (TeamMembers.Count > 0)
+                     {
+                         _hasEverHadData = false;
+                         _ocrDataLoadedSuccessfully = false;
+                         TeamMembers.Clear();
+                         DiffLeft.Clear();
+                         DiffRight.Clear();
+                         RaiseMemberProperties();
+                     }
                     break;
             }
         }
