@@ -192,10 +192,19 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             RefreshCacheSizeAsync().SafeFireAndForget("Settings.RefreshCacheSize");
         }
 
-        protected override void OnNavigatedToExecute(NavigationContext navigationContext)
+        protected override async void OnNavigatedToExecute(NavigationContext navigationContext)
         {
+            await _settings.ReloadAsync();
+
+            _dataPath = _settings.Current.DataSavePath;
+            _cachePath = _settings.Current.CachePath;
+
+            RaisePropertyChanged(nameof(DataPath));
+            RaisePropertyChanged(nameof(CachePath));
             RaisePropertyChanged(nameof(SelectedCloseBehavior));
             RaisePropertyChanged(nameof(RememberCloseBehavior));
+            RaisePropertyChanged(nameof(SelectedLanguage));
+            RaisePropertyChanged(nameof(ShowTeamOverlayDuringHeroSelection));
             base.OnNavigatedToExecute(navigationContext);
         }
 
