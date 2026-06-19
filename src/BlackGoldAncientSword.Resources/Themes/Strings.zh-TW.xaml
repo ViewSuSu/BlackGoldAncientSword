@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <ns0:ResourceDictionary xmlns:ns0="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:ns1="clr-namespace:System;assembly=mscorlib" xmlns:ns2="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <ns1:String ns2:Key="App.Title">黑金古刀-永劫助手</ns1:String>
@@ -54,6 +54,7 @@
     <ns1:String ns2:Key="Stats.RecentBattles">最近10場對局</ns1:String>
     <ns1:String ns2:Key="Stats.LoadError">載入戰績失敗，請檢查網路後重試。</ns1:String>
     <ns1:String ns2:Key="Stats.NoPlayerName">請先在設定中設定玩家名稱</ns1:String>
+    <ns1:String ns2:Key="Stats.GameNotInstalled">您目前未下載遊戲</ns1:String>
     <ns1:String ns2:Key="Stats.PlayerNotFound">找不到該玩家，請檢查名稱是否正確</ns1:String>
     <ns1:String ns2:Key="Stats.CopyNickname">複製暱稱</ns1:String>
     <ns1:String ns2:Key="Stats.CopyUID">複製UID</ns1:String>
@@ -180,6 +181,8 @@
 
     
     <ns1:String ns2:Key="Settings.Category.CloseBehavior">關閉行為</ns1:String>
+    <ns1:String ns2:Key="Settings.CopyTeamOverlayName">複製名稱</ns1:String>
+    <ns1:String ns2:Key="Settings.Category.TeamOverlay">英雄選擇提示</ns1:String>
     <ns1:String ns2:Key="Settings.CloseBehavior.Description">設定點擊關閉按鈕時的預設行為</ns1:String>
     <ns1:String ns2:Key="Settings.CloseBehavior.Ask">每次詢問</ns1:String>
     <ns1:String ns2:Key="Settings.CloseBehavior.MinimizeToTaskbar">最小化到任務欄</ns1:String>
@@ -207,14 +210,9 @@
     <ns1:String ns2:Key="Settings.UpdateDownloading">正在下載更新...</ns1:String>
     <ns1:String ns2:Key="Settings.CurrentVersion">目前版本: {0}</ns1:String>
     <ns1:String ns2:Key="Settings.CurrentVersionLatest">目前版本（最新）: {0}</ns1:String>
-
-    
-    <ns1:String ns2:Key="Settings.AutoUpdate">更新</ns1:String>
-
-    
-    <ns1:String ns2:Key="MainWindow.CheckForUpdates">檢測更新</ns1:String>
+<ns1:String ns2:Key="MainWindow.CheckForUpdates">檢測更新</ns1:String>
     <ns1:String ns2:Key="MainWindow.CheckForUpdates.ToolTip">檢查是否有新版本</ns1:String>
-    <ns1:String ns2:Key="Settings.AutoCheckUpdates">啟動時檢測新版本</ns1:String>
+<ns1:String ns2:Key="Settings.ShowTeamOverlayDuringHeroSelection">英雄選擇時顯示隊伍提示</ns1:String>
     
     <ns1:String ns2:Key="UpdateDialog.SoftwareUpdate">軟體更新</ns1:String>
     <ns1:String ns2:Key="UpdateDialog.NewVersionAvailable">有新版本可用</ns1:String>
@@ -266,5 +264,37 @@
     <ns1:String ns2:Key="TeamInfo.LoadFailed">載入失敗</ns1:String>
     <ns1:String ns2:Key="TeamInfo.LoadError">載入錯誤</ns1:String>
     <ns1:String ns2:Key="TeamInfo.QueryFailed">查詢失敗</ns1:String>
-    <ns1:String ns2:Key="TeamInfo.RefreshOcr">重新識別隊伍資訊</ns1:String>
+   <ns1:String ns2:Key="TeamInfo.RefreshOcr">重新識別隊伍資訊</ns1:String>
+   <ns1:String ns2:Key="TeamOverlay.DontShowAgain">是否不再提示</ns1:String>
+
+    <!--  MainWindow - Contact & Update Log  -->
+    <ns1:String ns2:Key="MainWindow.ViewUpdateLog">檢視更新日誌</ns1:String>
+    <ns1:String ns2:Key="MainWindow.ContactAuthor">聯繫作者</ns1:String>
+    <ns1:String ns2:Key="MainWindow.WeChatInfo">微信號：Yyu16147</ns1:String>
+
+
+    <!--  TeamInfo - Player Stats Navigation  -->
+    <ns1:String ns2:Key="TeamInfo.ViewPlayerStats">查看該玩家詳細戰績</ns1:String>
+
+    <!--  TeamOverlay  -->
+    <ns1:String ns2:Key="TeamOverlay.Title">隊伍資訊</ns1:String>
+    <ns1:String ns2:Key="TeamOverlay.ViewTeamInfo">查看隊伍資訊</ns1:String>
+    <ns1:String ns2:Key="TeamOverlay.ViewTeamInfoButton">查看詳情</ns1:String>
+
+    <!--  Feedback  -->
+    <ns1:String ns2:Key="Feedback.Title">問題反饋</ns1:String>
+    <ns1:String ns2:Key="Feedback.ClientGroupTitle">客戶端問題反饋群</ns1:String>
+    <ns1:String ns2:Key="Feedback.ClientGroupQQ">①群：146088141</ns1:String>
+    <ns1:String ns2:Key="Feedback.DataGroupTitle">數據問題反饋群</ns1:String>
+    <ns1:String ns2:Key="Feedback.BotDescription">QQ群機器人也可以查戰績</ns1:String>
+    <ns1:String ns2:Key="Feedback.DataGroup1">①群：476074617</ns1:String>
+    <ns1:String ns2:Key="Feedback.DataGroup2">②群：649891198</ns1:String>
+    <ns1:String ns2:Key="Feedback.DataGroup3">③群：966720321</ns1:String>
+    <ns1:String ns2:Key="Feedback.QQEntryRequirement">QQ等級超過32（兩個太陽）的自動審核進群，小號不給進</ns1:String>
+    <ns1:String ns2:Key="Feedback.WebTitle">網頁端</ns1:String>
+    <ns1:String ns2:Key="Feedback.GitHubTitle">GitHub</ns1:String>
+    <ns1:String ns2:Key="Feedback.Close">關閉</ns1:String>
 </ns0:ResourceDictionary>
+
+
+

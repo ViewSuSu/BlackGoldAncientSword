@@ -46,7 +46,7 @@ internal static class WgcInterop
                 throw new NotSupportedException($"RoGetActivationFactory: 0x{hr:X8}. Windows.Graphics.Capture may not be available.");
 
             var interopIid = IID_IGraphicsCaptureItemInterop;
-            hr = Marshal.QueryInterface(fac, ref interopIid, out var interop);
+            hr = Marshal.QueryInterface(fac, in interopIid, out var interop);
             Marshal.Release(fac);
 
             if (hr != 0)
@@ -142,7 +142,7 @@ internal static class WgcInterop
     public static IntPtr GetDxgiInterface(IntPtr surface, Guid dxgiIid)
     {
         var accessIid = IID_IDirect3DDxgiInterfaceAccess;
-        int hr = Marshal.QueryInterface(surface, ref accessIid, out var access);
+        int hr = Marshal.QueryInterface(surface, in accessIid, out var access);
         if (hr != 0) throw new InvalidOperationException($"QI(DxgiAccess): 0x{hr:X8}");
         try
         {
@@ -158,7 +158,7 @@ internal static class WgcInterop
     public static void StopCapture(IntPtr session)
     {
         var closableIid = IID_IClosable;
-        int hr = Marshal.QueryInterface(session, ref closableIid, out var closable);
+        int hr = Marshal.QueryInterface(session, in closableIid, out var closable);
         if (hr != 0) throw new InvalidOperationException($"QI(IClosable): 0x{hr:X8}");
         try
         {

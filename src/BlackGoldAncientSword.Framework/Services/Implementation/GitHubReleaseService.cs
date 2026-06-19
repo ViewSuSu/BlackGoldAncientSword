@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
-using Newtonsoft.Json;
+using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
 {
@@ -12,6 +14,13 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
     public class GitHubReleaseService : IGitHubReleaseService
     {
         private const string ReleasesUrl = "https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/releases";
+
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
 
         private static readonly HttpClient _http = new()
         {
@@ -30,7 +39,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             try
             {
                 var json = await _http.GetStringAsync(ReleasesUrl);
-                var rawList = JsonConvert.DeserializeObject<List<GitHubReleaseRaw>>(json);
+                var rawList = JsonSerializer.Deserialize<List<GitHubReleaseRaw>>(json, _jsonOptions);
                 if (rawList == null) return new List<GitHubReleaseInfo>();
 
                 var result = new List<GitHubReleaseInfo>(rawList.Count);
@@ -54,22 +63,21 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
         }
 
-        [JsonObject]
         private class GitHubReleaseRaw
         {
-            [JsonProperty("tag_name")]
+            [JsonPropertyName("tag_name")]
             public string? TagName { get; set; }
 
-            [JsonProperty("name")]
+            [JsonPropertyName("name")]
             public string? Name { get; set; }
 
-            [JsonProperty("body")]
+            [JsonPropertyName("body")]
             public string? Body { get; set; }
 
-            [JsonProperty("published_at")]
+            [JsonPropertyName("published_at")]
             public string? PublishedAt { get; set; }
 
-            [JsonProperty("html_url")]
+            [JsonPropertyName("html_url")]
             public string? HtmlUrl { get; set; }
         }
     }

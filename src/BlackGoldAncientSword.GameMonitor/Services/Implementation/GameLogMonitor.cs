@@ -1,53 +1,33 @@
-using System.Text;
-using System.Text.RegularExpressions;
+using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal;
 
 namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
 {
+    /// <summary>
+    /// 游戏日志监视器 facade。本身不再承担文件读取 / Poll 循环 / 状态机这三件事——
+    /// 分别委托给 <see cref="LogReader"/> / <see cref="LogPoller"/> / <see cref="BattleStateMachine"/>。
+    /// 自己只负责：FileSystemWatcher 生命周期、对外事件分发、Stop/Dispose 顺序、IsRunning 早退。
+    /// </summary>
     [Component(ComponentLifetime.Singleton)]
     public class GameLogMonitor : IGameLogMonitor
     {
-        private static readonly Regex BattleTidRegex = new(
-            @"battle_tid:(\d+)", RegexOptions.Compiled);
-
-        private static readonly Regex MapIdRegex = new(
-            @"map_id:\s*(\d+)", RegexOptions.Compiled);
-
-        private static readonly Regex RoomIdRegex = new(
-            @"roomid:([0-9a-fA-F]+)", RegexOptions.Compiled);
-
-        private static readonly Regex RoomTypeRegex = new(
-            @"room_type:(\d+)", RegexOptions.Compiled);
-
-        private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(500);
+        private readonly LogReader _reader = new();
+        private readonly LogPoller _poller = new();
+        private readonly BattleStateMachine _stateMachine = new();
 
         private FileSystemWatcher? _watcher;
-        private long _lastPosition;
-        private string? _currentBattleId;
-        private string? _currentMapId;
-        private string? _currentRoomId;
-        private string? _currentRoomType;
-        private bool _isInBattle;
-        private bool _joinedBattle;
-        private bool _suppressEvents;
-        private readonly object _stateLock = new();
-        private readonly SemaphoreSlim _readSemaphore = new(1, 1);
         private CancellationTokenSource? _pollCts;
+        // 保留 PollLoop 的 Task 句柄：Stop/Dispose 必须 await 它退出，
+        // 否则 Dispose 释放 _reader 后 PollLoop 仍在跑会触发 ObjectDisposedException。
+        private Task? _pollTask;
 
         public event EventHandler<BattleEventArgs>? BattleStarted;
         public event EventHandler<BattleEventArgs>? BattleEnded;
         public event EventHandler<BattleEventArgs>? BattleJoined;
 
-        public string? CurrentBattleId
-        {
-            get { lock (_stateLock) return _currentBattleId; }
-        }
-
-        public bool IsInBattle
-        {
-            get { lock (_stateLock) return _isInBattle; }
-        }
-
+        public string? CurrentBattleId => _stateMachine.CurrentBattleId;
+        public bool IsInBattle => _stateMachine.IsInBattle;
         public bool IsRunning { get; private set; }
 
         public GameLogMonitor()
@@ -59,13 +39,13 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             if (IsRunning) return;
 
             var fullPath = Framework.Services.AppSettings.GetDefaultGameLogPath();
-            if (string.IsNullOrEmpty(fullPath) || !System.IO.File.Exists(fullPath))
+            if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
                 return;
 
-            await ReadExistingContentAsync(fullPath);
+            await ReplayExistingContentAsync(fullPath).ConfigureAwait(false);
 
-            var logDir = System.IO.Path.GetDirectoryName(fullPath) ?? ".";
-            var logFile = System.IO.Path.GetFileName(fullPath);
+            var logDir = Path.GetDirectoryName(fullPath) ?? ".";
+            var logFile = Path.GetFileName(fullPath);
 
             _watcher = new FileSystemWatcher(logDir, logFile)
             {
@@ -75,20 +55,32 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             _watcher.Changed += OnLogChanged;
 
             _pollCts = new CancellationTokenSource();
-            _ = PollLoopAsync(fullPath, _pollCts.Token);
+            _pollTask = _poller.RunAsync(
+                token => _reader.TryReadWithLockAsync(() => ReadNewContentAsync(fullPath), token),
+                _pollCts.Token);
 
             IsRunning = true;
         }
 
         public void Stop()
         {
+            // 顺序：1) 置 IsRunning=false（OnLogChanged 早退）；2) 取消 PollLoop 的 token；
+            // 3) FSW 停 raise + 解绑 + Dispose；4) 等 _pollTask 退出；5) Dispose CTS（仅在按时退出时）。
+            // 故意先 Cancel 再 Dispose FSW：先打断异步路径，避免 _watcher.Dispose 期间 PollLoop 仍在
+            // 持有 token 跑读取动作。
+            // **故意不 Dispose _reader（其内部 semaphore）** —— 后续可能仍有 in-flight OnLogChanged
+            // 在 Task.Run 队列中，semaphore 必须保持可用；真正释放放到 Dispose() 里，
+            // 并依赖 LogReader / OnLogChanged 内部 catch ObjectDisposedException 兜底剩余的 race 窗口。
             IsRunning = false;
 
             if (_pollCts != null)
             {
-                try { _pollCts.Cancel(); } catch { }
-                _pollCts.Dispose();
-                _pollCts = null;
+                try { _pollCts.Cancel(); }
+                catch (Exception ex)
+                {
+                    // 极端情况下 _pollCts 已被另一路径 Dispose；吞掉以保证 Stop 不抛，但留诊断。
+                    Debug.WriteLine($"[{nameof(GameLogMonitor)}] _pollCts.Cancel failed: {ex.Message}");
+                }
             }
 
             if (_watcher != null)
@@ -98,312 +90,132 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                 _watcher.Dispose();
                 _watcher = null;
             }
+
+            if (_pollCts != null)
+            {
+                // 等待 PollLoop 真正退出再释放 CTS / semaphore；超时 500ms 防止 Stop 卡死。
+                // Stop 是同步签名，无法 await——这里用同步等待是有意的权衡（非 IO 路径）。
+                if (_pollTask != null)
+                {
+                    bool exited = false;
+                    try { exited = _pollTask.Wait(TimeSpan.FromMilliseconds(500)); }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[{nameof(GameLogMonitor)}] _pollTask wait failed: {ex.Message}");
+                    }
+
+                    if (!exited)
+                    {
+                        // PollLoop 未在 500ms 内退出。若此刻 Dispose CTS，PollLoop 仍持有 token 触发的
+                        // 注册回调路径会抛 ObjectDisposedException（LogReader 已吞 ODE，但 token.Register
+                        // 等内部路径可能未覆盖）。宁可接受小泄漏 (一个 CTS+Token 句柄)，也不冒崩溃风险。
+                        Debug.WriteLine($"[{nameof(GameLogMonitor)}] PollLoop 未在 500ms 内退出，保留 CTS 避免 ODE");
+                        _pollCts = null;
+                        _pollTask = null;
+                        return;
+                    }
+                    _pollTask = null;
+                }
+
+                _pollCts.Dispose();
+                _pollCts = null;
+            }
         }
 
         public void Dispose()
         {
             Stop();
-            _readSemaphore.Dispose();
+            // Dispose 在 Stop 之后，但 OnLogChanged 已被解绑、IsRunning=false 早退；
+            // 即便残余 in-flight 仍能命中 ObjectDisposedException catch 而非崩溃 ThreadPool。
+            _reader.Dispose();
         }
 
-        private async Task PollLoopAsync(string fullPath, CancellationToken token)
+        /// <summary>
+        /// 启动期回放：把现有日志整文件读一遍以建立状态机当前对局状态，但抑制事件触发。
+        /// 失败不抛——监控功能不可用比让 StartAsync 抛更可接受（上层 SafeFireAndForget 只 log）。
+        /// </summary>
+        private async Task ReplayExistingContentAsync(string fullPath)
         {
-            while (!token.IsCancellationRequested)
-            {
-                try
-                {
-                    await Task.Delay(PollInterval, token);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-
-                if (!await _readSemaphore.WaitAsync(0, token))
-                    continue;
-
-                try
-                {
-                    await ReadNewContentAsync(fullPath);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch
-                {
-                }
-                finally
-                {
-                    try { _readSemaphore.Release(); } catch { }
-                }
-            }
-        }
-
-        private async Task ReadExistingContentAsync(string fullPath)
-        {
-            _suppressEvents = true;
+            _stateMachine.BeginSuppressedReplay();
             try
             {
-                await using var fs = new System.IO.FileStream(
-                    fullPath, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite,
-                    bufferSize: 4096, useAsync: true);
-                using var reader = new StreamReader(fs);
-                var content = await reader.ReadToEndAsync();
-                ProcessContent(content);
-
-                lock (_stateLock)
-                {
-                    try { _lastPosition = new System.IO.FileInfo(fullPath).Length; }
-                    catch { }
-                }
+                var (content, length) = await _reader.ReadAllAsync(fullPath).ConfigureAwait(false);
+                // 抑制期 ProcessContent 不会返回事件，无需触发。
+                _stateMachine.ProcessContent(content);
+                _stateMachine.SetLastPosition(length);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(GameLogMonitor)}] ReplayExistingContent failed: {ex.Message}");
+            }
             finally
             {
-                _suppressEvents = false;
-                ResetState();
+                _stateMachine.EndSuppressedReplay();
             }
         }
 
-        private void OnLogChanged(object sender, System.IO.FileSystemEventArgs e)
+        private void OnLogChanged(object sender, FileSystemEventArgs e)
         {
+            // FileSystemWatcher 在 ThreadPool raise；Stop()/Dispose() 之后 FSW 内部仍可能 schedule
+            // 一到两次回调（已经入队但未跑）。这些回调若进到下面对已 Dispose 的 _reader.semaphore
+            // 做 WaitAsync/Release，会在线程池上裸抛 ObjectDisposedException → 进程崩溃。
+            // 此处用 IsRunning 早退；LogReader 内部再吞 ObjectDisposedException 双保险。
+            if (!IsRunning) return;
+
             Task.Run(async () =>
             {
-                if (!await _readSemaphore.WaitAsync(0))
-                    return;
-
                 try
                 {
-                    await ReadNewContentAsync(e.FullPath);
+                    await _reader.TryReadWithLockAsync(
+                        () => ReadNewContentAsync(e.FullPath),
+                        CancellationToken.None).ConfigureAwait(false);
                 }
-                catch
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
-                }
-                finally
-                {
-                    _readSemaphore.Release();
+                    // 其它异常吞掉以免崩溃 ThreadPool；监控失效本身不应让进程挂掉。
+                    // 排除 OOM / SOF 这两个进程级致命异常——它们必须传播出去。
+                    Debug.WriteLine($"[{nameof(GameLogMonitor)}.{nameof(OnLogChanged)}] {ex}");
                 }
             });
         }
 
+        /// <summary>
+        /// 计算增量字节范围 → 读取 → 截到最后一个完整行 → 喂给状态机 → 分发事件 → 提交位置。
+        /// </summary>
         private async Task ReadNewContentAsync(string fullPath)
         {
-            long startPos;
-            long endPos;
+            var length = LogReader.TryGetFileLength(fullPath);
+            if (length == null) return;
 
-            lock (_stateLock)
+            var range = _stateMachine.PrepareReadRange(length.Value);
+            if (range == null) return;
+
+            var (startPos, endPos) = range.Value;
+            if (startPos >= endPos) return;
+
+            byte[]? buffer = await LogReader.ReadFileRangeAsync(fullPath, startPos, endPos).ConfigureAwait(false);
+            if (buffer == null || buffer.Length == 0) return;
+
+            // 截断到最后一个完整行 + UTF-8 解码下沉到 LogReader，facade 只负责装配与事件分发。
+            if (!LogReader.TruncateToLastNewline(buffer, out var completeContent, out var consumedBytes)) return;
+
+            var events = _stateMachine.ProcessContent(completeContent);
+            _stateMachine.CommitReadPosition(startPos + consumedBytes);
+
+            foreach (var (kind, args) in events)
             {
-                try
+                switch (kind)
                 {
-                    var fileInfo = new System.IO.FileInfo(fullPath);
-                    endPos = fileInfo.Length;
-                    startPos = _lastPosition;
-
-                    if (endPos < startPos)
-                    {
-                        startPos = 0;
-                        ResetState();
-                    }
-                }
-                catch { return; }
-            }
-
-            if (startPos >= endPos)
-                return;
-
-            byte[]? buffer = await ReadFileRangeAsync(fullPath, startPos, endPos);
-            if (buffer == null || buffer.Length == 0)
-                return;
-
-            int lastNewline = -1;
-            for (int i = buffer.Length - 1; i >= 0; i--)
-            {
-                if (buffer[i] == (byte)'\n')
-                {
-                    lastNewline = i;
-                    break;
-                }
-            }
-
-            if (lastNewline >= 0)
-            {
-                string completeContent = Encoding.UTF8.GetString(buffer, 0, lastNewline + 1);
-                ProcessContent(completeContent);
-
-                lock (_stateLock)
-                {
-                    _lastPosition = startPos + lastNewline + 1;
-                }
-            }
-        }
-
-        private static async Task<byte[]?> ReadFileRangeAsync(string fullPath, long startPos, long endPos)
-        {
-            for (int retry = 0; retry < 3; retry++)
-            {
-                try
-                {
-                    await using var fs = new System.IO.FileStream(
-                        fullPath, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite,
-                        bufferSize: 4096, useAsync: true);
-                    fs.Seek(startPos, System.IO.SeekOrigin.Begin);
-
-                    int bytesToRead = (int)(endPos - startPos);
-                    var buffer = new byte[bytesToRead];
-                    await fs.ReadExactlyAsync(buffer, 0, bytesToRead);
-                    return buffer;
-                }
-                catch (System.IO.IOException)
-                {
-                    if (retry == 2) return null;
-                    await Task.Delay(50);
-                }
-            }
-            return null;
-        }
-
-        private void ResetState()
-        {
-            _isInBattle = false;
-            _joinedBattle = false;
-            _currentBattleId = null;
-            _currentMapId = null;
-            _currentRoomId = null;
-            _currentRoomType = null;
-            _lastPosition = 0;
-        }
-
-        private void ProcessContent(string content)
-        {
-            var lines = content.Split('\n');
-            foreach (var line in lines)
-            {
-                ProcessLine(line.TrimEnd('\r'));
-            }
-        }
-
-        private void ProcessLine(string line)
-        {
-            var battleTidMatch = BattleTidRegex.Match(line);
-            if (battleTidMatch.Success)
-            {
-                lock (_stateLock) { _currentBattleId = battleTidMatch.Groups[1].Value; }
-            }
-
-            var mapIdMatch = MapIdRegex.Match(line);
-            if (mapIdMatch.Success)
-            {
-                lock (_stateLock) { _currentMapId = mapIdMatch.Groups[1].Value; }
-            }
-
-            var roomIdMatch = RoomIdRegex.Match(line);
-            if (roomIdMatch.Success)
-            {
-                lock (_stateLock) { _currentRoomId = roomIdMatch.Groups[1].Value; }
-            }
-
-            var roomTypeMatch = RoomTypeRegex.Match(line);
-            if (roomTypeMatch.Success)
-            {
-                lock (_stateLock) { _currentRoomType = roomTypeMatch.Groups[1].Value; }
-            }
-
-            if (line.Contains("开始连接战斗服务器"))
-            {
-                lock (_stateLock) { _joinedBattle = true; }
-                if (!_suppressEvents)
-                {
-                    var args = CreateCurrentBattleArgs();
-                    BattleJoined?.Invoke(this, args);
-                }
-            }
-
-            if (_joinedBattle && (line.Contains("DoHideTeamOffLoadingPage") || line.Contains("TeamBattle Init")))
-            {
-                bool alreadyInBattle;
-                lock (_stateLock)
-                {
-                    alreadyInBattle = _isInBattle;
-                    if (!alreadyInBattle)
-                    {
-                        _isInBattle = true;
-                        _joinedBattle = false;
-                    }
-                }
-
-                if (!alreadyInBattle && !_suppressEvents)
-                {
-                    var args = CreateCurrentBattleArgs();
-                    BattleStarted?.Invoke(this, args);
-                }
-            }
-
-            if (line.Contains("TeamBattle Destroy") || line.Contains("GridMapManager Destroy"))
-            {
-                bool wasInBattle;
-                lock (_stateLock)
-                {
-                    wasInBattle = _isInBattle;
-                    _isInBattle = false;
-                    _joinedBattle = false;
-                }
-
-                if (wasInBattle && !_suppressEvents)
-                {
-                    if (!_suppressEvents)
-                    {
-                        var args = CreateCurrentBattleArgs();
+                    case BattleEventKind.Joined:
+                        BattleJoined?.Invoke(this, args);
+                        break;
+                    case BattleEventKind.Started:
+                        BattleStarted?.Invoke(this, args);
+                        break;
+                    case BattleEventKind.Ended:
                         BattleEnded?.Invoke(this, args);
-                    }
-
-                    lock (_stateLock)
-                    {
-                        _currentBattleId = null;
-                        _currentMapId = null;
-                    }
+                        break;
                 }
-            }
-
-            if (line.Contains("NetAgent DisconnectFromEnet"))
-            {
-                bool joined, inBattle;
-                lock (_stateLock)
-                {
-                    joined = _joinedBattle;
-                    inBattle = _isInBattle;
-                }
-
-                if (joined && !inBattle)
-                {
-                    lock (_stateLock) { _joinedBattle = false; }
-                    if (!_suppressEvents)
-                    {
-                        var args = CreateCurrentBattleArgs();
-                        BattleEnded?.Invoke(this, args);
-                    }
-
-                    lock (_stateLock)
-                    {
-                        _currentBattleId = null;
-                        _currentMapId = null;
-                    }
-                }
-            }
-        }
-
-        private BattleEventArgs CreateCurrentBattleArgs()
-        {
-            lock (_stateLock)
-            {
-                return new BattleEventArgs
-                {
-                    BattleId = _currentBattleId ?? string.Empty,
-                    MapId = _currentMapId ?? string.Empty,
-                    RoomId = _currentRoomId ?? string.Empty,
-                    RoomType = _currentRoomType ?? string.Empty,
-                    Timestamp = DateTimeOffset.Now
-                };
             }
         }
     }

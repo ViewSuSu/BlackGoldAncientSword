@@ -39,7 +39,7 @@
                         Grid.Column="0"
                         FontSize="18"
                         FontWeight="Bold"
-                        Text="问题反馈" />
+                        Text="{DynamicResource Feedback.Title}" />
                     <Button
                         Grid.Column="1"
                         Width="24"
@@ -68,7 +68,7 @@
                             Margin="0,0,0,8"
                             FontSize="14"
                             FontWeight="SemiBold"
-                            Text="客户端问题反馈群" />
+                            Text="{DynamicResource Feedback.ClientGroupTitle}" />
                         <TextBox
                             Margin="0,0,0,16"
                             Padding="0"
@@ -77,18 +77,18 @@
                             FontSize="12"
                             Foreground="Gray"
                             IsReadOnly="True"
-                            Text="①群：146088141" />
+                            Text="{DynamicResource Feedback.ClientGroupQQ}" />
 
                         <TextBlock
                             Margin="0,0,0,8"
                             FontSize="14"
                             FontWeight="SemiBold"
-                            Text="数据问题反馈群" />
+                            Text="{DynamicResource Feedback.DataGroupTitle}" />
                         <TextBlock
                             Margin="0,0,0,4"
                             FontSize="12"
                             Foreground="Gray"
-                            Text="QQ群机器人也可以查战绩"
+                            Text="{DynamicResource Feedback.BotDescription}"
                             TextWrapping="Wrap" />
                         <TextBox
                             Margin="0,0,0,4"
@@ -98,7 +98,7 @@
                             FontSize="12"
                             Foreground="Gray"
                             IsReadOnly="True"
-                            Text="①群：476074617" />
+                            Text="{DynamicResource Feedback.DataGroup1}" />
                         <TextBox
                             Margin="0,0,0,4"
                             Padding="0"
@@ -107,7 +107,7 @@
                             FontSize="12"
                             Foreground="Gray"
                             IsReadOnly="True"
-                            Text="②群：649891198" />
+                            Text="{DynamicResource Feedback.DataGroup2}" />
                         <TextBox
                             Margin="0,0,0,4"
                             Padding="0"
@@ -116,12 +116,12 @@
                             FontSize="12"
                             Foreground="Gray"
                             IsReadOnly="True"
-                            Text="③群：966720321" />
+                            Text="{DynamicResource Feedback.DataGroup3}" />
                         <TextBlock
                             Margin="0,0,0,16"
                             FontSize="11"
                             Foreground="#999999"
-                            Text="QQ等级超过32（两个太阳）的自动审核进群，小号不给进"
+                            Text="{DynamicResource Feedback.QQEntryRequirement}"
                             TextWrapping="Wrap" />
 
                         <Separator Margin="0,8" />
@@ -130,7 +130,7 @@
                             Margin="0,0,0,4"
                             FontSize="14"
                             FontWeight="SemiBold"
-                            Text="网页端" />
+                            Text="{DynamicResource Feedback.WebTitle}" />
                         <TextBlock Margin="0,0,0,12" FontSize="12">
                             <Hyperlink
                                 Cursor="Hand"
@@ -145,7 +145,7 @@
                             Margin="0,0,0,4"
                             FontSize="14"
                             FontWeight="SemiBold"
-                            Text="GitHub" />
+                            Text="{DynamicResource Feedback.GitHubTitle}" />
                         <TextBlock FontSize="12">
                             <Hyperlink
                                 Cursor="Hand"
@@ -162,7 +162,7 @@
                     Grid.Row="2"
                     HorizontalAlignment="Right"
                     Orientation="Horizontal">
-                    <Button MinWidth="80" Height="32" Content="关闭">
+                    <Button MinWidth="80" Height="32" Content="{DynamicResource Feedback.Close}">
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="Click">
                                 <i:InvokeCommandAction Command="{Binding ConfirmCommand}" />

@@ -97,7 +97,18 @@ dotnet build src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj
 ```powershell
 git add -A
 git commit -m "<message>"
+# 设置代理（与 GitHub Desktop 共享系统代理配置）
+git config --local http.proxy http://127.0.0.1:9098
+git config --local https.proxy http://127.0.0.1:9098
+$env:HTTP_PROXY = "http://127.0.0.1:9098"
+$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+
 git push origin <current-branch>
+
+# 清理代理
+git config --local --unset http.proxy
+git config --local --unset https.proxy
+Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
 
 ### 4. 合并到 release 并推送
@@ -105,7 +116,18 @@ git push origin <current-branch>
 ```powershell
 git checkout release
 git merge <source-branch>
+# 设置代理
+git config --local http.proxy http://127.0.0.1:9098
+git config --local https.proxy http://127.0.0.1:9098
+$env:HTTP_PROXY = "http://127.0.0.1:9098"
+$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+
 git push origin release
+
+# 清理代理
+git config --local --unset http.proxy
+git config --local --unset https.proxy
+Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 git checkout <source-branch>
 ```
 

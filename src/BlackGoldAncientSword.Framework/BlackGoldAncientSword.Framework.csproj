@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Authors>小窗同学</Authors>
@@ -12,6 +12,8 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    <!-- 控制 SourceGenerator 行为：Client 模式生成 DTO 与 NarakaApiClient -->
+    <BgaSourceGenMode>Client</BgaSourceGenMode>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +21,6 @@
     <PackageReference Include="Prism.DryIoc" Version="8.1.97" />
     <PackageReference Include="HandyControl" Version="3.5.0" />
     <PackageReference Include="Mapster" Version="7.4.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,6 +29,11 @@
 
   <ItemGroup>
     <AdditionalFiles Include="Http\Definitions\**\*.json" />
+  </ItemGroup>
+
+  <!-- 让 SourceGenerator 通过 AnalyzerConfigOptionsProvider 读取自定义 MSBuild 属性 -->
+  <ItemGroup>
+    <CompilerVisibleProperty Include="BgaSourceGenMode" />
   </ItemGroup>
 
   <ItemGroup>
