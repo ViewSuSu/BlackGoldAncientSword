@@ -47,10 +47,13 @@ When entering hero selection, the app captures the screen and recognizes teammat
 - Side-by-side stat comparison
 - Team info **locks** once the match starts
 
-<p align="center">
-  <img src="docs/images/03_team_info.png" width="49%">
-  <img src="docs/images/03_team_info_recognition.png" width="49%">
-</p>
+**Team Info Recognition 1**
+
+![Team Info screenshot](docs/images/03_team_info.png)
+
+**Team Info Recognition 2**
+
+![Team Info OCR recognition result](docs/images/03_team_info_recognition.png)
 
 > Click "Re-identify Team" anytime to trigger a manual refresh. If some names are recognized incorrectly, you can edit them directly and re-query.
 
@@ -427,3 +430,4 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ## License
 
 MIT License. Author: **小窗同学** (XiaoChuang).
+

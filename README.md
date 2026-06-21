@@ -49,10 +49,13 @@
 - 队伍成员关键数据对比展示
 - 在进入对局后**锁定队伍信息**，无需再次识别
 
-<p align="center">
-  <img src="docs/images/03_team_info.png" width="49%">
-  <img src="docs/images/03_team_info_recognition.png" width="49%">
-</p>
+**队伍信息识别 1**
+
+![队伍信息截图](docs/images/03_team_info.png)
+
+**队伍信息识别 2**
+
+![队伍信息识别效果](docs/images/03_team_info_recognition.png)
 
 > 可随时点击"重新识别队伍信息"按钮手动触发识别。当部分名字识别错误时，可直接修改识别出的名字并重新查询。
 
@@ -439,3 +442,4 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ### 许可证
 
 本项目基于 [MIT License](LICENSE) 开源。作者：**小窗同学**。
+
