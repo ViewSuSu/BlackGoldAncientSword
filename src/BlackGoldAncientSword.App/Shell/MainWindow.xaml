@@ -482,7 +482,7 @@
                         Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="MouseLeftButtonDown">
-                                <i:InvokeCommandAction Command="{Binding NavigateToAnnouncementCommand}" />
+                                <i:InvokeCommandAction Command="{Binding CheckForUpdatesCommand}" />
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
                         <TextBlock
@@ -491,11 +491,6 @@
                             FontSize="11"
                             Foreground="#5B8DEF"
                             Text="{DynamicResource Settings.UpdateAvailable}" />
-                        <Image
-                            Width="14"
-                            Height="14"
-                            ToolTip="{DynamicResource MainWindow.ViewUpdateLog}"
-                            Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/announcement.png" />
                     </StackPanel>
                 </StackPanel>
                 <StackPanel
