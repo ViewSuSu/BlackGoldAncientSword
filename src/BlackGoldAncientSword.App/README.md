@@ -55,10 +55,10 @@
 - 队伍成员关键数据对比展示
 - 在进入对局后**锁定队伍信息**，无需再次识别
 
-![队伍信息截图](docs/images/03_team_info.png)
-
-
-![队伍信息识别效果](docs/images/03_team_info_recognition.png)
+<p align="center">
+  <img src="docs/images/03_team_info.png" width="49%">
+  <img src="docs/images/03_team_info_recognition.png" width="49%">
+</p>
 
 > 可随时点击"重新识别队伍信息"按钮手动触发 OCR。
 

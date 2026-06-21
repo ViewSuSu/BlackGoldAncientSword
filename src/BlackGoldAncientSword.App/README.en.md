@@ -53,9 +53,10 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 - Side-by-side stat comparison
 - Team info **locks** once the match starts
 
-![Team Info screenshot](docs/images/03_team_info.png)
-
-![Team Info OCR recognition result](docs/images/03_team_info_recognition.png)
+<p align="center">
+  <img src="docs/images/03_team_info.png" width="49%">
+  <img src="docs/images/03_team_info_recognition.png" width="49%">
+</p>
 
 
 ---
