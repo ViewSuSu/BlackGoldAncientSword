@@ -341,7 +341,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             {
                 StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
 
-                var names = await _ocrCoordinator.RecognizeOnceAsync(ct);
+                var names = await _ocrCoordinator.RecognizeAutoAsync(ct);
                 ct.ThrowIfCancellationRequested();
 
                 if (names.Length == 0) return;
@@ -442,7 +442,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 // 一旦英雄选择阶段 OCR 拿不到队友名（例如分辨率不匹配、UI 还没绘出），
                 // 每秒会反复触发 3 次 PaddleOCR 推理 + 全屏抓取，把 CPU 与磁盘打满。
                 // 800 ms 在人类感知上等同立刻，但 CPU 占用立刻降一个数量级。
-                var names = await _ocrCoordinator.WaitForFirstRecognitionAsync(
+                var names = await _ocrCoordinator.WaitForAutoRecognitionAsync(
                     initialDelay: TimeSpan.FromSeconds(2),
                     retryInterval: TimeSpan.FromMilliseconds(800),
                     ct);
@@ -556,12 +556,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     TeamMembers.Move(localIdx, 1);
                 }
             }
-            // For 2 members: local user goes to left (index 0)
+            // For 2 members: local user goes to center (index 1) — matching the blue border on Member1
             else if (TeamMembers.Count == 2)
             {
-                if (localIdx != 0)
+                if (localIdx != 1)
                 {
-                    TeamMembers.Move(localIdx, 0);
+                    TeamMembers.Move(localIdx, 1);
                 }
             }
         }
