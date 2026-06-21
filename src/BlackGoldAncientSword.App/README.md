@@ -1,4 +1,4 @@
-﻿# 黑金古刀-永劫助手（BlackGoldAncientSword）
+# 黑金古刀-永劫助手（BlackGoldAncientSword）
 
 > 查询《永劫无间》（NARAKA: BLADEPOINT）玩家战绩数据的桌面辅助工具。
 
@@ -56,6 +56,9 @@
 - 在进入对局后**锁定队伍信息**，无需再次识别
 
 ![队伍信息截图](docs/images/03_team_info.png)
+
+
+![队伍信息识别效果](docs/images/03_team_info_recognition.png)
 
 > 可随时点击"重新识别队伍信息"按钮手动触发 OCR。
 

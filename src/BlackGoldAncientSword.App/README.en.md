@@ -1,4 +1,4 @@
-﻿# BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
+# BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
 
 > A desktop companion app for querying *NARAKA: BLADEPOINT* player statistics and match data.
 
@@ -54,6 +54,9 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 - Team info **locks** once the match starts
 
 ![Team Info screenshot](docs/images/03_team_info.png)
+
+![Team Info OCR recognition result](docs/images/03_team_info_recognition.png)
+
 
 ---
 
