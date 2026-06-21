@@ -51,6 +51,9 @@
 
 ![队伍信息截图](docs/images/03_team_info.png)
 
+
+![队伍信息识别效果](docs/images/03_team_info_recognition.png)
+
 > 可随时点击"重新识别队伍信息"按钮手动触发识别。当部分名字识别错误时，可直接修改识别出的名字并重新查询。
 
 ---
