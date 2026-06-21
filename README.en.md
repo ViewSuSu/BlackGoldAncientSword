@@ -49,6 +49,9 @@ When entering hero selection, the app captures the screen and recognizes teammat
 
 ![Team Info screenshot](docs/images/03_team_info.png)
 
+
+![Team Info OCR recognition result](docs/images/03_team_info_recognition.png)
+
 > Click "Re-identify Team" anytime to trigger a manual refresh. If some names are recognized incorrectly, you can edit them directly and re-query.
 
 ---
