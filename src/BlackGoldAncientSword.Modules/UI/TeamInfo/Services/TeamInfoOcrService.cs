@@ -20,11 +20,31 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     /// <summary>
     /// 三个队友名字区域的归一化坐标（基于 2048×1152 参考分辨率）。
     /// </summary>
-    private static readonly OcrRegion[] TeamRegions = new[]
+    internal static readonly OcrRegion[] TeamRegions = new[]
     {
         new OcrRegion { X = 0.301953, Y = 0.899306, Width = 0.123661, Height = 0.039583 },  // 左侧
         new OcrRegion { X = 0.475000, Y = 0.897222, Width = 0.125447, Height = 0.041667 },  // 中间
         new OcrRegion { X = 0.646484, Y = 0.897917, Width = 0.138672, Height = 0.036806 },  // 右侧
+    };
+
+    /// <summary>
+    /// 双排两个队友名字区域的归一化坐标（基于 2048×1152 参考分辨率）。
+    /// 位于英雄选择界面底部，与三排区域 Y 坐标无重叠。
+    /// </summary>
+    internal static readonly OcrRegion[] DuoRegions = new[]
+    {
+        new OcrRegion { X = 0.386719, Y = 0.906250, Width = 0.110547, Height = 0.040000 },  // 左侧
+        new OcrRegion { X = 0.557813, Y = 0.906250, Width = 0.119141, Height = 0.040000 },  // 右侧
+    };
+
+    /// <summary>
+    /// 三排检测用小区域（左侧区域左边 ~40%，右侧区域左边 ~40%）。
+    /// 名字从左到右排列，仅取左边缘即可快速判断是否有文本。
+    /// </summary>
+    internal static readonly OcrRegion[] TrioDetectRegions = new[]
+    {
+        new OcrRegion { X = 0.301953, Y = 0.899306, Width = 0.050, Height = 0.039583 }, // 左侧区域左边部分
+        new OcrRegion { X = 0.646484, Y = 0.897917, Width = 0.050, Height = 0.036806 }, // 右侧区域左边部分
     };
 
     public TeamInfoOcrService(IScreenCaptureService screenCapture, IOcrService ocr)
@@ -74,6 +94,158 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         }
 
         // 按 box.TopLeft.X 落入哪个 region 的 [start, end) 区间,聚合到该桶。
+        var buckets = new string[stitched.regionXRanges.Length];
+        foreach (var r in results)
+        {
+            var cx = (r.Box.TopLeft.X + r.Box.TopRight.X) / 2;
+            for (int i = 0; i < stitched.regionXRanges.Length; i++)
+            {
+                var (xStart, xEnd) = stitched.regionXRanges[i];
+                if (cx >= xStart && cx < xEnd)
+                {
+                    buckets[i] = (buckets[i] ?? "") + r.Text;
+                    break;
+                }
+            }
+        }
+
+        var names = new List<string>();
+        foreach (var bucket in buckets)
+        {
+            if (string.IsNullOrEmpty(bucket)) continue;
+            var name = bucket.Replace(" ", "").Replace("\n", "").Replace("\r", "").Trim();
+            if (!string.IsNullOrWhiteSpace(name))
+                names.Add(name);
+        }
+
+        return names.Distinct().ToArray();
+    }
+
+    public async Task<string[]> RecognizeDuoTeamMembersAsync(CancellationToken ct = default)
+    {
+        if (!_screenCapture.TryFindGameWindow("NarakaBladepoint", out var hwnd))
+            return Array.Empty<string>();
+
+        byte[] rawBgra;
+        int fullWidth, fullHeight;
+        try
+        {
+            rawBgra = _screenCapture.CaptureFullRaw(hwnd, out fullWidth, out fullHeight);
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+
+        if (fullWidth <= 0 || fullHeight <= 0) return Array.Empty<string>();
+
+        // 双排 region 拼接逻辑与三排完全一致,仅 regions 数据和 region 数量不同。
+        // 复用 StitchRegionsForOcr + 按 X 分桶 pipeline。
+        var stitched = StitchRegionsForOcr(rawBgra, fullWidth, fullHeight, DuoRegions);
+        if (stitched.bmp == null) return Array.Empty<string>();
+
+        ct.ThrowIfCancellationRequested();
+
+        List<OcrResult> results;
+        try
+        {
+            results = await _ocr.RecognizeAsync(stitched.bmp).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] Duo OCR error (stitched): {ex.Message}");
+            return Array.Empty<string>();
+        }
+
+        // 按 box.TopLeft.X 落入 [start, end) 分桶。
+        var buckets = new string[stitched.regionXRanges.Length];
+        foreach (var r in results)
+        {
+            var cx = (r.Box.TopLeft.X + r.Box.TopRight.X) / 2;
+            for (int i = 0; i < stitched.regionXRanges.Length; i++)
+            {
+                var (xStart, xEnd) = stitched.regionXRanges[i];
+                if (cx >= xStart && cx < xEnd)
+                {
+                    buckets[i] = (buckets[i] ?? "") + r.Text;
+                    break;
+                }
+            }
+        }
+
+        var names = new List<string>();
+        foreach (var bucket in buckets)
+        {
+            if (string.IsNullOrEmpty(bucket)) continue;
+            var name = bucket.Replace(" ", "").Replace("\n", "").Replace("\r", "").Trim();
+            if (!string.IsNullOrWhiteSpace(name))
+                names.Add(name);
+        }
+
+        return names.Distinct().ToArray();
+    }
+
+    public async Task<string[]> RecognizeTeamMembersAutoAsync(CancellationToken ct = default)
+    {
+        if (!_screenCapture.TryFindGameWindow("NarakaBladepoint", out var hwnd))
+            return Array.Empty<string>();
+
+        byte[] rawBgra;
+        int fullWidth, fullHeight;
+        try
+        {
+            rawBgra = _screenCapture.CaptureFullRaw(hwnd, out fullWidth, out fullHeight);
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+
+        if (fullWidth <= 0 || fullHeight <= 0) return Array.Empty<string>();
+
+        ct.ThrowIfCancellationRequested();
+
+        // Step 1: 检测队伍规模
+        // 取三排左侧区域左边 ~40% 和右侧区域左边 ~40% 拼成一块检测图，
+        // 因为玩家名字从左到右排列，仅取左边缘即可判断该区域是否有文本。
+        // 三排区域与双排区域 Y 坐标相差约 34px，无重叠，不会误判。
+        var detectStitched = StitchRegionsForOcr(rawBgra, fullWidth, fullHeight, TrioDetectRegions);
+        bool isTrio = false;
+
+        if (detectStitched.bmp != null)
+        {
+            try
+            {
+                var detectResults = await _ocr.RecognizeAsync(detectStitched.bmp).ConfigureAwait(false);
+                isTrio = detectResults.Count > 0
+                    && detectResults.Any(r => !string.IsNullOrWhiteSpace(r.Text));
+            }
+            catch
+            {
+                // 检测失败时安全地默认走双排
+            }
+        }
+
+        // Step 2: 根据检测结果选择对应的完整区域进行识别
+        var regions = isTrio ? TeamRegions : DuoRegions;
+
+        var stitched = StitchRegionsForOcr(rawBgra, fullWidth, fullHeight, regions);
+        if (stitched.bmp == null) return Array.Empty<string>();
+
+        List<OcrResult> results;
+        try
+        {
+            results = await _ocr.RecognizeAsync(stitched.bmp).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] Auto OCR error (stitched): {ex.Message}");
+            return Array.Empty<string>();
+        }
+
+        // 按 box.TopLeft.X 落入 [start, end) 分桶
         var buckets = new string[stitched.regionXRanges.Length];
         foreach (var r in results)
         {
@@ -264,3 +436,5 @@ public class OcrRegion
     /// <summary>高度百分比 (0.0 ~ 1.0)</summary>
     public double Height { get; set; }
 }
+
+
