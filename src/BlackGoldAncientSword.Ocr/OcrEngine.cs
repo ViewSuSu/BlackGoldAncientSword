@@ -61,7 +61,8 @@ public class OcrEngine : IOcrService, IDisposable
         // image_base64 模式：图片字节直接通过 stdin 管道传输，零磁盘 IO。
         // Utf8JsonWriter 直接把 byte[] base64 编码成 UTF-8 字节写到 buffer，全程不产生中间 string。
         var json = await SendImageRequestAsync(imageBytes, CancellationToken.None).ConfigureAwait(false);
-        return ParseResults(json);
+        LastRawJson = json;
+            return ParseResults(json);
     }
 
     /// <inheritdoc />
@@ -310,6 +311,10 @@ public class OcrEngine : IOcrService, IDisposable
     /// <summary>
     /// 将 PaddleOCR-json 返回的 JSON 字符串转换为 OcrResult 列表。
     /// </summary>
+
+    /// <summary>临时暴露最后一次原始 JSON 响应（调试用）。</summary>
+    internal string? LastRawJson { get; private set; }
+
     private static List<OcrResult> ParseResults(string rawJson)
     {
         if (string.IsNullOrWhiteSpace(rawJson))
