@@ -22,6 +22,7 @@ The home page automatically detects whether *NARAKA: BLADEPOINT* is running. Whe
 - **In Game**: Match in progress (BattleId displayed)
 - **Battle Ended**: Match concluded
 
+**Home**
 ![Home screenshot](docs/images/01_home.png)
 
 Use the left sidebar to switch between: **Home**, **Stats**, **Team Info**, and **Settings**. The title bar shows the version number and update indicator.
@@ -39,6 +40,7 @@ Enter a player nickname in the search box to fetch full stats:
 
 Filter by season, mode category (Ranked / Casual / Immortal), and team size (Trio / Duo / Solo).
 
+**Stats**
 ![Stats screenshot](docs/images/02_stats.png)
 
 ---
@@ -72,6 +74,7 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 - **Close behavior**: Minimize to tray or exit directly
 - **Current version**
 
+**Settings**
 ![Settings screenshot](docs/images/04_settings.png)
 
 ---
@@ -82,6 +85,7 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 
 Minimize to system tray during gameplay. Right-click the tray icon to restore or exit.
 
+**Close Prompt**
 ![Close prompt screenshot](docs/images/05_close_prompt.png)
 
 ### Toast Notifications
