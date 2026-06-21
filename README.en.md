@@ -33,6 +33,7 @@ Enter a player nickname in the search box to fetch full stats:
 
 Filter by season, mode category (Ranked / Casual / Immortal), and team size (Trio / Duo / Solo).
 
+**Stats**
 ![Stats screenshot](docs/images/02_stats.png)
 
 ---
@@ -69,6 +70,7 @@ When entering hero selection, the app captures the screen and recognizes teammat
 - **Check for updates**: Manually check and download new releases
 - **Current version**
 
+**Settings**
 ![Settings screenshot](docs/images/04_settings.png)
 
 ---
@@ -79,6 +81,7 @@ When entering hero selection, the app captures the screen and recognizes teammat
 
 Minimize to system tray during gameplay. Right-click the tray icon to restore or exit.
 
+**Close Prompt**
 ![Close prompt screenshot](docs/images/05_close_prompt.png)
 
 ---
