@@ -22,8 +22,10 @@ The home page automatically detects whether *NARAKA: BLADEPOINT* is running. Whe
 - **In Game**: Match in progress (BattleId displayed)
 - **Battle Ended**: Match concluded
 
-**Home**
-![Home screenshot](docs/images/01_home.png)
+<p align="center">
+  <img src="docs/images/01_home.png" alt="Home screenshot" /><br />
+  <small><u>Home</u></small>
+</p>
 
 Use the left sidebar to switch between: **Home**, **Stats**, **Team Info**, and **Settings**. The title bar shows the version number and update indicator.
 
@@ -40,8 +42,10 @@ Enter a player nickname in the search box to fetch full stats:
 
 Filter by season, mode category (Ranked / Casual / Immortal), and team size (Trio / Duo / Solo).
 
-**Stats**
-![Stats screenshot](docs/images/02_stats.png)
+<p align="center">
+  <img src="docs/images/02_stats.png" alt="Stats screenshot" /><br />
+  <small><u>Stats</u></small>
+</p>
 
 ---
 
@@ -55,13 +59,15 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 - Side-by-side stat comparison
 - Team info **locks** once the match starts
 
-**Team Info Recognition 1**
+<p align="center">
+  <img src="docs/images/03_team_info.png" alt="Team Info screenshot" /><br />
+  <small><u>Team Info Recognition 1</u></small>
+</p>
 
-![Team Info screenshot](docs/images/03_team_info.png)
-
-**Team Info Recognition 2**
-
-![Team Info OCR recognition result](docs/images/03_team_info_recognition.png)
+<p align="center">
+  <img src="docs/images/03_team_info_recognition.png" alt="Team Info OCR recognition result" /><br />
+  <small><u>Team Info Recognition 2</u></small>
+</p>
 
 
 ---
@@ -74,8 +80,10 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 - **Close behavior**: Minimize to tray or exit directly
 - **Current version**
 
-**Settings**
-![Settings screenshot](docs/images/04_settings.png)
+<p align="center">
+  <img src="docs/images/04_settings.png" alt="Settings screenshot" /><br />
+  <small><u>Settings</u></small>
+</p>
 
 ---
 
@@ -85,8 +93,10 @@ When entering hero selection, the app uses **OCR to capture the screen and recog
 
 Minimize to system tray during gameplay. Right-click the tray icon to restore or exit.
 
-**Close Prompt**
-![Close prompt screenshot](docs/images/05_close_prompt.png)
+<p align="center">
+  <img src="docs/images/05_close_prompt.png" alt="Close prompt screenshot" /><br />
+  <small><u>Close Prompt</u></small>
+</p>
 
 ### Toast Notifications
 
