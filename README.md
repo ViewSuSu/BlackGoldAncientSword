@@ -33,8 +33,10 @@
 
 支持切换赛季、模式类别（排位 / 匹配 / 天人）和队伍规模（三排 / 双排 / 单排）。
 
-**战绩**
-![战绩截图](docs/images/02_stats.png)
+<p align="center">
+  <img src="docs/images/02_stats.png" alt="战绩截图" /><br />
+  <small><u>战绩</u></small>
+</p>
 
 > 点击玩家昵称旁的复制按钮可快速复制昵称或 UID。
 
@@ -50,13 +52,15 @@
 - 队伍成员关键数据对比展示
 - 在进入对局后**锁定队伍信息**，无需再次识别
 
-**队伍信息识别 1**
+<p align="center">
+  <img src="docs/images/03_team_info.png" alt="队伍信息截图" /><br />
+  <small><u>队伍信息识别 1</u></small>
+</p>
 
-![队伍信息截图](docs/images/03_team_info.png)
-
-**队伍信息识别 2**
-
-![队伍信息识别效果](docs/images/03_team_info_recognition.png)
+<p align="center">
+  <img src="docs/images/03_team_info_recognition.png" alt="队伍信息识别效果" /><br />
+  <small><u>队伍信息识别 2</u></small>
+</p>
 
 > 可随时点击"重新识别队伍信息"按钮手动触发识别。当部分名字识别错误时，可直接修改识别出的名字并重新查询。
 
@@ -74,8 +78,10 @@
 - **检查更新**：手动检查与下载新版本
 - **当前版本**：显示版本号
 
-**设置**
-![设置截图](docs/images/04_settings.png)
+<p align="center">
+  <img src="docs/images/04_settings.png" alt="设置截图" /><br />
+  <small><u>设置</u></small>
+</p>
 
 ---
 
@@ -85,8 +91,10 @@
 
 助手支持最小化到系统托盘，游戏过程中不打扰。右键托盘图标可快速恢复窗口或退出。
 
-**关闭提示**
-![关闭提示截图](docs/images/05_close_prompt.png)
+<p align="center">
+  <img src="docs/images/05_close_prompt.png" alt="关闭提示截图" /><br />
+  <small><u>关闭提示</u></small>
+</p>
 
 - 托盘图标显示在线状态
 - 点击关闭按钮时弹出确认对话框，提醒"退出程序会停止检测游戏"

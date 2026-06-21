@@ -33,8 +33,10 @@ Enter a player nickname in the search box to fetch full stats:
 
 Filter by season, mode category (Ranked / Casual / Immortal), and team size (Trio / Duo / Solo).
 
-**Stats**
-![Stats screenshot](docs/images/02_stats.png)
+<p align="center">
+  <img src="docs/images/02_stats.png" alt="Stats screenshot" /><br />
+  <small><u>Stats</u></small>
+</p>
 
 ---
 
@@ -48,13 +50,15 @@ When entering hero selection, the app captures the screen and recognizes teammat
 - Side-by-side stat comparison
 - Team info **locks** once the match starts
 
-**Team Info Recognition 1**
+<p align="center">
+  <img src="docs/images/03_team_info.png" alt="Team Info screenshot" /><br />
+  <small><u>Team Info Recognition 1</u></small>
+</p>
 
-![Team Info screenshot](docs/images/03_team_info.png)
-
-**Team Info Recognition 2**
-
-![Team Info OCR recognition result](docs/images/03_team_info_recognition.png)
+<p align="center">
+  <img src="docs/images/03_team_info_recognition.png" alt="Team Info OCR recognition result" /><br />
+  <small><u>Team Info Recognition 2</u></small>
+</p>
 
 > Click "Re-identify Team" anytime to trigger a manual refresh. If some names are recognized incorrectly, you can edit them directly and re-query.
 
@@ -70,8 +74,10 @@ When entering hero selection, the app captures the screen and recognizes teammat
 - **Check for updates**: Manually check and download new releases
 - **Current version**
 
-**Settings**
-![Settings screenshot](docs/images/04_settings.png)
+<p align="center">
+  <img src="docs/images/04_settings.png" alt="Settings screenshot" /><br />
+  <small><u>Settings</u></small>
+</p>
 
 ---
 
@@ -81,8 +87,10 @@ When entering hero selection, the app captures the screen and recognizes teammat
 
 Minimize to system tray during gameplay. Right-click the tray icon to restore or exit.
 
-**Close Prompt**
-![Close prompt screenshot](docs/images/05_close_prompt.png)
+<p align="center">
+  <img src="docs/images/05_close_prompt.png" alt="Close prompt screenshot" /><br />
+  <small><u>Close Prompt</u></small>
+</p>
 
 ---
 
