@@ -1,4 +1,4 @@
-﻿# 黑金古刀-永劫助手（BlackGoldAncientSword）
+# 黑金古刀-永劫助手（BlackGoldAncientSword）
 
 > 查询《永劫无间》（NARAKA: BLADEPOINT）玩家战绩数据的桌面辅助工具。
 
@@ -22,7 +22,10 @@
 - **对局中**：正在进行对局，同时显示 BattleId
 - **对局结束**：本局游戏结束
 
-![启动页截图](docs/images/01_home.png)
+<p align="center">
+  <img src="docs/images/01_home.png" alt="启动页截图" /><br />
+  <small><u>启动页</u></small>
+</p>
 
 左侧导航栏可切换至各功能页面：**启动页**、**战绩**、**队伍信息**、**设置**。顶部标题栏显示当前版本号与更新指示器。
 
@@ -39,7 +42,10 @@
 
 支持切换赛季、模式类别（排位 / 匹配 / 天人）和队伍规模（三排 / 双排 / 单排）。
 
-![战绩截图](docs/images/02_stats.png)
+<p align="center">
+  <img src="docs/images/02_stats.png" alt="战绩截图" /><br />
+  <small><u>战绩</u></small>
+</p>
 
 > 点击玩家昵称旁的复制按钮可快速复制昵称或 UID。
 
@@ -55,7 +61,15 @@
 - 队伍成员关键数据对比展示
 - 在进入对局后**锁定队伍信息**，无需再次识别
 
-![队伍信息截图](docs/images/03_team_info.png)
+<p align="center">
+  <img src="docs/images/03_team_info.png" alt="队伍信息截图" /><br />
+  <small><u>队伍信息识别 1</u></small>
+</p>
+
+<p align="center">
+  <img src="docs/images/03_team_info_recognition.png" alt="队伍信息识别效果" /><br />
+  <small><u>队伍信息识别 2</u></small>
+</p>
 
 > 可随时点击"重新识别队伍信息"按钮手动触发 OCR。
 
@@ -71,7 +85,10 @@
 - **关闭行为**：点击关闭按钮时"最小化到托盘"或"直接退出"
 - **当前版本**：显示版本号
 
-![设置截图](docs/images/04_settings.png)
+<p align="center">
+  <img src="docs/images/04_settings.png" alt="设置截图" /><br />
+  <small><u>设置</u></small>
+</p>
 
 ---
 
@@ -81,7 +98,10 @@
 
 助手支持最小化到系统托盘，游戏过程中不打扰。右键托盘图标可快速恢复窗口或退出。
 
-![关闭提示截图](docs/images/05_close_prompt.png)
+<p align="center">
+  <img src="docs/images/05_close_prompt.png" alt="关闭提示截图" /><br />
+  <small><u>关闭提示</u></small>
+</p>
 
 - 托盘图标显示在线状态
 - 点击关闭按钮时弹出确认对话框，提醒"退出程序会停止检测游戏"
@@ -365,3 +385,4 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 
 本项目基于 [MIT License](LICENSE) 开源。作者：**小窗同学**。
+
