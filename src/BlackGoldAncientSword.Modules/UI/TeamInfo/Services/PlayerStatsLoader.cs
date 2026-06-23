@@ -60,7 +60,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 result.RankIcon = stats.Data.Grade.GradeIcon ?? string.Empty;
                 result.RankScore = stats.Data.Grade.GradeScore ?? 0;
                 var gm = (int)gameMode;
-                result.PageRankName = GetRankNameForScore(result.RankScore, gm);
+                result.PageRankName = GetRankNameForScore(result.RankScore, gm) + GetSubTierName(result.RankScore, gm);
                 result.PageStarCount = GetStarCount(result.RankScore, gm);
                 result.PageHasStars = ((GameMode)gm).IsRankMode() && result.RankScore >= 4500;
                 result.RankTierScore = GetRankTierScore(result.RankScore, gm);
@@ -140,6 +140,40 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             if (score >= 1500) return (score - 1500) % 100;
             return score % 100;
         }
+
+        /// <summary>
+        /// 获取子段位名称（五、四、三、二、一），每小段 100 分
+        /// 仅对排位模式 1500~4499 分有效
+        /// </summary>
+        private static string GetSubTierName(double score, int gameMode)
+        {
+            if (!((GameMode)gameMode).IsRankMode()) return string.Empty;
+            if (score < 1500 || score >= 4500) return string.Empty;
+
+            var tierBase = GetTierBaseForSubTier(score);
+            var offset = score - tierBase;
+            var subTierIndex = (int)(offset / 100);
+            var names = new[] { "5", "4", "3", "2", "1" };
+            if (subTierIndex >= 0 && subTierIndex < names.Length)
+                return names[subTierIndex];
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// 获取段位的起始分数线（该大段的最低分），仅用于子段计算
+        /// </summary>
+        private static double GetTierBaseForSubTier(double score)
+        {
+            if (score >= 4500) return 4500;
+            if (score >= 4000) return 4000;
+            if (score >= 3500) return 3500;
+            if (score >= 3000) return 3000;
+            if (score >= 2500) return 2500;
+            if (score >= 2000) return 2000;
+            if (score >= 1500) return 1500;
+            return 0;
+        }
+
     }
 
     /// <summary>

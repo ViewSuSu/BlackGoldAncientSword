@@ -602,6 +602,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private async System.Threading.Tasks.Task<bool> LoadAllAsync(CancellationToken ct)
         {
+            ShowNotFound = false;
             if (!_playerPrefsService.Current.IsLoaded)
             {
                 ShowNotFound = true;
@@ -686,11 +687,13 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                             GameModeCategoryText = FormatGameModeCategory(modeCode),
                             GameModeTeamSizeText = FormatGameModeTeamSize(modeCode),
                             GameMode = modeCode,
+                            IsRankMode = IsTianxuanMode(modeCode),
                             Kill = (int)(b.Kill ?? 0),
                             Damage = (int)(b.Damage ?? 0),
                             ScoreNumber = GetRankTierScore((b.RoundRankScore ?? 0), modeCode),
                             ScoreDiff = (b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0),
-                            RankDisplayText = GetRankNameForScore((b.RoundRankScore ?? 0), modeCode),
+                            RankDisplayText = GetRankNameForScore((b.RoundRankScore ?? 0), modeCode) + GetSubTierName((b.RoundRankScore ?? 0), IsTianxuanMode(modeCode)),
+                            ShowScoreNumber = ShouldShowTierScore((b.RoundRankScore ?? 0), modeCode),
                             StarCount = GetStarCount((b.RoundRankScore ?? 0), modeCode),
                             HasStars = IsTianxuanMode(modeCode) && (b.RoundRankScore ?? 0) >= 4500,
                             ScoreDiffDisplay = FormatScoreDiff((b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0)),
@@ -785,7 +788,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     RankIcon = data.Grade.GradeIcon ?? string.Empty;
                     RankScore = data.Grade.GradeScore ?? 0;
                     RankLevel = data.Grade.GradeLevel ?? string.Empty;
-                    PageRankName = GetRankNameForScore(data.Grade.GradeScore ?? 0, (int)gameMode);
+                    PageRankName = GetRankNameForScore(data.Grade.GradeScore ?? 0, (int)gameMode) + GetSubTierName(data.Grade.GradeScore ?? 0, IsTianxuanMode((int)gameMode));
                     PageStarCount = GetStarCount(data.Grade.GradeScore ?? 0, (int)gameMode);
                     PageHasStars = IsTianxuanMode((int)gameMode) && (data.Grade.GradeScore ?? 0) >= 4500;
                     RankDisplayWithStars = FormatPageRankDisplay(data.Grade.GradeScore ?? 0, (int)gameMode);
@@ -955,7 +958,21 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private static bool IsTianxuanMode(double gameMode)
         {
-            var mode = (int)gameMode; return Enum.IsDefined(typeof(GameMode), mode) && ((GameMode)mode).GetCategory() == GameModeCategory.Rank;
+            var mode = (int)gameMode;
+            // 直接 GameMode 枚举值（如 101=RankSolo）
+            if (Enum.IsDefined(typeof(GameMode), mode))
+                return ((GameMode)mode).GetCategory() == GameModeCategory.Rank;
+
+            // 通过对局历史 API 编码（如 1=RankSolo）
+            try
+            {
+                var gm = GameModeExtensions.FromBattleApiCode(mode);
+                return gm.GetCategory() == GameModeCategory.Rank;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return false;
+            }
         }
 
         private string GetRankNameForScore(double score, int gameMode = 0)
@@ -992,7 +1009,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         private static int GetStarCount(double score, int gameMode = 0)
         {
             if (!IsTianxuanMode(gameMode)) return 0;
-            if (score >= 4500) return (int)((score - 4500) / 100);
+            if (score >= 4500) return (int)((score - 4500) / 100); // 修罗以上：星数
             return 0;
         }
 
@@ -1013,11 +1030,82 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private static double GetRankTierScore(double score, int gameMode = 0)
         {
-            if (!IsTianxuanMode(gameMode)) return score;
-            if (score >= 4500) return (score - 4500) % 100;
+            var isTianxuan = IsTianxuanMode(gameMode);
+            if (!isTianxuan) return score;
+
+            if (score >= 4500)
+                return (score - 4500) % 100; // 星阶段位内分数
+
+            if (score >= 1500)
+            {
+                var tierBase = GetTierBase(score, true);
+                return (score - tierBase) % 100; // 子段内分数
+            }
+
             return score;
         }
 
+        /// <summary>
+        /// 获取段位的起始分数线（该大段的最低分）
+        /// </summary>
+        private static double GetTierBase(double score, bool isTianxuan)
+        {
+            if (isTianxuan)
+            {
+                if (score >= 7500) return 7500;
+                if (score >= 6000) return 6000;
+                if (score >= 5000) return 5000;
+                if (score >= 4500) return 4500;
+                if (score >= 4000) return 4000;
+                if (score >= 3500) return 3500;
+                if (score >= 3000) return 3000;
+                if (score >= 2500) return 2500;
+                if (score >= 2000) return 2000;
+                if (score >= 1500) return 1500;
+                return 0;
+            }
+            else
+            {
+                if (score >= 7000) return 7000;
+                if (score >= 6500) return 6500;
+                if (score >= 6000) return 6000;
+                if (score >= 5500) return 5500;
+                if (score >= 5000) return 5000;
+                if (score >= 4500) return 4500;
+                if (score >= 4000) return 4000;
+                if (score >= 3500) return 3500;
+                if (score >= 3000) return 3000;
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// 获取子段位名称（五、四、三、二、一），每小段 100 分
+        /// 仅对排位模式 1500~4499 分有效
+        /// </summary>
+        private static string GetSubTierName(double score, bool isTianxuan)
+        {
+            if (!isTianxuan) return string.Empty;
+            if (score < 1500 || score >= 4500) return string.Empty;
+
+            var tierBase = GetTierBase(score, isTianxuan);
+            var offset = score - tierBase;
+            var subTierIndex = (int)(offset / 100);
+            var names = new[] { "5", "4", "3", "2", "1" };
+            if (subTierIndex >= 0 && subTierIndex < names.Length)
+                return names[subTierIndex];
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// 判断是否应该在 DataGrid 行中显示段位分数
+        /// </summary>
+        private static bool ShouldShowTierScore(double score, int gameMode)
+        {
+            if (IsTianxuanMode(gameMode))
+                return score >= 1500;
+            return false;
+        }
     }
 
     public class StatEntryItem
@@ -1041,10 +1129,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public double ScoreNumber { get; set; }
         public double ScoreDiff { get; set; }
         public string RankDisplayText { get; set; } = string.Empty;
+        public bool ShowScoreNumber { get; set; }
         public double StarCount { get; set; }
         public bool HasStars { get; set; }
         public string ScoreDiffDisplay { get; set; } = string.Empty;
         public string BattleTime { get; set; } = string.Empty;
+        public bool IsRankMode { get; set; }
     }
 
     public class HonorTitleDisplayItem

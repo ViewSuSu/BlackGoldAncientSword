@@ -1,4 +1,4 @@
-<bases:UserControlBase
+﻿<bases:UserControlBase
     x:Class="BlackGoldAncientSword.Modules.UI.Stats.Views.StatsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -373,13 +373,17 @@
                                     Text="{Binding PageStarCount}"
                                     Visibility="{Binding PageHasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             </StackPanel>
-                            <TextBlock
+                            <StackPanel
                                 Margin="0,2,0,0"
                                 HorizontalAlignment="Center"
-                                FontSize="13"
-                                Foreground="Gray">
-                                <Run Text="{Binding RankTierScore, StringFormat='{}{0}'}" /><Run Text="{DynamicResource Stats.Points}" />
-                            </TextBlock>
+                                Orientation="Horizontal">
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="13"
+                                    Foreground="Gray">
+                                    <Run Text="{Binding RankTierScore, StringFormat='{}{0}'}" /><Run Text="{DynamicResource Stats.Points}" />
+                                </TextBlock>
+                            </StackPanel>
                         </StackPanel>
 
                         <!--  Detail stats (right column)  -->
@@ -651,7 +655,8 @@
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                          Visibility="{Binding IsRankMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="50" />
                                             <ColumnDefinition />
@@ -700,7 +705,7 @@
                                                 FontWeight="ExtraLight"
                                                 Foreground="Gray"
                                                 Text="{Binding ScoreNumber}"
-                                                Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                Visibility="{Binding ShowScoreNumber, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             <TextBlock
                                                 Margin="6,0,0,0"
                                                 VerticalAlignment="Center"
