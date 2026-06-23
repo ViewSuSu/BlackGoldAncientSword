@@ -218,6 +218,36 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private void OnGameStatusRecognized(object? sender, GameStatusChangedEventArgs args)
         {
+            // 非英雄选择状态时立即取消 OCR 循环，无需等待 UI 线程调度。
+            // GameLogMonitor 在 ThreadPool 上触发事件，HandleGameStatusOnUiThread 通过
+            // _uiDispatcher.InvokeAsync marshal 到 UI 线程，从事件触发到实际执行 StopOcrLoop
+            // 之间存在延迟窗口，OCR 截图循环在此期间会继续执行。
+            // StopOcrLoop 内部持有 _ocrLock，线程安全，可从任意线程调用。
+            if (args.Status != GameStatus.HeroSelection)
+            {
+                StopOcrLoop();
+            }
+
+            // 英雄选择状态下已有有效数据时，不启动 OCR 循环
+            if (args.Status == GameStatus.HeroSelection && _ocrDataLoadedSuccessfully)
+            {
+                if (!_uiDispatcher.CheckAccess())
+                {
+                    _ = _uiDispatcher.InvokeAsync(() =>
+                    {
+                        IsHeroSelectionPhase = true;
+                        StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
+                    });
+                    return;
+                }
+                IsHeroSelectionPhase = true;
+                StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
+                return;
+            }
+
+            // HandleGameStatusOnUiThread 中 InGame/BattleEnded/Unknown 分支仍会调用
+            // StopOcrLoop()，但 _isOcrRunning 已为 false 时会通过 lock 内早期 return 快速退出。
+
             // GameStatusRecognized 可能从 ThreadPool 触发（GameLogMonitor 的 FileSystemWatcher.OnLogChanged
             // 走 Task.Run → 同步 raise BattleStarted/Ended/Joined → MainWindowViewModel/HomePageViewModel
             // 同步调 _gameStatusMonitor.NotifyStatus → 同步 raise GameStatusRecognized）。
@@ -232,6 +262,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             HandleGameStatusOnUiThread(sender, args);
         }
+
 
         private void HandleGameStatusOnUiThread(object? sender, GameStatusChangedEventArgs args)
         {
@@ -448,6 +479,18 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     ct);
 
                 if (ct.IsCancellationRequested || names.Length == 0) return;
+
+                // ★ 一旦 OCR 识别到有效队友名，立即停止后续 OCR 截图。
+                // 即使 HTTP 数据加载失败，也不应重复截图识别。
+                _ocrDataLoadedSuccessfully = true;
+
+                // ★ 如果游戏状态已非英雄选择阶段，跳过本次识别结果处理。
+                // 避免 HeroSelection→InGame 转换延迟窗口中最后一次截图结果被错误处理。
+                if (_gameStatusMonitor.CurrentStatus != GameStatus.HeroSelection)
+                    return;
+
+                // 确保赛季数据已加载后再加载成员数据，避免 _selectedSeason?.Code 为 null
+                await LoadSeasonsAsync();
 
                 await _uiDispatcher.InvokeAsync(() =>
                 {
@@ -918,10 +961,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
                 StartOcrLoop();
             }
-            else if (_gameStatusMonitor.CurrentStatus == GameStatus.InGame && TeamMembers.Count > 0)
+            else if (_gameStatusMonitor.CurrentStatus == GameStatus.InGame
+                     && TeamMembers.Count > 0
+                     && TeamMembers.All(m => !m.HasStatusError && !string.IsNullOrEmpty(m.UID)))
             {
-                // 游戏中且已有识别的队伍数据：保留数据，不清理
-                // 可能是从英雄选择阶段自然过渡到游戏中，或是用户手动导航到此页面
+                // 游戏中且已有识别的有效队伍数据：保留数据，不清理
+                // 只有所有成员都有有效数据（无错误、有UID）时才保留，
+                // 避免残留的查询失败数据在导航时错误显示。
                 IsHeroSelectionPhase = false;
                 StatusText = string.Empty;
                 _teamOverlayService.Hide();
@@ -929,18 +975,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             else
             {
                 // 非英雄选择状态时清除旧队友数据，避免复杂UI（DropShadowEffect + 索引绑定）立即渲染导致卡死
-                if (TeamMembers.Count > 0)
-                {
-                    _hasEverHadData = false;
-                    TeamMembers.Clear();
-                    DiffLeft.Clear();
-                    DiffRight.Clear();
-                    RaiseMemberProperties();
-                }
+                _hasEverHadData = false;
+                TeamMembers.Clear();
+                DiffLeft.Clear();
+                DiffRight.Clear();
+                RaiseMemberProperties();
 
                 IsHeroSelectionPhase = false;
-                if (_gameStatusMonitor.CurrentStatus != GameStatus.InGame)
-                    StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
+                StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
             }
         }
 
