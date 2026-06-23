@@ -69,20 +69,25 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
             lock (_stateLock) { _suppressEvents = true; }
         }
 
-        /// <summary>
-        /// 启动期回放结束：解除抑制并重置状态机（清空 battleId/inBattle 等），
-        /// 让真正的现网增量从干净状态开始。两步必须在同一锁内原子完成，
-        /// 否则在 _suppressEvents=false 与 ResetLocked() 之间到达的 ProcessLine 可能
-        /// 在脏状态下触发事件。
-        /// </summary>
-        public void EndSuppressedReplay()
-        {
-            lock (_stateLock)
-            {
-                _suppressEvents = false;
-                ResetLocked();
-            }
-        }
+       /// <summary>
+       /// 启动期回放结束：解除抑制并重置状态机（清空 battleId/inBattle 等），
+       /// 让真正的现网增量从干净状态开始。两步必须在同一锁内原子完成，
+       /// 否则在 _suppressEvents=false 与 ResetLocked() 之间到达的 ProcessLine 可能
+       /// 在脏状态下触发事件。
+        /// 注意：必须保留 _lastPosition 不被清 0，否则 FSW/Poll 循环会从头重读旧日志，
+        /// 触发陈年 BattleJoined 事件导致 OCR 在程序启动后不应触发的时候启动。
+       /// </summary>
+       public void EndSuppressedReplay()
+       {
+           lock (_stateLock)
+           {
+                // 保存文件读取位置，避免 ResetLocked() 将其清 0。
+                var savedPosition = _lastPosition;
+               _suppressEvents = false;
+               ResetLocked();
+                _lastPosition = savedPosition;
+           }
+       }
 
         /// <summary>
         /// 启动期一次性读取后，把回放完毕的字节长度写入 LastPosition。
