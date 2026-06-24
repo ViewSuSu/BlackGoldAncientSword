@@ -122,8 +122,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
-          curl.exe -OL https://files.jrsoftware.org/is/6/innosetup-6.5.0.exe
-          .\innosetup-6.5.0.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+          curl.exe -L -o innosetup.exe https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe
+          .\innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
           "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
 
       - name: Download Inno Setup Chinese language file
