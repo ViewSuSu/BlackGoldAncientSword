@@ -118,14 +118,18 @@ jobs:
           Write-Host "Created: $zipPath ($zipSize bytes)"
 
       - name: Install Inno Setup
-        shell: powershell
+        shell: pwsh
         run: |
-          choco install innosetup -y --no-progress --force
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          curl.exe -OL https://files.jrsoftware.org/is/6/innosetup-6.5.0.exe
+          .\innosetup-6.5.0.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
 
       - name: Download Inno Setup Chinese language file
         shell: powershell
         run: |
-          $url = "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/ChineseSimplified.isl"
+          $url = "https://raw.githubusercontent.com/kira-96/Inno-Setup-Chinese-Simplified-Translation/main/ChineseSimplified.isl"
           $dest = "C:\Program Files (x86)\Inno Setup 6\Languages\ChineseSimplified.isl"
           Invoke-WebRequest -Uri $url -OutFile $dest
           Write-Host "Downloaded ChineseSimplified.isl"
