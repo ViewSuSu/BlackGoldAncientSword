@@ -24,7 +24,7 @@ ShowLanguageDialog=yes
 UninstallDisplayIcon={app}\BlackGoldAncientSword.App.exe
 
 [Languages]
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+Name: "chinesesimplified"; MessagesFile: ".\ChineseSimplified.isl"
 Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
