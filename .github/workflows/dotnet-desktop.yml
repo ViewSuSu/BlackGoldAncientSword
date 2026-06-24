@@ -126,14 +126,6 @@ jobs:
           .\innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
           "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
 
-      - name: Download Inno Setup Chinese language file
-        shell: powershell
-        run: |
-          $url = "https://raw.githubusercontent.com/kira-96/Inno-Setup-Chinese-Simplified-Translation/main/ChineseSimplified.isl"
-          $dest = "C:\Program Files (x86)\Inno Setup 6\Languages\ChineseSimplified.isl"
-          Invoke-WebRequest -Uri $url -OutFile $dest
-          Write-Host "Downloaded ChineseSimplified.isl"
-
       - name: Build Installer
         shell: powershell
         run: |
