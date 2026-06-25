@@ -52,23 +52,13 @@
                     FontWeight="SemiBold"
                     Foreground="#CCCCCC"
                     Text="{DynamicResource TeamInfo.Title}" />
-                <Button
+                <TextBlock
                     Grid.Column="1"
-                    Width="22"
-                    Height="22"
-                    Padding="0"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    Command="{Binding RefreshCommand}"
-                    Cursor="Hand"
-                    ToolTip="{DynamicResource TeamInfo.RefreshOcr}">
-                    <Image
-                        Width="14"
-                        Height="14"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/refresh_data.png" />
-                </Button>
+                    Margin="0,0,6,0"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="#888888"
+                    Text="{Binding CountdownText}" />
                 <Button
                     Grid.Column="2"
                     Width="22"
