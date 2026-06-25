@@ -417,13 +417,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     RaiseMemberProperties();
                 });
 
-                // 从 UI 线程启动所有 LoadMemberDataAsync，确保 SynchronizationContext 正确
+                // 从 UI 线程启动所有 LoadWithIndependentToken，确保 SynchronizationContext 正确
+                // 每个成员使用独立 linked CTS，互不干扰
                 var tasks = new List<Task>();
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     foreach (var member in TeamMembers)
                     {
-                        tasks.Add(LoadMemberDataAsync(member, ct));
+                        tasks.Add(LoadWithIndependentToken(member, ct));
                     }
                 });
 
@@ -548,6 +549,18 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // Mark that we have loaded data at least once
             _hasEverHadData = true;
 
+            // 给成员数据加载用独立 token，不复用 OCR loop 的 ct。
+            // 原因：游戏状态 HeroSelection → InGame 切换会 StopOcrLoop()→取消 _ocrLoopCts，
+            // 此时若 stats HTTP 仍在 in-flight 会抛 OperationCanceledException，
+            // LoadMemberDataAsync 跳过字段写入 block，卡片出现"段位有数据但 stats 全空"的不一致状态。
+            // member-scoped 加载只应在用户主动整队刷新（RefreshTeamMemberData）或离开页面时取消。
+            if (_refreshMembersCts == null || _refreshMembersCts.IsCancellationRequested)
+            {
+                CancelAndDispose(ref _refreshMembersCts);
+                    _refreshMembersCts = new CancellationTokenSource();
+            }
+            var loadCt = _refreshMembersCts.Token;
+
             var existingNames = TeamMembers.Select(m => m.UserName).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var newNames = names.Where(n => !existingNames.Contains(n)).ToArray();
 
@@ -571,7 +584,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     }
                 };
                 TeamMembers.Add(member);
-                _ = LoadMemberDataAsync(member, ct);
+                _ = LoadWithIndependentToken(member, loadCt);
             }
 
             ReorderMembersForLocalUser();
@@ -736,6 +749,17 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _ = LoadMemberDataAsync(member, CancellationToken.None);
         }
 
+        /// <summary>
+        /// 为每个成员创建独立的 linked CancellationTokenSource，使各成员 HTTP 请求完全独立：
+        /// 父 token 取消时所有成员同步取消（导航离开、切换筛选器），
+        /// 但单个成员查询失败不会影响其他成员的 token。
+        /// </summary>
+        private async Task LoadWithIndependentToken(TeamMemberInfo member, CancellationToken parentToken)
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(parentToken);
+            await LoadMemberDataAsync(member, cts.Token);
+        }
+
         private async Task LoadMemberDataAsync(TeamMemberInfo member, CancellationToken ct)
         {
             var userName = member.UserName;
@@ -757,39 +781,41 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     {
                         member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
                     });
-                    return;
+                    // 不 return：让 final cleanup 块执行，确保 IsLoading 被重置
                 }
-
-                // Step 6: 合并所有属性更新为单一批，降低 UI 线程队列压力
-                await _uiDispatcher.InvokeAsync(() =>
+                else
                 {
-                    member.UserName = loaded.UserName;
-                    member.Level = loaded.Level;
-                    member.UID = loaded.UID;
-                    member.AvatarUrl = loaded.AvatarUrl;
-                    member.SoloRankScore = loaded.SoloRankScore;
-                    member.DuoRankScore = loaded.DuoRankScore;
-                    member.TrioRankScore = loaded.TrioRankScore;
-                    member.KillCount = loaded.Stats?.AvgKill ?? member.KillCount;
-                    member.Top5Rate = loaded.Stats?.Top5Rate ?? member.Top5Rate;
-                    member.DamagePlayer = loaded.Stats?.AvgDamage ?? member.DamagePlayer;
-                    member.SurviveTime = loaded.Stats?.SurviveTime ?? member.SurviveTime;
-                    var s = loaded.Stats;
-                    member.RankName = s?.RankName ?? member.RankName;
-                    member.RankIcon = s?.RankIcon ?? member.RankIcon;
-                    member.RankScore = s?.RankScore ?? 0;
-                    member.PageRankName = s?.PageRankName ?? member.PageRankName;
-                    member.PageStarCount = s?.PageStarCount ?? 0;
-                    member.PageHasStars = s?.PageHasStars ?? false;
-                    member.RankTierScore = s?.RankTierScore ?? 0;
-                    member.Stats.Clear();
-                    if (loaded.Stats != null)
+                    // Step 6: 合并所有属性更新为单一批，降低 UI 线程队列压力
+                    await _uiDispatcher.InvokeAsync(() =>
                     {
-                        foreach (var kv in loaded.Stats.Stats)
-                            member.Stats[kv.Key] = kv.Value;
-                    }
-                    member.StatusText = "";
-                });
+                        member.UserName = loaded.UserName;
+                        member.Level = loaded.Level;
+                        member.UID = loaded.UID;
+                        member.AvatarUrl = loaded.AvatarUrl;
+                        member.SoloRankScore = loaded.SoloRankScore;
+                        member.DuoRankScore = loaded.DuoRankScore;
+                        member.TrioRankScore = loaded.TrioRankScore;
+                        member.KillCount = loaded.Stats?.AvgKill ?? member.KillCount;
+                        member.Top5Rate = loaded.Stats?.Top5Rate ?? member.Top5Rate;
+                        member.DamagePlayer = loaded.Stats?.AvgDamage ?? member.DamagePlayer;
+                        member.SurviveTime = loaded.Stats?.SurviveTime ?? member.SurviveTime;
+                        var s = loaded.Stats;
+                        member.RankName = s?.RankName ?? member.RankName;
+                        member.RankIcon = s?.RankIcon ?? member.RankIcon;
+                        member.RankScore = s?.RankScore ?? 0;
+                        member.PageRankName = s?.PageRankName ?? member.PageRankName;
+                        member.PageStarCount = s?.PageStarCount ?? 0;
+                        member.PageHasStars = s?.PageHasStars ?? false;
+                        member.RankTierScore = s?.RankTierScore ?? 0;
+                        member.Stats.Clear();
+                        if (loaded.Stats != null)
+                        {
+                            foreach (var kv in loaded.Stats.Stats)
+                                member.Stats[kv.Key] = kv.Value;
+                        }
+                        member.StatusText = "";
+                    });
+                }
             }
             catch (OperationCanceledException)
             {
@@ -892,22 +918,22 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             var members = TeamMembers.ToList();
 
             // 在 UI 线程上设置加载状态，确保 WPF 绑定跨线程安全
+            // 不跳过无 UID 的成员：筛选器变更取消了首次加载时这些成员从未获得 UID，
+            // 若此处跳过则它们永远不会被重试。
             await _uiDispatcher.InvokeAsync(() =>
             {
                 foreach (var member in members)
                 {
-                    if (string.IsNullOrEmpty(member.UID)) continue;
                     member.IsLoading = true;
+                    member.StatusText = string.Empty;
                 }
             });
 
             var tasks = new List<Task>();
             foreach (var member in members)
             {
-                if (string.IsNullOrEmpty(member.UID)) continue;
-                // LoadMemberDataAsync 自身已是异步方法（ConfigureAwait(false) + UIDispatcher.InvokeAsync），
-                // 无需再用 Task.Run 多嵌一层 ThreadPool；直接收集 Task 即可。
-                tasks.Add(LoadMemberDataAsync(member, ct));
+                // 每个成员使用独立 linked token，互不干扰
+                tasks.Add(LoadWithIndependentToken(member, ct));
             }
             if (tasks.Count > 0)
                 await Task.WhenAll(tasks);
