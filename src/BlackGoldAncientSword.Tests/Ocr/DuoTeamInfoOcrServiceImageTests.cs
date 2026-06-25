@@ -58,19 +58,29 @@ public class DuoTeamInfoOcrServiceImageTests
         if (stitched.bmp == null) return Array.Empty<string>();
 
         var results = await engine.RecognizeAsync(stitched.bmp);
+        // 与 TeamInfoOcrService.BucketAndExtractNames 保持一致：按最近槽位中心分桶，不去重。
+        // 旧实现严判区间 + Distinct 会让 OCR box 中心漂入 spacer 死区或被误识同名时丢槽位。
+        var centers = new int[stitched.regionXRanges.Length];
+        for (int i = 0; i < stitched.regionXRanges.Length; i++)
+        {
+            var (xStart, xEnd) = stitched.regionXRanges[i];
+            centers[i] = xStart < 0 ? int.MinValue / 2 : (xStart + xEnd) / 2;
+        }
+
         var buckets = new string[stitched.regionXRanges.Length];
         foreach (var r in results)
         {
             var cx = (r.Box.TopLeft.X + r.Box.TopRight.X) / 2;
-            for (int i = 0; i < stitched.regionXRanges.Length; i++)
+            int best = -1;
+            int bestDist = int.MaxValue;
+            for (int i = 0; i < centers.Length; i++)
             {
-                var (xStart, xEnd) = stitched.regionXRanges[i];
-                if (cx >= xStart && cx < xEnd)
-                {
-                    buckets[i] = (buckets[i] ?? "") + r.Text;
-                    break;
-                }
+                if (centers[i] == int.MinValue / 2) continue;
+                var d = Math.Abs(cx - centers[i]);
+                if (d < bestDist) { bestDist = d; best = i; }
             }
+            if (best >= 0)
+                buckets[best] = (buckets[best] ?? "") + r.Text;
         }
 
         var names = new List<string>();
@@ -81,7 +91,7 @@ public class DuoTeamInfoOcrServiceImageTests
             if (!string.IsNullOrWhiteSpace(name))
                 names.Add(name);
         }
-        return names.Distinct().ToArray();
+        return names.ToArray();
     }
 
     // ── 测试用例 ──────────────────────────────────────────
