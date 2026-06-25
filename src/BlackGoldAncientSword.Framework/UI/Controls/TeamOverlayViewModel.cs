@@ -27,6 +27,18 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
 
         public bool HasMembers => Members.Count > 0;
 
+        private string _countdownText = string.Empty;
+        public string CountdownText
+        {
+            get => _countdownText;
+            set
+            {
+                if (_countdownText == value) return;
+                _countdownText = value;
+                RaisePropertyChanged(nameof(CountdownText));
+            }
+        }
+
         public DelegateCommand CloseCommand { get; }
         public DelegateCommand NavigateToTeamInfoCommand { get; }
         public DelegateCommand RefreshCommand { get; }

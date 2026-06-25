@@ -38,13 +38,26 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     };
 
     /// <summary>
-    /// 三排检测用小区域（左侧区域左边 ~40%，右侧区域左边 ~40%）。
-    /// 名字从左到右排列，仅取左边缘即可快速判断是否有文本。
+    /// 三排检测用小区域：trio 左 region 的最左截 + trio 右 region 的最右截。
+    /// <para>
+    /// 取两端外侧截而非内侧，是为避开 duo 玩家名字 X 范围：
+    /// duo 左玩家 X ∈ [0.386, 0.497]，duo 右玩家 X ∈ [0.558, 0.677]。
+    /// trio 检测区若落入这两段（旧实现右截 [0.646, 0.696] 即与 duo 右玩家 [0.646, 0.677] 重叠 31px），
+    /// duo 画面会被误识到字符 → 误判为 trio。
+    /// </para>
+    /// <para>
+    /// trio 与 duo 的 Y 范围实际重叠约 38px（注释中所谓"相差 34px"是错的），无法靠 Y 区分，
+    /// 必须靠 X 完全避开 duo 玩家 X 范围。
+    /// </para>
+    /// <para>
+    /// 左截 X=[0.302, 0.352]：在 duo 左玩家 0.386 之前，安全。
+    /// 右截 X=[0.685, 0.785]：在 duo 右玩家 0.677 之后留 ~16px buffer，安全。
+    /// </para>
     /// </summary>
     internal static readonly OcrRegion[] TrioDetectRegions = new[]
     {
-        new OcrRegion { X = 0.301953, Y = 0.899306, Width = 0.050, Height = 0.039583 }, // 左侧区域左边部分
-        new OcrRegion { X = 0.646484, Y = 0.897917, Width = 0.050, Height = 0.036806 }, // 右侧区域左边部分
+        new OcrRegion { X = 0.301953, Y = 0.899306, Width = 0.050, Height = 0.039583 }, // trio 左 region 最左截
+        new OcrRegion { X = 0.685000, Y = 0.897917, Width = 0.100, Height = 0.036806 }, // trio 右 region 最右截
     };
 
     public TeamInfoOcrService(IScreenCaptureService screenCapture, IOcrService ocr)
@@ -93,32 +106,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             return Array.Empty<string>();
         }
 
-        // 按 box.TopLeft.X 落入哪个 region 的 [start, end) 区间,聚合到该桶。
-        var buckets = new string[stitched.regionXRanges.Length];
-        foreach (var r in results)
-        {
-            var cx = (r.Box.TopLeft.X + r.Box.TopRight.X) / 2;
-            for (int i = 0; i < stitched.regionXRanges.Length; i++)
-            {
-                var (xStart, xEnd) = stitched.regionXRanges[i];
-                if (cx >= xStart && cx < xEnd)
-                {
-                    buckets[i] = (buckets[i] ?? "") + r.Text;
-                    break;
-                }
-            }
-        }
-
-        var names = new List<string>();
-        foreach (var bucket in buckets)
-        {
-            if (string.IsNullOrEmpty(bucket)) continue;
-            var name = bucket.Replace(" ", "").Replace("\n", "").Replace("\r", "").Trim();
-            if (!string.IsNullOrWhiteSpace(name))
-                names.Add(name);
-        }
-
-        return names.Distinct().ToArray();
+        return BucketAndExtractNames(stitched.regionXRanges, results);
     }
 
     public async Task<string[]> RecognizeDuoTeamMembersAsync(CancellationToken ct = default)
@@ -158,32 +146,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             return Array.Empty<string>();
         }
 
-        // 按 box.TopLeft.X 落入 [start, end) 分桶。
-        var buckets = new string[stitched.regionXRanges.Length];
-        foreach (var r in results)
-        {
-            var cx = (r.Box.TopLeft.X + r.Box.TopRight.X) / 2;
-            for (int i = 0; i < stitched.regionXRanges.Length; i++)
-            {
-                var (xStart, xEnd) = stitched.regionXRanges[i];
-                if (cx >= xStart && cx < xEnd)
-                {
-                    buckets[i] = (buckets[i] ?? "") + r.Text;
-                    break;
-                }
-            }
-        }
-
-        var names = new List<string>();
-        foreach (var bucket in buckets)
-        {
-            if (string.IsNullOrEmpty(bucket)) continue;
-            var name = bucket.Replace(" ", "").Replace("\n", "").Replace("\r", "").Trim();
-            if (!string.IsNullOrWhiteSpace(name))
-                names.Add(name);
-        }
-
-        return names.Distinct().ToArray();
+        return BucketAndExtractNames(stitched.regionXRanges, results);
     }
 
     public async Task<string[]> RecognizeTeamMembersAutoAsync(CancellationToken ct = default)
@@ -207,9 +170,10 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         ct.ThrowIfCancellationRequested();
 
         // Step 1: 检测队伍规模
-        // 取三排左侧区域左边 ~40% 和右侧区域左边 ~40% 拼成一块检测图，
-        // 因为玩家名字从左到右排列，仅取左边缘即可判断该区域是否有文本。
-        // 三排区域与双排区域 Y 坐标相差约 34px，无重叠，不会误判。
+        // 取 trio 左 region 最左截 + trio 右 region 最右截拼成一块检测图。
+        // trio 与 duo 的 Y 范围实际重叠约 38px（屏幕底栏位置接近），无法靠 Y 区分，
+        // 必须靠 X 完全避开 duo 玩家 X 范围（左玩家 [0.386,0.497]、右玩家 [0.558,0.677]）。
+        // 详见 TrioDetectRegions 注释。
         var detectStitched = StitchRegionsForOcr(rawBgra, fullWidth, fullHeight, TrioDetectRegions);
         bool isTrio = false;
 
@@ -245,20 +209,55 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             return Array.Empty<string>();
         }
 
-        // 按 box.TopLeft.X 落入 [start, end) 分桶
-        var buckets = new string[stitched.regionXRanges.Length];
+        return BucketAndExtractNames(stitched.regionXRanges, results);
+    }
+
+    /// <summary>
+    /// 把 OCR 结果按"最近槽位中心"分桶并清洗成名字数组。
+    /// <para>
+    /// 旧实现按 [xStart, xEnd) 严判分桶 + 末尾 <c>Distinct()</c> 去重，存在两个 bug：
+    /// </para>
+    /// <list type="number">
+    /// <item>槽位之间留 80 px 白色 spacer 死区，PaddleOCR detector 给 box 加 padding 后
+    /// box 中心可能落入死区被静默丢弃 → 三排只识别到两人。</item>
+    /// <item><c>Distinct()</c> 把两个槽位被 OCR 误识成相同字符串的情况合并成一项 → 同样丢人。
+    /// 槽位识别的语义本就是按位置区分玩家，去重无意义。</item>
+    /// </list>
+    /// <para>
+    /// 新实现：每个 OCR box 按中心 X 与最近槽位中心距离归属，无死区；按槽位顺序输出，
+    /// 同名误识保留两条以便后续 HTTP 查询失败时仍可见。
+    /// </para>
+    /// </summary>
+    private static string[] BucketAndExtractNames(
+        (int xStart, int xEnd)[] regionXRanges, List<OcrResult> results)
+    {
+        var centers = new int[regionXRanges.Length];
+        for (int i = 0; i < regionXRanges.Length; i++)
+        {
+            var (xStart, xEnd) = regionXRanges[i];
+            // StitchRegionsForOcr 对无效 region 写入 (-1,-1)；此处保持中心为负，
+            // 任何有效 cx 都不会与之距离最近，等价于该槽位被跳过。
+            centers[i] = xStart < 0 ? int.MinValue / 2 : (xStart + xEnd) / 2;
+        }
+
+        var buckets = new string[regionXRanges.Length];
         foreach (var r in results)
         {
             var cx = (r.Box.TopLeft.X + r.Box.TopRight.X) / 2;
-            for (int i = 0; i < stitched.regionXRanges.Length; i++)
+            int best = -1;
+            int bestDist = int.MaxValue;
+            for (int i = 0; i < centers.Length; i++)
             {
-                var (xStart, xEnd) = stitched.regionXRanges[i];
-                if (cx >= xStart && cx < xEnd)
+                if (centers[i] == int.MinValue / 2) continue;
+                var d = Math.Abs(cx - centers[i]);
+                if (d < bestDist)
                 {
-                    buckets[i] = (buckets[i] ?? "") + r.Text;
-                    break;
+                    bestDist = d;
+                    best = i;
                 }
             }
+            if (best >= 0)
+                buckets[best] = (buckets[best] ?? "") + r.Text;
         }
 
         var names = new List<string>();
@@ -269,8 +268,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             if (!string.IsNullOrWhiteSpace(name))
                 names.Add(name);
         }
-
-        return names.Distinct().ToArray();
+        return names.ToArray();
     }
 
     /// <summary>
