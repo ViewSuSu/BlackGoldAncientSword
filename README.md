@@ -542,7 +542,7 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 5. 用 `setup.iss`（Inno Setup 脚本）生成 `BlackGoldAncientSword-Setup.exe`
 6. 创建 GitHub Release，自动列举上一版本到本次的 commit 标题
 
-> `release` 分支已开启分支保护：禁直推 / 禁 force / 禁删除，必须通过 PR 合入。日常开发在 `main` 分支进行，发版由 PR 触发同步到 `release`。
+> 日常开发在 `main` 分支进行；发版时由 [git-commit](.claude/skills/git-commit/SKILL.md) skill 自动 commit 当前分支 → 切到 `release` 合并源分支 → 直推 `release` 触发 `dotnet-desktop.yml`。`release` 分支保护已解除，允许本地直推，不再走 PR。
 
 ---
 
