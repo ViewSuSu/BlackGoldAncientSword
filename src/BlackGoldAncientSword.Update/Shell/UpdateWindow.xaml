@@ -192,59 +192,38 @@
                     Value="{Binding Percent, Mode=OneWay}" />
             </Grid>
 
-            <!--  详情行：速度 | 大小 | ETA | 百分比  -->
-            <Grid Grid.Row="3">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <!--  左侧：速度（高亮蓝） + 大小（次级） + ETA（次级）  -->
-                <StackPanel
-                    Grid.Column="0"
-                    VerticalAlignment="Center"
-                    Orientation="Horizontal">
-                    <TextBlock
-                        FontSize="12"
-                        FontWeight="SemiBold"
-                        Foreground="{StaticResource AccentBrush}"
-                        Text="{Binding SpeedText}"
-                        Typography.NumeralAlignment="Tabular" />
-                    <!--  分隔点：节奏感更强  -->
-                    <TextBlock
-                        Margin="10,0,10,0"
-                        FontSize="12"
-                        Foreground="{StaticResource TextMutedBrush}"
-                        Text="·" />
-                    <TextBlock
-                        FontSize="12"
-                        Foreground="{StaticResource TextSecondaryBrush}"
-                        Text="{Binding SizeText}"
-                        Typography.NumeralAlignment="Tabular" />
-                    <TextBlock
-                        Margin="10,0,10,0"
-                        FontSize="12"
-                        Foreground="{StaticResource TextMutedBrush}"
-                        Text="·" />
-                    <TextBlock
-                        FontSize="12"
-                        Foreground="{StaticResource TextSecondaryBrush}"
-                        Text="{Binding EtaText}"
-                        Typography.NumeralAlignment="Tabular" />
-                </StackPanel>
-
-                <!--  右侧：大号百分比，强调当前进度  -->
+            <!--  详情行：速度 | 大小 | ETA  -->
+            <StackPanel
+                Grid.Row="3"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
                 <TextBlock
-                    Grid.Column="2"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    FontSize="20"
+                    FontSize="12"
                     FontWeight="SemiBold"
-                    Foreground="{StaticResource TextPrimaryBrush}"
-                    Text="{Binding PercentText}"
+                    Foreground="{StaticResource AccentBrush}"
+                    Text="{Binding SpeedText}"
                     Typography.NumeralAlignment="Tabular" />
-            </Grid>
+                <TextBlock
+                    Margin="10,0,10,0"
+                    FontSize="12"
+                    Foreground="{StaticResource TextMutedBrush}"
+                    Text="·" />
+                <TextBlock
+                    FontSize="12"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Text="{Binding SizeText}"
+                    Typography.NumeralAlignment="Tabular" />
+                <TextBlock
+                    Margin="10,0,10,0"
+                    FontSize="12"
+                    Foreground="{StaticResource TextMutedBrush}"
+                    Text="·" />
+                <TextBlock
+                    FontSize="12"
+                    Foreground="{StaticResource TextSecondaryBrush}"
+                    Text="{Binding EtaText}"
+                    Typography.NumeralAlignment="Tabular" />
+            </StackPanel>
         </Grid>
     </Border>
 </Window>
