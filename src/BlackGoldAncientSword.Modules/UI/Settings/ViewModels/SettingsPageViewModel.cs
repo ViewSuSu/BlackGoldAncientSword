@@ -154,16 +154,6 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             }
         }
 
-        private DelegateCommand? _copyTeamOverlayNameCommand;
-        public DelegateCommand CopyTeamOverlayNameCommand =>
-            _copyTeamOverlayNameCommand ??= new DelegateCommand(() =>
-            {
-                var name = _localizedText.Get("Settings.Category.TeamOverlay", "英雄选择时出现右下角弹窗");
-                _clipboard.TrySetText(name);
-                eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(_localizedText.Get("Stats.CopySuccess", "复制成功")));
-            });
-
         public SettingsPageViewModel(
             ISettingsService settings,
             ILocalizationService localization,
