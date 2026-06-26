@@ -175,7 +175,6 @@
     <ns1:String ns2:Key="UpdateNotification.Title">發現新版本</ns1:String>
     <ns1:String ns2:Key="UpdateNotification.NewVersion">偵測到最新版本：</ns1:String>
     <ns1:String ns2:Key="UpdateNotification.Message">請及時下載最新版，確保功能正常可用。</ns1:String>
-    <ns1:String ns2:Key="UpdateNotification.DownloadNow">瀏覽器下載</ns1:String>
     <ns1:String ns2:Key="UpdateNotification.OnlineUpdate">線上更新</ns1:String>
     <ns1:String ns2:Key="UpdateNotification.OnlineUpdate.ToolTip">使用內建更新程式自動下載並安裝</ns1:String>
     <ns1:String ns2:Key="UpdateNotification.CopyUrl">複製下載連結</ns1:String>
@@ -215,7 +214,7 @@
     <ns1:String ns2:Key="Settings.CheckForUpdates">檢查更新</ns1:String>
     <ns1:String ns2:Key="Settings.UpdateChecking">正在檢查更新...</ns1:String>
     <ns1:String ns2:Key="Settings.NoUpdateAvailable">目前已經是最新版本</ns1:String>
-    <ns1:String ns2:Key="Settings.UpdateAvailable">下載最新版</ns1:String>
+    <ns1:String ns2:Key="Settings.UpdateAvailable">發現新版本</ns1:String>
     <ns1:String ns2:Key="Settings.NewVersionTooltip">發現新版本: {0}，點擊更新</ns1:String>
     <ns1:String ns2:Key="Settings.UpdateCheckFailed">檢查更新失敗，請稍後重試</ns1:String>
     <ns1:String ns2:Key="Settings.UpdateError">更新錯誤: {0}</ns1:String>

@@ -1,6 +1,6 @@
-﻿---
+---
 name: git-commit
-description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，则执行完整的发版流程：commit+push 当前分支 → 合并到 release → push release → 切回原分支。
+description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，则执行完整的发版流程：commit+push 当前分支 → 切到 release 合并源分支 → 直推 release（release 分支保护已解除，允许直推）。
 ---
 
 # Git Commit 工作流
@@ -65,15 +65,23 @@ Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 - 不要 `git add` 特定文件后分批提交，一次性 `git add -A` 全部提交
 - Push 前必须检查 `git-proxy` 技能，确保代理已配置
 
+## 分支推送策略
+
+- `main`：允许本地直推
+- `release`：**保护已于 2026-06-26 解除**，允许本地直推 / force push / 删除
+- 其它功能/特性分支：允许直推
+
 ## 完整发版流程（当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时）
 
-执行上述 1-4 步（分析差异 → 撰写 commit message → commit → push 当前分支）后，继续以下步骤：
+执行上述 1-4 步（分析差异 → 撰写 commit message → commit → push 当前源分支）后，继续以下步骤：
 
-### 5. 合并到 release 分支并推送
+### 5. 合并源分支到 release 并直推
+
+`release` 保护已解除，可直接切到 release 合并 + 直推，不再走 gh PR 流程：
 
 ```powershell
-git checkout release
-git merge <source-branch>
+# 记住当前源分支
+$source = git rev-parse --abbrev-ref HEAD
 
 # 设置代理
 git config --local http.proxy http://127.0.0.1:9098
@@ -81,25 +89,34 @@ git config --local https.proxy http://127.0.0.1:9098
 $env:HTTP_PROXY = "http://127.0.0.1:9098"
 $env:HTTPS_PROXY = "http://127.0.0.1:9098"
 
-# 推送 release 分支
+# 同步远端 release
+git fetch origin release
+git checkout release
+git pull --ff-only origin release
+
+# 合并源分支（保留 merge commit，与原行为一致）
+git merge --no-ff $source -m "Merge branch '$source' into release"
+
+# 直推 release
 git push origin release
+
+# 切回源分支
+git checkout $source
 
 # 清理代理
 git config --local --unset http.proxy
 git config --local --unset https.proxy
 Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
-
-git checkout <source-branch>
 ```
 
 ### 6. 确认结果
 
-- 确认 `git merge` 成功，无冲突
-- 确认 `git push origin release` 成功
-- 确认已切回原分支
+- `git push origin release` 成功
+- 已切回源分支
 
 ### 发版原则
 
-- 合并使用 `git merge`（非 fast-forward 时自动生成 merge commit）
-- 合并完成后必须切回原分支
-- 如遇冲突，停止并报告，不做自动解决
+- `release` 保护已解除，**允许本地直推**，无需再用 `gh pr create` / `gh pr merge`
+- 合并模式使用 `--no-ff`（保留 merge commit，与原 `gh pr merge --merge` 行为一致）
+- 若 release 与源分支冲突，停止并报告，不做自动解决
+- 不要 force push release（保护虽解除，仍按惯例避免改写已发布历史）

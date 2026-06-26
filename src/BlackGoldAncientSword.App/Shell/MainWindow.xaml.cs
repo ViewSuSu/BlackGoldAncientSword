@@ -239,7 +239,25 @@ namespace BlackGoldAncientSword.App.Shell
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            // 直接终止进程，不执行任何优雅清理。
+            try
+            {
+                var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<Framework.Services.Abstractions.ISettingsService>();
+                switch (settings.Current.CloseBehavior)
+                {
+                    case "MinimizeToTaskbar":
+                        WindowState = WindowState.Minimized;
+                        return;
+                    case "MinimizeToTray":
+                        Hide();
+                        return;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] CloseButton_Click settings resolve failed: {ex.Message}");
+            }
+
+            // ExitDirectly 或异常兜底：直接终止进程，不执行任何优雅清理。
             // JobObject (JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE) 保证子进程 (PaddleOCR-json.exe) 被 OS 自动清理。
             System.Diagnostics.Process.GetCurrentProcess().Kill();
         }

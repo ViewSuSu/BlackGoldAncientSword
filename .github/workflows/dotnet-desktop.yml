@@ -106,11 +106,31 @@ jobs:
             /p:Version=${{ steps.version.outputs.new_version }}
           Write-Host "Publish completed"
 
+      - name: Publish Updater (Native AOT)
+        # Updater csproj 已配 PublishAot=true（生成原生 exe，零运行时依赖）。
+        # 不要传 PublishSingleFile / IncludeNativeLibrariesForSelfExtract /
+        # EnableCompressionInSingleFile / --self-contained：
+        #   - SingleFile 是 .NET 自宿主打包，与 AOT 原生 exe 互斥，SDK 会警告甚至失败；
+        #   - SelfExtract/Compression 仅对 SingleFile 生效；
+        #   - --self-contained 在 AOT 下默认即为 true。
+        # 其它 AOT 选项（StripSymbols / IlcOptimizationPreference / InvariantGlobalization / TrimMode）
+        # 写在 csproj 里自动生效，无需在命令行重复。
+        shell: powershell
+        run: |
+          $updProj = "src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj"
+          dotnet publish $updProj `
+            -c Release `
+            -r win-x64 `
+            -o publish/Updater `
+            /p:Version=${{ steps.version.outputs.new_version }}
+          Write-Host "Updater AOT publish completed"
+
       - name: Merge build + publish output
         shell: powershell
         run: |
           $buildDir = "src/BlackGoldAncientSword.App/bin/Release/net10.0-windows/win-x64"
           $publishDir = "publish/Release"
+          $updaterDir = "publish/Updater"
           $mergedDir = "publish/Merged"
 
           New-Item -ItemType Directory -Force -Path $mergedDir | Out-Null
@@ -122,6 +142,16 @@ jobs:
           # 2. Overlay with publish output (publish wins on conflicts)
           Copy-Item -Path "$publishDir\*" -Destination $mergedDir -Recurse -Force
           Write-Host "Overlaid publish output: $(Get-ChildItem $mergedDir -Recurse | Measure-Object).Count files total"
+
+          # 3. 复制独立的 Updater single-file exe 进安装目录
+          #    Updater 必须随 App 一起部署，否则"在线更新"按钮 CanOnlineUpdate=false 永远 disabled
+          $updaterExe = Join-Path $updaterDir "BlackGoldAncientSword.Update.exe"
+          if (-not (Test-Path $updaterExe)) {
+            Write-Error "Updater exe not found: $updaterExe"
+            exit 1
+          }
+          Copy-Item -Path $updaterExe -Destination $mergedDir -Force
+          Write-Host "Copied Updater exe into merged: $updaterExe"
 
       - name: Zip merged output
         id: zip
