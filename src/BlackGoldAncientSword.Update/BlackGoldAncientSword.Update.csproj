@@ -16,7 +16,14 @@
     <Company>$(Authors)</Company>
     <Description>BlackGoldAncientSword 在线更新程序</Description>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <!--
+      TargetFramework 固定 net9.0：
+        Avalonia 11.2.5 + Native AOT 官方测试矩阵覆盖 net8 / net9，
+        net10.0 上启动 silent crash（实测 v1.0.0.0/v1.0.0.1）。
+        Update 项目独立、不引用主 App（主 App 仍 net10.0-windows），
+        两者 TargetFramework 不一致互不影响。
+    -->
+    <TargetFramework>net9.0</TargetFramework>
     <ApplicationIcon>..\BlackGoldAncientSword.Resources\Images\app.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
