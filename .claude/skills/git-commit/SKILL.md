@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，则执行完整的发版流程：commit+push 当前分支 → 切到 release 合并源分支 → 直推 release（release 分支保护已解除，允许直推）。
+description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整发版流程：commit + push 当前分支 →（在 GitHub 上）创建 main → release 的 PR 并合并（release 分支保护已重启，禁止本地直推，只能走 PR）。
 ---
 
 # Git Commit 工作流
@@ -44,10 +44,10 @@ Push 前必须设置代理，push 后清理。详见 `git-proxy` 技能：
 
 ```powershell
 # 设置代理（http.proxy + https.proxy + 环境变量，与 GitHub Desktop 共用系统代理配置）
-git config --local http.proxy http://127.0.0.1:9098
-git config --local https.proxy http://127.0.0.1:9098
-$env:HTTP_PROXY = "http://127.0.0.1:9098"
-$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+git config --local http.proxy http://127.0.0.1:7897
+git config --local https.proxy http://127.0.0.1:7897
+$env:HTTP_PROXY = "http://127.0.0.1:7897"
+$env:HTTPS_PROXY = "http://127.0.0.1:7897"
 
 # 推送
 git push origin <current-branch>
@@ -68,55 +68,53 @@ Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ## 分支推送策略
 
 - `main`：允许本地直推
-- `release`：**保护已于 2026-06-26 解除**，允许本地直推 / force push / 删除
+- `release`：**已开启分支保护（含 `enforce_admins`）**，禁止本地直推 / force push / 删除，所有变更必须通过 PR 合并进来
 - 其它功能/特性分支：允许直推
 
 ## 完整发版流程（当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时）
 
-执行上述 1-4 步（分析差异 → 撰写 commit message → commit → push 当前源分支）后，继续以下步骤：
+执行上述 1-4 步（分析差异 → 撰写 commit message → commit → push 当前源分支，通常是 `main`）后，继续以下步骤：
 
-### 5. 合并源分支到 release 并直推
+### 5. 创建 main → release 的 PR
 
-`release` 保护已解除，可直接切到 release 合并 + 直推，不再走 gh PR 流程：
+`release` 分支保护已重启，**不再允许本地直推**。发版必须通过 GitHub 上的 PR 完成合并：
 
-```powershell
-# 记住当前源分支
-$source = git rev-parse --abbrev-ref HEAD
+- 推荐做法：在浏览器打开
+  `https://github.com/ViewSuSu/BlackGoldAncientSword/compare/release...main?expand=1`
+  填写 PR 标题（例如 `Release vX.Y.Z.W`），提交 PR，再点击 **Merge pull request**（保留 merge commit）触发 `dotnet-desktop.yml`。
+- 如果本机已安装 GitHub CLI，可改用：
 
-# 设置代理
-git config --local http.proxy http://127.0.0.1:9098
-git config --local https.proxy http://127.0.0.1:9098
-$env:HTTP_PROXY = "http://127.0.0.1:9098"
-$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+  ```powershell
+  gh pr create --base release --head main --title "Release" --body "发版合并"
+  gh pr merge --merge --auto
+  ```
 
-# 同步远端 release
-git fetch origin release
-git checkout release
-git pull --ff-only origin release
+- 如果只有 GitHub Personal Access Token（无 `gh`），也可用 GitHub REST API：
 
-# 合并源分支（保留 merge commit，与原行为一致）
-git merge --no-ff $source -m "Merge branch '$source' into release"
+  ```powershell
+  # 创建 PR
+  curl -x http://127.0.0.1:7897 -X POST `
+    -H "Authorization: Bearer $env:GITHUB_TOKEN" `
+    -H "Accept: application/vnd.github+json" `
+    https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/pulls `
+    -d '{"title":"Release","head":"main","base":"release","body":"发版合并"}'
 
-# 直推 release
-git push origin release
-
-# 切回源分支
-git checkout $source
-
-# 清理代理
-git config --local --unset http.proxy
-git config --local --unset https.proxy
-Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
-```
+  # 合并 PR（用上一步返回的 number 替换 <PR_NUMBER>）
+  curl -x http://127.0.0.1:7897 -X PUT `
+    -H "Authorization: Bearer $env:GITHUB_TOKEN" `
+    -H "Accept: application/vnd.github+json" `
+    https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/pulls/<PR_NUMBER>/merge `
+    -d '{"merge_method":"merge"}'
+  ```
 
 ### 6. 确认结果
 
-- `git push origin release` 成功
-- 已切回源分支
+- `main` 已 push 到远端
+- `main` → `release` 的 PR 已创建并合并，`dotnet-desktop.yml` 已被触发
 
 ### 发版原则
 
-- `release` 保护已解除，**允许本地直推**，无需再用 `gh pr create` / `gh pr merge`
-- 合并模式使用 `--no-ff`（保留 merge commit，与原 `gh pr merge --merge` 行为一致）
-- 若 release 与源分支冲突，停止并报告，不做自动解决
-- 不要 force push release（保护虽解除，仍按惯例避免改写已发布历史）
+- **`release` 分支保护已开启，不允许本地直推**：禁止 `git push origin release`、禁止 force push、禁止删除，对管理员同样生效（`enforce_admins`）
+- 合并模式使用 `--merge`（保留 merge commit），不要用 squash/rebase
+- 若 PR 出现冲突，停止并报告，由人工解决后再触发合并
+- 不在本地执行任何修改 `release` 分支历史的命令
