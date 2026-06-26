@@ -11,6 +11,8 @@ using System.Windows;
 using System.Windows.Threading;
 using BlackGoldAncientSword.Update.Shell;
 using BlackGoldAncientSword.Update.ViewModels;
+// 用 HandyControl 的 MessageBox 替代 System.Windows.MessageBox，外观与主题统一
+using HCMessageBox = HandyControl.Controls.MessageBox;
 
 namespace BlackGoldAncientSword.Update.Services
 {
@@ -65,8 +67,7 @@ namespace BlackGoldAncientSword.Update.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"[Updater] 更新失败: {ex}");
-                _ui.Invoke(() => MessageBox.Show(
-                    _window,
+                _ui.Invoke(() => HCMessageBox.Show(
                     $"更新失败：{ex.Message}",
                     "BlackGoldAncientSword 在线更新",
                     MessageBoxButton.OK,
@@ -237,8 +238,7 @@ namespace BlackGoldAncientSword.Update.Services
                     // 注意：MessageBoxButton.OKCancel 在 WPF 中按钮文字固定为系统的"确定/取消"，
                     // 不能自定义为"强制关闭/取消"，因此正文中明确点"确定"=立即结束主程序、
                     // "取消"=退出更新，避免按钮与正文措辞不一致让用户误点。
-                    var result = MessageBox.Show(
-                        _window,
+                    var result = HCMessageBox.Show(
                         $"检测到 {_options.MainExeName} 正在运行，必须先关闭才能完成更新。\n\n点击 \"确定\" 立即结束主程序，点击 \"取消\" 退出更新。",
                         "需要关闭主程序",
                         MessageBoxButton.OKCancel,
@@ -291,8 +291,7 @@ namespace BlackGoldAncientSword.Update.Services
                     var retryTcs = new TaskCompletionSource<bool>();
                     _ui.Invoke(() =>
                     {
-                        var r = MessageBox.Show(
-                            _window,
+                        var r = HCMessageBox.Show(
                             $"无法关闭主程序：\n\n{detail}\n\n常见原因：\n  • Updater 权限低于主程序（主程序以管理员身份运行，需要 Updater 也用管理员身份）\n  • 主程序被守护进程/外部脚本持续拉起\n  • 杀毒软件拦截了 TerminateProcess\n\n点击 \"确定\" 再次尝试关闭，点击 \"取消\" 退出更新。",
                             "关闭主程序失败",
                             MessageBoxButton.OKCancel,
