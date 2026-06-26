@@ -259,7 +259,13 @@ namespace BlackGoldAncientSword.Update.Services
                     catch { }
                     try
                     {
-                        p.Kill(entireProcessTree: true);
+                        // 不用 entireProcessTree:true：Updater 是主程序 spawn 的子进程，
+                        // 杀进程树会包含 calling process（Updater 自己），CLR 直接抛
+                        // "Cannot be used to terminate a process tree containing the calling process"。
+                        // 主程序自己的子进程（如 PaddleOCR-json）已由 JobObject
+                        // JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE 在父进程退出时由 OS 自动清理，
+                        // 这里只需 kill 主程序本身即可。
+                        p.Kill();
                         // Kill 是异步的，必须等待真正退出，否则下一轮检测仍可能命中。
                         // 超时 3 秒兜底，避免极端情况下被某进程卡死无限阻塞 updater。
                         if (!p.WaitForExit(3000))
