@@ -190,7 +190,10 @@ jobs:
           Write-Host "Installer: $exeName ($exeSize bytes)"
 
       - name: Commit version bump to release
-        shell: powershell
+        # 必须用 pwsh（PowerShell 7+，UTF-8 默认）。
+        # Windows PowerShell 5.1（shell: powershell）会把无 BOM 的 .ps1 按 ANSI 读，
+        # 导致下面的中文 commit message 在赋值前就被破坏，最终推到 git 仍是乱码。
+        shell: pwsh
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -203,7 +206,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             Write-Host "csproj 无版本变更，跳过 commit"
           } else {
-            # 用 UTF-8 无 BOM 写 commit message，避免 PowerShell 把中文按 ANSI 传给 git 导致乱码
+            # 用 UTF-8 无 BOM 写 commit message，pwsh 下中文字面量已经是 UTF-8，文件落盘也是 UTF-8
             $msg = "chore: 同步 App 版本号到 v$ver [skip ci]"
             $msgPath = "$env:RUNNER_TEMP/commit-msg-release.txt"
             $utf8NoBom = New-Object System.Text.UTF8Encoding $false
@@ -284,7 +287,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sync version to main
-        shell: powershell
+        # 同上：必须 pwsh 才能让中文 commit message 走 UTF-8 不乱码
+        shell: pwsh
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
