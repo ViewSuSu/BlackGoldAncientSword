@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Input;
+using HCMessageBox = HandyControl.Controls.MessageBox;
 
 namespace BlackGoldAncientSword.Update.Shell
 {
@@ -52,13 +53,11 @@ namespace BlackGoldAncientSword.Update.Shell
         private bool TryConfirmCancel()
         {
             if (!IsCancellable) return false;
-            var result = MessageBox.Show(
-                this,
+            var result = HCMessageBox.Show(
                 "是否停止更新？\n\n已下载的临时文件会被清除。",
                 "停止更新",
                 MessageBoxButton.YesNo,
-                MessageBoxImage.Question,
-                MessageBoxResult.No);
+                MessageBoxImage.Question);
             return result == MessageBoxResult.Yes;
         }
     }
