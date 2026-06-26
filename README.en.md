@@ -12,7 +12,7 @@
 
 ## Download 📥
 
-[![Download](https://img.shields.io/badge/Download-Latest%20Release-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest/download/BlackGoldAncientSword-Setup.exe)
+[![Download](https://img.shields.io/badge/Download-Latest%20Release-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest)
 
 Click the button above to directly download the latest .exe installer.
 
@@ -263,7 +263,7 @@ Before using this program, please ensure you have read, understood, and agreed t
 | **System Tray** | Hardcodet.NotifyIcon.Wpf | Tray icon and context menu |
 | **Tests** | xUnit + Moq | Unit and integration tests |
 | **Packaging** | Self-Contained + PublishSingleFile | Both App and Updater shipped as single-file .exe (win-x64) |
-| **Installer** | Inno Setup | Produces `BlackGoldAncientSword-Setup.exe` |
+| **Installer** | Inno Setup | Produces `BlackGoldAncientSword-{version}-win-x64-Setup.exe` |
 
 ---
 
@@ -535,7 +535,7 @@ Release flow highlights:
 2. Patch `App.csproj`: `Version` / `AssemblyVersion` / `FileVersion`
 3. Publish both App and Updater as self-contained single-file .exe
 4. Merge publish outputs → zip as `BlackGoldAncientSword-v{version}.zip`
-5. Build `BlackGoldAncientSword-Setup.exe` via `setup.iss` (Inno Setup script)
+5. Build `BlackGoldAncientSword-{version}-win-x64-Setup.exe` via `setup.iss` (Inno Setup script)
 6. Create a GitHub Release with auto-generated commit-title list since the previous tag
 
 > The `release` branch has branch protection enabled: no direct push, no force push, no deletion, and `enforce_admins` is on (so administrators are bound by the same rules). Every change must land via a pull request. Day-to-day work happens on `main`; to ship a release, first commit + push `main` via the [git-commit](.claude/skills/git-commit/SKILL.md) skill, then open a `main` → `release` pull request on GitHub and merge it — that merge is what triggers `dotnet-desktop.yml`.

@@ -20,6 +20,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             "https://github.com/" + GitHubOwner + "/" + GitHubRepo + "/releases/latest";
 
         /// <summary>
+        /// 安装包命名约定（setup.iss 生成）：BlackGoldAncientSword-{version}-win-x64-Setup.exe
+        /// ResolveAssetUrl 按 .exe 后缀匹配，无需关心完整文件名。
         /// release zip 命名约定：BlackGoldAncientSword-v{version}.zip
         /// CI workflow (.github/workflows/dotnet-desktop.yml) 生成此名。
         /// </summary>

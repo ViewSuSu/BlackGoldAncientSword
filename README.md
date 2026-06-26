@@ -12,7 +12,7 @@
 
 ## 下载 📥
 
-[![Download](https://img.shields.io/badge/下载-最新版本-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest/download/BlackGoldAncientSword-Setup.exe)
+[![Download](https://img.shields.io/badge/下载-最新版本-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest)
 
 点击上方按钮即可直接下载最新版本的 .exe 安装包。
 
@@ -265,7 +265,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | **系统托盘** | Hardcodet.NotifyIcon.Wpf | 托盘图标与菜单 |
 | **测试** | xUnit + Moq | 单元测试与集成测试 |
 | **打包** | Self-Contained + PublishSingleFile | App、Updater 均为单文件独立部署 (win-x64) |
-| **安装包** | Inno Setup | 生成 `BlackGoldAncientSword-Setup.exe` |
+| **安装包** | Inno Setup | 生成 `BlackGoldAncientSword-{version}-win-x64-Setup.exe` |
 
 ---
 
@@ -539,7 +539,7 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 2. 修改 `App.csproj` 的 `Version` / `AssemblyVersion` / `FileVersion`
 3. 分别发布 App 与 Update 为自包含单文件 .exe
 4. 合并 publish 输出 → 压缩为 `BlackGoldAncientSword-v{version}.zip`
-5. 用 `setup.iss`（Inno Setup 脚本）生成 `BlackGoldAncientSword-Setup.exe`
+5. 用 `setup.iss`（Inno Setup 脚本）生成 `BlackGoldAncientSword-{version}-win-x64-Setup.exe`
 6. 创建 GitHub Release，自动列举上一版本到本次的 commit 标题
 
 > `release` 分支已开启分支保护：禁直推 / 禁 force-push / 禁删除，且对管理员同样生效（`enforce_admins`），所有变更必须通过 PR 合并进来。日常开发在 `main` 分支进行；发版时先由 [git-commit](.claude/skills/git-commit/SKILL.md) skill commit + push `main`，随后在 GitHub 上创建 `main` → `release` 的 PR 并合并，由此触发 `dotnet-desktop.yml` 完成发版。
