@@ -177,7 +177,13 @@
     <system:String x:Key="UpdateNotification.Title">发现新版本</system:String>
     <system:String x:Key="UpdateNotification.NewVersion">检测到最新版本：</system:String>
     <system:String x:Key="UpdateNotification.Message">请及时下载最新版，确保功能完好可用。</system:String>
-    <system:String x:Key="UpdateNotification.DownloadNow">立即下载</system:String>
+    <system:String x:Key="UpdateNotification.DownloadNow">浏览器下载</system:String>
+    <system:String x:Key="UpdateNotification.OnlineUpdate">在线更新</system:String>
+    <system:String x:Key="UpdateNotification.OnlineUpdate.ToolTip">使用内置更新程序自动下载并安装</system:String>
+    <system:String x:Key="UpdateNotification.CopyUrl">复制下载链接</system:String>
+    <system:String x:Key="UpdateNotification.ProxyMirror">国内代理专线下载</system:String>
+    <system:String x:Key="UpdateNotification.ProxyHint">如果下载速度缓慢可以用这个</system:String>
+    <system:String x:Key="UpdateNotification.ReleaseNotesHeader">更新说明（点击展开）</system:String>
     <system:String x:Key="UpdateNotification.Later">稍后再说</system:String>
 
     <!--  Close Prompt  -->
