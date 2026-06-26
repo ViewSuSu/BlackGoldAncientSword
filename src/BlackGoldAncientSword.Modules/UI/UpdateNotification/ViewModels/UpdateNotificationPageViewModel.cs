@@ -116,6 +116,10 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
                     psi.ArgumentList.Add(targetDir);
                     psi.ArgumentList.Add("--main-exe");
                     psi.ArgumentList.Add(MainAppExeName);
+                    // 传当前进程 PID 给 Updater，让其用 GetProcessById 精确定位本主程序进程，
+                    // 绕开 image name 不一致（dotnet host / 同名异目录 / 多会话）等歧义。
+                    psi.ArgumentList.Add("--main-pid");
+                    psi.ArgumentList.Add(Process.GetCurrentProcess().Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     Process.Start(psi);
                     DismissOverlay();
                 }
