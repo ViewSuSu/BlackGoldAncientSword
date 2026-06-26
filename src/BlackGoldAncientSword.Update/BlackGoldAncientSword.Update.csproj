@@ -5,9 +5,13 @@
     原因：updater 解压完成后会全量覆盖安装目录里的文件，如果 updater 进程
     持有这些项目的 dll（DefaultLoadContext 锁定），文件覆盖会失败。
 
-    技术栈：Avalonia 11 + Native AOT。
-    发布产物：单个原生 exe（无外部 dll、无 .NET Runtime 依赖），
-    客户机零运行时依赖；目标体积远小于原 WPF self-contained 方案。
+    技术栈：Avalonia 11 + .NET self-contained single-file。
+    发布产物：单个 self-contained exe（apphost 启动时把 runtime 抽到 %TEMP%\.net，
+    安装目录里除 updater.exe 自身没有任何被锁定的 dll，整目录覆盖安全）。
+
+    历史：曾尝试 Native AOT（v1.0.0.0/v1.0.0.1），Avalonia 11.2.5 + net10.0 AOT
+    启动 silent crash；降到 net9.0 AOT 仍未充分验证，遂回退到 self-contained 单文件，
+    生产环境最稳。
   -->
 
   <PropertyGroup>
@@ -17,11 +21,9 @@
     <Description>BlackGoldAncientSword 在线更新程序</Description>
     <OutputType>WinExe</OutputType>
     <!--
-      TargetFramework 固定 net9.0：
-        Avalonia 11.2.5 + Native AOT 官方测试矩阵覆盖 net8 / net9，
-        net10.0 上启动 silent crash（实测 v1.0.0.0/v1.0.0.1）。
-        Update 项目独立、不引用主 App（主 App 仍 net10.0-windows），
-        两者 TargetFramework 不一致互不影响。
+      TargetFramework 保持 net9.0：Avalonia 11.2.5 官方测试矩阵覆盖 net8 / net9，
+      net10.0 与 Avalonia 11.2.x 组合曾遇启动崩，保留 net9 更稳。
+      Update 项目独立，与主 App (net10.0-windows) TargetFramework 不一致不互相影响。
     -->
     <TargetFramework>net9.0</TargetFramework>
     <ApplicationIcon>..\BlackGoldAncientSword.Resources\Images\app.ico</ApplicationIcon>
@@ -31,21 +33,19 @@
     <Version>1.0.0.0</Version>
     <AssemblyName>BlackGoldAncientSword.Update</AssemblyName>
     <RootNamespace>BlackGoldAncientSword.Update</RootNamespace>
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-
-    <!-- Avalonia AOT 编译开关 -->
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
-  <!-- 发布参数：CI/installer 调用 dotnet publish 时使用 -->
+  <!-- 发布参数：CI/installer 调用 dotnet publish 时自动应用。
+       self-contained = 不依赖客户机已装 .NET runtime，
+       PublishSingleFile + IncludeNativeLibrariesForSelfExtract = 单 exe 自宿主，
+       EnableCompressionInSingleFile = 压缩内嵌 runtime 减体积。 -->
   <PropertyGroup>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <PublishAot>true</PublishAot>
-    <StripSymbols>true</StripSymbols>
-    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <TrimMode>full</TrimMode>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
