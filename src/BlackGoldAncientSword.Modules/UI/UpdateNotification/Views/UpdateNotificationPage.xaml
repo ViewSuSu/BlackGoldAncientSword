@@ -156,13 +156,6 @@
                     <Button
                         Height="32"
                         MinWidth="100"
-                        Margin="0,0,8,0"
-                        Command="{Binding OpenDownloadCommand}"
-                        Content="{DynamicResource UpdateNotification.DownloadNow}"
-                        ToolTip="{DynamicResource UpdateNotification.DownloadNow}" />
-                    <Button
-                        Height="32"
-                        MinWidth="100"
                         Command="{Binding OnlineUpdateCommand}"
                         Content="{DynamicResource UpdateNotification.OnlineUpdate}"
                         IsEnabled="{Binding CanOnlineUpdate}"

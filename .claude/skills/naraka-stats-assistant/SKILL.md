@@ -1,6 +1,6 @@
 ---
 name: naraka-stats-assistant
-description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整的发版流程：分析 git diff、中文详细 commit、push、合并到 release 分支并推送。
+description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整的发版流程：分析 git diff、中文详细 commit、push 当前分支、本地切到 release 合并源分支并直推（release 分支保护已解除，允许直推）。
 license: MIT
 ---
 
@@ -111,28 +111,50 @@ git config --local --unset https.proxy
 Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
 
-### 4. 合并到 release 并推送
+### 4. 合并源分支到 release 并直推
+
+`release` 分支保护已于 2026-06-26 解除，允许本地直推，无需走 `gh` PR 流程：
 
 ```powershell
-git checkout release
-git merge <source-branch>
+# 记住当前源分支
+$source = git rev-parse --abbrev-ref HEAD
+
 # 设置代理
 git config --local http.proxy http://127.0.0.1:9098
 git config --local https.proxy http://127.0.0.1:9098
 $env:HTTP_PROXY = "http://127.0.0.1:9098"
 $env:HTTPS_PROXY = "http://127.0.0.1:9098"
 
+# 同步并切到 release
+git fetch origin release
+git checkout release
+git pull --ff-only origin release
+
+# 合并源分支（保留 merge commit，与原 gh pr merge --merge 一致）
+git merge --no-ff $source -m "Merge branch '$source' into release"
+
+# 直推 release
 git push origin release
+
+# 切回源分支
+git checkout $source
 
 # 清理代理
 git config --local --unset http.proxy
 git config --local --unset https.proxy
 Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
-git checkout <source-branch>
 ```
+
+### 分支推送策略
+
+- `main`：允许本地直推
+- `release`：**保护已于 2026-06-26 解除**，允许本地直推
+- 其它功能分支：允许直推
 
 ### 原则
 
-- 合并使用 `git merge`（非 fast-forward 时自动生成 merge commit）
-- 合并完成后必须切回原分支
+- `release` 允许直推，无需 PR
+- 合并模式 `--no-ff`（保留 merge commit）
+- 合并完成后切回源分支
 - 如遇冲突，停止并报告，不做自动解决
+- 不要 force push release（保护虽解除，仍按惯例避免改写已发布历史）

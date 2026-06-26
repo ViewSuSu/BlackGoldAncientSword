@@ -5,9 +5,9 @@
     原因：updater 解压完成后会全量覆盖安装目录里的文件，如果 updater 进程
     持有这些项目的 dll（DefaultLoadContext 锁定），文件覆盖会失败。
 
-    发布建议：以 self-contained single-file 形式发布到安装目录，
-    apphost 会把 runtime 抽取到 %TEMP%\.net，安装目录里除了 updater.exe 自身
-    没有任何被锁定的 dll，可放心整目录覆盖。
+    技术栈：Avalonia 11 + Native AOT。
+    发布产物：单个原生 exe（无外部 dll、无 .NET Runtime 依赖），
+    客户机零运行时依赖；目标体积远小于原 WPF self-contained 方案。
   -->
 
   <PropertyGroup>
@@ -16,8 +16,7 @@
     <Company>$(Authors)</Company>
     <Description>BlackGoldAncientSword 在线更新程序</Description>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <TargetFramework>net10.0</TargetFramework>
     <ApplicationIcon>..\BlackGoldAncientSword.Resources\Images\app.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -25,23 +24,31 @@
     <Version>1.0.0.0</Version>
     <AssemblyName>BlackGoldAncientSword.Update</AssemblyName>
     <RootNamespace>BlackGoldAncientSword.Update</RootNamespace>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+
+    <!-- Avalonia AOT 编译开关 -->
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <!-- 发布参数：CI/installer 调用 dotnet publish 时使用 -->
   <PropertyGroup>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishAot>true</PublishAot>
+    <StripSymbols>true</StripSymbols>
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TrimMode>full</TrimMode>
   </PropertyGroup>
 
   <ItemGroup>
     <!--
-      只引 NuGet 包，不引项目，保持 updater 独立。
-      版本与主项目 Framework.csproj 保持一致：HandyControl 3.5.0。
+      Avalonia 11.x：跨平台 UI 框架。仅桌面 + Fluent 主题，
+      不引 Avalonia.Diagnostics（DevTools），减体积。
     -->
-    <PackageReference Include="HandyControl" Version="3.5.0" />
+    <PackageReference Include="Avalonia" Version="11.2.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.5" />
   </ItemGroup>
 
 </Project>

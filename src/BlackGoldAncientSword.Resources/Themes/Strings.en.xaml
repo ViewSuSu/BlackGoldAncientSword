@@ -179,7 +179,7 @@
     <system:String x:Key="Settings.CheckForUpdates">Check for Updates</system:String>
     <system:String x:Key="Settings.UpdateChecking">Checking for updates...</system:String>
     <system:String x:Key="Settings.NoUpdateAvailable">You are running the latest version.</system:String>
-    <system:String x:Key="Settings.UpdateAvailable">Download latest</system:String>
+    <system:String x:Key="Settings.UpdateAvailable">New version available</system:String>
     <system:String x:Key="Settings.NewVersionTooltip">New version: {0}, click to update</system:String>
     <system:String x:Key="Settings.UpdateCheckFailed">Failed to check for updates. Please try again later.</system:String>
     <system:String x:Key="Settings.UpdateError">Update error: {0}</system:String>
@@ -206,7 +206,6 @@
     <system:String x:Key="UpdateNotification.Title">New Version Available</system:String>
     <system:String x:Key="UpdateNotification.NewVersion">Latest version:</system:String>
     <system:String x:Key="UpdateNotification.Message">Please download the latest version to keep all features working correctly.</system:String>
-    <system:String x:Key="UpdateNotification.DownloadNow">Open in Browser</system:String>
     <system:String x:Key="UpdateNotification.OnlineUpdate">Update Now</system:String>
     <system:String x:Key="UpdateNotification.OnlineUpdate.ToolTip">Use the built-in updater to download and install automatically</system:String>
     <system:String x:Key="UpdateNotification.CopyUrl">Copy download URL</system:String>
