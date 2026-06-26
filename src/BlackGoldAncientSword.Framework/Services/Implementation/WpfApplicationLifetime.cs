@@ -23,5 +23,18 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             var app = Application.Current;
             app?.Shutdown();
         }
+
+        public void MinimizeMainWindow()
+        {
+            var app = Application.Current;
+            var window = app?.MainWindow;
+            if (window is null) return;
+            window.WindowState = WindowState.Minimized;
+        }
+
+        public void ForceTerminate()
+        {
+            System.Diagnostics.Process.GetCurrentProcess().Kill();
+        }
     }
 }
