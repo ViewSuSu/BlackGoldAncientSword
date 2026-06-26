@@ -172,6 +172,12 @@
     <ns1:String ns2:Key="TitleBar.Close">關閉</ns1:String>
 
     
+    <ns1:String ns2:Key="UpdateNotification.Title">發現新版本</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.NewVersion">偵測到最新版本：</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.Message">請及時下載最新版，確保功能正常可用。</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.DownloadNow">立即下載</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.Later">稍後再說</ns1:String>
+
     <ns1:String ns2:Key="ClosePrompt.Title">關閉確認</ns1:String>
     <ns1:String ns2:Key="ClosePrompt.Message">您點擊了關閉按钮，請選擇關閉按钮的預設行為：</ns1:String>
     <ns1:String ns2:Key="ClosePrompt.RememberChoice">記住我的選擇</ns1:String>
