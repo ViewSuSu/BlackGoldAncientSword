@@ -1,6 +1,6 @@
-﻿---
+---
 name: git-commit
-description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，则执行完整的发版流程：commit+push 当前分支 → 用 gh CLI 创建 PR 到 release 并合并（release 受分支保护禁直推）。
+description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，则执行完整的发版流程：commit+push 当前分支 → 切到 release 合并源分支 → 直推 release（release 分支保护已解除，允许直推）。
 ---
 
 # Git Commit 工作流
@@ -68,45 +68,55 @@ Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ## 分支推送策略
 
 - `main`：允许本地直推
-- `release`：**受 GitHub 分支保护**，禁直推 / 禁 force push / 禁删除；必须经 Pull Request 合并
+- `release`：**保护已于 2026-06-26 解除**，允许本地直推 / force push / 删除
 - 其它功能/特性分支：允许直推
 
 ## 完整发版流程（当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时）
 
-执行上述 1-4 步（分析差异 → 撰写 commit message → commit → push 当前分支）后，继续以下步骤：
+执行上述 1-4 步（分析差异 → 撰写 commit message → commit → push 当前源分支）后，继续以下步骤：
 
-### 5. 创建 PR 并合并到 release
+### 5. 合并源分支到 release 并直推
 
-`release` 受分支保护，本地 `git push origin release` 会被远端拒绝，必须用 `gh` CLI 走 PR 流程：
+`release` 保护已解除，可直接切到 release 合并 + 直推，不再走 gh PR 流程：
 
 ```powershell
-# 确认 gh 已登录（必要时 gh auth login -h github.com -p https -w）
-gh auth status
+# 记住当前源分支
+$source = git rev-parse --abbrev-ref HEAD
 
-# 设置代理（gh 走 HTTPS_PROXY）
-$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+# 设置代理
+git config --local http.proxy http://127.0.0.1:9098
+git config --local https.proxy http://127.0.0.1:9098
 $env:HTTP_PROXY = "http://127.0.0.1:9098"
+$env:HTTPS_PROXY = "http://127.0.0.1:9098"
 
-# 创建 PR：base=release, head=当前源分支；--fill 用 commit 信息自动填 title/body
-gh pr create --base release --head <source-branch> --fill
+# 同步远端 release
+git fetch origin release
+git checkout release
+git pull --ff-only origin release
 
-# 合并 PR：--merge 保留 merge commit，与原 git merge 行为一致
-gh pr merge <source-branch> --merge
+# 合并源分支（保留 merge commit，与原行为一致）
+git merge --no-ff $source -m "Merge branch '$source' into release"
+
+# 直推 release
+git push origin release
+
+# 切回源分支
+git checkout $source
 
 # 清理代理
+git config --local --unset http.proxy
+git config --local --unset https.proxy
 Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
 
 ### 6. 确认结果
 
-- `gh pr merge` 成功，PR 状态变为 `MERGED`
-- 无需切到 `release` 本地分支（本地 release 不再需要同步；下次发版前 `git fetch` 即可）
-- 仍停留在源分支
+- `git push origin release` 成功
+- 已切回源分支
 
 ### 发版原则
 
-- `release` 受 GitHub 分支保护，**禁本地直推**，必须经 PR 合并
-- 合并模式使用 `--merge`（非 fast-forward，保留 merge commit）
-- 若 `gh` 未登录：先 `gh auth login -h github.com -p https -w`
-- 若 PR 合并因冲突失败，停止并报告，不做自动解决
-- 若 gh CLI 不在 PATH，用绝对路径 `"C:/Program Files/GitHub CLI/gh.exe"`
+- `release` 保护已解除，**允许本地直推**，无需再用 `gh pr create` / `gh pr merge`
+- 合并模式使用 `--no-ff`（保留 merge commit，与原 `gh pr merge --merge` 行为一致）
+- 若 release 与源分支冲突，停止并报告，不做自动解决
+- 不要 force push release（保护虽解除，仍按惯例避免改写已发布历史）
