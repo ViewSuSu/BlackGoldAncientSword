@@ -33,10 +33,10 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public event EventHandler<bool>? UpdateAvailabilityChanged;
 
-        public UpdateService(IUIDispatcher uiDispatcher)
+        public UpdateService(IUIDispatcher uiDispatcher, IAppAssemblyMarker appAssemblyMarker)
         {
             _uiDispatcher = uiDispatcher;
-            CurrentVersion = GetCurrentVersion();
+            CurrentVersion = GetCurrentVersion(appAssemblyMarker);
 
             _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword");
@@ -97,9 +97,15 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 _uiDispatcher.BeginInvoke(action);
         }
 
-        private static string GetCurrentVersion()
+        /// <summary>
+        /// 通过 App 程序集标记接口反推 App 程序集，读取其 AssemblyInformationalVersion。
+        /// 不能用 typeof(UpdateService).Assembly：UpdateService 属于 Framework 程序集，
+        /// 而 Framework.csproj 未定义 &lt;Version&gt;，会得到默认 "1.0.0.0"，导致 UI 左下角始终显示 1.0.0。
+        /// </summary>
+        private static string GetCurrentVersion(IAppAssemblyMarker appAssemblyMarker)
         {
-            var attr = typeof(UpdateService).Assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            var appAssembly = appAssemblyMarker.GetType().Assembly;
+            var attr = appAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
             if (attr != null)
             {
                 var version = attr.InformationalVersion;
