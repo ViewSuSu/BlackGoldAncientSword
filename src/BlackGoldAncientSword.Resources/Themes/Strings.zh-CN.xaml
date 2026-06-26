@@ -195,7 +195,6 @@
 
     <!--  Settings - Close Behavior  -->
     <system:String x:Key="Settings.Category.CloseBehavior">关闭行为</system:String>
-    <system:String x:Key="Settings.CopyTeamOverlayName">复制名称</system:String>
     <system:String x:Key="Settings.Category.TeamOverlay">英雄选择时出现右下角弹窗</system:String>
     <system:String x:Key="Settings.CloseBehavior.Description">设置点击关闭按钮时的默认行为</system:String>
     <system:String x:Key="Settings.CloseBehavior.Ask">每次询问</system:String>

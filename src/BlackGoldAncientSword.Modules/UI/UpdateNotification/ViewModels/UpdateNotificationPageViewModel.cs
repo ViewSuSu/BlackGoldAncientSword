@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
@@ -67,6 +68,7 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
                 var url = _updateService.DownloadUrl;
                 if (string.IsNullOrEmpty(url)) return;
                 _clipboardService.TrySetText(url);
+                eventAggregator.GetEvent<TipMessageEvent>().Publish(new TipMessageWithHighlightArgs("下载链接已复制到剪贴板"));
             });
 
         private DelegateCommand? _openProxyMirrorCommand;
