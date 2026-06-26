@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Threading;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using BlackGoldAncientSword.Update.Shell;
 using BlackGoldAncientSword.Update.ViewModels;
 
@@ -30,7 +29,6 @@ namespace BlackGoldAncientSword.Update.Services
         private readonly UpdateOptions _options;
         private readonly UpdateViewModel _vm;
         private readonly UpdateWindow _window;
-        private readonly Dispatcher _ui;
         private readonly CancellationTokenSource _cts = new();
         private string? _tempRoot;
 
@@ -39,7 +37,6 @@ namespace BlackGoldAncientSword.Update.Services
             _options = options;
             _vm = vm;
             _window = window;
-            _ui = window.Dispatcher;
             _window.CancelRequested += (_, _) => _cts.Cancel();
             _window.Closed += (_, _) => _cts.Cancel();
             _window.IsCancellable = true;
@@ -53,7 +50,7 @@ namespace BlackGoldAncientSword.Update.Services
                 var extractDir = await ExtractAsync(zipPath, _cts.Token).ConfigureAwait(false);
                 await EnsureMainAppClosedAsync().ConfigureAwait(false);
                 // 进入文件覆盖阶段：禁止用户中途取消（半覆盖无法回滚）
-                _ui.Invoke(() => _window.IsCancellable = false);
+                await OnUiAsync(() => _window.IsCancellable = false).ConfigureAwait(false);
                 await CopyOverAsync(extractDir).ConfigureAwait(false);
                 LaunchMainApp();
                 CleanupAndExit(0);
@@ -65,12 +62,13 @@ namespace BlackGoldAncientSword.Update.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"[Updater] 更新失败: {ex}");
-                _ui.Invoke(() => MessageBox.Show(
-                    _window,
-                    $"更新失败：{ex.Message}",
-                    "BlackGoldAncientSword 在线更新",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error));
+                await OnUiAsync(async () =>
+                {
+                    await ConfirmDialog.ShowErrorAsync(
+                        _window,
+                        "BlackGoldAncientSword 在线更新",
+                        $"更新失败：{ex.Message}").ConfigureAwait(false);
+                }).ConfigureAwait(false);
                 CleanupAndExit(1);
             }
         }
@@ -89,7 +87,7 @@ namespace BlackGoldAncientSword.Update.Services
             using var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword.Update");
 
-            _ui.Invoke(() => _vm.StatusText = "正在连接下载服务器...");
+            await OnUiAsync(() => _vm.StatusText = "正在连接下载服务器...").ConfigureAwait(false);
 
             using var resp = await http.GetAsync(
                 _options.ZipUrl,
@@ -98,11 +96,11 @@ namespace BlackGoldAncientSword.Update.Services
             resp.EnsureSuccessStatusCode();
 
             long? totalBytes = resp.Content.Headers.ContentLength;
-            _ui.Invoke(() =>
+            await OnUiAsync(() =>
             {
                 _vm.StatusText = "正在下载更新包...";
                 _vm.SizeText = totalBytes.HasValue ? $"0 / {FormatBytes(totalBytes.Value)}" : "0";
-            });
+            }).ConfigureAwait(false);
 
             await using var src = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
             await using var dst = new FileStream(
@@ -110,7 +108,6 @@ namespace BlackGoldAncientSword.Update.Services
 
             var buffer = new byte[81920];
             long copied = 0;
-            var startedAt = DateTime.UtcNow;
             var lastReport = DateTime.UtcNow;
             long lastCopied = 0;
             double currentSpeed = 0; // bytes/sec
@@ -134,7 +131,7 @@ namespace BlackGoldAncientSword.Update.Services
                     long? _total = totalBytes;
                     double _speed = currentSpeed;
 
-                    _ui.Invoke(() =>
+                    await OnUiAsync(() =>
                     {
                         if (_total.HasValue && _total.Value > 0)
                         {
@@ -149,17 +146,17 @@ namespace BlackGoldAncientSword.Update.Services
                             _vm.EtaText = string.Empty;
                         }
                         _vm.SpeedText = $"{FormatBytes((long)_speed)}/s";
-                    });
+                    }).ConfigureAwait(false);
                 }
             }
 
             await dst.FlushAsync(ct).ConfigureAwait(false);
-            _ui.Invoke(() =>
+            await OnUiAsync(() =>
             {
                 _vm.Percent = DownloadCap;
                 _vm.EtaText = string.Empty;
-                _vm.StatusText = "下载完成，正在解压...";
-            });
+                _vm.StatusText = "下载完成,正在解压...";
+            }).ConfigureAwait(false);
             return zipPath;
         }
 
@@ -170,8 +167,7 @@ namespace BlackGoldAncientSword.Update.Services
             var extractDir = Path.Combine(_tempRoot!, "extracted");
             Directory.CreateDirectory(extractDir);
 
-            // 切到解压阶段：保留下载阶段的速度 / 大小 / ETA 显示，只换状态行
-            _ui.Invoke(() => _vm.StatusText = "正在解压更新包...");
+            await OnUiAsync(() => _vm.StatusText = "正在解压更新包...").ConfigureAwait(false);
 
             await Task.Run(() =>
             {
@@ -199,7 +195,7 @@ namespace BlackGoldAncientSword.Update.Services
                     done++;
 
                     // 节流 UI 更新：≥80ms 或最后一个文件才推一次，
-                    // 避免每条 entry 都 Invoke 把 UI 线程打爆
+                    // 避免每条 entry 都 Post 把 UI 线程打爆
                     var nowTick = Environment.TickCount64;
                     if (done == total || nowTick - lastUiTick >= 80)
                     {
@@ -208,7 +204,7 @@ namespace BlackGoldAncientSword.Update.Services
                         double p = DownloadCap + (ExtractCap - DownloadCap) * frac;
                         int _done = done;
                         int _total = total;
-                        _ui.Invoke(() =>
+                        Dispatcher.UIThread.Post(() =>
                         {
                             _vm.Percent = p;
                             _vm.StatusText = $"正在解压更新包... {_done} / {_total}";
@@ -217,7 +213,7 @@ namespace BlackGoldAncientSword.Update.Services
                 }
             }, ct).ConfigureAwait(false);
 
-            _ui.Invoke(() => _vm.Percent = ExtractCap);
+            await OnUiAsync(() => _vm.Percent = ExtractCap).ConfigureAwait(false);
             return extractDir;
         }
 
@@ -230,20 +226,18 @@ namespace BlackGoldAncientSword.Update.Services
                 var running = GetMainProcesses();
                 if (running.Count == 0) return;
 
-                var tcs = new TaskCompletionSource<bool>();
-                _ui.Invoke(() =>
+                bool forceClose = false;
+                await Dispatcher.UIThread.InvokeAsync(async () =>
                 {
-                    _vm.StatusText = $"检测到主程序 {_options.MainExeName} 正在运行，需要关闭后继续。";
-                    var result = MessageBox.Show(
+                    _vm.StatusText = $"检测到主程序 {_options.MainExeName} 正在运行,需要关闭后继续。";
+                    forceClose = await ConfirmDialog.ShowConfirmAsync(
                         _window,
-                        $"检测到 {_options.MainExeName} 正在运行，必须先关闭才能完成更新。\n\n点击 \"强制关闭\" 立即结束主程序，点击 \"取消\" 退出更新。",
                         "需要关闭主程序",
-                        MessageBoxButton.OKCancel,
-                        MessageBoxImage.Warning);
-                    tcs.SetResult(result == MessageBoxResult.OK);
+                        $"检测到 {_options.MainExeName} 正在运行,必须先关闭才能完成更新。\n\n点击\"强制关闭\"立即结束主程序,点击\"取消\"退出更新。",
+                        okText: "强制关闭",
+                        cancelText: "取消").ConfigureAwait(true);
                 });
 
-                bool forceClose = await tcs.Task.ConfigureAwait(false);
                 if (!forceClose) throw new OperationCanceledException();
 
                 foreach (var p in running)
@@ -278,7 +272,7 @@ namespace BlackGoldAncientSword.Update.Services
                 }
                 catch
                 {
-                    // 32/64 位 / 权限不足时拿不到 MainModule，保守也加入
+                    // 32/64 位 / 权限不足时拿不到 MainModule,保守也加入
                 }
                 list.Add(p);
             }
@@ -289,7 +283,7 @@ namespace BlackGoldAncientSword.Update.Services
 
         private async Task CopyOverAsync(string extractDir)
         {
-            _ui.Invoke(() => _vm.StatusText = "正在安装文件，请稍候...");
+            await OnUiAsync(() => _vm.StatusText = "正在安装文件,请稍候...").ConfigureAwait(false);
 
             string selfExe;
             try { selfExe = Path.GetFullPath(Environment.ProcessPath ?? string.Empty); }
@@ -337,7 +331,7 @@ namespace BlackGoldAncientSword.Update.Services
                         double p = ExtractCap + (100 - ExtractCap) * frac;
                         int _done = done;
                         int _total = total;
-                        _ui.Invoke(() =>
+                        Dispatcher.UIThread.Post(() =>
                         {
                             _vm.Percent = Math.Min(100, p);
                             _vm.StatusText = $"正在安装文件... {_done} / {_total}";
@@ -346,11 +340,11 @@ namespace BlackGoldAncientSword.Update.Services
                 }
             }).ConfigureAwait(false);
 
-            _ui.Invoke(() =>
+            await OnUiAsync(() =>
             {
                 _vm.Percent = 100;
-                _vm.StatusText = "更新完成，正在重启主程序...";
-            });
+                _vm.StatusText = "更新完成,正在重启主程序...";
+            }).ConfigureAwait(false);
         }
 
         // ============ 5. 重启 + 退出 ============
@@ -363,7 +357,7 @@ namespace BlackGoldAncientSword.Update.Services
                 var exe = _options.MainExeFullPath;
                 if (!File.Exists(exe))
                 {
-                    Debug.WriteLine($"[Updater] 主程序不存在，跳过启动: {exe}");
+                    Debug.WriteLine($"[Updater] 主程序不存在,跳过启动: {exe}");
                     return;
                 }
                 Process.Start(new ProcessStartInfo
@@ -392,15 +386,44 @@ namespace BlackGoldAncientSword.Update.Services
             {
                 Debug.WriteLine($"[Updater] 清理临时目录失败: {ex.Message}");
             }
-            _ui.BeginInvoke(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 _window.IsCancellable = false;
                 _window.ForceClose();
-                Environment.Exit(code);
+                if (Avalonia.Application.Current?.ApplicationLifetime
+                    is IClassicDesktopStyleApplicationLifetime desktop)
+                {
+                    desktop.Shutdown(code);
+                }
+                else
+                {
+                    Environment.Exit(code);
+                }
             });
         }
 
         // ============ 工具 ============
+
+        private static async Task OnUiAsync(Action action)
+            => await Dispatcher.UIThread.InvokeAsync(action);
+
+        private static Task OnUiAsync(Func<Task> action)
+        {
+            var tcs = new TaskCompletionSource();
+            Dispatcher.UIThread.Post(async () =>
+            {
+                try
+                {
+                    await action().ConfigureAwait(true);
+                    tcs.SetResult();
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            return tcs.Task;
+        }
 
         private static string FormatBytes(long bytes)
         {
@@ -421,4 +444,5 @@ namespace BlackGoldAncientSword.Update.Services
             return $"{seconds / 3600:0} 时 {(seconds % 3600) / 60:0} 分";
         }
     }
+
 }
