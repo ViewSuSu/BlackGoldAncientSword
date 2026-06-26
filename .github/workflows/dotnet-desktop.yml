@@ -189,44 +189,6 @@ jobs:
           "exe_size=$exeSize" >> $env:GITHUB_OUTPUT
           Write-Host "Installer: $exeName ($exeSize bytes)"
 
-      - name: Generate appcast.xml
-        shell: powershell
-        run: |
-          $ver = "${{ steps.version.outputs.new_version }}"
-          $zipSize = "${{ steps.zip.outputs.zip_size }}"
-          $repo = "${{ github.repository }}"
-          $pubDate = (Get-Date).ToString("ddd, dd MMM yyyy HH:mm:ss zzz", [System.Globalization.CultureInfo]::InvariantCulture)
-
-          $xml = @"
-          <?xml version="1.0" encoding="UTF-8"?>
-          <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
-            <channel>
-              <title>BlackGoldAncientSword</title>
-              <link>https://github.com/$repo</link>
-              <description>BlackGoldAncientSword Auto Update Feed</description>
-              <language>zh-CN</language>
-              <item>
-                <title>Version $ver</title>
-                <sparkle:releaseNotesLink>https://github.com/$repo/releases/tag/v$ver</sparkle:releaseNotesLink>
-                <pubDate>$pubDate</pubDate>
-                <enclosure
-                  url="https://github.com/$repo/releases/download/v$ver/${{ steps.installer.outputs.exe_name }}"
-                  sparkle:version="$ver"
-                  sparkle:shortVersionString="$ver"
-                  length="${{ steps.installer.outputs.exe_size }}"
-                  type="application/octet-stream"
-                  sparkle:os="windows"
-                  sparkle:installerArguments="/SILENT" />
-              </item>
-            </channel>
-          </rss>
-          "@
-
-          # Use .NET to write true UTF-8 without BOM (PowerShell 5 Set-Content adds BOM)
-          $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-          [System.IO.File]::WriteAllText("$pwd\output\appcast.xml", $xml.Trim(), $utf8NoBom)
-          Write-Host "appcast.xml written ($($xml.Length) chars)"
-
       - name: Commit version bump to release
         shell: powershell
         run: |
@@ -279,9 +241,29 @@ jobs:
           files: |
             output/*.exe
             output/*.zip
-            output/appcast.xml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync Release to Gitee
+        if: ${{ env.GITEE_TOKEN != '' }}
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        uses: nICEnnnnnnnLee/action-gitee-release@master
+        with:
+          gitee_action: create_release
+          gitee_owner: SususuChang
+          gitee_repo: BlackGoldAncientSword
+          gitee_token: ${{ secrets.GITEE_TOKEN }}
+          gitee_tag_name: v${{ steps.version.outputs.new_version }}
+          gitee_release_name: Release v${{ steps.version.outputs.new_version }}
+          gitee_release_body: |
+            自动同步自 GitHub Release v${{ steps.version.outputs.new_version }}
+            源 Release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.new_version }}
+          gitee_target_commitish: release
+          gitee_files: |-
+            output/${{ steps.installer.outputs.exe_name }}
+            output/${{ steps.zip.outputs.zip_name }}
+          gitee_upload_retry_times: 3
 
       - name: Sync version to main
         shell: powershell
