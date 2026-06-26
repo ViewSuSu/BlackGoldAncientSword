@@ -1,6 +1,6 @@
 [中文](README.md) | [English](README.en.md)
 
-[![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]()
+[![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]() [![WPF](https://img.shields.io/badge/UI-WPF%20%2B%20Prism%208.1-purple?style=flat)]() [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
 
 # BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
 
@@ -14,13 +14,13 @@
 
 [![Download](https://img.shields.io/badge/Download-Latest%20Release-blue?style=flat&logo=github)](https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest/download/BlackGoldAncientSword-Setup.exe)
 
-Click the button above to directly download the latest .exe package.
+Click the button above to directly download the latest .exe installer.
 
 # User Guide
 
 ## Overview
 
-**BlackGoldAncientSword** is a Windows desktop application that automatically detects game status, recognizes teammates, and fetches real-time player stats. No need to alt-tab to a browser — stats are displayed directly on your desktop. Supports **Solo / Duo / Trio** modes and **Ranked / Casual / Immortal** match types.
+**BlackGoldAncientSword** is a Windows desktop application that automatically detects game status, recognizes teammates, and fetches real-time player stats. No need to alt-tab to a browser — stats are displayed directly on your desktop. Supports **Solo / Duo / Trio** team sizes and **Ranked / Casual / Immortal** match types.
 
 ## Player Stats
 
@@ -37,6 +37,8 @@ Filter by season, mode category (Ranked / Casual / Immortal), and team size (Tri
   <img src="docs/images/02_stats.png" alt="Stats screenshot" /><br />
   <small><u>Stats</u></small>
 </p>
+
+> Click the copy button next to a player's nickname to quickly copy the nickname or UID.
 
 ---
 
@@ -69,15 +71,26 @@ When entering hero selection, the app captures the screen and recognizes teammat
 - **Data path**: Local storage directory for stats (customizable, with auto-migration)
 - **Cache path**: Image cache directory (size display + one-click clear)
 - **Language**: 简体中文 / English / 繁體中文
-- **Close behavior**: Default action when clicking the close button — choose from *Ask every time / Minimize to taskbar / Minimize to system tray / Exit directly*, with a "remember choice" option
+- **Close behavior**: Default action when clicking the close button — *Ask every time / Minimize to taskbar / Minimize to system tray / Exit directly*, with a "remember choice" option
 - **Team overlay during hero selection**: Toggle the bottom-right teammate popup
-- **Check for updates**: Manually check and download new releases
+- **Check for updates**: Manually check and download new releases (delegates to the standalone Updater process, see below)
 - **Current version**
 
 <p align="center">
   <img src="docs/images/04_settings.png" alt="Settings screenshot" /><br />
   <small><u>Settings</u></small>
 </p>
+
+---
+
+## Online Update
+
+The app compares the latest GitHub Release version both at startup and via "Settings → Check for updates". When a new version is detected, an update notification page is shown. Click "Update Online" to:
+
+1. The main app launches the standalone **BlackGoldAncientSword.Update.exe** (the updater) with the download URL, install directory, and main-app file name as arguments;
+2. The updater downloads the new zip → extracts → overlays the install directory → relaunches the main app → exits itself.
+
+> The updater is fully decoupled from the main app (no references to App / Framework / Modules), so no DLL is locked during the overlay step.
 
 ---
 
@@ -92,27 +105,30 @@ Minimize to system tray during gameplay. Right-click the tray icon to restore or
   <small><u>Close Prompt</u></small>
 </p>
 
+- Tray icon reflects online status
+- Confirm dialog on close: "exiting will stop game detection"
+
 ---
 
 ## FAQ 🧐
 
 **Q: Will I get banned for using BlackGoldAncientSword? 😨**
 
-This app only reads the game log file (Player.log) and captures the hero selection screen for OCR recognition. It does not modify or inject into game files or memory in any way. You are very unlikely to be banned, though no guarantee can be made.
+This app only reads the game log file (Player.log) and captures the hero selection screen for OCR. It does not modify or inject into game files or memory in any way. You are very unlikely to be banned, though no guarantee can be made.
 
 **Q: Why can't I query stats / why is data delayed?**
 
-All stats data comes from the same API powering https://naraka.drivod.top/ , provided by craftwyrd. The app only displays the data. If data is unavailable or delayed, the issue is almost certainly on the API server side. For data-related issues, ask in the data feedback QQ group or contact the API author craftwyrd directly.
+All stats data comes from the same API powering https://naraka.drivod.top/ , provided by craftwyrd. The app only displays the data. If data is unavailable or delayed, the issue is almost certainly on the API server side. Ask in the data feedback QQ group or contact the API author craftwyrd directly.
 
 **Q: Why does teammate recognition fail or show inaccurate results?**
 
 OCR recognition uses the same underlying technology as OBS screen capture, capturing directly from the graphics card layer and bypassing any overlays. However, it currently only supports recognition when the screen and game resolutions match. If your screen resolution differs from the game resolution, black bars will appear on the sides — please avoid playing in such a setup. For best results, play in fullscreen at the highest resolution or at a resolution matching your display.
 
-Additionally, OCR may sometimes fail to recognize certain special characters. If you encounter unrecognized names, you can use QQ screenshot text recognition or similar tools as a manual workaround.
+OCR may also fail on certain special characters. When that happens, use QQ screenshot OCR or similar tools as a manual workaround.
 
 **Q: Why is the installer / program so large (200MB+)?**
 
-The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. Additionally, the built-in OCR engine (PaddleOCR) depends on the Intel Math Kernel Library (mklml.dll, ~88MB) and the OpenCV computer vision library (opencv_world4100.dll, ~62MB). These two native AI/vision libraries, together with the .NET runtime, account for the vast majority of the download size. Without them, automatic screenshot recognition of teammate names wouldn't be possible — the "bulk" is a necessary price to pay 😅.
+The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. The built-in OCR engine (PaddleOCR) also depends on the Intel Math Kernel Library (mklml.dll, ~88MB) and the OpenCV computer vision library (opencv_world4100.dll, ~62MB). These two native AI/vision libraries, together with the .NET runtime, account for the vast majority of the download size. Without them, automatic OCR of teammate nicknames would not be possible — the "bulk" is a necessary price 😅.
 
 **Q: Why do I see a yellow border around my screen when entering hero selection?**
 
@@ -121,6 +137,10 @@ The yellow border is a visual indicator that the app is capturing the screen and
 **Q: What if my antivirus flags the program?**
 
 Because this program is not code-signed, it may be detected as a virus or suspicious file by antivirus software such as 360. You can temporarily disable the antivirus and then reopen the program.
+
+**Q: What if the online update fails?**
+
+The updater (BlackGoldAncientSword.Update.exe) runs as an independent process. Typical failure causes: no GitHub network access, insufficient permissions on the install directory, antivirus blocking the overlay. As a fallback, download the installer directly from the Releases page and reinstall over the existing install.
 
 ---
 
@@ -170,50 +190,61 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 # Developer Guide
 
-## Architecture Overview
+## Solution Overview
+
+`src/BlackGoldAncientSword.slnx` contains **10 projects**: 8 class libraries + 2 executables (the main App and the standalone Updater).
 
 ```
-┌──────────────────────────────────────────┐
-│          BlackGoldAncientSword.App       │  ← WPF entry point
-│          (Shell / MainWindow)            │
-└────────────────────┬─────────────────────┘
-                     │
-     ┌───────────────┼───────────────┐
-     │               │               │
-     ▼               ▼               ▼
-┌─────────┐  ┌─────────────┐  ┌───────────┐
-│ Modules │  │  Framework  │  │ Resources │
-│ (8 UI   │  │  (Core +    │  │ (Strings, │
-│  Pages) │  │   Services) │  │  Images)  │
-└────┬────┘  └──────┬──────┘  └───────────┘
-     │              │
-     ▼              ▼
-┌──────────┐  ┌──────────────┐
-│GameMonitor│  │ScreenCapture │
-│(Process/ │  │  (WGC API)   │
-│ Log)     │  │              │
-└─────┬─────┘  └──────┬───────┘
-      │               │
-      ▼               ▼
-┌──────────┐  ┌──────────────┐
-│   Ocr    │  │ PaddleOCR-   │
-│ (Engine) │  │  json.exe    │
-└──────────┘  └──────────────┘
+┌────────────────────────────────────────────────────────┐
+│             BlackGoldAncientSword.App                  │  ← WPF main entry (WinExe)
+│             (Shell / MainWindow / Tray)                │
+└──────────┬─────────────────────────────────────────┬───┘
+           │ launches external process               │
+           ▼                                          │
+┌──────────────────────────┐                          │
+│ BlackGoldAncientSword.   │                          │
+│ Update (standalone WinExe)│                         │
+│ Download/Extract/Overlay  │                         │
+└──────────────────────────┘                          │
+                                                      │
+        ┌─────────────────────┬──────────────────────┘
+        │                     │
+        ▼                     ▼                     ▼
+┌────────────┐        ┌──────────────┐        ┌───────────┐
+│  Modules   │        │  Framework   │        │ Resources │
+│ (9 UI page │ ◄────► │ (Core + 13   │ ◄──────│ (i18n XAML│
+│  modules)  │        │  service IF) │        │  + icons) │
+└─────┬──────┘        └──────┬───────┘        └───────────┘
+      │                      │
+      │             ┌────────┴───────┐
+      ▼             ▼                ▼
+┌──────────────┐ ┌──────────────┐ ┌────────────────────┐
+│ GameMonitor  │ │ ScreenCapture│ │ Framework.         │
+│ (process/log │ │ (WGC API +   │ │ SourceGenerator    │
+│ state machine│ │ native DLL)  │ │ (compile-time HTTP)│
+└──────┬───────┘ └──────┬───────┘ └────────────────────┘
+       │                │
+       ▼                ▼
+┌──────────────┐ ┌──────────────────┐
+│     Ocr      │ │ PaddleOCR-json   │
+│ (subprocess) │ │  .exe + models   │
+└──────────────┘ └──────────────────┘
 ```
 
 ### Layer Map
 
-| Layer | Project | Responsibility |
-|---|---|---|
-| **Shell** | `BlackGoldAncientSword.App` | App entry, main window, navigation, tray, updates |
-| **UI Modules** | `BlackGoldAncientSword.Modules` | 8 independent page modules, on-demand loading |
-| **Core Framework** | `BlackGoldAncientSword.Framework` | MVVM base, Prism infra, HTTP API, localization, settings |
-| **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | Process detection, log parsing, state machine |
-| **Screen Capture** | `BlackGoldAncientSword.ScreenCapture` | Windows Graphics Capture API via SharpDX |
-| **OCR Engine** | `BlackGoldAncientSword.Ocr` | PaddleOCR-json wrapper |
-| **Resources** | `BlackGoldAncientSword.Resources` | Multi-language XAML resource dictionaries, icons |
-| **Source Gen** | `BlackGoldAncientSword.Framework.SourceGenerator` | Compile-time HTTP client generation from JSON |
-| **Tests** | `BlackGoldAncientSword.Tests` | OCR, screen capture, game monitor, and update tests |
+| Layer | Project | Output | Responsibility |
+|---|---|---|---|
+| **Main App** | `BlackGoldAncientSword.App` | WinExe | App entry, main window, sidebar nav, tray, launches Updater |
+| **Updater** | `BlackGoldAncientSword.Update` | WinExe | Standalone online-update process, zero business deps (HandyControl only) |
+| **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 9 Prism `IModule` pages, on-demand loading |
+| **Core Framework** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM base, Prism infra, service abstractions/implementations, HTTP API |
+| **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | ClassLib | Process detection, Player.log parsing, battle state machine |
+| **Screen Capture** | `BlackGoldAncientSword.ScreenCapture` | ClassLib | Windows Graphics Capture API + SharpDX + native `wgc_capture.dll` |
+| **OCR Engine** | `BlackGoldAncientSword.Ocr` | ClassLib | PaddleOCR-json.exe subprocess wrapper |
+| **Resources** | `BlackGoldAncientSword.Resources` | ClassLib | Multi-language XAML resource dictionaries, icons, images |
+| **Source Gen** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | Compile-time HTTP client + test code generation from JSON |
+| **Tests** | `BlackGoldAncientSword.Tests` | xUnit | OCR, screen capture, game monitor, HTTP, update tests |
 
 ---
 
@@ -221,16 +252,18 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 | Category | Technology / Library | Purpose |
 |---|---|---|
-| **Runtime** | .NET 10.0 (net10.0-windows) | Target framework |
+| **Runtime** | .NET 10.0 (`net10.0-windows`) | Target framework |
 | **UI** | WPF + HandyControl 3.5 | Desktop UI and control library |
-| **MVVM** | Prism 8.1 (DryIoc) | DI container, region navigation, modularization |
-| **HTTP** | Compile-time source generator | Auto-generate typed API clients from JSON definitions |
+| **MVVM** | Prism 8.1 (`Prism.DryIoc`) | DI container, region navigation, modularization |
+| **HTTP** | Compile-time source generator | Generate strongly-typed API clients from `api-definitions.json` |
 | **Mapping** | Mapster 7.4 | DTO ↔ ViewModel |
-| **JSON** | System.Text.Json (with source-generated context) | Serialization / deserialization (fully replaced Newtonsoft.Json) |
-| **Screen Capture** | SharpDX + native WGC DLL (C++) | Game window capture |
+| **JSON** | `System.Text.Json` (with source-generated context) | Serialization / deserialization (fully replaced Newtonsoft.Json) |
+| **Screen Capture** | SharpDX.Direct3D11 + native WGC DLL (C++/WinRT) | Game window capture |
 | **OCR** | PaddleOCR-json.exe (long-lived child process) | Multi-language text recognition |
 | **System Tray** | Hardcodet.NotifyIcon.Wpf | Tray icon and context menu |
-| **Packaging** | Self-Contained + PublishSingleFile | Single-file deployment (win-x64) |
+| **Tests** | xUnit + Moq | Unit and integration tests |
+| **Packaging** | Self-Contained + PublishSingleFile | Both App and Updater shipped as single-file .exe (win-x64) |
+| **Installer** | Inno Setup | Produces `BlackGoldAncientSword-Setup.exe` |
 
 ---
 
@@ -238,114 +271,135 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 ```
 src/
-├── BlackGoldAncientSword.App/              # WPF startup project
+├── BlackGoldAncientSword.App/              # WPF main entry (WinExe)
 │   ├── App.xaml / App.xaml.cs              # App entry, Prism bootstrap
-│   ├── Shell/
-│   │   ├── MainWindow.xaml                 # Shell layout (sidebar + nav + tray)
-│   │   └── MainWindowViewModel.cs          # Nav commands, game status, update detection
-│   └── BlackGoldAncientSword.App.csproj
+│   └── Shell/
+│       ├── MainWindow.xaml(.cs)            # Shell (sidebar + nav + tray)
+│       └── MainWindowViewModel.cs          # Nav commands, game status, update detection
+│
+├── BlackGoldAncientSword.Update/           # Standalone online updater (WinExe, zero business deps)
+│   ├── App.xaml(.cs)                       # Entry: parses --url / --target / --main-exe
+│   ├── Services/
+│   │   ├── UpdateOptions.cs                # Command-line argument model
+│   │   └── UpdaterRunner.cs                # Orchestrates: download → extract → close main → overlay → relaunch
+│   ├── Shell/UpdateWindow.xaml(.cs)        # Progress window
+│   └── ViewModels/UpdateViewModel.cs       # Progress & status bindings
 │
 ├── BlackGoldAncientSword.Framework/        # Core framework
 │   ├── Core/
-│   │   ├── Attributes/
-│   │   │   └── ComponentAttribute.cs            # Custom component marker attribute
-│   │   ├── Bases/
-│   │   │   ├── PrismApplicationBase.cs        # Prism application base class
-│   │   │   ├── ViewModels/ViewModelBase.cs    # MVVM base class (RaisePropertyChanged)
-│   │   │   └── Views/UserControlBase.cs       # View base class
-│   │   ├── Consts/
-│   │   │   ├── GlobalConstant.cs                # Global constants
-│   │   │   └── PageNames.cs                     # Page name constants
-│   │   ├── Events/                             # Prism EventAggregator events
-│   │   │   ├── GameStatus.cs                   # Game status enum
-│   │   │   ├── GameStatusChangedEventArgs.cs   # Status change event args
-│   │   │   ├── SettingsChangedEvent.cs         # Settings change event
-│   │   │   └── TipMessageEvent.cs              # Toast message event
-│   │   ├── Extensions/                         # Extension methods & value converters
-│   │   └── Infrastructure/                     # Navigation interfaces
-│   │       ├── IMainContentNavigationService.cs  # Nav service interface
-│   │       └── MainContentNavigator.cs          # Nav service implementation
+│   │   ├── Attributes/                     # ComponentAttribute (auto-DI marker)
+│   │   ├── Bases/                          # ViewModelBase, PrismApplicationBase, etc.
+│   │   ├── Consts/                         # GlobalConstant, PageNames
+│   │   ├── Events/                         # GameStatusChanged, SettingsChanged, TipMessageEvent
+│   │   ├── Extensions/                     # Extension methods & value converters
+│   │   └── Infrastructure/                 # IMainContentNavigationService / MainContentNavigator
 │   ├── Http/
-│   │   ├── Definitions/                        # API JSON definitions → source gen
-│   │   └── JsonFlexibleStringConverter.cs      # System.Text.Json fault-tolerant converter
+│   │   ├── Definitions/
+│   │   │   ├── api-definitions.json        # API endpoints / requests / responses (→ source gen)
+│   │   │   └── enums.json                  # Enum definitions
+│   │   └── JsonFlexibleStringConverter.cs  # Fault-tolerant System.Text.Json converter
 │   ├── Services/
-│   │   ├── AppSettings.cs                       # App config data model
-│   │   ├── LanguageOption.cs                    # Language option model
-│   │   ├── SearchHistoryItem.cs                 # Search history model
-│   │   ├── ServiceAutoRegister.cs              # Service auto-registration
-│   │   ├── Abstractions/                       # Service interfaces (12)
-│   │   └── Implementation/                     # Service implementations
-│   ├── Themes/Generic.xaml                     # HandyControl theme
-│   └── UI/Controls/
-│       └── DataGridWrapPanel.cs                # DataGrid wrap panel
+│   │   ├── Abstractions/                   # 13 service interfaces (see table below)
+│   │   └── Implementation/                 # Service implementations
+│   ├── Themes/Generic.xaml                 # HandyControl theme
+│   └── UI/Controls/                        # Custom WPF controls (DataGridWrapPanel, etc.)
 │
-├── BlackGoldAncientSword.Modules/          # UI page modules
-│   ├── Mappings/
-│   │   └── BattleMappingRegister.cs          # Mapster mapping registration
-│   ├── Module/                               # Prism IModule registrations (8)
-│   └── UI/
-│       ├── Announcement/                     # Announcement page
-│       ├── ClosePrompt/                      # Close confirmation dialog
-│       ├── Feedback/                         # Feedback page
-│       ├── Home/                             # Home (game status monitor)
-│       ├── Search/                           # Search history
-│       ├── Settings/                         # Settings page
-│       ├── Stats/                            # Player stats
-│       └── TeamInfo/                         # Team info (OCR + comparison)
-│           └── Services/                     # Contains TeamInfoOcrService, TeamOcrCoordinator
+├── BlackGoldAncientSword.Framework.SourceGenerator/  # Roslyn source generator
+│   ├── ApiDefinitionsParser.cs             # Parses api-definitions.json
+│   ├── EnumSourceGenerator.cs              # Generates enum types
+│   ├── HttpApiSourceGenerator.cs           # Generates NarakaApiClient + DTOs (Client mode)
+│   └── HttpApiTestSourceGenerator.cs       # Generates HTTP API test code (Tests mode)
+│
+├── BlackGoldAncientSword.Modules/          # UI page modules (9 Prism IModule)
+│   ├── Mappings/BattleMappingRegister.cs   # Mapster mapping registration
+│   ├── Module/                             # 9 IModule registrations
+│   │   ├── AnnouncementModule.cs           # Announcements
+│   │   ├── ClosePromptModule.cs            # Close confirmation dialog
+│   │   ├── FeedbackModule.cs               # Feedback
+│   │   ├── HomeModule.cs                   # Home (game status monitor)
+│   │   ├── SearchModule.cs                 # Search history
+│   │   ├── SettingsModule.cs               # Settings
+│   │   ├── StatsModule.cs                  # Player stats
+│   │   ├── TeamInfoModule.cs               # Team info (OCR + comparison)
+│   │   └── UpdateNotificationModule.cs     # New version prompt / launch Updater
+│   └── UI/                                 # ViewModels + Views per module
+│       ├── Stats/Services/                 # Stats aggregation services
+│       ├── TeamInfo/Services/              # TeamInfoOcrService, TeamOcrCoordinator
+│       └── UpdateNotification/ViewModels/  # Launches BlackGoldAncientSword.Update.exe
 │
 ├── BlackGoldAncientSword.GameMonitor/      # Game monitoring
-│   ├── GameMonitorAutoRegister.cs            # Service auto-registration
-│   ├── GlobalUsing.cs                        # Global usings
-│   ├── Models/                               # BattleEventArgs, PlayerPrefsData
-│   └── Services/
-│       ├── Abstractions/
-│       │   ├── IGameLogMonitor.cs            # Log monitor interface
-│       │   ├── IGameStatusMonitor.cs         # Status monitor interface
-│       │   └── IPlayerPrefsService.cs        # Preferences service interface
-│       └── Implementation/
-│           ├── GameLogMonitor.cs             # Player.log parser
-│           ├── GameStatusMonitor.cs          # Game state machine
-│           └── PlayerPrefsService.cs         # Local user preferences
+│   ├── Models/                             # BattleEventArgs, PlayerPrefsData
+│   ├── Services/
+│   │   ├── Abstractions/                   # IGameLogMonitor / IGameStatusMonitor / IPlayerPrefsService
+│   │   └── Implementation/
+│   │       ├── GameLogMonitor.cs           # Façade (orchestrates lifetime + event dispatch)
+│   │       ├── GameStatusMonitor.cs        # Game state machine
+│   │       ├── PlayerPrefsService.cs       # Local user preferences
+│   │       └── Internal/
+│   │           ├── BattleStateMachine.cs   # Battle state machine
+│   │           ├── LogPoller.cs            # Polling loop
+│   │           └── LogReader.cs            # Player.log reader
+│   └── GameMonitorAutoRegister.cs          # Service auto-registration
 │
-├── BlackGoldAncientSword.ScreenCapture/     # Screen capture
-│   ├── GlobalUsing.cs                        # Global usings
-│   ├── IScreenCaptureService.cs             # Capture service interface
-│   ├── NativeWgc.cs                          # Native WGC API interop
-│   ├── ScreenCaptureAutoRegister.cs          # Service auto-registration
-│   ├── ScreenCaptureService.cs              # WGC wrapper
-│   ├── ScreenQuadrant.cs                     # Screen quadrant split
-│   ├── WgcInterop.cs                         # WGC COM interop wrapper
-│   └── native/
-│       └── wgc_capture.dll                  # Native C++ capture library
+├── BlackGoldAncientSword.ScreenCapture/    # Screen capture (Windows Graphics Capture API)
+│   ├── IScreenCaptureService.cs            # Service interface
+│   ├── ScreenCaptureService.cs             # WGC wrapper
+│   ├── NativeWgc.cs / WgcInterop.cs        # Native WGC API interop
+│   ├── ScreenQuadrant.cs                   # Screen quadrant split
+│   ├── native/                             # Native C++ source + build script
+│   └── runtimes/win-x64/native/
+│       └── wgc_capture.dll                 # Native C++/WinRT capture library
 │
-├── BlackGoldAncientSword.Ocr/               # OCR engine
-│   ├── GlobalUsing.cs                        # Global usings
-│   ├── IOcrService.cs                        # OCR service interface
-│   ├── JobObjectHelper.cs                    # Child process lifecycle management
-│   ├── OcrAutoRegister.cs                    # Service auto-registration
-│   └── OcrEngine.cs                          # PaddleOCR-json.exe wrapper
+├── BlackGoldAncientSword.Ocr/              # OCR engine
+│   ├── IOcrService.cs                      # Service interface
+│   ├── OcrEngine.cs                        # PaddleOCR-json.exe wrapper
+│   ├── JobObjectHelper.cs                  # JobObject fallback for child-process cleanup
+│   └── OcrAutoRegister.cs                  # Service auto-registration
 │
-├── BlackGoldAncientSword.Resources/         # Multi-language resources
-│   ├── Images/                               # UI image resources
+├── BlackGoldAncientSword.Resources/        # Multi-language resources
+│   ├── Images/                             # UI images, app icon (app.ico)
 │   └── Themes/
-│       ├── Strings.zh-CN.xaml               # Simplified Chinese
-│       ├── Strings.en.xaml                  # English
-│       └── Strings.zh-TW.xaml               # Traditional Chinese
+│       ├── Strings.zh-CN.xaml              # Simplified Chinese
+│       ├── Strings.en.xaml                 # English
+│       └── Strings.zh-TW.xaml              # Traditional Chinese
 │
-├── BlackGoldAncientSword.Tests/             # Test project
-│   ├── GameMonitor/                          # Game monitor tests
-│   ├── Http/                                 # HTTP / JSON fault-tolerance tests
-│   ├── Ocr/                                  # OCR tests
-│   ├── ScreenCapture/                        # Screen capture tests
-│   ├── TestData/                             # Test data
-│   └── Update/                               # Update flow tests
-│
-└── ocr_engine/                               # PaddleOCR-json engine files
-    ├── PaddleOCR-json.exe                    # OCR engine executable
-    ├── models/                               # OCR model files
-    └── *.dll                                 # Runtime dependencies (onnxruntime, OpenCV, etc.)
+└── BlackGoldAncientSword.Tests/            # Test project (xUnit + Moq)
+    ├── GameMonitor/                        # Game monitor tests
+    ├── Http/                               # HTTP / JSON fault-tolerance tests (some code source-generated)
+    ├── Ocr/                                # OCR tests
+    ├── ScreenCapture/                      # Screen capture tests
+    ├── Update/                             # Update flow tests
+    └── TestData/                           # Test data
+
+ocr_engine/                                 # PaddleOCR-json engine + models (copied to output by Ocr)
+├── PaddleOCR-json.exe                      # OCR engine executable
+├── models/                                 # OCR models (ch / cht / en / cyrillic / japan / korean)
+└── *.dll                                   # Runtime deps (onnxruntime, opencv_world, mklml, etc.)
 ```
+
+---
+
+## Framework Service Interfaces
+
+`BlackGoldAncientSword.Framework/Services/Abstractions/` exposes 13 public interfaces:
+
+| Interface | Main Implementation | Purpose |
+|---|---|---|
+| `IAppAssemblyMarker` | `AppAssemblyMarker` | Assembly locator marker (for XAML resource resolution) |
+| `IApplicationLifetime` | `WpfApplicationLifetime` | Exit / restart application |
+| `IClipboardService` | `WpfClipboardService` | Clipboard read/write |
+| `IGitHubReleaseService` | `GitHubReleaseService` | Fetch GitHub releases list and assets |
+| `IImageCacheService` | `ImageCacheService` | On-disk image cache |
+| `ILocalizationService` | `LocalizationService` | Switch language at runtime (reload XAML resource dictionaries) |
+| `ILocalizedTextProvider` | `WpfLocalizedTextProvider` | Read localized strings from code |
+| `ISearchHistoryService` | `SearchHistoryService` | Persist search history |
+| `ISettingsService` | `SettingsService` | App configuration read/write |
+| `ITeamOverlayService` | `TeamOverlayService` | Bottom-right team overlay during hero selection |
+| `ITipMessageService` | `TipMessageService` | Global toast / tip messages |
+| `IUIDispatcher` | `WpfUIDispatcher` | Cross-thread UI dispatch wrapper |
+| `IUpdateService` | `UpdateService` | Compare versions, resolve latest release zip URL |
+
+`GameMonitor`, `Ocr`, `ScreenCapture` each expose their own interfaces (`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService`, `IOcrService`, `IScreenCaptureService`), registered into the DI container via their `*AutoRegister.cs`.
 
 ---
 
@@ -353,56 +407,82 @@ src/
 
 ### 1. MVVM Architecture (Prism + DryIoc)
 
-- All ViewModels inherit from `ViewModelBase` with `RaisePropertyChanged()` (no `SetProperty` wrapper per project conventions)
+- All ViewModels inherit from `ViewModelBase` with `RaisePropertyChanged()` (no `SetProperty` wrapper per [CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md) conventions)
 - Property change notifications use `nameof()` or `[CallerMemberName]`, string literals forbidden
+- ViewModels **must not reference WPF types** (`Visibility`, `Brush`, `Color`, etc.); express visibility as `bool` + Converter
 - Navigation via `IMainContentNavigationService` with forward/back support
-- Cross-module communication via `IEventAggregator` (e.g. `TipMessageEvent`)
+- Cross-module communication via `IEventAggregator` (e.g. `TipMessageEvent`, `SettingsChangedEvent`)
 
 ### 2. On-Demand Module Loading
 
-Each of the 8 UI pages is a Prism `IModule` registered as `OnDemand` in `ModuleCatalogConfigManager`. Modules are only loaded on first navigation, reducing startup time.
+Each of the 9 UI pages is a Prism `IModule` registered as `OnDemand` in `ModuleCatalogConfigManager`. Modules are only loaded on first navigation, reducing startup time.
 
 ```csharp
 // PageNames.cs
 public static class PageNames
 {
-    public const string HomePage     = nameof(HomePage);
-    public const string StatsPage    = nameof(StatsPage);
-    public const string SearchPage   = nameof(SearchPage);
-    public const string TeamInfoPage = nameof(TeamInfoPage);
-    public const string SettingsPage = nameof(SettingsPage);
-    public const string AnnouncementPage = nameof(AnnouncementPage);
-    public const string ClosePromptPage  = nameof(ClosePromptPage);
-    public const string FeedbackPage     = nameof(FeedbackPage);
+    public const string HomePage               = nameof(HomePage);
+    public const string StatsPage              = nameof(StatsPage);
+    public const string SearchPage             = nameof(SearchPage);
+    public const string TeamInfoPage           = nameof(TeamInfoPage);
+    public const string SettingsPage           = nameof(SettingsPage);
+    public const string AnnouncementPage       = nameof(AnnouncementPage);
+    public const string ClosePromptPage        = nameof(ClosePromptPage);
+    public const string FeedbackPage           = nameof(FeedbackPage);
+    public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
 }
 ```
 
 ### 3. Game Status Monitoring (GameMonitor)
 
-`GameLogMonitor` watches `Player.log` using **`FileSystemWatcher` plus a polling fallback**. Internally the responsibilities are split into `LogReader` (file IO), `LogPoller` (poll loop) and `BattleStateMachine` (battle state); the monitor itself is just a façade that orchestrates lifetime and event dispatch. Detected events:
+`GameLogMonitor` watches `Player.log` using **`FileSystemWatcher` plus a polling fallback**. Internally the responsibilities are split into:
+
+- `LogReader` (file IO)
+- `LogPoller` (poll loop)
+- `BattleStateMachine` (battle state)
+
+The outer `GameLogMonitor` is just a façade that orchestrates lifetime and event dispatch. Detected events:
 
 - `BattleJoined` — hero selection (parses RoomId from log)
 - `BattleStarted` — match start (parses BattleId)
 - `BattleEnded` — match end
 
-`GameStatusMonitor` maintains a state machine, notifying pages of the current phase. `HomePageViewModel` additionally uses `Process.GetProcessesByName("NarakaBladepoint")` as a secondary check.
+`GameStatusMonitor` maintains a state machine, notifying pages of the current phase (`HeroSelection` / `InGame` / `BattleEnded`). `HomePageViewModel` additionally uses `Process.GetProcessesByName("NarakaBladepoint")` as a secondary check.
 
 ### 4. Screen Capture & OCR (Team Info)
 
 1. `GameStatusMonitor` detects `HeroSelection` state
-2. `TeamInfoPageViewModel` starts OCR polling loop
-3. `ScreenCaptureService` captures the game window via **Windows Graphics Capture API** (native C++ DLL → SharpDX D3D11), reusing full-frame buffers from `ArrayPool` and slicing three regions via `ScreenQuadrant` into a single composite image
+2. `TeamInfoPageViewModel` starts the OCR polling loop
+3. `ScreenCaptureService` captures the game window via **Windows Graphics Capture API** (native C++/WinRT DLL → SharpDX D3D11), reusing full-frame buffers from `ArrayPool` and slicing three regions via `ScreenQuadrant` into a single composite image
 4. `OcrEngine` talks to **PaddleOCR-json.exe** as a **singleton long-lived child process** over stdin/stdout pipes using `image_base64` (zero disk IO). Models load once on the first `PrewarmAsync` call (~600–1500 ms); subsequent calls only run inference (~100–250 ms). A `JobObject` guarantees the child is reaped by the OS if the host crashes
 5. `TeamInfoOcrService` / `TeamOcrCoordinator` parse the OCR output and extract teammate nicknames
-6. The stats API is queried for each teammate and displayed side-by-side
+6. The stats API is queried for each teammate and the results are displayed side-by-side
 
 ### 5. Source-Generated HTTP Client
 
-API clients are **not hand-written**. `BlackGoldAncientSword.Framework.SourceGenerator` reads JSON definitions from `Http/Definitions/*.json` at compile time and generates strongly-typed HTTP client code.
+API clients are **not hand-written**. `BlackGoldAncientSword.Framework.SourceGenerator` reads JSON definitions from `Http/Definitions/*.json` at compile time and generates strongly-typed code:
+
+- JSON files describe endpoints, request/response data structures, and enums
+- The generator is a **Roslyn Source Generator**, referenced by both Framework and Tests as an Analyzer
+- The `BgaSourceGenMode` MSBuild property switches output:
+  - `Client` mode (Framework) — generates `NarakaApiClient` + DTOs
+  - `Tests` mode (Tests) — generates HTTP API test code
 
 ### 6. Localization
 
-Multi-language support via WPF `ResourceDictionary`. All UI text is defined in `Strings.xx.xaml`. `ILocalizationService.ApplyLanguage()` dynamically swaps resource dictionaries at runtime — no restart needed.
+Multi-language support via WPF `ResourceDictionary`. All UI text is defined in `Strings.{zh-CN,en,zh-TW}.xaml`. `ILocalizationService.ApplyLanguage()` dynamically swaps resource dictionaries at runtime — no restart needed.
+
+### 7. Online Update (Standalone Updater Process)
+
+Updates are a two-process collaboration:
+
+- **Main app side** (`Modules/UI/UpdateNotification/ViewModels/UpdateNotificationPageViewModel.cs`)
+  - Detects new versions via `IUpdateService` + `IGitHubReleaseService`
+  - On "Update Online" click, launches `BlackGoldAncientSword.Update.exe` in the install directory with `--url <zip URL>`, `--target <install dir>`, `--main-exe BlackGoldAncientSword.App.exe`
+- **Updater side** (`BlackGoldAncientSword.Update`)
+  - Standalone process. Does not reference any business project (HandyControl only) — avoids DLL locking so the whole install directory can be safely overlaid
+  - `UpdaterRunner` orchestrates: download zip (0–90%) → extract (90–98%) → prompt to close main app → full overlay → relaunch main app → exit
+  - Published as self-contained + `PublishSingleFile` + `EnableCompressionInSingleFile`
 
 ---
 
@@ -412,19 +492,25 @@ Multi-language support via WPF `ResourceDictionary`. All UI text is defined in `
 
 - Windows 10/11 x64
 - .NET 10.0 SDK
+- PowerShell 7+ recommended (UTF-8 environment)
 
 ### Build
 
 ```powershell
-# Restore
-dotnet restore src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj
+# Restore + build the whole solution
+dotnet build src/BlackGoldAncientSword.slnx
 
-# Debug build
+# Build only the main app
 dotnet build src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c Debug
 
-# Release publish (single-file exe)
-dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c Release -o publish/
+# Release publish main app (self-contained single-file .exe)
+dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c Release -o publish/App
+
+# Release publish updater (self-contained single-file .exe, must sit next to the main app)
+dotnet publish src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj -c Release -o publish/Updater
 ```
+
+> Project rule: after any code change, run `dotnet build src/BlackGoldAncientSword.slnx` and reach 0 errors before considering the change done.
 
 ### Run Tests
 
@@ -432,7 +518,27 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ```
 
-```
+---
+
+## CI / Release Flow
+
+Two workflows under `.github/workflows/`:
+
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| `main-build.yml` | push / PR → `main` | Validation build (`dotnet build src/BlackGoldAncientSword.slnx`), no publish |
+| `dotnet-desktop.yml` | push → `release` | Full release: bump version → build App → publish App + Updater (self-contained) → pack zip + Inno Setup installer → create GitHub Release |
+
+Release flow highlights:
+
+1. Infer version from existing git tags (`v*.*.*.*` pattern), auto-increment the build segment
+2. Patch `App.csproj`: `Version` / `AssemblyVersion` / `FileVersion`
+3. Publish both App and Updater as self-contained single-file .exe
+4. Merge publish outputs → zip as `BlackGoldAncientSword-v{version}.zip`
+5. Build `BlackGoldAncientSword-Setup.exe` via `setup.iss` (Inno Setup script)
+6. Create a GitHub Release with auto-generated commit-title list since the previous tag
+
+> The `release` branch has branch protection enabled: no direct push, no force push, no deletion. Releases must go through a PR. Day-to-day work happens on `main`; the release flow opens a PR from `main` into `release`.
 
 ---
 
@@ -445,4 +551,3 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 ## License
 
 MIT License. Author: **小窗同学** (XiaoChuang).
-
