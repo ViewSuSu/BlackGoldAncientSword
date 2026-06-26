@@ -21,17 +21,12 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         private readonly IUpdateService _updateService;
         private readonly IClipboardService _clipboard;
 
-        private System.Threading.Timer? _saveTimer;
-        private const int SaveDebounceMs = 300;
-
-        /// <summary>属性变更后防抖保存：300ms 内的多次属性变更只触发一次实际写盘，避免拖动滑块/输入路径时频繁 IO。</summary>
-        private void DebouncedSave()
+        /// <summary>立即异步落盘。设置项变更点必须实时持久化，避免"改完立即关闭/Kill 进程"
+        /// 导致丢失。所有设置项均为单次用户动作（点击单选/勾选/选完文件夹），不存在高频
+        /// 调用场景，无需防抖。</summary>
+        private void SaveImmediate([System.Runtime.CompilerServices.CallerMemberName] string? caller = null)
         {
-            _saveTimer?.Dispose();
-            _saveTimer = new System.Threading.Timer(_ =>
-            {
-                _settings.SaveAsync().SafeFireAndForget("Settings.SaveAsync");
-            }, null, SaveDebounceMs, System.Threading.Timeout.Infinite);
+            _settings.SaveAsync().SafeFireAndForget($"{nameof(SettingsPageViewModel)}.{caller}.SaveAsync");
         }
 
         private string _dataPath = string.Empty;
@@ -48,7 +43,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                     return;
 
                 _settings.Current.DataSavePath = value;
-                DebouncedSave();
+                SaveImmediate();
             }
         }
 
@@ -67,7 +62,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
 
                 _settings.Current.CachePath = value;
                 _cacheService.CachePath = value;
-                DebouncedSave();
+                SaveImmediate();
             }
         }
 
@@ -98,7 +93,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 _localization.ApplyLanguage(value);
                 _localization.CurrentLanguage = value;
                 _settings.Current.Language = value;
-                DebouncedSave();
+                SaveImmediate();
                 CloseBehaviorOptions.ResetBindings();
             }
         }
@@ -124,7 +119,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 _settings.Current.CloseBehavior = value;
                 RaisePropertyChanged();
                 RaisePropertyChanged(nameof(RememberCloseBehavior));
-                DebouncedSave();
+                SaveImmediate();
             }
         }
 
@@ -143,7 +138,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             {
                 _settings.Current.CloseBehaviorRemembered = value;
                 RaisePropertyChanged();
-                DebouncedSave();
+                SaveImmediate();
             }
         }
 
@@ -155,7 +150,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             {
                 _settings.Current.ShowTeamOverlayDuringHeroSelection = value;
                 RaisePropertyChanged();
-                DebouncedSave();
+                SaveImmediate();
             }
         }
 
@@ -210,8 +205,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
-            _saveTimer?.Dispose();
-            _saveTimer = null;
+            // 实时落盘策略下无 pending 计时器需清理
             base.OnNavigatedFromExecute(navigationContext);
         }
 

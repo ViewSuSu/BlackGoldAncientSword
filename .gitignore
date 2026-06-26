@@ -19,3 +19,4 @@ src/ocr_service/__pycache__/
 
 # --- Editor / IDE settings (per-machine) ---
 .vscode/
+.claude/worktrees/
