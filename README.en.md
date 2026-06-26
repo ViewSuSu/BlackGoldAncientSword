@@ -538,7 +538,7 @@ Release flow highlights:
 5. Build `BlackGoldAncientSword-Setup.exe` via `setup.iss` (Inno Setup script)
 6. Create a GitHub Release with auto-generated commit-title list since the previous tag
 
-> The `release` branch has branch protection enabled: no direct push, no force push, no deletion. Releases must go through a PR. Day-to-day work happens on `main`; the release flow opens a PR from `main` into `release`.
+> The `release` branch has branch protection enabled: no direct push, no force push, no deletion, and `enforce_admins` is on (so administrators are bound by the same rules). Every change must land via a pull request. Day-to-day work happens on `main`; to ship a release, first commit + push `main` via the [git-commit](.claude/skills/git-commit/SKILL.md) skill, then open a `main` → `release` pull request on GitHub and merge it — that merge is what triggers `dotnet-desktop.yml`.
 
 ---
 
