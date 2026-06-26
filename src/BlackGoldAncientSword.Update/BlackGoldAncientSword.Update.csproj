@@ -5,13 +5,9 @@
     原因：updater 解压完成后会全量覆盖安装目录里的文件，如果 updater 进程
     持有这些项目的 dll（DefaultLoadContext 锁定），文件覆盖会失败。
 
-    技术栈：Avalonia 11 + .NET self-contained single-file。
-    发布产物：单个 self-contained exe（apphost 启动时把 runtime 抽到 %TEMP%\.net，
-    安装目录里除 updater.exe 自身没有任何被锁定的 dll，整目录覆盖安全）。
-
-    历史：曾尝试 Native AOT（v1.0.0.0/v1.0.0.1），Avalonia 11.2.5 + net10.0 AOT
-    启动 silent crash；降到 net9.0 AOT 仍未充分验证，遂回退到 self-contained 单文件，
-    生产环境最稳。
+    发布建议：以 self-contained single-file 形式发布到安装目录，
+    apphost 会把 runtime 抽取到 %TEMP%\.net，安装目录里除了 updater.exe 自身
+    没有任何被锁定的 dll，可放心整目录覆盖。
   -->
 
   <PropertyGroup>
@@ -20,12 +16,8 @@
     <Company>$(Authors)</Company>
     <Description>BlackGoldAncientSword 在线更新程序</Description>
     <OutputType>WinExe</OutputType>
-    <!--
-      TargetFramework 保持 net9.0：Avalonia 11.2.5 官方测试矩阵覆盖 net8 / net9，
-      net10.0 与 Avalonia 11.2.x 组合曾遇启动崩，保留 net9 更稳。
-      Update 项目独立，与主 App (net10.0-windows) TargetFramework 不一致不互相影响。
-    -->
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <ApplicationIcon>..\BlackGoldAncientSword.Resources\Images\app.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -33,13 +25,9 @@
     <Version>1.0.0.0</Version>
     <AssemblyName>BlackGoldAncientSword.Update</AssemblyName>
     <RootNamespace>BlackGoldAncientSword.Update</RootNamespace>
-    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
-  <!-- 发布参数：CI/installer 调用 dotnet publish 时自动应用。
-       self-contained = 不依赖客户机已装 .NET runtime，
-       PublishSingleFile + IncludeNativeLibrariesForSelfExtract = 单 exe 自宿主，
-       EnableCompressionInSingleFile = 压缩内嵌 runtime 减体积。 -->
+  <!-- 发布参数：CI/installer 调用 dotnet publish 时使用 -->
   <PropertyGroup>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
@@ -50,12 +38,10 @@
 
   <ItemGroup>
     <!--
-      Avalonia 11.x：跨平台 UI 框架。仅桌面 + Fluent 主题，
-      不引 Avalonia.Diagnostics（DevTools），减体积。
+      只引 NuGet 包，不引项目，保持 updater 独立。
+      版本与主项目 Framework.csproj 保持一致：HandyControl 3.5.0。
     -->
-    <PackageReference Include="Avalonia" Version="11.2.5" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.2.5" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.5" />
+    <PackageReference Include="HandyControl" Version="3.5.0" />
   </ItemGroup>
 
 </Project>
