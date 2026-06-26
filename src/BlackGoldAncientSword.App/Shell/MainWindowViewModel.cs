@@ -172,45 +172,21 @@ namespace BlackGoldAncientSword.App.Shell
 
         private DelegateCommand? _checkForUpdatesCommand;
         public DelegateCommand CheckForUpdatesCommand =>
-            _checkForUpdatesCommand ??= new DelegateCommand(async () =>
+            _checkForUpdatesCommand ??= new DelegateCommand(() =>
             {
-                // async DelegateCommand 实际是 async void：整段必须用 try/catch 兜底，
-                // 否则任何异常都会冒泡到 DispatcherUnhandledException。
+                // 左下角"发现新版本"点击 → 复用启动期发现新版时的半透明卡片提示。
+                // 用户主动点击：忽略 _updateNotificationShown 守卫，以便关闭后还能再次打开。
                 try
                 {
-                    Debug.WriteLine($"[{nameof(MainWindowViewModel)}.{nameof(CheckForUpdatesCommand)}] 执行：打开 GitHub 下载最新版本");
-                    string url;
-                    try
-                    {
-                        // Fetch latest release download URL from GitHub API
-                        using var http = new System.Net.Http.HttpClient();
-                        http.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword");
-                        var json = await http.GetStringAsync("https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/releases/latest").ConfigureAwait(false);
-                        using var doc = System.Text.Json.JsonDocument.Parse(json);
-                        var assets = doc.RootElement.GetProperty("assets");
-                        string? downloadUrl = null;
-                        foreach (var asset in assets.EnumerateArray())
-                        {
-                            var name = asset.GetProperty("name").GetString();
-                            if (name != null && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                            {
-                                downloadUrl = asset.GetProperty("browser_download_url").GetString();
-                                break;
-                            }
-                        }
-                        url = downloadUrl ?? "https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest";
-                    }
-                    catch (Exception apiEx) when (apiEx is not OutOfMemoryException and not StackOverflowException)
-                    {
-                        Debug.WriteLine($"[{nameof(MainWindowViewModel)}.{nameof(CheckForUpdatesCommand)}] GitHub API 查询失败，回退到 releases 页面: {apiEx.Message}");
-                        url = "https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest";
-                    }
-                    Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-                    Debug.WriteLine($"[{nameof(MainWindowViewModel)}.{nameof(CheckForUpdatesCommand)}] 完成");
+                    EnsureModuleLoaded(PageNames.UpdateNotificationPage);
+                    _regionManager.RequestNavigate(
+                        GlobalConstant.UpdateNotificationRegion,
+                        PageNames.UpdateNotificationPage);
+                    _updateNotificationShown = true;
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
-                    Debug.WriteLine($"[{nameof(MainWindowViewModel)}.{nameof(CheckForUpdatesCommand)}] 启动下载页失败: {ex}");
+                    Debug.WriteLine($"[{nameof(MainWindowViewModel)}.{nameof(CheckForUpdatesCommand)}] 弹出更新通知失败: {ex}");
                 }
             });
 

@@ -106,11 +106,27 @@ jobs:
             /p:Version=${{ steps.version.outputs.new_version }}
           Write-Host "Publish completed"
 
+      - name: Publish Updater (self-contained single-file)
+        shell: powershell
+        run: |
+          $updProj = "src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj"
+          dotnet publish $updProj `
+            -c Release `
+            -r win-x64 `
+            -o publish/Updater `
+            --self-contained `
+            /p:PublishSingleFile=true `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:EnableCompressionInSingleFile=true `
+            /p:Version=${{ steps.version.outputs.new_version }}
+          Write-Host "Updater publish completed"
+
       - name: Merge build + publish output
         shell: powershell
         run: |
           $buildDir = "src/BlackGoldAncientSword.App/bin/Release/net10.0-windows/win-x64"
           $publishDir = "publish/Release"
+          $updaterDir = "publish/Updater"
           $mergedDir = "publish/Merged"
 
           New-Item -ItemType Directory -Force -Path $mergedDir | Out-Null
@@ -122,6 +138,16 @@ jobs:
           # 2. Overlay with publish output (publish wins on conflicts)
           Copy-Item -Path "$publishDir\*" -Destination $mergedDir -Recurse -Force
           Write-Host "Overlaid publish output: $(Get-ChildItem $mergedDir -Recurse | Measure-Object).Count files total"
+
+          # 3. 复制独立的 Updater single-file exe 进安装目录
+          #    Updater 必须随 App 一起部署，否则"在线更新"按钮 CanOnlineUpdate=false 永远 disabled
+          $updaterExe = Join-Path $updaterDir "BlackGoldAncientSword.Update.exe"
+          if (-not (Test-Path $updaterExe)) {
+            Write-Error "Updater exe not found: $updaterExe"
+            exit 1
+          }
+          Copy-Item -Path $updaterExe -Destination $mergedDir -Force
+          Write-Host "Copied Updater exe into merged: $updaterExe"
 
       - name: Zip merged output
         id: zip
