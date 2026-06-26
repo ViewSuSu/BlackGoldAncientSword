@@ -245,6 +245,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sync Release to Gitee
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
         uses: trustedinster/sync-release-gitee@v1.3
         with:
           gitee_owner: SususuChang
@@ -286,3 +289,60 @@ jobs:
             git push origin main
             Write-Host "Synced csproj version v$ver to main"
           }
+
+      - name: Cleanup on failure (delete tag / GitHub release / Gitee release)
+        if: failure()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          $ver = "${{ steps.version.outputs.new_version }}"
+          if (-not $ver) {
+            Write-Host "未确定版本号，无需回滚"
+            exit 0
+          }
+          $tag = "v$ver"
+          $repo = "${{ github.repository }}"
+          $giteeOwner = "SususuChang"
+          $giteeRepo = "BlackGoldAncientSword"
+
+          Write-Host "===== 失败回滚开始: $tag ====="
+
+          # 1. 删除 GitHub release + tag（gh CLI --cleanup-tag 同时删 release 与 tag）
+          try {
+            gh release delete $tag -y --cleanup-tag -R $repo
+            Write-Host "[OK] GitHub release/tag $tag 已删除"
+          } catch {
+            Write-Host "[SKIP] GitHub release $tag 不存在或删除失败: $_"
+          }
+
+          # 2. 兜底再删一次远端 tag（防止 gh --cleanup-tag 不可用）
+          try {
+            git push origin --delete $tag 2>$null
+            Write-Host "[OK] 远端 tag $tag 兜底删除完成"
+          } catch {
+            Write-Host "[SKIP] 远端 tag $tag 删除兜底失败: $_"
+          }
+
+          # 3. 删除 Gitee release
+          if ($env:GITEE_TOKEN) {
+            try {
+              $getUrl = "https://gitee.com/api/v5/repos/$giteeOwner/$giteeRepo/releases/tags/$tag" + "?access_token=$($env:GITEE_TOKEN)"
+              $resp = Invoke-RestMethod -Uri $getUrl -Method Get -ErrorAction Stop
+              if ($resp.id) {
+                $delUrl = "https://gitee.com/api/v5/repos/$giteeOwner/$giteeRepo/releases/$($resp.id)" + "?access_token=$($env:GITEE_TOKEN)"
+                Invoke-RestMethod -Uri $delUrl -Method Delete | Out-Null
+                Write-Host "[OK] Gitee release $tag (id=$($resp.id)) 已删除"
+              } else {
+                Write-Host "[SKIP] Gitee 未找到 release $tag"
+              }
+            } catch {
+              Write-Host "[SKIP] Gitee release $tag 查询/删除失败: $_"
+            }
+          } else {
+            Write-Host "[SKIP] 未配置 GITEE_TOKEN, 跳过 Gitee 清理"
+          }
+
+          Write-Host "===== 失败回滚结束 ====="
+          Write-Host "注意: release / main 分支已 push 的版本号 commit 未回滚（避免强推），下次发版会从已有 tag 继续递增"
