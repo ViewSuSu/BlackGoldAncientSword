@@ -230,6 +230,45 @@ jobs:
             Write-Host "Tag v$ver already exists on remote, skipping creation"
           }
 
+      - name: Generate changelog
+        id: changelog
+        shell: pwsh
+        run: |
+          $newTag = "v${{ steps.version.outputs.new_version }}"
+
+          # 找上一个 4 段版本号 tag，排除本次新建的 newTag
+          $prevTag = git tag --sort=-v:refname | Where-Object { $_ -match '^v\d+\.\d+\.\d+\.\d+$' -and $_ -ne $newTag } | Select-Object -First 1
+
+          if (-not $prevTag) {
+            $rangeLabel = "初次发版"
+            $changelog  = "- 项目首次发版"
+            $compareUrl = ""
+          } else {
+            $rangeLabel = "$prevTag → $newTag"
+            # prev_tag..HEAD 内非 merge、非 [skip ci] commit 标题，附短哈希
+            $rawLog = git log "$prevTag..HEAD" --pretty=format:"- %s (%h)" --no-merges --grep='\[skip ci\]' --invert-grep
+            if (-not $rawLog) {
+              $changelog = "- 本次发版无业务代码改动（仅版本号同步）"
+            } else {
+              $changelog = ($rawLog | Out-String).TrimEnd()
+            }
+            $compareUrl = "https://github.com/${{ github.repository }}/compare/$prevTag...$newTag"
+          }
+
+          $body = "## 本次更新（$rangeLabel）`n`n$changelog"
+          if ($compareUrl) {
+            $body += "`n`n**完整对比**: $compareUrl"
+          }
+
+          # 多行内容写入 GITHUB_OUTPUT，使用 heredoc 分隔符
+          $delim = "EOF_" + [guid]::NewGuid().ToString('N')
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "release_body<<$delim"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $body
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $delim
+
+          Write-Host "===== Changelog ($rangeLabel) ====="
+          Write-Host $body
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -237,26 +276,12 @@ jobs:
           name: Release v${{ steps.version.outputs.new_version }}
           draft: false
           prerelease: false
-          generate_release_notes: true
+          body: ${{ steps.changelog.outputs.release_body }}
           files: |
             output/*.exe
             output/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Sync Release to Gitee
-        env:
-          PYTHONIOENCODING: utf-8
-          PYTHONUTF8: "1"
-        uses: trustedinster/sync-release-gitee@v1.3
-        with:
-          gitee_owner: SususuChang
-          gitee_repo: BlackGoldAncientSword
-          gitee_token: ${{ secrets.GITEE_TOKEN }}
-          github_owner: ${{ github.repository_owner }}
-          github_repo: ${{ github.event.repository.name }}
-          gitee_upload_retry_times: 3
-          debug: true
 
       - name: Sync version to main
         shell: powershell
@@ -290,12 +315,11 @@ jobs:
             Write-Host "Synced csproj version v$ver to main"
           }
 
-      - name: Cleanup on failure (delete tag / GitHub release / Gitee release)
+      - name: Cleanup on failure (delete tag / GitHub release)
         if: failure()
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
           $ver = "${{ steps.version.outputs.new_version }}"
           if (-not $ver) {
@@ -304,8 +328,6 @@ jobs:
           }
           $tag = "v$ver"
           $repo = "${{ github.repository }}"
-          $giteeOwner = "SususuChang"
-          $giteeRepo = "BlackGoldAncientSword"
 
           Write-Host "===== 失败回滚开始: $tag ====="
 
@@ -325,24 +347,7 @@ jobs:
             Write-Host "[SKIP] 远端 tag $tag 删除兜底失败: $_"
           }
 
-          # 3. 删除 Gitee release
-          if ($env:GITEE_TOKEN) {
-            try {
-              $getUrl = "https://gitee.com/api/v5/repos/$giteeOwner/$giteeRepo/releases/tags/$tag" + "?access_token=$($env:GITEE_TOKEN)"
-              $resp = Invoke-RestMethod -Uri $getUrl -Method Get -ErrorAction Stop
-              if ($resp.id) {
-                $delUrl = "https://gitee.com/api/v5/repos/$giteeOwner/$giteeRepo/releases/$($resp.id)" + "?access_token=$($env:GITEE_TOKEN)"
-                Invoke-RestMethod -Uri $delUrl -Method Delete | Out-Null
-                Write-Host "[OK] Gitee release $tag (id=$($resp.id)) 已删除"
-              } else {
-                Write-Host "[SKIP] Gitee 未找到 release $tag"
-              }
-            } catch {
-              Write-Host "[SKIP] Gitee release $tag 查询/删除失败: $_"
-            }
-          } else {
-            Write-Host "[SKIP] 未配置 GITEE_TOKEN, 跳过 Gitee 清理"
-          }
-
           Write-Host "===== 失败回滚结束 ====="
           Write-Host "注意: release / main 分支已 push 的版本号 commit 未回滚（避免强推），下次发版会从已有 tag 继续递增"
+          # cleanup 自身应以 0 退出，否则 step 显示为红，且 git push --delete 在 tag 已被 --cleanup-tag 删掉时可能写 $LASTEXITCODE=1
+          exit 0
