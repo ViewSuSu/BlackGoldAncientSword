@@ -8,4 +8,5 @@
   <Project Path="BlackGoldAncientSword.ScreenCapture\BlackGoldAncientSword.ScreenCapture.csproj" />
   <Project Path="BlackGoldAncientSword.Tests\BlackGoldAncientSword.Tests.csproj" />
   <Project Path="BlackGoldAncientSword.App\BlackGoldAncientSword.App.csproj" />
+  <Project Path="BlackGoldAncientSword.Update\BlackGoldAncientSword.Update.csproj" />
 </Solution>

@@ -12,10 +12,18 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
     [Component(ComponentLifetime.Singleton)]
     public class UpdateService : IUpdateService
     {
+        private const string GitHubOwner = "ViewSuSu";
+        private const string GitHubRepo = "BlackGoldAncientSword";
         private const string GitHubLatestReleaseApi =
-            "https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/releases/latest";
+            "https://api.github.com/repos/" + GitHubOwner + "/" + GitHubRepo + "/releases/latest";
         private const string GitHubLatestReleasePage =
-            "https://github.com/ViewSuSu/BlackGoldAncientSword/releases/latest";
+            "https://github.com/" + GitHubOwner + "/" + GitHubRepo + "/releases/latest";
+
+        /// <summary>
+        /// release zip 命名约定：BlackGoldAncientSword-v{version}.zip
+        /// CI workflow (.github/workflows/dotnet-desktop.yml) 生成此名。
+        /// </summary>
+        private const string ZipNameFormat = GitHubRepo + "-v{0}.zip";
 
         private readonly IUIDispatcher _uiDispatcher;
         private readonly HttpClient _httpClient;
@@ -28,6 +36,10 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         public string? LatestVersion { get; private set; }
 
         public string? DownloadUrl { get; private set; }
+
+        public string? ZipDownloadUrl { get; private set; }
+
+        public string? LatestReleaseNotes { get; private set; }
 
         public string ReleasePageUrl => GitHubLatestReleasePage;
 
@@ -59,7 +71,11 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     ? (tagEl.GetString() ?? string.Empty)
                     : string.Empty;
                 var latest = NormalizeVersion(tagName);
-                var installerUrl = ResolveInstallerUrl(root);
+                var installerUrl = ResolveAssetUrl(root, ".exe");
+                var zipUrl = ResolveZipUrl(root, latest);
+                var notes = root.TryGetProperty("body", out var bodyEl)
+                    ? (bodyEl.GetString() ?? string.Empty)
+                    : string.Empty;
 
                 bool available = TryCompare(latest, CurrentVersion) > 0;
                 Debug.WriteLine($"[{nameof(UpdateService)}] tag={tagName}, current={CurrentVersion}, available={available}");
@@ -69,6 +85,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     IsUpdateAvailable = available;
                     LatestVersion = available ? latest : null;
                     DownloadUrl = available ? installerUrl : null;
+                    ZipDownloadUrl = available ? zipUrl : null;
+                    LatestReleaseNotes = available ? notes : null;
                     UpdateAvailabilityChanged?.Invoke(this, available);
                 });
             }
@@ -76,12 +94,13 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 Debug.WriteLine($"[{nameof(UpdateService)}] GitHub API 检查失败（静默）: {ex.Message}");
 
-                // 静默失败：仍触发 false 让监听方退出 "checking" 占位状态
                 SafeInvoke(() =>
                 {
                     IsUpdateAvailable = false;
                     LatestVersion = null;
                     DownloadUrl = null;
+                    ZipDownloadUrl = null;
+                    LatestReleaseNotes = null;
                     UpdateAvailabilityChanged?.Invoke(this, false);
                 });
             }
@@ -99,8 +118,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         /// <summary>
         /// 通过 App 程序集标记接口反推 App 程序集，读取其 AssemblyInformationalVersion。
-        /// 不能用 typeof(UpdateService).Assembly：UpdateService 属于 Framework 程序集，
-        /// 而 Framework.csproj 未定义 &lt;Version&gt;，会得到默认 "1.0.0.0"，导致 UI 左下角始终显示 1.0.0。
         /// </summary>
         private static string GetCurrentVersion(IAppAssemblyMarker appAssemblyMarker)
         {
@@ -115,9 +132,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             return "0.0.0";
         }
 
-        /// <summary>
-        /// 去掉 git tag 常见的 "v" 前缀（如 "v1.0.0.12" → "1.0.0.12"）。
-        /// </summary>
+        /// <summary>去掉 git tag 常见的 "v" 前缀。</summary>
         private static string NormalizeVersion(string version)
         {
             if (version.Length > 0 && (version[0] == 'v' || version[0] == 'V'))
@@ -125,7 +140,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             return version;
         }
 
-        private static string? ResolveInstallerUrl(JsonElement root)
+        private static string? ResolveAssetUrl(JsonElement root, string extension)
         {
             if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
                 return null;
@@ -134,13 +149,47 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             {
                 if (!asset.TryGetProperty("name", out var nameEl)) continue;
                 var name = nameEl.GetString();
-                if (name != null && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                if (name != null && name.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
                 {
                     if (asset.TryGetProperty("browser_download_url", out var urlEl))
                         return urlEl.GetString();
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// 找版本对应的 zip 资产：优先精确匹配 BlackGoldAncientSword-v{version}.zip，
+        /// 找不到再退到任意 .zip。version 已去掉 "v" 前缀。
+        /// </summary>
+        private static string? ResolveZipUrl(JsonElement root, string version)
+        {
+            if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+                return null;
+
+            var expected = string.Format(ZipNameFormat, version);
+            string? fallback = null;
+
+            foreach (var asset in assets.EnumerateArray())
+            {
+                if (!asset.TryGetProperty("name", out var nameEl)) continue;
+                var name = nameEl.GetString();
+                if (name == null) continue;
+                if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!asset.TryGetProperty("browser_download_url", out var urlEl)) continue;
+
+                var url = urlEl.GetString();
+                if (string.Equals(name, expected, StringComparison.OrdinalIgnoreCase))
+                {
+                    Debug.WriteLine($"[{nameof(UpdateService)}] 命中版本 zip: {name}");
+                    return url;
+                }
+                fallback ??= url;
+            }
+
+            if (fallback != null)
+                Debug.WriteLine($"[{nameof(UpdateService)}] 未找到 {expected}，退回首个 .zip");
+            return fallback;
         }
 
         private static int TryCompare(string a, string b)
