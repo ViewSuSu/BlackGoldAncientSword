@@ -32,6 +32,12 @@ namespace BlackGoldAncientSword.Update.Services
         private readonly CancellationTokenSource _cts = new();
         private string? _tempRoot;
 
+        // 文件覆盖阶段失败的相对路径 + 原因（汇总在结束时弹窗一次性告知，避免每个文件弹）
+        private readonly List<string> _copySkipped = new();
+
+        // 重启主程序失败 / 主程序不存在 时记录的提示，结束时一并弹窗
+        private string? _postRunWarning;
+
         public UpdaterRunner(UpdateOptions options, UpdateViewModel vm, UpdateWindow window)
         {
             _options = options;
@@ -46,6 +52,7 @@ namespace BlackGoldAncientSword.Update.Services
         {
             try
             {
+                ValidateOptions();
                 var zipPath = await DownloadAsync(_cts.Token).ConfigureAwait(false);
                 var extractDir = await ExtractAsync(zipPath, _cts.Token).ConfigureAwait(false);
                 await EnsureMainAppClosedAsync().ConfigureAwait(false);
@@ -53,6 +60,7 @@ namespace BlackGoldAncientSword.Update.Services
                 await OnUiAsync(() => _window.IsCancellable = false).ConfigureAwait(false);
                 await CopyOverAsync(extractDir).ConfigureAwait(false);
                 LaunchMainApp();
+                await ShowPostRunWarningsAsync().ConfigureAwait(false);
                 CleanupAndExit(0);
             }
             catch (OperationCanceledException)
@@ -71,6 +79,70 @@ namespace BlackGoldAncientSword.Update.Services
                 }).ConfigureAwait(false);
                 CleanupAndExit(1);
             }
+        }
+
+        // ============ 0. 前置参数校验 ============
+
+        /// <summary>
+        /// 所有"不符合 update 需要的条件"在这里集中校验，
+        /// 任意不通过都抛 InvalidOperationException，让 RunAsync 外层 catch 统一弹窗。
+        /// </summary>
+        private void ValidateOptions()
+        {
+            if (string.IsNullOrWhiteSpace(_options.ZipUrl))
+                throw new InvalidOperationException("缺少必需参数 --url <zipUrl>。");
+
+            if (!_options.ZipUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                && !_options.ZipUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    $"--url 必须是 http(s) 直链，当前值：{_options.ZipUrl}");
+
+            if (string.IsNullOrWhiteSpace(_options.TargetDirectory))
+                throw new InvalidOperationException("目标安装目录为空。");
+
+            if (!Directory.Exists(_options.TargetDirectory))
+                throw new InvalidOperationException(
+                    $"目标安装目录不存在：{_options.TargetDirectory}");
+
+            if (string.IsNullOrWhiteSpace(_options.MainExeName))
+                throw new InvalidOperationException("主程序 exe 名为空（--main-exe）。");
+        }
+
+        /// <summary>
+        /// 文件覆盖阶段静默跳过 / 重启主程序失败 这类"已完成但有问题"的情况，
+        /// 在退出前一次性汇总弹窗告诉用户，不要静默吞掉。
+        /// </summary>
+        private async Task ShowPostRunWarningsAsync()
+        {
+            if (_copySkipped.Count == 0 && _postRunWarning == null) return;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("更新已完成，但有以下情况需要您留意：\n");
+
+            if (_copySkipped.Count > 0)
+            {
+                sb.Append($"\n● {_copySkipped.Count} 个文件未能写入（可能被占用或权限不足）：\n");
+                int show = Math.Min(_copySkipped.Count, 10);
+                for (int i = 0; i < show; i++)
+                {
+                    sb.Append("  - ").Append(_copySkipped[i]).Append('\n');
+                }
+                if (_copySkipped.Count > show)
+                    sb.Append($"  ...（其余 {_copySkipped.Count - show} 条省略）\n");
+            }
+
+            if (_postRunWarning != null)
+            {
+                sb.Append("\n● ").Append(_postRunWarning).Append('\n');
+            }
+
+            await OnUiAsync(async () =>
+            {
+                await ConfirmDialog.ShowErrorAsync(
+                    _window,
+                    "BlackGoldAncientSword 在线更新",
+                    sb.ToString()).ConfigureAwait(false);
+            }).ConfigureAwait(false);
         }
 
         // ============ 1. 下载 ============
@@ -318,8 +390,12 @@ namespace BlackGoldAncientSword.Update.Services
                     }
                     catch (Exception ex)
                     {
-                        // 锁定 / 权限 / 路径错误：全部静默跳过（按用户要求不提示）
+                        // 不可取消阶段不能弹窗中断流程，先累积，最后在 ShowPostRunWarningsAsync 一次性弹
                         Debug.WriteLine($"[Updater] 跳过 {dst}: {ex.Message}");
+                        lock (_copySkipped)
+                        {
+                            _copySkipped.Add($"{rel}: {ex.Message}");
+                        }
                     }
 
                     done++;
@@ -352,14 +428,16 @@ namespace BlackGoldAncientSword.Update.Services
         private void LaunchMainApp()
         {
             if (!_options.RestartAfterInstall) return;
+            var exe = _options.MainExeFullPath;
+            if (!File.Exists(exe))
+            {
+                Debug.WriteLine($"[Updater] 主程序不存在,跳过启动: {exe}");
+                _postRunWarning =
+                    $"未找到主程序 {_options.MainExeName}，无法自动重启。\n路径：{exe}\n请手动启动主程序。";
+                return;
+            }
             try
             {
-                var exe = _options.MainExeFullPath;
-                if (!File.Exists(exe))
-                {
-                    Debug.WriteLine($"[Updater] 主程序不存在,跳过启动: {exe}");
-                    return;
-                }
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = exe,
@@ -370,6 +448,8 @@ namespace BlackGoldAncientSword.Update.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"[Updater] 启动主程序失败: {ex.Message}");
+                _postRunWarning =
+                    $"自动启动主程序失败：{ex.Message}\n请手动启动 {_options.MainExeName}。";
             }
         }
 
