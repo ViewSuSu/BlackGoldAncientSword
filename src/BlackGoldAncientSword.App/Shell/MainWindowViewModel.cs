@@ -112,6 +112,7 @@ namespace BlackGoldAncientSword.App.Shell
                 _updateService.CurrentVersion);
 
         private bool _updateCheckCompleted;
+        private bool _updateNotificationShown;
         private bool _isUpdateAvailable;
         public bool IsUpdateAvailable
         {
@@ -269,7 +270,31 @@ namespace BlackGoldAncientSword.App.Shell
             {
                 _updateCheckCompleted = true;
                 IsUpdateAvailable = isAvailable;
+                TryShowUpdateNotification(isAvailable);
             });
+        }
+
+        /// <summary>
+        /// 启动期发现新版本时弹出透明遮罩 + 白色卡片提示。
+        /// 一次会话只弹一次，避免重复检查触发多次弹窗。
+        /// </summary>
+        private void TryShowUpdateNotification(bool isAvailable)
+        {
+            if (!isAvailable) return;
+            if (_updateNotificationShown) return;
+            _updateNotificationShown = true;
+
+            try
+            {
+                EnsureModuleLoaded(PageNames.UpdateNotificationPage);
+                _regionManager.RequestNavigate(
+                    GlobalConstant.UpdateNotificationRegion,
+                    PageNames.UpdateNotificationPage);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(MainWindowViewModel)}.{nameof(TryShowUpdateNotification)}] 弹出失败: {ex}");
+            }
         }
 
 

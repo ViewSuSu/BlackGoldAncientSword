@@ -46,7 +46,8 @@ namespace BlackGoldAncientSword.App.Shell
         {
             return AnnouncementOverlay.Content != null
                 || FeedbackOverlay.Content != null
-                || ClosePromptOverlay.Content != null;
+                || ClosePromptOverlay.Content != null
+                || UpdateNotificationOverlay.Content != null;
         }
 
         static MainWindow()

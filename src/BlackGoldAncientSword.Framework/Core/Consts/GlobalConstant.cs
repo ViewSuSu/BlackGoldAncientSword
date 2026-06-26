@@ -11,6 +11,7 @@
         public const string AnnouncementRegion = nameof(AnnouncementRegion);
         public const string ClosePromptRegion = nameof(ClosePromptRegion);
         public const string FeedbackRegion = nameof(FeedbackRegion);
+        public const string UpdateNotificationRegion = nameof(UpdateNotificationRegion);
     }
 }
 

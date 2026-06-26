@@ -1,7 +1,8 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions">
+    xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions"
+    xmlns:ctrls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/SkinDefault.xaml" />
         <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml" />
@@ -55,4 +56,79 @@
     <ext:ScoreDiffToColorConverter x:Key="ScoreDiffToColorConverter" />
     <ext:EnumEqualityConverter x:Key="EnumEqualityConverter" />
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+    <!--  Default style for OverlayHost: scrim + centered white card + title + close button  -->
+    <Style TargetType="{x:Type ctrls:OverlayHost}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="#80000000" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ctrls:OverlayHost}">
+                    <Grid Background="{TemplateBinding Background}" Focusable="True">
+                        <Border
+                            MaxWidth="{TemplateBinding CardMaxWidth}"
+                            MinWidth="{TemplateBinding CardMinWidth}"
+                            MaxHeight="{TemplateBinding CardMaxHeight}"
+                            Padding="{TemplateBinding CardPadding}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Background="White"
+                            CornerRadius="8">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <!--  Title bar  -->
+                                <Grid x:Name="TitleRow" Grid.Row="0" Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        VerticalAlignment="Center"
+                                        FontSize="16"
+                                        FontWeight="Bold"
+                                        Text="{TemplateBinding Title}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <Button
+                                        x:Name="PART_CloseButton"
+                                        Grid.Column="1"
+                                        Width="24"
+                                        Height="24"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Cursor="Hand"
+                                        ToolTip="{DynamicResource TitleBar.Close}">
+                                        <Image
+                                            Width="15"
+                                            Height="15"
+                                            Source="/BlackGoldAncientSword.Resources;component/Images/close.png"
+                                            Stretch="Uniform" />
+                                    </Button>
+                                </Grid>
+
+                                <!--  Card body  -->
+                                <ContentPresenter
+                                    Grid.Row="1"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Title" Value="{x:Null}">
+                            <Setter TargetName="TitleRow" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>
