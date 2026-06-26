@@ -1,6 +1,6 @@
 ---
 name: naraka-stats-assistant
-description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整的发版流程：分析 git diff、中文详细 commit、push 当前分支、本地切到 release 合并源分支并直推（release 分支保护已解除，允许直推）。
+description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整发版流程：分析 git diff、中文详细 commit、push 当前分支（通常是 main），然后在 GitHub 上创建 main → release 的 PR 并合并（release 分支保护已重启，禁止本地直推，只能走 PR）。
 license: MIT
 ---
 
@@ -14,14 +14,15 @@ license: MIT
 
 | 项目 | 职责 |
 |---|---|
-| `BlackGoldAncientSword.App` | 应用入口、Shell/MainWindow、启动注册 |
+| `BlackGoldAncientSword.App` | 应用入口、Shell/MainWindow、启动注册、拉起独立 Updater |
+| `BlackGoldAncientSword.Update` | 独立在线更新器（WinExe，零业务依赖，仅 HandyControl） |
 | `BlackGoldAncientSword.Framework` | 基础设施：Prism 基类、事件、服务抽象与实现、UI 控件、扩展转换器 |
-| `BlackGoldAncientSword.Framework.SourceGenerator` | 源生成器：`EnumSourceGenerator`、`HttpApiSourceGenerator` |
+| `BlackGoldAncientSword.Framework.SourceGenerator` | 源生成器：`EnumSourceGenerator`、`HttpApiSourceGenerator`、`HttpApiTestSourceGenerator` |
 | `BlackGoldAncientSword.GameMonitor` | 游戏状态监控：进程检测、日志监控、PlayerPrefs 读取 |
-| `BlackGoldAncientSword.Modules` | 业务模块：Home、Search、Stats、Settings、TeamInfo、Announcement、ClosePrompt |
+| `BlackGoldAncientSword.Modules` | 业务模块：Home、Search、Stats、Settings、TeamInfo、Announcement、ClosePrompt、Feedback、UpdateNotification |
 | `BlackGoldAncientSword.Ocr` | OCR 服务：封装 PaddleOCR-json.exe，提供文字识别 |
 | `BlackGoldAncientSword.ScreenCapture` | 屏幕捕获：基于 Windows Graphics Capture (WGC) API |
-| `BlackGoldAncientSword.Resources` | 静态资源：图片、主题样式 |
+| `BlackGoldAncientSword.Resources` | 静态资源：图片、主题样式、多语言 XAML |
 | `BlackGoldAncientSword.Tests` | 单元测试 |
 
 ## 核心模式
@@ -68,7 +69,7 @@ license: MIT
 - OCR 依赖 `ocr_engine/` 目录下的 PaddleOCR-json 及相关 DLL
 
 ```powershell
-dotnet build src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj
+dotnet build src/BlackGoldAncientSword.slnx
 ```
 
 ## 外部依赖
@@ -92,16 +93,16 @@ dotnet build src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj
 - 每个文件的改动 + 原因，按功能分组
 - 禁止"修复问题"、"优化代码"等笼统描述
 
-### 3. Commit + Push 当前分支
+### 3. Commit + Push 当前分支（通常是 `main`）
 
 ```powershell
 git add -A
 git commit -m "<message>"
 # 设置代理（与 GitHub Desktop 共享系统代理配置）
-git config --local http.proxy http://127.0.0.1:9098
-git config --local https.proxy http://127.0.0.1:9098
-$env:HTTP_PROXY = "http://127.0.0.1:9098"
-$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+git config --local http.proxy http://127.0.0.1:7897
+git config --local https.proxy http://127.0.0.1:7897
+$env:HTTP_PROXY = "http://127.0.0.1:7897"
+$env:HTTPS_PROXY = "http://127.0.0.1:7897"
 
 git push origin <current-branch>
 
@@ -111,50 +112,31 @@ git config --local --unset https.proxy
 Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
 
-### 4. 合并源分支到 release 并直推
+### 4. 创建 main → release 的 PR 并合并
 
-`release` 分支保护已于 2026-06-26 解除，允许本地直推，无需走 `gh` PR 流程：
+`release` 分支已开启分支保护（含 `enforce_admins`），**禁止本地直推**，所有变更必须通过 PR 合并：
 
-```powershell
-# 记住当前源分支
-$source = git rev-parse --abbrev-ref HEAD
+- 推荐做法：在浏览器打开
+  `https://github.com/ViewSuSu/BlackGoldAncientSword/compare/release...main?expand=1`
+  填写 PR 标题（例如 `Release vX.Y.Z.W`），提交 PR，再点击 **Merge pull request**（保留 merge commit）触发 `dotnet-desktop.yml`。
+- 如果本机已安装 GitHub CLI：
 
-# 设置代理
-git config --local http.proxy http://127.0.0.1:9098
-git config --local https.proxy http://127.0.0.1:9098
-$env:HTTP_PROXY = "http://127.0.0.1:9098"
-$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+  ```powershell
+  gh pr create --base release --head main --title "Release" --body "发版合并"
+  gh pr merge --merge --auto
+  ```
 
-# 同步并切到 release
-git fetch origin release
-git checkout release
-git pull --ff-only origin release
-
-# 合并源分支（保留 merge commit，与原 gh pr merge --merge 一致）
-git merge --no-ff $source -m "Merge branch '$source' into release"
-
-# 直推 release
-git push origin release
-
-# 切回源分支
-git checkout $source
-
-# 清理代理
-git config --local --unset http.proxy
-git config --local --unset https.proxy
-Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
-```
+- 如果只有 PAT（无 `gh`）：通过 GitHub REST API 调用 `POST /repos/.../pulls` 创建 PR，再调用 `PUT /repos/.../pulls/<number>/merge` 完成合并。
 
 ### 分支推送策略
 
 - `main`：允许本地直推
-- `release`：**保护已于 2026-06-26 解除**，允许本地直推
+- `release`：**已开启分支保护（含 `enforce_admins`）**，禁止本地直推 / force push / 删除；只能通过 PR 合并
 - 其它功能分支：允许直推
 
 ### 原则
 
-- `release` 允许直推，无需 PR
-- 合并模式 `--no-ff`（保留 merge commit）
-- 合并完成后切回源分支
-- 如遇冲突，停止并报告，不做自动解决
-- 不要 force push release（保护虽解除，仍按惯例避免改写已发布历史）
+- 严禁 `git push origin release` 直推；保护规则会拒绝
+- 合并模式使用 `--merge`（保留 merge commit），不要 squash/rebase
+- 若 PR 出现冲突，停止并报告，由人工解决
+- 不在本地执行任何修改 `release` 历史的命令
