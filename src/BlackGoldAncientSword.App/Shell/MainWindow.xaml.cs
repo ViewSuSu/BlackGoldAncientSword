@@ -100,6 +100,16 @@ namespace BlackGoldAncientSword.App.Shell
             try
             {
                 var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<Framework.Services.Abstractions.ISettingsService>();
+
+                // 未勾选"记住选项"时，拦截关闭并弹出半透明确认浮层；
+                // 浮层中的 ClosePromptPageViewModel 会通过 IApplicationLifetime 直接执行"最小化"或"强制终止"，不再回到本路径。
+                if (!settings.Current.CloseBehaviorRemembered)
+                {
+                    e.Cancel = true;
+                    ShowClosePromptOverlay();
+                    return;
+                }
+
                 switch (settings.Current.CloseBehavior)
                 {
                     case "MinimizeToTaskbar":
@@ -239,9 +249,21 @@ namespace BlackGoldAncientSword.App.Shell
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
+            // 浮层已经显示时再点 X 不重复弹，避免叠加同一个浮层。
+            if (ClosePromptOverlay.Content != null)
+                return;
+
             try
             {
                 var settings = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<Framework.Services.Abstractions.ISettingsService>();
+
+                // 未勾选"记住选项"：弹半透明确认浮层，由用户在浮层中选择最小化或直接退出。
+                if (!settings.Current.CloseBehaviorRemembered)
+                {
+                    ShowClosePromptOverlay();
+                    return;
+                }
+
                 switch (settings.Current.CloseBehavior)
                 {
                     case "MinimizeToTaskbar":
@@ -260,6 +282,28 @@ namespace BlackGoldAncientSword.App.Shell
             // ExitDirectly 或异常兜底：直接终止进程，不执行任何优雅清理。
             // JobObject (JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE) 保证子进程 (PaddleOCR-json.exe) 被 OS 自动清理。
             System.Diagnostics.Process.GetCurrentProcess().Kill();
+        }
+
+        /// <summary>
+        /// 加载 ClosePromptModule（按需模块）并把 ClosePromptPage 导航到 ClosePromptRegion。
+        /// 用于 CloseButton_Click / OnWindowClosing 在未勾选"记住选项"时弹出关闭确认浮层。
+        /// </summary>
+        private void ShowClosePromptOverlay()
+        {
+            try
+            {
+                var moduleManager = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<IModuleManager>();
+                moduleManager.LoadModule(nameof(BlackGoldAncientSword.Modules.Module.ClosePromptModule));
+
+                var regionManager = BlackGoldAncientSword.Framework.Core.Bases.PrismApplicationBase.ContainerProvider.Resolve<IRegionManager>();
+                regionManager.RequestNavigate(GlobalConstant.ClosePromptRegion, PageNames.ClosePromptPage);
+            }
+            catch (Exception ex)
+            {
+                // 浮层弹出失败时，回退到"直接退出"避免主窗口无法关闭。
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] {nameof(ShowClosePromptOverlay)} failed: {ex.Message}");
+                System.Diagnostics.Process.GetCurrentProcess().Kill();
+            }
         }
 
         private void ToastItemBorder_Loaded(object sender, RoutedEventArgs e)

@@ -42,7 +42,9 @@ namespace BlackGoldAncientSword.Modules.UI.ClosePrompt.ViewModels
                     if (RememberChoice)
                         await _settingsService.SaveAsync();
                     DismissOverlay();
-                    _appLifetime.CloseMainWindow();
+                    // 直接最小化，不走 MainWindow.Close()；否则 OnClosing 在未勾选"记住选项"时
+                    // 会再次发现 CloseBehaviorRemembered==false 而重新弹出本提示，造成无限循环。
+                    _appLifetime.MinimizeMainWindow();
                 }
                 catch (Exception ex)
                 {
@@ -69,7 +71,10 @@ namespace BlackGoldAncientSword.Modules.UI.ClosePrompt.ViewModels
                     if (RememberChoice)
                         await _settingsService.SaveAsync();
                     DismissOverlay();
-                    _appLifetime.Shutdown();
+                    // 走强制终止而非 Application.Shutdown：后者会触发 MainWindow.OnClosing，
+                    // 未勾选"记住选项"时又会重弹本提示。强制终止与 CloseButton 兜底路径一致，
+                    // 由 JobObject 负责清理子进程。
+                    _appLifetime.ForceTerminate();
                 }
                 catch (Exception ex)
                 {
