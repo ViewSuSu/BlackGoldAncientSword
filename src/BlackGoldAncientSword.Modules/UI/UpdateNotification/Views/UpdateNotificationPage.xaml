@@ -11,83 +11,165 @@
     Background="Transparent"
     mc:Ignorable="d">
     <ctrls:OverlayHost
-        CardMaxWidth="520"
-        CardMinWidth="380"
+        CardMaxWidth="560"
+        CardMinWidth="420"
         RegionName="{x:Static consts:GlobalConstant.UpdateNotificationRegion}"
         Title="{DynamicResource UpdateNotification.Title}">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
 
-            <!--  Version line  -->
-            <StackPanel
-                Grid.Row="0"
-                Margin="0,0,0,12"
-                Orientation="Horizontal">
+        <!--  整张卡片最高 540：内容超出自动出滚动条  -->
+        <ScrollViewer MaxHeight="540" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <!--  版本行  -->
+                <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="13"
+                        Foreground="#333333"
+                        Text="{DynamicResource UpdateNotification.NewVersion}" />
+                    <Border
+                        Margin="6,0,0,0"
+                        Padding="6,1"
+                        VerticalAlignment="Center"
+                        Background="#E8F0FE"
+                        CornerRadius="3">
+                        <TextBlock
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="#1A73E8"
+                            Text="{Binding LatestVersion}" />
+                    </Border>
+                </StackPanel>
+
+                <!--  说明  -->
                 <TextBlock
-                    VerticalAlignment="Center"
+                    Margin="0,0,0,10"
                     FontSize="13"
                     Foreground="#333333"
-                    Text="{DynamicResource UpdateNotification.NewVersion}" />
-                <Border
-                    Margin="6,0,0,0"
-                    Padding="6,1"
-                    VerticalAlignment="Center"
-                    Background="#E8F0FE"
-                    CornerRadius="3">
+                    Text="{DynamicResource UpdateNotification.Message}"
+                    TextWrapping="Wrap" />
+
+                <!--  下载 URL 行：可点击打开浏览器 + 右侧复制按钮  -->
+                <Grid
+                    Margin="0,0,0,6"
+                    Visibility="{Binding HasDownloadUrl, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border
+                        Grid.Column="0"
+                        Padding="8,6"
+                        VerticalAlignment="Center"
+                        Background="#F5F7FA"
+                        CornerRadius="4">
+                        <TextBlock
+                            FontSize="12"
+                            TextTrimming="CharacterEllipsis"
+                            TextWrapping="NoWrap"
+                            ToolTip="{Binding DownloadUrl}">
+                            <Hyperlink Foreground="#1A73E8" TextDecorations="Underline">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="Click">
+                                        <i:InvokeCommandAction Command="{Binding OpenDownloadCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                                <Run Text="{Binding DownloadUrl, Mode=OneWay}" />
+                            </Hyperlink>
+                        </TextBlock>
+                    </Border>
+                    <Button
+                        Grid.Column="1"
+                        Width="32"
+                        Height="28"
+                        Margin="6,0,0,0"
+                        VerticalAlignment="Center"
+                        Background="Transparent"
+                        BorderBrush="#DADCE0"
+                        BorderThickness="1"
+                        Command="{Binding CopyDownloadUrlCommand}"
+                        ToolTip="{DynamicResource UpdateNotification.CopyUrl}">
+                        <!--  复制图标（Path 几何，不依赖字体 / Emoji）  -->
+                        <Path
+                            Width="14"
+                            Height="14"
+                            Data="M4,1 L11,1 L11,3 L13,3 L13,15 L5,15 L5,13 L3,13 L3,3 L4,3 Z M5,3 L5,11 L11,11 L11,3 Z M7,5 L13,5 L13,13 L7,13 Z"
+                            Fill="#5F6368"
+                            Stretch="Uniform" />
+                    </Button>
+                </Grid>
+
+                <!--  国内代理专线  -->
+                <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
+                    <TextBlock FontSize="12">
+                        <Hyperlink Foreground="#1A73E8" TextDecorations="Underline">
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="Click">
+                                    <i:InvokeCommandAction Command="{Binding OpenProxyMirrorCommand}" />
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+                            <Run Text="{DynamicResource UpdateNotification.ProxyMirror}" />
+                        </Hyperlink>
+                    </TextBlock>
                     <TextBlock
-                        FontSize="12"
-                        FontWeight="SemiBold"
-                        Foreground="#1A73E8"
-                        Text="{Binding LatestVersion}" />
-                </Border>
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="#888888"
+                        Text="{DynamicResource UpdateNotification.ProxyHint}" />
+                </StackPanel>
+
+                <!--  折叠的更新说明（release notes）  -->
+                <Expander
+                    Margin="0,0,0,14"
+                    Foreground="#333333"
+                    Header="{DynamicResource UpdateNotification.ReleaseNotesHeader}"
+                    IsExpanded="False"
+                    Visibility="{Binding HasReleaseNotes, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Border
+                        Margin="0,6,0,0"
+                        Padding="10,8"
+                        Background="#FAFBFC"
+                        BorderBrush="#E1E4E8"
+                        BorderThickness="1"
+                        CornerRadius="4">
+                        <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto">
+                            <TextBlock
+                                FontFamily="Consolas, Microsoft YaHei UI"
+                                FontSize="12"
+                                Foreground="#24292E"
+                                Text="{Binding ReleaseNotes}"
+                                TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </Border>
+                </Expander>
+
+                <!--  操作按钮  -->
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                    <Button
+                        Height="32"
+                        MinWidth="90"
+                        Margin="0,0,8,0"
+                        Command="{Binding DismissCommand}"
+                        Content="{DynamicResource UpdateNotification.Later}"
+                        ToolTip="{DynamicResource UpdateNotification.Later}" />
+                    <Button
+                        Height="32"
+                        MinWidth="100"
+                        Margin="0,0,8,0"
+                        Command="{Binding OpenDownloadCommand}"
+                        Content="{DynamicResource UpdateNotification.DownloadNow}"
+                        ToolTip="{DynamicResource UpdateNotification.DownloadNow}" />
+                    <Button
+                        Height="32"
+                        MinWidth="100"
+                        Command="{Binding OnlineUpdateCommand}"
+                        Content="{DynamicResource UpdateNotification.OnlineUpdate}"
+                        IsEnabled="{Binding CanOnlineUpdate}"
+                        ToolTip="{DynamicResource UpdateNotification.OnlineUpdate.ToolTip}" />
+                </StackPanel>
+
             </StackPanel>
-
-            <TextBlock
-                Grid.Row="1"
-                Margin="0,0,0,10"
-                FontSize="13"
-                Foreground="#333333"
-                Text="{DynamicResource UpdateNotification.Message}"
-                TextWrapping="Wrap" />
-
-            <TextBlock
-                Grid.Row="2"
-                Margin="0,0,0,18"
-                FontSize="12"
-                TextWrapping="Wrap">
-                <Hyperlink Foreground="#1A73E8" TextDecorations="Underline">
-                    <i:Interaction.Triggers>
-                        <i:EventTrigger EventName="Click">
-                            <i:InvokeCommandAction Command="{Binding OpenDownloadCommand}" />
-                        </i:EventTrigger>
-                    </i:Interaction.Triggers>
-                    <Run Text="{Binding DownloadUrl, Mode=OneWay}" />
-                </Hyperlink>
-            </TextBlock>
-
-            <StackPanel
-                Grid.Row="3"
-                HorizontalAlignment="Right"
-                Orientation="Horizontal">
-                <Button
-                    MinWidth="100"
-                    Height="32"
-                    Margin="0,0,8,0"
-                    Content="{DynamicResource UpdateNotification.Later}"
-                    Command="{Binding DismissCommand}"
-                    ToolTip="{DynamicResource UpdateNotification.Later}" />
-                <Button
-                    MinWidth="120"
-                    Height="32"
-                    Command="{Binding OpenDownloadCommand}"
-                    Content="{DynamicResource UpdateNotification.DownloadNow}"
-                    ToolTip="{DynamicResource UpdateNotification.DownloadNow}" />
-            </StackPanel>
-        </Grid>
+        </ScrollViewer>
     </ctrls:OverlayHost>
 </bases:UserControlBase>

@@ -175,7 +175,13 @@
     <ns1:String ns2:Key="UpdateNotification.Title">發現新版本</ns1:String>
     <ns1:String ns2:Key="UpdateNotification.NewVersion">偵測到最新版本：</ns1:String>
     <ns1:String ns2:Key="UpdateNotification.Message">請及時下載最新版，確保功能正常可用。</ns1:String>
-    <ns1:String ns2:Key="UpdateNotification.DownloadNow">立即下載</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.DownloadNow">瀏覽器下載</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.OnlineUpdate">線上更新</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.OnlineUpdate.ToolTip">使用內建更新程式自動下載並安裝</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.CopyUrl">複製下載連結</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.ProxyMirror">國內代理專線下載</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.ProxyHint">如果下載速度緩慢可以用這個</ns1:String>
+    <ns1:String ns2:Key="UpdateNotification.ReleaseNotesHeader">更新說明（點擊展開）</ns1:String>
     <ns1:String ns2:Key="UpdateNotification.Later">稍後再說</ns1:String>
 
     <ns1:String ns2:Key="ClosePrompt.Title">關閉確認</ns1:String>
