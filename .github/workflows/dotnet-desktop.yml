@@ -245,22 +245,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sync Release to Gitee
-        uses: nICEnnnnnnnLee/action-gitee-release@master
+        uses: trustedinster/sync-release-gitee@v1.3
         with:
-          gitee_action: create_release
           gitee_owner: SususuChang
           gitee_repo: BlackGoldAncientSword
           gitee_token: ${{ secrets.GITEE_TOKEN }}
-          gitee_tag_name: v${{ steps.version.outputs.new_version }}
-          gitee_release_name: Release v${{ steps.version.outputs.new_version }}
-          gitee_release_body: |
-            自动同步自 GitHub Release v${{ steps.version.outputs.new_version }}
-            源 Release: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.new_version }}
-          gitee_target_commitish: release
-          gitee_files: |-
-            output/${{ steps.installer.outputs.exe_name }}
-            output/${{ steps.zip.outputs.zip_name }}
+          github_owner: ${{ github.repository_owner }}
+          github_repo: ${{ github.event.repository.name }}
           gitee_upload_retry_times: 3
+          debug: true
 
       - name: Sync version to main
         shell: powershell
