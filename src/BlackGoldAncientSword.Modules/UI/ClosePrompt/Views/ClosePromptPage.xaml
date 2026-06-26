@@ -3,102 +3,55 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
+    xmlns:consts="clr-namespace:BlackGoldAncientSword.Framework.Core.Consts;assembly=BlackGoldAncientSword.Framework"
+    xmlns:ctrls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     Background="Transparent"
     mc:Ignorable="d">
-    <Grid
-        x:Name="OverlayGrid"
-        HorizontalAlignment="Stretch"
-        VerticalAlignment="Stretch"
-        Background="#80000000"
-        KeyDown="Grid_KeyDown"
-        Focusable="True">
-        <Border
-            MaxWidth="945"
-            Padding="10"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Background="White"
-            CornerRadius="8">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+    <ctrls:OverlayHost
+        CardMaxWidth="945"
+        CardPadding="10"
+        RegionName="{x:Static consts:GlobalConstant.ClosePromptRegion}"
+        Title="{DynamicResource ClosePrompt.Title}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-                <!--  Title row with close button  -->
-                <Grid Grid.Row="0" Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock
-                        Grid.Column="0"
-                        FontSize="16"
-                        FontWeight="Bold"
-                        Text="{DynamicResource ClosePrompt.Title}" />
-                    <Button
-                        Grid.Column="1"
-                        Width="24"
-                        Height="24"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Click="CloseButton_Click"
-                        Cursor="Hand"
-                        ToolTip="{DynamicResource TitleBar.Close}">
-                        <Image
-                            Width="15"
-                            Height="15"
-                            Source="/BlackGoldAncientSword.Resources;component/Images/close.png"
-                            Stretch="Uniform" />
-                    </Button>
-                </Grid>
+            <TextBlock
+                Grid.Row="0"
+                Margin="0,0,0,16"
+                FontSize="13"
+                Text="{DynamicResource ClosePrompt.Message}"
+                TextWrapping="Wrap" />
 
-                <TextBlock
-                    Grid.Row="1"
-                    Margin="0,0,0,16"
-                    FontSize="13"
-                    Text="{DynamicResource ClosePrompt.Message}"
-                    TextWrapping="Wrap" />
+            <CheckBox
+                Grid.Row="1"
+                Margin="0,0,0,16"
+                Content="{DynamicResource ClosePrompt.RememberChoice}"
+                IsChecked="{Binding RememberChoice}" />
 
-                <CheckBox
-                    Grid.Row="2"
-                    Margin="0,0,0,16"
-                    Content="{DynamicResource ClosePrompt.RememberChoice}"
-                    IsChecked="{Binding RememberChoice}" />
-
-                <StackPanel
-                    Grid.Row="3"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal">
-                    <Button
-                        MinWidth="100"
-                        Height="32"
-                        Margin="0,0,8,0"
-                        ToolTip="{DynamicResource ClosePrompt.MinimizeToTaskbar}" Content="{DynamicResource ClosePrompt.MinimizeToTaskbar}">
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="Click">
-                                <i:InvokeCommandAction Command="{Binding MinimizeToTaskbarCommand}" />
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </Button>
-                    <Button
-                        MinWidth="80"
-                        Height="32"
-                        ToolTip="{DynamicResource ClosePrompt.ExitDirectly}" Content="{DynamicResource ClosePrompt.ExitDirectly}">
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="Click">
-                                <i:InvokeCommandAction Command="{Binding ExitDirectlyCommand}" />
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-    </Grid>
+            <StackPanel
+                Grid.Row="2"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal">
+                <Button
+                    MinWidth="100"
+                    Height="32"
+                    Margin="0,0,8,0"
+                    Command="{Binding MinimizeToTaskbarCommand}"
+                    Content="{DynamicResource ClosePrompt.MinimizeToTaskbar}"
+                    ToolTip="{DynamicResource ClosePrompt.MinimizeToTaskbar}" />
+                <Button
+                    MinWidth="80"
+                    Height="32"
+                    Command="{Binding ExitDirectlyCommand}"
+                    Content="{DynamicResource ClosePrompt.ExitDirectly}"
+                    ToolTip="{DynamicResource ClosePrompt.ExitDirectly}" />
+            </StackPanel>
+        </Grid>
+    </ctrls:OverlayHost>
 </bases:UserControlBase>
