@@ -1,6 +1,6 @@
 ---
 name: naraka-stats-assistant
-description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整的发版流程：分析 git diff、中文详细 commit、push 当前分支、用 gh CLI 创建 PR 合并到 release（release 受分支保护禁直推）。
+description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整的发版流程：分析 git diff、中文详细 commit、push 当前分支、本地切到 release 合并源分支并直推（release 分支保护已解除，允许直推）。
 license: MIT
 ---
 
@@ -111,37 +111,50 @@ git config --local --unset https.proxy
 Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
 
-### 4. 创建 PR 合并到 release
+### 4. 合并源分支到 release 并直推
 
-`release` 受 GitHub 分支保护（禁直推 / 禁 force push / 禁删除），必须经 `gh` PR 合并：
+`release` 分支保护已于 2026-06-26 解除，允许本地直推，无需走 `gh` PR 流程：
 
 ```powershell
-# 确认 gh 已登录
-gh auth status
+# 记住当前源分支
+$source = git rev-parse --abbrev-ref HEAD
 
 # 设置代理
-$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+git config --local http.proxy http://127.0.0.1:9098
+git config --local https.proxy http://127.0.0.1:9098
 $env:HTTP_PROXY = "http://127.0.0.1:9098"
+$env:HTTPS_PROXY = "http://127.0.0.1:9098"
 
-# 创建 PR + 合并
-gh pr create --base release --head <source-branch> --fill
-gh pr merge <source-branch> --merge
+# 同步并切到 release
+git fetch origin release
+git checkout release
+git pull --ff-only origin release
+
+# 合并源分支（保留 merge commit，与原 gh pr merge --merge 一致）
+git merge --no-ff $source -m "Merge branch '$source' into release"
+
+# 直推 release
+git push origin release
+
+# 切回源分支
+git checkout $source
 
 # 清理代理
+git config --local --unset http.proxy
+git config --local --unset https.proxy
 Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
 
 ### 分支推送策略
 
 - `main`：允许本地直推
-- `release`：**受保护，禁直推**，必须经 PR 合并
+- `release`：**保护已于 2026-06-26 解除**，允许本地直推
 - 其它功能分支：允许直推
 
 ### 原则
 
-- `release` 必须经 PR 合并，本地不再 `git checkout release` / `git push origin release`
-- 合并模式 `--merge`（保留 merge commit）
-- 合并完成后停留在源分支即可
+- `release` 允许直推，无需 PR
+- 合并模式 `--no-ff`（保留 merge commit）
+- 合并完成后切回源分支
 - 如遇冲突，停止并报告，不做自动解决
-- gh 未登录：`gh auth login -h github.com -p https -w`
-- gh 不在 PATH：用绝对路径 `"C:/Program Files/GitHub CLI/gh.exe"`
+- 不要 force push release（保护虽解除，仍按惯例避免改写已发布历史）

@@ -106,7 +106,15 @@ jobs:
             /p:Version=${{ steps.version.outputs.new_version }}
           Write-Host "Publish completed"
 
-      - name: Publish Updater (self-contained single-file)
+      - name: Publish Updater (Native AOT)
+        # Updater csproj 已配 PublishAot=true（生成原生 exe，零运行时依赖）。
+        # 不要传 PublishSingleFile / IncludeNativeLibrariesForSelfExtract /
+        # EnableCompressionInSingleFile / --self-contained：
+        #   - SingleFile 是 .NET 自宿主打包，与 AOT 原生 exe 互斥，SDK 会警告甚至失败；
+        #   - SelfExtract/Compression 仅对 SingleFile 生效；
+        #   - --self-contained 在 AOT 下默认即为 true。
+        # 其它 AOT 选项（StripSymbols / IlcOptimizationPreference / InvariantGlobalization / TrimMode）
+        # 写在 csproj 里自动生效，无需在命令行重复。
         shell: powershell
         run: |
           $updProj = "src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj"
@@ -114,12 +122,8 @@ jobs:
             -c Release `
             -r win-x64 `
             -o publish/Updater `
-            --self-contained `
-            /p:PublishSingleFile=true `
-            /p:IncludeNativeLibrariesForSelfExtract=true `
-            /p:EnableCompressionInSingleFile=true `
             /p:Version=${{ steps.version.outputs.new_version }}
-          Write-Host "Updater publish completed"
+          Write-Host "Updater AOT publish completed"
 
       - name: Merge build + publish output
         shell: powershell
