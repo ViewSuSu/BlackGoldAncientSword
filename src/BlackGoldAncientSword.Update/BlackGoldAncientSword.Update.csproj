@@ -18,7 +18,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>..\BlackGoldAncientSword.Resources\Images\app.ico</ApplicationIcon>
+    <ApplicationIcon>Images\app.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
@@ -42,6 +42,17 @@
       版本与主项目 Framework.csproj 保持一致：HandyControl 3.5.0。
     -->
     <PackageReference Include="HandyControl" Version="3.5.0" />
+  </ItemGroup>
+
+  <!--
+    Updater 自带一份图标资源，与主程序视觉保持一致：
+    - Images/app.ico：窗口标题栏图标（Window.Icon）+ exe 文件图标（ApplicationIcon）
+    - Images/close.png：右上角自绘关闭按钮图标
+    设计上不引用 BlackGoldAncientSword.Resources 项目，保留 Updater 零项目引用的独立性。
+  -->
+  <ItemGroup>
+    <Resource Include="Images\app.ico" />
+    <Resource Include="Images\close.png" />
   </ItemGroup>
 
 </Project>

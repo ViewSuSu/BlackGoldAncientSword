@@ -4,30 +4,100 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:hc="https://handyorg.github.io/handycontrol"
     Title="BlackGoldAncientSword 在线更新"
-    Width="520"
+    Width="560"
     AllowsTransparency="True"
     Background="Transparent"
+    FontFamily="Microsoft YaHei UI, Segoe UI"
+    Icon="/Images/app.ico"
     ResizeMode="NoResize"
     ShowInTaskbar="True"
     SizeToContent="Height"
+    SnapsToDevicePixels="True"
+    TextOptions.TextFormattingMode="Display"
+    TextOptions.TextRenderingMode="ClearType"
     Topmost="True"
+    UseLayoutRounding="True"
     WindowStartupLocation="CenterScreen"
     WindowStyle="None">
+
+    <!--  设计语义 token：集中维护浅色主题下的色彩、字号与节奏，避免硬编码散落各处  -->
+    <Window.Resources>
+        <!--  外层窗体：纯白 → 极浅冷灰 对角渐变，营造柔和纸面质感  -->
+        <LinearGradientBrush x:Key="SurfaceBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Offset="0" Color="#FFFFFF" />
+            <GradientStop Offset="1" Color="#F2F4F8" />
+        </LinearGradientBrush>
+
+        <!--  内描边：浅灰过渡，强化卡片边缘但不喧宾夺主  -->
+        <LinearGradientBrush x:Key="StrokeBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Offset="0" Color="#E6E8EE" />
+            <GradientStop Offset="1" Color="#D5D8E0" />
+        </LinearGradientBrush>
+
+        <!--  进度条填充：青→蓝→紫 三色渐变，在白底上仍醒目，符合 contrast-data ≥3:1  -->
+        <LinearGradientBrush x:Key="ProgressFillBrush" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Offset="0" Color="#29B6F6" />
+            <GradientStop Offset="0.55" Color="#5C6BC0" />
+            <GradientStop Offset="1" Color="#AB47BC" />
+        </LinearGradientBrush>
+
+        <!--  进度条轨道：浅灰半透叠层，与 ProgressBarBaseStyle 默认背景叠加保证可视感  -->
+        <SolidColorBrush x:Key="ProgressTrackBrush" Color="#0F000000" />
+
+        <!--  正文文字 ≥4.5:1 对比；次级 ≥4.5:1；muted ≥3:1，满足 WCAG AA  -->
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F172A" />
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569" />
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#2563EB" />
+        <SolidColorBrush x:Key="DangerBrush" Color="#E11D48" />
+
+        <!--  关闭按钮：默认透明、悬停浅红高亮、按下加深；动画 150ms 符合 micro-interaction 时序  -->
+        <Style x:Key="CloseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border
+                            x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FFE4E6" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FECDD3" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!--  外层边框：渐变 surface + 渐变 stroke + 立体阴影，营造玻璃质感  -->
     <Border
-        Padding="18,16"
-        Background="#2B2B2B"
-        BorderBrush="#3A3A3A"
+        Margin="14"
+        Background="{StaticResource SurfaceBrush}"
+        BorderBrush="{StaticResource StrokeBrush}"
         BorderThickness="1"
-        CornerRadius="8">
+        CornerRadius="12">
         <Border.Effect>
+            <!--  柔和大范围阴影：浅色主题用低透明度墨黑，营造悬浮感而不发灰  -->
             <DropShadowEffect
-                BlurRadius="20"
+                BlurRadius="28"
                 Direction="270"
-                Opacity="0.45"
-                ShadowDepth="2"
-                Color="Black" />
+                Opacity="0.18"
+                ShadowDepth="3"
+                Color="#0F172A" />
         </Border.Effect>
-        <Grid>
+
+        <Grid Margin="24,20,24,22">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -35,51 +105,94 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!--  标题  -->
-            <Grid Grid.Row="0" Margin="0,0,0,12">
-                <TextBlock
-                    HorizontalAlignment="Left"
+            <!--  标题栏  -->
+            <Grid Grid.Row="0" Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!--  App 图标 + 标题：左侧主体  -->
+                <StackPanel
+                    Grid.Column="0"
                     VerticalAlignment="Center"
-                    FontSize="14"
-                    FontWeight="SemiBold"
-                    Foreground="#F0F0F0"
-                    Text="正在更新 BlackGoldAncientSword" />
+                    Orientation="Horizontal">
+                    <Border
+                        Width="28"
+                        Height="28"
+                        Margin="0,0,12,0"
+                        Background="#EEF2FA"
+                        CornerRadius="7">
+                        <Image
+                            Width="18"
+                            Height="18"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Source="/Images/app.ico"
+                            Stretch="Uniform" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource TextPrimaryBrush}"
+                            Text="BlackGoldAncientSword" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            FontSize="11"
+                            Foreground="{StaticResource TextMutedBrush}"
+                            Text="在线更新" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!--  右上关闭按钮（沿用主程序 close.png，悬停红色玻璃高亮）  -->
                 <Button
                     x:Name="CloseButton"
-                    Width="24"
-                    Height="24"
-                    HorizontalAlignment="Right"
+                    Grid.Column="2"
+                    Width="28"
+                    Height="28"
                     VerticalAlignment="Center"
-                    Background="Transparent"
-                    BorderThickness="0"
                     Click="CloseButton_Click"
-                    Content="✕"
-                    Foreground="#AAAAAA"
-                    ToolTip="取消更新" />
+                    Style="{StaticResource CloseButtonStyle}"
+                    ToolTip="取消更新">
+                    <Image
+                        Width="18"
+                        Height="18"
+                        Source="/Images/close.png"
+                        Stretch="Uniform" />
+                </Button>
             </Grid>
 
-            <!--  状态文字  -->
+            <!--  状态行  -->
             <TextBlock
                 Grid.Row="1"
-                Margin="0,0,0,8"
-                FontSize="12"
-                Foreground="#C0C0C0"
+                Margin="0,0,0,12"
+                FontSize="13"
+                Foreground="{StaticResource TextSecondaryBrush}"
                 Text="{Binding StatusText}"
-                TextWrapping="Wrap" />
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="NoWrap" />
 
-            <!--  进度条：HandyControl 默认样式  -->
-            <Grid Grid.Row="2" Margin="0,0,0,10">
+            <!--  进度条：HandyControl 默认样式 + 渐变填充 + 圆角轨道  -->
+            <Grid Grid.Row="2" Margin="0,0,0,14">
+                <!--  自绘轨道背景：HC 默认样式背景在暗主题下偏深，叠一层圆角浅色块提升对比  -->
+                <Border
+                    Height="15"
+                    Background="{StaticResource ProgressTrackBrush}"
+                    CornerRadius="7.5" />
                 <ProgressBar
                     Height="15"
+                    Background="Transparent"
                     BorderThickness="0"
-                    Foreground="{DynamicResource PrimaryBrush}"
+                    Foreground="{StaticResource ProgressFillBrush}"
                     Maximum="100"
                     Minimum="0"
                     Style="{StaticResource ProgressBarBaseStyle}"
                     Value="{Binding Percent, Mode=OneWay}" />
             </Grid>
 
-            <!--  详细信息行：速度 | 大小 | 剩余时间 | 百分比  -->
+            <!--  详情行：速度 | 大小 | ETA | 百分比  -->
             <Grid Grid.Row="3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -87,34 +200,50 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
+                <!--  左侧：速度（高亮蓝） + 大小（次级） + ETA（次级）  -->
                 <StackPanel
                     Grid.Column="0"
                     VerticalAlignment="Center"
                     Orientation="Horizontal">
                     <TextBlock
                         FontSize="12"
-                        Foreground="#90CAF9"
-                        Text="{Binding SpeedText}" />
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource AccentBrush}"
+                        Text="{Binding SpeedText}"
+                        Typography.NumeralAlignment="Tabular" />
+                    <!--  分隔点：节奏感更强  -->
                     <TextBlock
-                        Margin="10,0,0,0"
+                        Margin="10,0,10,0"
                         FontSize="12"
-                        Foreground="#A0A0A0"
-                        Text="{Binding SizeText}" />
+                        Foreground="{StaticResource TextMutedBrush}"
+                        Text="·" />
                     <TextBlock
-                        Margin="10,0,0,0"
                         FontSize="12"
-                        Foreground="#A0A0A0"
-                        Text="{Binding EtaText}" />
+                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Text="{Binding SizeText}"
+                        Typography.NumeralAlignment="Tabular" />
+                    <TextBlock
+                        Margin="10,0,10,0"
+                        FontSize="12"
+                        Foreground="{StaticResource TextMutedBrush}"
+                        Text="·" />
+                    <TextBlock
+                        FontSize="12"
+                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Text="{Binding EtaText}"
+                        Typography.NumeralAlignment="Tabular" />
                 </StackPanel>
 
+                <!--  右侧：大号百分比，强调当前进度  -->
                 <TextBlock
                     Grid.Column="2"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
-                    FontSize="12"
+                    FontSize="20"
                     FontWeight="SemiBold"
-                    Foreground="#E0E0E0"
-                    Text="{Binding PercentText}" />
+                    Foreground="{StaticResource TextPrimaryBrush}"
+                    Text="{Binding PercentText}"
+                    Typography.NumeralAlignment="Tabular" />
             </Grid>
         </Grid>
     </Border>

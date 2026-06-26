@@ -234,9 +234,12 @@ namespace BlackGoldAncientSword.Update.Services
                 _ui.Invoke(() =>
                 {
                     _vm.StatusText = $"检测到主程序 {_options.MainExeName} 正在运行，需要关闭后继续。";
+                    // 注意：MessageBoxButton.OKCancel 在 WPF 中按钮文字固定为系统的"确定/取消"，
+                    // 不能自定义为"强制关闭/取消"，因此正文中明确点"确定"=立即结束主程序、
+                    // "取消"=退出更新，避免按钮与正文措辞不一致让用户误点。
                     var result = MessageBox.Show(
                         _window,
-                        $"检测到 {_options.MainExeName} 正在运行，必须先关闭才能完成更新。\n\n点击 \"强制关闭\" 立即结束主程序，点击 \"取消\" 退出更新。",
+                        $"检测到 {_options.MainExeName} 正在运行，必须先关闭才能完成更新。\n\n点击 \"确定\" 立即结束主程序，点击 \"取消\" 退出更新。",
                         "需要关闭主程序",
                         MessageBoxButton.OKCancel,
                         MessageBoxImage.Warning);
@@ -246,42 +249,153 @@ namespace BlackGoldAncientSword.Update.Services
                 bool forceClose = await tcs.Task.ConfigureAwait(false);
                 if (!forceClose) throw new OperationCanceledException();
 
+                // 记录 kill 失败/未生效的进程，用于循环结束时一次性反馈给用户，
+                // 避免按"确定"后悄无声息又反复弹同一个对话框。
+                var killFailures = new List<string>();
                 foreach (var p in running)
                 {
-                    try { p.Kill(entireProcessTree: true); }
-                    catch (Exception ex) { Debug.WriteLine($"[Updater] kill {p.Id} 失败: {ex.Message}"); }
-                    finally { p.Dispose(); }
+                    int pid = -1;
+                    try { pid = p.Id; }
+                    catch { }
+                    try
+                    {
+                        p.Kill(entireProcessTree: true);
+                        // Kill 是异步的，必须等待真正退出，否则下一轮检测仍可能命中。
+                        // 超时 3 秒兜底，避免极端情况下被某进程卡死无限阻塞 updater。
+                        if (!p.WaitForExit(3000))
+                            killFailures.Add($"PID={pid} 在 3 秒内未退出（可能被另一个高权限进程持有）");
+                    }
+                    catch (Exception ex)
+                    {
+                        killFailures.Add($"PID={pid} kill 失败：{ex.Message}");
+                    }
+                    finally
+                    {
+                        try { p.Dispose(); } catch { }
+                    }
                 }
 
-                // 等待句柄释放
+                // 等待句柄完全释放后再重新枚举进程列表
                 await Task.Delay(800).ConfigureAwait(false);
+
+                // 若 800ms 后目标进程仍存活，向用户报错并允许其选择重试或退出，
+                // 取代原"静默死循环反复弹同一对话框"的行为。
+                var stillAlive = GetMainProcesses();
+                if (stillAlive.Count > 0 || killFailures.Count > 0)
+                {
+                    foreach (var sp in stillAlive) sp.Dispose();
+                    var detail = killFailures.Count > 0
+                        ? string.Join("\n", killFailures)
+                        : $"主程序 {_options.MainExeName} 仍在运行（共 {stillAlive.Count} 个进程）。";
+
+                    var retryTcs = new TaskCompletionSource<bool>();
+                    _ui.Invoke(() =>
+                    {
+                        var r = MessageBox.Show(
+                            _window,
+                            $"无法关闭主程序：\n\n{detail}\n\n常见原因：\n  • Updater 权限低于主程序（主程序以管理员身份运行，需要 Updater 也用管理员身份）\n  • 主程序被守护进程/外部脚本持续拉起\n  • 杀毒软件拦截了 TerminateProcess\n\n点击 \"确定\" 再次尝试关闭，点击 \"取消\" 退出更新。",
+                            "关闭主程序失败",
+                            MessageBoxButton.OKCancel,
+                            MessageBoxImage.Error);
+                        retryTcs.SetResult(r == MessageBoxResult.OK);
+                    });
+
+                    if (!await retryTcs.Task.ConfigureAwait(false))
+                        throw new OperationCanceledException();
+                    // 用户选择重试则继续 while(true) 下一轮
+                }
             }
         }
 
+        /// <summary>
+        /// 找到必须先关闭的主程序进程列表。三段策略，按可靠度递减：
+        ///   1. 主程序传了 --main-pid → 直接 GetProcessById(pid)，这是最稳的判定，
+        ///      绕开 image name 不一致 / 多会话 / 同名异目录的所有歧义。
+        ///   2. PID 命中后，额外按 MainModule 路径扫一遍是否还有"同安装目录的其它实例"
+        ///      （用户开了两个相同 App），一并加入待杀列表。
+        ///   3. 主程序没传 PID（旧版兼容） → 退回原 image name + MainExeFullPath 路径比对。
+        /// </summary>
         private List<Process> GetMainProcesses()
         {
-            var name = _options.MainProcessName;
+            var targetPath = Path.GetFullPath(_options.MainExeFullPath);
+            var seenPids = new HashSet<int>();
             var list = new List<Process>();
-            foreach (var p in Process.GetProcessesByName(name))
+
+            // === 1. PID 优先 ===
+            if (_options.MainPid is int pid)
             {
                 try
                 {
-                    var path = p.MainModule?.FileName;
-                    if (path != null
-                        && Path.GetFullPath(path).Equals(
-                            Path.GetFullPath(_options.MainExeFullPath),
-                            StringComparison.OrdinalIgnoreCase))
+                    // GetProcessById 在进程不存在 / 已退出时抛 ArgumentException，被 catch 吞掉
+                    var p = Process.GetProcessById(pid);
+                    if (!p.HasExited)
                     {
                         list.Add(p);
-                        continue;
+                        seenPids.Add(p.Id);
+                    }
+                    else
+                    {
+                        p.Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Updater] GetProcessById({pid}) 失败（可能进程已退出）: {ex.Message}");
+                }
+            }
+
+            // === 2 & 3. 路径扫描：捕获同安装目录其它实例 / 兼容未传 PID 的旧主程序 ===
+            //
+            // 不再只信 Process.GetProcessesByName(imageName) — 因为 dotnet host / publish 选项
+            // 不同会导致 image name 是 "dotnet" 等而漏检。直接遍历全部进程按 MainModule 路径命中。
+            // 性能上 Process.GetProcesses 数百进程，MainModule 访问几十微秒，整体可接受。
+            foreach (var p in Process.GetProcesses())
+            {
+                if (seenPids.Contains(p.Id))
+                {
+                    p.Dispose();
+                    continue;
+                }
+
+                bool match;
+                try
+                {
+                    var path = p.MainModule?.FileName;
+                    // 精确路径匹配；拿不到 MainModule 时仅当进程 image name 与目标一致才保守命中，
+                    // 避免一棍子打死所有"模块不可读"的系统进程。
+                    if (path != null)
+                    {
+                        match = Path.GetFullPath(path).Equals(targetPath, StringComparison.OrdinalIgnoreCase);
+                    }
+                    else
+                    {
+                        match = string.Equals(p.ProcessName, _options.MainProcessName, StringComparison.OrdinalIgnoreCase);
                     }
                 }
                 catch
                 {
-                    // 32/64 位 / 权限不足时拿不到 MainModule，保守也加入
+                    // Access denied 等：按 image name 兜底；不再无条件命中，避免误杀系统进程
+                    try
+                    {
+                        match = string.Equals(p.ProcessName, _options.MainProcessName, StringComparison.OrdinalIgnoreCase);
+                    }
+                    catch
+                    {
+                        match = false;
+                    }
                 }
-                list.Add(p);
+
+                if (match)
+                {
+                    list.Add(p);
+                    seenPids.Add(p.Id);
+                }
+                else
+                {
+                    p.Dispose();
+                }
             }
+
             return list;
         }
 
