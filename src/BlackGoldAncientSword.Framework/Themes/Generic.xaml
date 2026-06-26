@@ -3,12 +3,16 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions"
     xmlns:ctrls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls">
+
     <ResourceDictionary.MergedDictionaries>
+        <!--  ModernTheme 统一语义色板与控件样式  -->
+        <ResourceDictionary Source="pack://application:,,,/BlackGoldAncientSword.Framework;component/Themes/ModernTheme.xaml" />
+        <!--  HandyControl 默认主题  -->
         <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/SkinDefault.xaml" />
         <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-    <!--  Global ListBoxItem style with lighter selection colors  -->
+    <!-- ====================== 全局 ListBoxItem 样式 ====================== -->
     <Style TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Padding" Value="0" />
@@ -31,18 +35,17 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#F5F6F8" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceTertiaryBrush}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#ECF0F5" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="#D8DEE8" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceActiveBrush}" />
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsMouseOver" Value="True" />
                                 <Condition Property="IsSelected" Value="True" />
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="Bd" Property="Background" Value="#E3E8F0" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentLightBrush}" />
                         </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" />
@@ -52,12 +55,14 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <!-- ====================== 全局转换器 ====================== -->
     <ext:UrlToImageSourceConverter x:Key="UrlToImageSourceConverter" />
     <ext:ScoreDiffToColorConverter x:Key="ScoreDiffToColorConverter" />
     <ext:EnumEqualityConverter x:Key="EnumEqualityConverter" />
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
-    <!--  Default style for OverlayHost: scrim + centered white card + title + close button  -->
+    <!-- ====================== OverlayHost 默认样式 ====================== -->
     <Style TargetType="{x:Type ctrls:OverlayHost}">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="VerticalAlignment" Value="Stretch" />
@@ -68,6 +73,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ctrls:OverlayHost}">
                     <Grid Background="{TemplateBinding Background}" Focusable="True">
+                        <!--  Scrim: 半透明遮罩 + 模糊效果  -->
                         <Border
                             MaxWidth="{TemplateBinding CardMaxWidth}"
                             MinWidth="{TemplateBinding CardMinWidth}"
@@ -75,8 +81,9 @@
                             Padding="{TemplateBinding CardPadding}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Background="White"
-                            CornerRadius="8">
+                            Background="{StaticResource SurfaceSecondaryBrush}"
+                            CornerRadius="{StaticResource RadiusXl}"
+                            Effect="{StaticResource ShadowElevatedEffect}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -93,18 +100,20 @@
                                         Grid.Column="0"
                                         VerticalAlignment="Center"
                                         FontSize="16"
-                                        FontWeight="Bold"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource TextPrimaryBrush}"
                                         Text="{TemplateBinding Title}"
                                         TextTrimming="CharacterEllipsis" />
                                     <Button
                                         x:Name="PART_CloseButton"
                                         Grid.Column="1"
-                                        Width="24"
-                                        Height="24"
+                                        Width="28"
+                                        Height="28"
                                         Padding="0"
                                         Background="Transparent"
                                         BorderThickness="0"
                                         Cursor="Hand"
+                                        Style="{StaticResource TitleBarCloseButtonStyle}"
                                         ToolTip="{DynamicResource TitleBar.Close}">
                                         <Image
                                             Width="15"

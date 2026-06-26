@@ -1,4 +1,4 @@
-<bases:UserControlBase
+﻿<bases:UserControlBase
     x:Class="BlackGoldAncientSword.Modules.UI.Announcement.Views.AnnouncementPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -45,18 +45,18 @@
                                         Grid.Column="0"
                                         Padding="4,1"
                                         VerticalAlignment="Top"
-                                        Background="#E8F0FE"
+                                        Background="{DynamicResource AccentLightBrush}"
                                         CornerRadius="3">
                                         <TextBlock
                                             FontSize="11"
-                                            Foreground="#1A73E8"
+                                            Foreground="{DynamicResource AccentPrimaryBrush}"
                                             Text="{Binding Version}" />
                                     </Border>
                                     <TextBlock
                                         Grid.Column="1"
                                         Margin="10,0,0,0"
                                         FontSize="12"
-                                        Foreground="#333333"
+                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                         Text="{Binding Detail}"
                                         TextWrapping="Wrap" />
                                 </Grid>
