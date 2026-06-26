@@ -173,6 +173,13 @@
     <system:String x:Key="TitleBar.Restore">还原</system:String>
     <system:String x:Key="TitleBar.Close">关闭</system:String>
 
+    <!--  Update Notification  -->
+    <system:String x:Key="UpdateNotification.Title">发现新版本</system:String>
+    <system:String x:Key="UpdateNotification.NewVersion">检测到最新版本：</system:String>
+    <system:String x:Key="UpdateNotification.Message">请及时下载最新版，确保功能完好可用。</system:String>
+    <system:String x:Key="UpdateNotification.DownloadNow">立即下载</system:String>
+    <system:String x:Key="UpdateNotification.Later">稍后再说</system:String>
+
     <!--  Close Prompt  -->
     <system:String x:Key="ClosePrompt.Title">关闭确认</system:String>
     <system:String x:Key="ClosePrompt.Message">您点击了关闭按钮，请选择关闭按钮的默认行为：</system:String>

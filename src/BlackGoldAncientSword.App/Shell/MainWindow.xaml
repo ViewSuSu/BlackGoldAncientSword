@@ -591,7 +591,7 @@
                     VerticalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
-                    Panel.ZIndex="900"
+                    Panel.ZIndex="10000"
                     x:Name="AnnouncementOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.AnnouncementRegion}" />                <!--  Feedback overlay (covers entire window, below toast)  -->
                 <ContentControl
@@ -600,7 +600,7 @@
                     VerticalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
-                    Panel.ZIndex="900"
+                    Panel.ZIndex="10000"
                     x:Name="FeedbackOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.FeedbackRegion}" />
 
@@ -611,9 +611,20 @@
                     VerticalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"
                     VerticalContentAlignment="Stretch"
-                    Panel.ZIndex="950"
+                    Panel.ZIndex="10050"
                     x:Name="ClosePromptOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.ClosePromptRegion}" />
+
+                <!--  Update notification overlay (covers entire window, above close prompt)  -->
+                <ContentControl
+                    Grid.RowSpan="3"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Panel.ZIndex="10060"
+                    x:Name="UpdateNotificationOverlay"
+                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.UpdateNotificationRegion}" />
 
                 <!--  Stacked toast notifications (topmost)  -->
                 <ItemsControl
@@ -621,7 +632,7 @@
                     Margin="0,60,0,0"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top"
-                    Panel.ZIndex="999"
+                    Panel.ZIndex="10100"
                     IsHitTestVisible="False"
                     ItemsSource="{Binding ToastItems}">
                     <ItemsControl.ItemsPanel>

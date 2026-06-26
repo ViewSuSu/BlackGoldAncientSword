@@ -35,26 +35,52 @@ jobs:
         id: version
         shell: powershell
         run: |
-          $latestTag = git tag --sort=-v:refname | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } | Select-Object -First 1
+          # 4 段版本号 Major.Minor.Patch.Build，每段 0-99，溢出向高位进位
+          function Bump-Version([string]$v) {
+            $p = $v -split '\.'
+            $major = [int]$p[0]
+            $minor = [int]$p[1]
+            $patch = [int]$p[2]
+            $build = [int]$p[3]
+            $build++
+            if ($build -gt 99) { $build = 0; $patch++ }
+            if ($patch -gt 99) { $patch = 0; $minor++ }
+            if ($minor -gt 99) { $minor = 0; $major++ }
+            return "$major.$minor.$patch.$build"
+          }
+
+          $latestTag = git tag --sort=-v:refname | Where-Object { $_ -match '^v\d+\.\d+\.\d+\.\d+$' } | Select-Object -First 1
 
           if (-not $latestTag) {
-            $newVersion = "1.0.0"
-            Write-Host "No existing version tags found. Starting at $newVersion"
+            $newVersion = "1.0.0.0"
+            Write-Host "No existing 4-segment version tags. Starting at $newVersion"
           } else {
-            $latestTag -match '^v(\d+\.\d+\.\d+)$' | Out-Null
-            $current = [Version]$Matches[1]
-            $newVersion = "{0}.{1}.{2}" -f $current.Major, $current.Minor, ($current.Build + 1)
-            Write-Host "Latest tag: $latestTag -> candidate $newVersion"
-            # Avoid collision if tag already exists
+            $latestTag -match '^v(\d+\.\d+\.\d+\.\d+)$' | Out-Null
+            $current = $Matches[1]
+            $newVersion = Bump-Version $current
+            Write-Host "Latest tag: $latestTag -> candidate v$newVersion"
+
             $allTags = git tag
             while ($allTags -contains "v$newVersion") {
-              $parts = [Version]$newVersion
-              $newVersion = "{0}.{1}.{2}" -f $parts.Major, $parts.Minor, ($parts.Build + 1)
-              Write-Host "Tag v$newVersion exists, bumped to $newVersion"
+              $newVersion = Bump-Version $newVersion
+              Write-Host "Tag v$newVersion exists, bumped to v$newVersion"
             }
           }
 
           "new_version=$newVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Patch App csproj version
+        shell: powershell
+        run: |
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $proj = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+          $content = Get-Content $proj -Raw -Encoding UTF8
+          $content = $content -replace '<Version>[\d\.]+</Version>', "<Version>$ver</Version>"
+          $content = $content -replace '<AssemblyVersion>[\d\.]+</AssemblyVersion>', "<AssemblyVersion>$ver</AssemblyVersion>"
+          $content = $content -replace '<FileVersion>[\d\.]+</FileVersion>', "<FileVersion>$ver</FileVersion>"
+          $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+          [System.IO.File]::WriteAllText("$pwd/$proj", $content, $utf8NoBom)
+          Write-Host "Patched csproj -> Version=$ver"
 
       - name: Build
         shell: powershell
@@ -138,7 +164,7 @@ jobs:
           # Replace version placeholder with actual version
           $ver = "${{ steps.version.outputs.new_version }}"
           $issContent = Get-Content $issPath -Raw -Encoding UTF8
-          $issContent = $issContent -replace '#define MyAppVersion "0\.0\.0"', "#define MyAppVersion `"$ver`""
+          $issContent = $issContent -replace '#define MyAppVersion "[\d\.]+"', "#define MyAppVersion `"$ver`""
           [System.IO.File]::WriteAllText($issPath, $issContent, (New-Object System.Text.UTF8Encoding $false))
           Write-Host "Patched setup.iss MyAppVersion -> $ver"
 
@@ -201,6 +227,25 @@ jobs:
           [System.IO.File]::WriteAllText("$pwd\output\appcast.xml", $xml.Trim(), $utf8NoBom)
           Write-Host "appcast.xml written ($($xml.Length) chars)"
 
+      - name: Commit version bump to release
+        shell: powershell
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $proj = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+
+          git add $proj
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "csproj 无版本变更，跳过 commit"
+          } else {
+            git commit -m "chore: 同步 App 版本号到 v$ver [skip ci]"
+            git push origin HEAD:release
+            Write-Host "Committed & pushed csproj version bump to release"
+          }
+
       - name: Tag & Push
         shell: powershell
         run: |
@@ -232,3 +277,32 @@ jobs:
             output/appcast.xml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync version to main
+        shell: powershell
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $proj = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+
+          git fetch origin main
+          git checkout -B main origin/main
+
+          $content = Get-Content $proj -Raw -Encoding UTF8
+          $content = $content -replace '<Version>[\d\.]+</Version>', "<Version>$ver</Version>"
+          $content = $content -replace '<AssemblyVersion>[\d\.]+</AssemblyVersion>', "<AssemblyVersion>$ver</AssemblyVersion>"
+          $content = $content -replace '<FileVersion>[\d\.]+</FileVersion>', "<FileVersion>$ver</FileVersion>"
+          $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+          [System.IO.File]::WriteAllText("$pwd/$proj", $content, $utf8NoBom)
+
+          git add $proj
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "main csproj 已是 v$ver，跳过"
+          } else {
+            git commit -m "chore: 同步 App 版本号到 v$ver [skip ci]"
+            git push origin main
+            Write-Host "Synced csproj version v$ver to main"
+          }

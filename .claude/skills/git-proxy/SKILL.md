@@ -1,11 +1,11 @@
 ---
 name: git-proxy
-description: 确保 git push 操作通过代理 http://127.0.0.1:9098 执行。当用户要求推送、push、提交并推送、commit+push 或任何涉及 git push 的操作时使用此技能。
+description: 确保 git push 操作通过代理 http://127.0.0.1:7897 执行。当用户要求推送、push、提交并推送、commit+push 或任何涉及 git push 的操作时使用此技能。
 ---
 
 # Git Proxy
 
-本项目 GitHub 直连不通，所有 `git push` 必须通过本地代理 `127.0.0.1:9098`（端口 9098）。
+本项目 GitHub 直连不通，所有 `git push` 必须通过本地代理 `127.0.0.1:7897`（端口 7897）。
 
 ## 代理来源
 
@@ -13,7 +13,7 @@ GitHub Desktop 在 Windows 上通过读取系统注册表 `HKCU:\Software\Micros
 
 当前环境系统代理设置：
 - `ProxyEnable = 1`
-- `ProxyServer = 127.0.0.1:9098`
+- `ProxyServer = 127.0.0.1:7897`
 - `ProxyOverride = localhost;127.*;[::1]`
 
 ## 规则
@@ -23,15 +23,15 @@ GitHub Desktop 在 Windows 上通过读取系统注册表 `HKCU:\Software\Micros
 执行任何 `git push` 命令之前，先设置本地 git 代理：
 
 ```powershell
-git config --local http.proxy http://127.0.0.1:9098
-git config --local https.proxy http://127.0.0.1:9098
+git config --local http.proxy http://127.0.0.1:7897
+git config --local https.proxy http://127.0.0.1:7897
 ```
 
 同时设置环境变量（部分 git 操作还通过 HTTP 库直连）：
 
 ```powershell
-$env:HTTP_PROXY = "http://127.0.0.1:9098"
-$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+$env:HTTP_PROXY = "http://127.0.0.1:7897"
+$env:HTTPS_PROXY = "http://127.0.0.1:7897"
 ```
 
 ### Push 后必须清理代理
@@ -47,7 +47,7 @@ Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ### 超时处理
 
 如果 `git push` 超时，按顺序排查：
-1. `Test-NetConnection 127.0.0.1 -Port 9098` 检查代理是否在运行
+1. `Test-NetConnection 127.0.0.1 -Port 7897` 检查代理是否在运行
 2. `git config --local --list` 确认代理已设置
 3. 检查 Windows 系统代理设置：`Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings" | Select-Object ProxyEnable, ProxyServer`
 
@@ -55,10 +55,10 @@ Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 
 ```powershell
 # 1. 设置代理
-git config --local http.proxy http://127.0.0.1:9098
-git config --local https.proxy http://127.0.0.1:9098
-$env:HTTP_PROXY = "http://127.0.0.1:9098"
-$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+git config --local http.proxy http://127.0.0.1:7897
+git config --local https.proxy http://127.0.0.1:7897
+$env:HTTP_PROXY = "http://127.0.0.1:7897"
+$env:HTTPS_PROXY = "http://127.0.0.1:7897"
 
 # 2. 推送
 git push origin <branch>
