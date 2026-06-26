@@ -275,7 +275,6 @@ jobs:
           if (-not $prevTag) {
             $rangeLabel = "初次发版"
             $changelog  = "- 项目首次发版"
-            $compareUrl = ""
           } else {
             $rangeLabel = "$prevTag → $newTag"
             # prev_tag..HEAD 内非 merge、非 [skip ci] commit 标题，附短哈希
@@ -285,13 +284,9 @@ jobs:
             } else {
               $changelog = ($rawLog | Out-String).TrimEnd()
             }
-            $compareUrl = "https://github.com/${{ github.repository }}/compare/$prevTag...$newTag"
           }
 
           $body = "## 本次更新（$rangeLabel）`n`n$changelog"
-          if ($compareUrl) {
-            $body += "`n`n**完整对比**: $compareUrl"
-          }
 
           # 多行内容写入 GITHUB_OUTPUT，使用 heredoc 分隔符
           $delim = "EOF_" + [guid]::NewGuid().ToString('N')
