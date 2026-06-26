@@ -118,6 +118,10 @@ The app is published as a **self-contained** deployment, which bundles the .NET 
 
 The yellow border is a visual indicator that the app is capturing the screen and recognizing teammate information. This is normal behavior — no need to worry.
 
+**Q: What if my antivirus flags the program?**
+
+Because this program is not code-signed, it may be detected as a virus or suspicious file by antivirus software such as 360. You can temporarily disable the antivirus and then reopen the program.
+
 ---
 
 ## Disclaimer 📢
