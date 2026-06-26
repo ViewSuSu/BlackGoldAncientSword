@@ -177,7 +177,6 @@
     <system:String x:Key="UpdateNotification.Title">发现新版本</system:String>
     <system:String x:Key="UpdateNotification.NewVersion">检测到最新版本：</system:String>
     <system:String x:Key="UpdateNotification.Message">请及时下载最新版，确保功能完好可用。</system:String>
-    <system:String x:Key="UpdateNotification.DownloadNow">浏览器下载</system:String>
     <system:String x:Key="UpdateNotification.OnlineUpdate">在线更新</system:String>
     <system:String x:Key="UpdateNotification.OnlineUpdate.ToolTip">使用内置更新程序自动下载并安装</system:String>
     <system:String x:Key="UpdateNotification.CopyUrl">复制下载链接</system:String>
@@ -218,7 +217,7 @@
     <system:String x:Key="Settings.CheckForUpdates">检查更新</system:String>
     <system:String x:Key="Settings.UpdateChecking">正在检查更新...</system:String>
     <system:String x:Key="Settings.NoUpdateAvailable">当前已是最新版本</system:String>
-    <system:String x:Key="Settings.UpdateAvailable">下载最新版</system:String>
+    <system:String x:Key="Settings.UpdateAvailable">发现新版本</system:String>
     <system:String x:Key="Settings.NewVersionTooltip">发现新版本: {0}，点击更新</system:String>
     <system:String x:Key="Settings.UpdateCheckFailed">检查更新失败，请稍后重试</system:String>
     <system:String x:Key="Settings.UpdateError">更新错误: {0}</system:String>

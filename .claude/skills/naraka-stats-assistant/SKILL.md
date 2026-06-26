@@ -1,6 +1,6 @@
 ---
 name: naraka-stats-assistant
-description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整的发版流程：分析 git diff、中文详细 commit、push、合并到 release 分支并推送。
+description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整的发版流程：分析 git diff、中文详细 commit、push 当前分支、用 gh CLI 创建 PR 合并到 release（release 受分支保护禁直推）。
 license: MIT
 ---
 
@@ -111,28 +111,37 @@ git config --local --unset https.proxy
 Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
 
-### 4. 合并到 release 并推送
+### 4. 创建 PR 合并到 release
+
+`release` 受 GitHub 分支保护（禁直推 / 禁 force push / 禁删除），必须经 `gh` PR 合并：
 
 ```powershell
-git checkout release
-git merge <source-branch>
-# 设置代理
-git config --local http.proxy http://127.0.0.1:9098
-git config --local https.proxy http://127.0.0.1:9098
-$env:HTTP_PROXY = "http://127.0.0.1:9098"
-$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+# 确认 gh 已登录
+gh auth status
 
-git push origin release
+# 设置代理
+$env:HTTPS_PROXY = "http://127.0.0.1:9098"
+$env:HTTP_PROXY = "http://127.0.0.1:9098"
+
+# 创建 PR + 合并
+gh pr create --base release --head <source-branch> --fill
+gh pr merge <source-branch> --merge
 
 # 清理代理
-git config --local --unset http.proxy
-git config --local --unset https.proxy
 Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
-git checkout <source-branch>
 ```
+
+### 分支推送策略
+
+- `main`：允许本地直推
+- `release`：**受保护，禁直推**，必须经 PR 合并
+- 其它功能分支：允许直推
 
 ### 原则
 
-- 合并使用 `git merge`（非 fast-forward 时自动生成 merge commit）
-- 合并完成后必须切回原分支
+- `release` 必须经 PR 合并，本地不再 `git checkout release` / `git push origin release`
+- 合并模式 `--merge`（保留 merge commit）
+- 合并完成后停留在源分支即可
 - 如遇冲突，停止并报告，不做自动解决
+- gh 未登录：`gh auth login -h github.com -p https -w`
+- gh 不在 PATH：用绝对路径 `"C:/Program Files/GitHub CLI/gh.exe"`
