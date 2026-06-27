@@ -223,9 +223,10 @@ jobs:
           Write-Host "Installer: $exeName ($exeSize bytes)"
 
       - name: Commit version bump to release
-        # 必须用 pwsh（PowerShell 7+，UTF-8 默认）。
-        # Windows PowerShell 5.1（shell: powershell）会把无 BOM 的 .ps1 按 ANSI 读，
-        # 导致下面的中文 commit message 在赋值前就被破坏，最终推到 git 仍是乱码。
+        # release 分支受保护，直接 push 会被拒绝（GH006）。
+        # 版本号以 git tag 为准，csproj 版本变更仅本地 commit 即可，
+        # 无需推回 release 分支。后续的 Tag & Push 会创建并推送版本 tag，
+        # Sync version to main 会把 csproj 同步到 main（main 未受保护）。
         shell: pwsh
         run: |
           git config --global user.name "github-actions[bot]"
@@ -245,8 +246,7 @@ jobs:
             $utf8NoBom = New-Object System.Text.UTF8Encoding $false
             [System.IO.File]::WriteAllText($msgPath, $msg, $utf8NoBom)
             git commit -F $msgPath
-            git push origin HEAD:release
-            Write-Host "Committed & pushed csproj version bump to release"
+            Write-Host "Committed csproj version bump to release (skip push - branch is protected)"
           }
 
       - name: Tag & Push
