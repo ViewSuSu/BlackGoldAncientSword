@@ -279,6 +279,7 @@ jobs:
           gitee-token: ${{ secrets.GITEE_TOKEN }}
           gitee-owner: SususuChang
           gitee-repo: BlackGoldAncientSword
+          gitee-target-commitish: main
           asset-files: output/*
 
       - name: Zip merged output (single-file zip, old updater compat)
