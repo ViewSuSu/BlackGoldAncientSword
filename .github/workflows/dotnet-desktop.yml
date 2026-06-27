@@ -315,7 +315,7 @@ jobs:
             $fileIdx++
             if ($_.Length -le $maxSize) {
               $start = Get-Date
-              Write-Host ("  [" + $fileIdx + "/" + $total + "] Upload: " + $_.Name + " (" + (""{0:N1}"" -f ($_.Length / 1MB)) + " MB)")
+              Write-Host ("  [" + $fileIdx + "/" + $total + "] Upload: " + $_.Name + " (" + ('{0:N1}' -f ($_.Length / 1MB)) + " MB)")
               curl.exe --connect-timeout 30 --max-time 300 -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
               $elapsed = (Get-Date) - $start
               $secs = [math]::Round($elapsed.TotalSeconds, 1)
@@ -323,7 +323,7 @@ jobs:
               Write-Host ("    Done: " + $_.Name + " in " + $secs + "s (" + $mbps + " MB/s)")
               $uploaded++
             } else {
-              Write-Host ("  [" + $fileIdx + "/" + $total + "] Skip: " + $_.Name + " (" + (""{0:N1}"" -f ($_.Length / 1MB)) + " MB) - over 100MB")
+              Write-Host ("  [" + $fileIdx + "/" + $total + "] Skip: " + $_.Name + " (" + ('{0:N1}' -f ($_.Length / 1MB)) + " MB) - over 100MB")
               $skipped++
             }
           }
