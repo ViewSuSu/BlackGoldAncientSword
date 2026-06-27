@@ -16,6 +16,13 @@ namespace BlackGoldAncientSword.Update.Services
     {
         public string ZipUrl { get; private set; } = string.Empty;
 
+        /// <summary>
+        /// 分卷 7z 第一个分卷的下载 URL（来自 --split-url 参数）。
+        /// 新版 Updater 以此枚举 .001/.002/... 下载全部分卷、合并后解压。
+        /// 旧版 Updater 不传此参数，降级到单 .zip 下载。
+        /// </summary>
+        public string? SplitUrl { get; private set; }
+
         public string TargetDirectory { get; private set; } =
             AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
@@ -44,6 +51,9 @@ namespace BlackGoldAncientSword.Update.Services
                 {
                     case "--url" when i + 1 < args.Length:
                         opts.ZipUrl = args[++i];
+                        break;
+                    case "--split-url" when i + 1 < args.Length:
+                        opts.SplitUrl = args[++i];
                         break;
                     case "--target" when i + 1 < args.Length:
                         opts.TargetDirectory = Path.GetFullPath(args[++i]);

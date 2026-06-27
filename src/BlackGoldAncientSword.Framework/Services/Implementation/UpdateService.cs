@@ -19,6 +19,14 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         private const string GitHubLatestReleasePage =
             "https://github.com/" + GitHubOwner + "/" + GitHubRepo + "/releases/latest";
 
+        private const string GiteeOwner = "SususuChang";
+        private const string GiteeRepo = "BlackGoldAncientSword";
+        private const string GiteeReleasePage =
+            "https://gitee.com/" + GiteeOwner + "/" + GiteeRepo + "/releases/latest";
+        private const string GiteeDownloadBase =
+            "https://gitee.com/" + GiteeOwner + "/" + GiteeRepo + "/releases/download";
+        private const string SplitZipFormat = GiteeRepo + "-v{0}-split.zip.001";
+
         /// <summary>
         /// 安装包命名约定（setup.iss 生成）：BlackGoldAncientSword-{version}-win-x64-Setup.exe
         /// ResolveAssetUrl 按 .exe 后缀匹配，无需关心完整文件名。
@@ -41,9 +49,11 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public string? ZipDownloadUrl { get; private set; }
 
+        public string? SplitZipDownloadUrl { get; private set; }
+
         public string? LatestReleaseNotes { get; private set; }
 
-        public string ReleasePageUrl => GitHubLatestReleasePage;
+        public string ReleasePageUrl => GiteeReleasePage;
 
         public event EventHandler<bool>? UpdateAvailabilityChanged;
 
@@ -75,6 +85,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 var latest = NormalizeVersion(tagName);
                 var installerUrl = ResolveAssetUrl(root, ".exe");
                 var zipUrl = ResolveZipUrl(root, latest);
+                var splitUrl = ResolveSplitZipUrl(root);
                 var notes = root.TryGetProperty("body", out var bodyEl)
                     ? (bodyEl.GetString() ?? string.Empty)
                     : string.Empty;
@@ -88,6 +99,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     LatestVersion = available ? latest : null;
                     DownloadUrl = available ? installerUrl : null;
                     ZipDownloadUrl = available ? zipUrl : null;
+                    SplitZipDownloadUrl = available && splitUrl != null
+                        ? string.Format(GiteeDownloadBase + "/v{0}/" + SplitZipFormat, latest, latest)
+                        : null;
                     LatestReleaseNotes = available ? notes : null;
                     UpdateAvailabilityChanged?.Invoke(this, available);
                 });
@@ -102,6 +116,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     LatestVersion = null;
                     DownloadUrl = null;
                     ZipDownloadUrl = null;
+                    SplitZipDownloadUrl = null;
                     LatestReleaseNotes = null;
                     UpdateAvailabilityChanged?.Invoke(this, false);
                 });
@@ -192,6 +207,30 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             if (fallback != null)
                 Debug.WriteLine($"[{nameof(UpdateService)}] 未找到 {expected}，退回首个 .zip");
             return fallback;
+        }
+
+
+        /// <summary>
+        /// 找第一个 .zip.001 分卷资产的下载 URL。
+        /// 新版 Updater 拿到此 URL 后自动枚举 .001/.002/... 下载全部分卷、合并后解压。
+        /// 旧版 Updater 仍需保持单 .zip 兼容（ZipDownloadUrl），两者互不干扰。
+        /// </summary>
+        private static string? ResolveSplitZipUrl(JsonElement root)
+        {
+            if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+                return null;
+
+            foreach (var asset in assets.EnumerateArray())
+            {
+                if (!asset.TryGetProperty("name", out var nameEl)) continue;
+                var name = nameEl.GetString();
+                if (name == null) continue;
+                if (!name.EndsWith(".zip.001", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!asset.TryGetProperty("browser_download_url", out var urlEl)) continue;
+
+                return urlEl.GetString();
+            }
+            return null;
         }
 
         private static int TryCompare(string a, string b)
