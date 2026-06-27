@@ -273,10 +273,11 @@ jobs:
         shell: pwsh
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          RELEASE_BODY: ${{ steps.changelog.outputs.release_body }}
         run: |
           $tag = "v${{ steps.version.outputs.new_version }}"
           $repo = "SususuChang/BlackGoldAncientSword"
-          $token = "${{ secrets.GITEE_TOKEN }}"
+          $token = $env:GITEE_TOKEN
           $apiBase = "https://gitee.com/api/v5/repos/$repo"
           $maxSize = 100 * 1024 * 1024
 
@@ -286,21 +287,22 @@ jobs:
           $existing = curl.exe "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
           if ($existing.id) {
             Write-Host "  Delete existing release ID=$($existing.id)"
-            curl.exe -v -X DELETE "$apiBase/releases/$($existing.id)" -H "Authorization: Bearer $token" 2>&1 | Out-Null
+            curl.exe --connect-timeout 30 --max-time 120 -v -X DELETE "$apiBase/releases/$($existing.id)" -H "Authorization: Bearer $token" 2>&1 | Out-Null
           }
 
           # 2. Always delete orphan tag (try multiple API endpoints)
-          curl.exe -X DELETE "$apiBase/tags/$tag?access_token=$token" 2>&1 | Out-Null
-          curl.exe -X DELETE "$apiBase/git/refs/tags/$tag?access_token=$token" 2>&1 | Out-Null
+          curl.exe --connect-timeout 30 --max-time 120 -X DELETE "$apiBase/tags/$tag?access_token=$token" 2>&1 | Out-Null
+          curl.exe --connect-timeout 30 --max-time 120 -X DELETE "$apiBase/git/refs/tags/$tag?access_token=$token" 2>&1 | Out-Null
 
 
-          # 2. Create release
-          $releaseBody = "${{ steps.changelog.outputs.release_body }}"
+          # 3. Create release (env var avoids multi-line string interpolation issue)
+          $releaseBody = $env:RELEASE_BODY
           $body = @{ access_token = $token; tag_name = $tag; name = "Release $tag"; body = $releaseBody; target_commitish = "main" }
-          $createResult = curl.exe -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
+          $createResult = curl.exe --connect-timeout 30 --max-time 120 -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
           $releaseId = ($createResult | ConvertFrom-Json -ErrorAction SilentlyContinue).id
           if (-not $releaseId) {
-            Write-Host "FAIL to create Gitee release: $createResult"
+            $errText = if ($createResult -is [string]) { $createResult } else { ($createResult | Out-String).Trim() }
+            Write-Host "FAIL to create Gitee release: $errText"
             exit 1
           }
           Write-Host "  Gitee release created, ID=$releaseId"
@@ -314,7 +316,7 @@ jobs:
             if ($_.Length -le $maxSize) {
               $start = Get-Date
               Write-Host ("  [" + $fileIdx + "/" + $total + "] Upload: " + $_.Name + " (" + (""{0:N1}"" -f ($_.Length / 1MB)) + " MB)")
-              curl.exe -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
+              curl.exe --connect-timeout 30 --max-time 300 -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
               $elapsed = (Get-Date) - $start
               $secs = [math]::Round($elapsed.TotalSeconds, 1)
               $mbps = if ($secs -gt 0) { [math]::Round(($_.Length / 1MB) / $secs, 1) } else { 0 }
