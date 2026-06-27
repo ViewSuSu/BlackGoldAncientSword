@@ -204,7 +204,9 @@ jobs:
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path output | Out-Null
-          & "C:\Program Files\7-Zip\7z.exe" a -tzip -v99m "output/BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}-split.zip" "publish/Merged/*"
+          pushd publish/Merged
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip -v99m "$OLDPWD/output/BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}-split.zip" "*"
+          popd
 
       - name: Install Inno Setup
         shell: pwsh
@@ -431,7 +433,9 @@ jobs:
           $zipName = "BlackGoldAncientSword-v${{ needs.gitee-sync.outputs.new_version }}.zip"
           $zipPath = "output/$zipName"
 
-          & "C:\Program Files\7-Zip\7z.exe" a -tzip $zipPath "publish/Merged/*"
+          pushd publish/Merged
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip "$OLDPWD/output/$zipName" "*"
+          popd
 
           $zipSize = (Get-Item $zipPath).Length
           "zip_name=$zipName" >> $env:GITHUB_OUTPUT
