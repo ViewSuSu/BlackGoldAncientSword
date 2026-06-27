@@ -8,6 +8,12 @@
 
 > 该项目受到 [Zzaphkiel/Seraphine](https://github.com/Zzaphkiel/Seraphine) 的鼓舞，感谢先驱者们做出的贡献。
 
+## 项目介绍视频 🎬
+
+[![Bilibili](https://img.shields.io/badge/项目介绍视频-Bilibili-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white)](https://www.bilibili.com/video/BV1WU7p6SE3T/)
+
+点击上方按钮观看项目介绍视频。
+
 ---
 
 ## 下载 📥
