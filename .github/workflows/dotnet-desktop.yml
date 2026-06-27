@@ -286,7 +286,7 @@ jobs:
           $existing = curl.exe "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
           if ($existing.id) {
             Write-Host "  Delete existing release ID=$($existing.id)"
-            curl.exe -X DELETE "$apiBase/releases/$($existing.id)?access_token=$token" 2>&1 | Out-Null
+            curl.exe -v -X DELETE "$apiBase/releases/$($existing.id)" -H "Authorization: Bearer $token" 2>&1 | Out-Null
           }
 
           # 2. Always delete orphan tag (try multiple API endpoints)
