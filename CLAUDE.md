@@ -43,5 +43,6 @@
 | [git-commit](.claude/skills/git-commit/SKILL.md) | 分析 diff、中文详细 commit、push、发版到 release |
 | [git-proxy](.claude/skills/git-proxy/SKILL.md) | git push 通过本地代理 127.0.0.1:9098 |
 | [rebuild-guard](.claude/skills/rebuild-guard/SKILL.md) | 对话收尾时强制 kill + dotnet build，确保 0 error |
+ | [gitee-token](.claude/skills/gitee-token/SKILL.md) | Gitee API 调用令牌（清理 release/tag、上传附件等） |
 
 > 同等内容在 `.codex/skills/` 下也存在一份，供 codex 使用；两者保持同步。

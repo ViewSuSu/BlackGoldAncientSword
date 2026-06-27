@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
@@ -28,7 +28,7 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
         public bool HasReleaseNotes => !string.IsNullOrWhiteSpace(_updateService.LatestReleaseNotes);
 
         public bool CanOnlineUpdate =>
-            (!string.IsNullOrEmpty(_updateService.ZipDownloadUrl) || !string.IsNullOrEmpty(_updateService.SplitZipDownloadUrl)) && File.Exists(UpdaterExePath);
+            (!string.IsNullOrEmpty(_updateService.ZipDownloadUrl) || (_updateService.SplitDownloadUrls is { Count: > 0 })) && File.Exists(UpdaterExePath);
 
         public string ProxyMirrorUrlText => ProxyMirrorUrl;
 
@@ -114,11 +114,15 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
                     };
                     psi.ArgumentList.Add("--url");
                     psi.ArgumentList.Add(zipUrl);
-                    var splitUrl = _updateService.SplitZipDownloadUrl;
-                    if (!string.IsNullOrEmpty(splitUrl))
+                    var splitUrls = _updateService.SplitDownloadUrls;
+                    if (splitUrls is { Count: > 0 })
                     {
-                        psi.ArgumentList.Add("--split-url");
-                        psi.ArgumentList.Add(splitUrl);
+                        foreach (var u in splitUrls)
+                        {
+                            psi.ArgumentList.Add("--split-url");
+                            psi.ArgumentList.Add(u);
+                        }
+
                     }
                     psi.ArgumentList.Add("--target");
                     psi.ArgumentList.Add(targetDir);
