@@ -283,14 +283,16 @@ jobs:
 
           Write-Host "===== Syncing release $tag to Gitee ====="
 
-          # 1. Delete existing release if any
+          # 1. Delete existing release if any (release might leave orphan tag on Gitee)
           $existing = curl.exe "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
           if ($existing.id) {
             Write-Host "  Delete existing release ID=$($existing.id)"
-            curl.exe -X DELETE "$apiBase/releases/$($existing.id)?access_token=$token" | Out-Null
-            curl.exe -X DELETE "$apiBase/tags/$tag?access_token=$token" | Out-Null
-            Write-Host "  Existing release and tag deleted"
+            curl.exe -X DELETE "$apiBase/releases/$($existing.id)?access_token=$token" 2>&1 | Out-Null
           }
+
+          # 2. Always delete orphan tag (ignore if tag does not exist)
+          curl.exe -X DELETE "$apiBase/tags/$tag?access_token=$token" 2>&1 | Out-Null
+
 
           # 2. Create release
           $releaseBody = "${{ steps.changelog.outputs.release_body }}"
