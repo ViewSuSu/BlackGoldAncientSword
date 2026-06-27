@@ -249,11 +249,10 @@ jobs:
           [System.IO.File]::WriteAllText($issPath, $issContent, (New-Object System.Text.UTF8Encoding $false))
           Write-Host "Patched setup.iss MyAppVersion -> $ver"
 
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
-            /DMyAppVersion=${{ steps.version.outputs.new_version }} `
-            /DUseDiskSpanning `
-            $issPath `
-            /O"output"
+          $p = Start-Process -FilePath "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            -ArgumentList "/DMyAppVersion=${{ steps.version.outputs.new_version }}","/DUseDiskSpanning","$issPath",'/O"output"' `
+            -NoNewWindow -Wait -PassThru
+          if ($p.ExitCode -ne 0) { exit 1 }
 
           if (-not (Get-ChildItem output/*.exe)) {
             Write-Error "Installer EXE not generated!"
