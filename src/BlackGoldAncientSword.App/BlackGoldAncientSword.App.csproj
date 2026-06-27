@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Authors>小窗同学</Authors>
+    <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
+    <Company>$(Authors)</Company>
+    <Description>$(PackageProjectUrl)</Description>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>..\BlackGoldAncientSword.Resources\Images\app.ico</ApplicationIcon>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CS8601;CS8603;CA1416;CS8618</NoWarn>
+    <LangVersion>latest</LangVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <Version>1.0.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Shell\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.Ocr\BlackGoldAncientSword.Ocr.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.Resources\BlackGoldAncientSword.Resources.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.GameMonitor\BlackGoldAncientSword.GameMonitor.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.Modules\BlackGoldAncientSword.Modules.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.ScreenCapture\BlackGoldAncientSword.ScreenCapture.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\BlackGoldAncientSword.ScreenCapture\runtimes\win-x64\native\wgc_capture.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>wgc_capture.dll</Link>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Shell\app.ico" />
+  </ItemGroup>
+</Project>

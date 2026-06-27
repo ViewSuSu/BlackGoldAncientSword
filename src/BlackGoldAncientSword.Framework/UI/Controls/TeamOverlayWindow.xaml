@@ -1,0 +1,242 @@
+<Window
+    x:Class="BlackGoldAncientSword.Framework.UI.Controls.TeamOverlayWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls"
+    xmlns:hc="clr-namespace:HandyControl.Controls;assembly=HandyControl"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Width="400"
+    Height="Auto"
+    MinHeight="190"
+    MaxHeight="230"
+    AllowsTransparency="True"
+    Background="Transparent"
+    ResizeMode="NoResize"
+    ShowActivated="False"
+    ShowInTaskbar="False"
+    SnapsToDevicePixels="True"
+    Topmost="True"
+    WindowStyle="None"
+    mc:Ignorable="d">
+    <Border
+        Margin="8"
+        Background="#2E2E2E"
+        BorderBrush="#3A3A3A"
+        BorderThickness="1"
+        CornerRadius="10">
+        <Border.Effect>
+            <DropShadowEffect
+                BlurRadius="15"
+                Direction="315"
+                Opacity="0.35"
+                ShadowDepth="3" />
+        </Border.Effect>
+        <Grid Margin="8,4,8,4">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <!--  Title + Refresh + Close button  -->
+            <Grid Grid.Row="0" x:Name="TitleBarGrid" Margin="0,2,0,4" MouseLeftButtonDown="TitleBarGrid_OnMouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    FontSize="13"
+                    FontWeight="SemiBold"
+                    Foreground="#CCCCCC"
+                    Text="{DynamicResource TeamInfo.Title}" />
+                <TextBlock
+                    Grid.Column="1"
+                    Margin="0,0,6,0"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="#888888"
+                    Text="{Binding CountdownText}" />
+                <Button
+                    Grid.Column="2"
+                    Width="22"
+                    Height="22"
+                    Padding="0"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Command="{Binding CloseCommand}"
+                    Cursor="Hand"
+                    ToolTip="{DynamicResource TitleBar.Close}">
+                    <Path
+                        Width="10"
+                        Height="10"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Data="M0,0 L10,10 M10,0 L0,10"
+                        Stroke="#888888"
+                        StrokeThickness="1.5" />
+                </Button>
+            </Grid>
+            <!--  Team members area  -->
+            <ItemsControl
+                Grid.Row="1"
+                Margin="0,4,0,0"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                d:ItemsSource="{d:SampleData}"
+                ItemsSource="{Binding Members}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="3" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type controls:TeamOverlayMemberItem}">
+                        <StackPanel
+                            Margin="6,0"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                            <!--  Avatar  -->
+                            <Border
+                                Width="44"
+                                Height="44"
+                                HorizontalAlignment="Center"
+                                Background="#3A3A3A"
+                                BorderBrush="#555555"
+                                BorderThickness="1"
+                                CornerRadius="22">
+                                <Image
+                                    Width="40"
+                                    Height="40"
+                                    RenderOptions.BitmapScalingMode="HighQuality"
+                                    Source="{Binding AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}" />
+                            </Border>
+                            <!--  User name  -->
+                            <TextBlock
+                                Margin="0,4,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="11"
+                                Foreground="#CCCCCC"
+                                Text="{Binding UserName}"
+                                TextTrimming="CharacterEllipsis" />
+                            <!--  Loading spinner (visible when IsLoading = true)  -->
+                            <hc:CircleProgressBar
+                                Width="36"
+                                Height="36"
+                                Margin="0,4,0,0"
+                                HorizontalAlignment="Center"
+                                ArcThickness="4"
+                                Foreground="#888888"
+                                IsIndeterminate="True"
+                                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <!--  Rank content (visible when IsLoading = false)  -->
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <!--  Rank icon  -->
+                                <Border
+                                    Margin="0,4,0,0"
+                                    Width="36"
+                                    Height="36"
+                                    HorizontalAlignment="Center"
+                                    BorderBrush="#555555"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    ClipToBounds="True">
+                                    <Image
+                                        Width="36"
+                                        Height="36"
+                                        RenderOptions.BitmapScalingMode="HighQuality"
+                                        Source="{Binding RankIcon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
+                                        Stretch="Uniform" />
+                                </Border>
+                                <!--  Rank name + Star count  -->
+                                <StackPanel
+                                    Margin="0,2,0,0"
+                                    HorizontalAlignment="Center"
+                                    Orientation="Horizontal">
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="#B0B0B0"
+                                        Text="{Binding PageRankName}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <Image
+                                        Width="12"
+                                        Height="12"
+                                        Margin="2,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/star_icon.png"
+                                        Visibility="{Binding PageHasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="#B0B0B0"
+                                        Text="{Binding PageStarCount}"
+                                        Visibility="{Binding PageHasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                </StackPanel>
+                                <!--  Rank tier score  -->
+                                <TextBlock
+                                    Margin="0,1,0,0"
+                                    HorizontalAlignment="Center"
+                                    FontSize="10"
+                                    Foreground="#888888"
+                                    TextTrimming="CharacterEllipsis">
+                                    <Run Text="{Binding RankTierScore, StringFormat='{}{0}'}" /><Run Text="{DynamicResource Stats.Points}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!--  Checkbox + TeamInfo button (bottom row)  -->
+            <Grid Grid.Row="2" Margin="4,0,4,2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <CheckBox
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    BorderBrush="#666666"
+                    Content="{DynamicResource TeamOverlay.DontShowAgain}"
+                    FontSize="11"
+                    Foreground="#999999"
+                    IsChecked="{Binding DontShowAgain}" />
+                <Button
+                    Grid.Column="2"
+                    Width="Auto"
+                    Height="20"
+                    Padding="6,0"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Command="{Binding NavigateToTeamInfoCommand}"
+                    Cursor="Hand"
+                    ToolTip="{DynamicResource TeamOverlay.ViewTeamInfo}">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="#5B8DEF"
+                        Text="{DynamicResource TeamOverlay.ViewTeamInfoButton}"
+                        TextDecorations="Underline" />
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
+

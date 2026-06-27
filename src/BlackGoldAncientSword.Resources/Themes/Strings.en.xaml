@@ -1,0 +1,320 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <system:String x:Key="App.Title">BlackGoldAncientSword</system:String>
+    <system:String x:Key="App.Search">Search</system:String>
+    <system:String x:Key="App.Settings">Settings</system:String>
+    <system:String x:Key="App.Language">Language</system:String>
+    <system:String x:Key="App.UnhandledError">Error: {0}</system:String>
+    <system:String x:Key="MainWindow.LatestVersion">(Latest)</system:String>
+
+
+    <system:String x:Key="Tab.Stats">Stats</system:String>
+    <system:String x:Key="Tab.GodTrial">God Trial</system:String>
+    <system:String x:Key="Tab.Arena">Arena</system:String>
+
+    <system:String x:Key="Mode.Ranked">Ranked</system:String>
+    <system:String x:Key="Mode.Normal">Normal</system:String>
+    <system:String x:Key="Mode.Casual">Casual</system:String>
+    <system:String x:Key="Mode.Immortal">Immortal</system:String>
+    <system:String x:Key="Mode.Trio">Trio</system:String>
+    <system:String x:Key="Mode.Duo">Duo</system:String>
+    <system:String x:Key="Mode.Solo">Solo</system:String>
+    <system:String x:Key="Mode.Rank">Ranked</system:String>
+    <system:String x:Key="Mode.Match">Normal</system:String>
+    <system:String x:Key="Mode.Tianren">Immortal</system:String>
+    <system:String x:Key="GameMode.RankSolo">Ranked Solo</system:String>
+    <system:String x:Key="GameMode.RankDuo">Ranked Duo</system:String>
+    <system:String x:Key="GameMode.RankTrio">Ranked Trio</system:String>
+    <system:String x:Key="GameMode.MatchSolo">Normal Solo</system:String>
+    <system:String x:Key="GameMode.MatchDuo">Normal Duo</system:String>
+    <system:String x:Key="GameMode.MatchTrio">Normal Trio</system:String>
+    <system:String x:Key="GameMode.TianrenSolo">Immortal Solo</system:String>
+    <system:String x:Key="GameMode.TianrenDuo">Immortal Duo</system:String>
+    <system:String x:Key="GameMode.TianrenTrio">Immortal Trio</system:String>
+    <system:String x:Key="GameMode.Trio">Trio</system:String>
+    <system:String x:Key="GameMode.Duo">Duo</system:String>
+    <system:String x:Key="GameMode.Solo">Solo</system:String>
+    <system:String x:Key="GameMode.Rank">Ranked</system:String>
+    <system:String x:Key="GameMode.Match">Normal</system:String>
+    <system:String x:Key="GameMode.Tianren">Immortal</system:String>
+        <system:String x:Key="GameMode.Unknown">Unknown</system:String>
+
+    <system:String x:Key="Stats.Title">Season Stats</system:String>
+    <system:String x:Key="Stats.Close">Close</system:String>
+    <system:String x:Key="Stats.DetailTitle">Detail Stats</system:String>
+    <system:String x:Key="Stats.BestTitle">Best Records</system:String>
+    <system:String x:Key="Stats.MostParry">Most Parry</system:String>
+    <system:String x:Key="Stats.Matches">Matches</system:String>
+    <system:String x:Key="Stats.FirstPlace">First Place</system:String>
+    <system:String x:Key="Stats.TopFive">Top 5</system:String>
+    <system:String x:Key="Stats.AvgDamage">Avg Damage</system:String>
+    <system:String x:Key="Stats.Points">pts</system:String>
+    <system:String x:Key="Stats.Season">Season:</system:String>
+    <system:String x:Key="Stats.RecentBattles">Recent 10 Battles</system:String>
+    <system:String x:Key="Stats.LoadError">Failed to load stats. Check your network and try again.</system:String>
+    <system:String x:Key="Stats.NoPlayerName">Please configure a player name in Settings first</system:String>
+    <system:String x:Key="Stats.GameNotInstalled">Game not installed</system:String>
+    <system:String x:Key="Stats.PlayerNotFound">Player not found. Please check the name and try again</system:String>
+    <system:String x:Key="Stats.CopyNickname">Copy nickname</system:String>
+    <system:String x:Key="Stats.CopyUID">Copy UID</system:String>
+    <system:String x:Key="Stats.CopySuccess">Copied!</system:String>
+    <system:String x:Key="Stats.UserNotFound">User not found</system:String>
+    <system:String x:Key="Stats.Unknown">Unknown</system:String>
+    <system:String x:Key="Stats.Minute">min</system:String>
+    <system:String x:Key="Stats.Second">s</system:String>
+    <system:String x:Key="Stats.KD">K/D</system:String>
+    <system:String x:Key="Stats.FirstRate">First Rate</system:String>
+    <system:String x:Key="Stats.TopFiveRate">Top 5 Rate</system:String>
+    <system:String x:Key="Stats.AvgKills">Avg Kills</system:String>
+    <system:String x:Key="Stats.AvgHeal">Avg Heal</system:String>
+    <system:String x:Key="Stats.AvgAssists">Avg Assists</system:String>
+    <system:String x:Key="Stats.AvgSurvival">Avg Survival</system:String>
+    <system:String x:Key="Stats.BestKills">Best Kills</system:String>
+    <system:String x:Key="Stats.BestHeal">Best Heal</system:String>
+    <system:String x:Key="Stats.BestAssists">Best Assists</system:String>
+    <system:String x:Key="Stats.BestDamage">Best Damage</system:String>
+        <system:String x:Key="Stats.Header.Rank">Rank</system:String>
+    <system:String x:Key="Stats.Header.Mode">Mode</system:String>
+    <system:String x:Key="Stats.Header.ModeCategory">Rank Mode</system:String>
+    <system:String x:Key="Stats.Header.ModeType">Match Type</system:String>
+    <system:String x:Key="Stats.Header.Kill">Kills</system:String>
+    <system:String x:Key="Stats.Header.Damage">Damage</system:String>
+    <system:String x:Key="Stats.Header.RankScore">Tier</system:String>
+    <system:String x:Key="Stats.Header.Time">Time</system:String>
+    <system:String x:Key="Stats.RankName">Unrivaled Asura</system:String>
+    <system:String x:Key="Stats.RankName.Solo.7000">Nirvana Asura</system:String>
+    <system:String x:Key="Stats.RankName.Solo.6000">Formless Dragon</system:String>
+    <system:String x:Key="Stats.RankName.Solo.5000">Unrivaled Asura</system:String>
+    <system:String x:Key="Stats.RankName.Solo.4500">Infernal Asura</system:String>
+    <system:String x:Key="Stats.RankName.Solo.4000">Sunset</system:String>
+    <system:String x:Key="Stats.RankName.Solo.3500">Eclipse</system:String>
+    <system:String x:Key="Stats.RankName.Solo.3000">Asteroid</system:String>
+    <system:String x:Key="Stats.RankName.Solo.2500">Platinum</system:String>
+    <system:String x:Key="Stats.RankName.Solo.2000">Gold</system:String>
+    <system:String x:Key="Stats.RankName.Solo.1500">Silver</system:String>
+    <system:String x:Key="Stats.RankName.Solo.0">Bronze</system:String>
+    <system:String x:Key="Stats.RankName.Trio.7000">Infernal Master</system:String>
+    <system:String x:Key="Stats.RankName.Trio.6500">Celestial Lord</system:String>
+    <system:String x:Key="Stats.RankName.Trio.6000">Void Sovereign</system:String>
+    <system:String x:Key="Stats.RankName.Trio.5500">Heavenly Champion</system:String>
+    <system:String x:Key="Stats.RankName.Trio.5000">Solar Veteran</system:String>
+    <system:String x:Key="Stats.RankName.Trio.4500">Lunar Grandmaster</system:String>
+    <system:String x:Key="Stats.RankName.Trio.4000">Cloud Warrior</system:String>
+    <system:String x:Key="Stats.RankName.Trio.3500">Supreme Expert</system:String>
+    <system:String x:Key="Stats.RankName.Trio.3000">Mortal Adept</system:String>
+    <system:String x:Key="Stats.Refresh">Refresh</system:String>
+    <system:String x:Key="Stats.BackToMe">Back to me</system:String>
+
+    <system:String x:Key="Search.Title">Search</system:String>
+    <system:String x:Key="Search.Input">Enter nickname or ID</system:String>
+    <system:String x:Key="Search.Button">Search</system:String>
+    <system:String x:Key="Search.Placeholder">Enter player name or ID to search</system:String>
+    <system:String x:Key="Search.History">Search History</system:String>
+    <system:String x:Key="Search.Copy">Copy</system:String>
+    <system:String x:Key="Search.Delete">Delete</system:String>
+    <system:String x:Key="Search.CopySuccess">Copied!</system:String>
+
+
+    <system:String x:Key="Settings.Title">Settings</system:String>
+    <system:String x:Key="Settings.DataPath">Data Save Path</system:String>
+    <system:String x:Key="Settings.Save">Save</system:String>
+    <system:String x:Key="Settings.Cancel">Cancel</system:String>
+    <system:String x:Key="Settings.DefaultPathHint">Default: user folder</system:String>
+    <system:String x:Key="Settings.Category.General">Data Storage Path</system:String>
+    <system:String x:Key="Settings.Category.Cache">Cache File Path</system:String>
+    <system:String x:Key="Settings.Category.Language">Language</system:String>
+    <system:String x:Key="Settings.BrowseDataPath">Select data save path</system:String>
+    <system:String x:Key="Settings.BrowseCachePath">Select cache path</system:String>
+    <system:String x:Key="Settings.CacheCleared">Cache cleared</system:String>
+    <system:String x:Key="Settings.InvalidDataPath">Invalid data path, please check and retry</system:String>
+    <system:String x:Key="Settings.InvalidCachePath">Invalid cache path, please check and retry</system:String>
+    <system:String x:Key="Settings.SaveSuccess">Saved successfully</system:String>
+    <system:String x:Key="Settings.SaveFailed">Save failed: {0}</system:String>
+
+    <system:String x:Key="Nav.Detail">Detail</system:String>
+    <system:String x:Key="Nav.Home">Launch</system:String>
+    <system:String x:Key="Nav.Stats">Stats</system:String>
+    <system:String x:Key="Nav.CurrentUser">Current User</system:String>
+    <system:String x:Key="Nav.Search">Search</system:String>
+    <system:String x:Key="Nav.Settings">Settings</system:String>
+    <system:String x:Key="Nav.Personal">Personal</system:String>
+    <system:String x:Key="Nav.Announcement">Announcement</system:String>
+    <system:String x:Key="Nav.Feedback">Feedback</system:String>
+    <system:String x:Key="Home.NoLocalData">No local player data found. Launch NarakaBladepoint first.</system:String>
+    <system:String x:Key="Home.PlayerNotFound">Player not found on server.</system:String>
+    <system:String x:Key="Home.RoleIdNotAvailable">Player role ID not available.</system:String>
+    <system:String x:Key="Home.LoadUserInfoFailed">Failed to load user info.</system:String>
+    <system:String x:Key="Home.NetworkError">Network error: {0}</system:String>
+    <system:String x:Key="Home.Status.WaitingForGame">Waiting for game to start</system:String>
+    <system:String x:Key="Announcement.InitialVersion">Initial Version</system:String>
+    <system:String x:Key="Announcement.InitialDetail">Supports Naraka Bladepoint stats query, player search, data saving and more.</system:String>
+    <system:String x:Key="Announcement.ThanksMessage">Thank you for using Naraka Bladepoint Stats Assistant! Feedback is welcome.</system:String>
+    <system:String x:Key="Home.Status.GameStarted">Game started</system:String>
+    <system:String x:Key="Home.Status.GameDetected">Naraka Bladepoint process detected</system:String>
+    <system:String x:Key="Home.Status.HeroSelection">Hero Selection (RoomId: {0})</system:String>
+    <system:String x:Key="Home.Status.InGame">In Game (BattleId: {0})</system:String>
+    <system:String x:Key="Announcement.UpdateHistory">Update History</system:String>
+    <system:String x:Key="Announcement.Notice">Announcement</system:String>
+        <system:String x:Key="Announcement.Loading">Loading update history...</system:String>
+    <system:String x:Key="Announcement.NoData">No update history available.</system:String>
+    <system:String x:Key="Announcement.LoadFailed">Failed to load update history. Please check your network.</system:String>
+<system:String x:Key="Announcement.Confirm">Confirm</system:String>
+
+    <system:String x:Key="Settings.CachePath">Cache Path</system:String>
+    <system:String x:Key="Settings.CacheSize">Cache Size:</system:String>
+    <system:String x:Key="Settings.ClearCache">Clear Cache</system:String>
+    <system:String x:Key="TitleBar.Back">Go Back</system:String>
+
+    <system:String x:Key="TitleBar.Minimize">Minimize</system:String>
+    <system:String x:Key="TitleBar.Maximize">Maximize</system:String>
+    <system:String x:Key="TitleBar.Restore">Restore</system:String>
+    <system:String x:Key="TitleBar.Close">Close</system:String>
+
+
+    
+    <!--  Update  -->
+    <system:String x:Key="Settings.CheckForUpdates">Check for Updates</system:String>
+    <system:String x:Key="Settings.UpdateChecking">Checking for updates...</system:String>
+    <system:String x:Key="Settings.NoUpdateAvailable">You are running the latest version.</system:String>
+    <system:String x:Key="Settings.UpdateAvailable">New version available</system:String>
+    <system:String x:Key="Settings.NewVersionTooltip">New version: {0}, click to update</system:String>
+    <system:String x:Key="Settings.UpdateCheckFailed">Failed to check for updates. Please try again later.</system:String>
+    <system:String x:Key="Settings.UpdateError">Update error: {0}</system:String>
+    <system:String x:Key="Settings.UpdateDownloading">Downloading update...</system:String>
+    <system:String x:Key="Settings.CurrentVersion">Current version: {0}</system:String>
+    <system:String x:Key="Settings.CurrentVersionLatest">Current version (latest): {0}</system:String>
+
+    
+
+        <system:String x:Key="GameStatus.LobbyWaiting">In Lobby</system:String>
+    <system:String x:Key="GameStatus.Queuing">Queuing</system:String>
+    <system:String x:Key="GameStatus.HeroSelection">Hero Selection</system:String>
+    <system:String x:Key="GameStatus.BattleEnded">Battle Over</system:String>
+    <system:String x:Key="GameStatus.InGame">In Game</system:String>
+
+
+
+    <!--  Update  -->
+<!--  Auto Update  -->
+    <system:String x:Key="MainWindow.CheckForUpdates">Check for Updates</system:String>
+    <system:String x:Key="MainWindow.CheckForUpdates.ToolTip">Check for new version</system:String>
+<system:String x:Key="Settings.ShowTeamOverlayDuringHeroSelection">Show team overlay during hero selection</system:String>
+    <!--  Update Notification  -->
+    <system:String x:Key="UpdateNotification.Title">New Version Available</system:String>
+    <system:String x:Key="UpdateNotification.NewVersion">Latest version:</system:String>
+    <system:String x:Key="UpdateNotification.Message">Please download the latest version to keep all features working correctly.</system:String>
+    <system:String x:Key="UpdateNotification.OnlineUpdate">Update Now</system:String>
+    <system:String x:Key="UpdateNotification.OnlineUpdate.ToolTip">Use the built-in updater to download and install automatically</system:String>
+    <system:String x:Key="UpdateNotification.CopyUrl">Copy download URL</system:String>
+    <system:String x:Key="UpdateNotification.ProxyMirror">China proxy mirror</system:String>
+    <system:String x:Key="UpdateNotification.ProxyHint">Use this if downloads are slow</system:String>
+    <system:String x:Key="UpdateNotification.ReleaseNotesHeader">Release notes (click to expand)</system:String>
+    <system:String x:Key="UpdateNotification.Later">Later</system:String>
+
+    <!--  Close Prompt  -->
+    <system:String x:Key="ClosePrompt.Title">Close Confirmation</system:String>
+    <system:String x:Key="ClosePrompt.Message">You clicked the close button. Please choose the default close behavior:</system:String>
+    <system:String x:Key="ClosePrompt.RememberChoice">Remember my choice</system:String>
+    <system:String x:Key="ClosePrompt.MinimizeToTaskbar">Minimize to taskbar</system:String>
+        <system:String x:Key="ClosePrompt.MinimizeToTray">Minimize to System Tray</system:String>
+    <system:String x:Key="ClosePrompt.ExitDirectly">Exit directly</system:String>
+
+    <!--  Settings - Close Behavior  -->
+    <system:String x:Key="Settings.Category.CloseBehavior">Close Behavior</system:String>
+    <system:String x:Key="Settings.Category.TeamOverlay">Team Overlay</system:String>
+    <system:String x:Key="Settings.CloseBehavior.Description">Set the default behavior when clicking the close button</system:String>
+    <system:String x:Key="Settings.CloseBehavior.Ask">Ask every time</system:String>
+    <system:String x:Key="Settings.CloseBehavior.MinimizeToTaskbar">Minimize to taskbar</system:String>
+    <system:String x:Key="Settings.CloseBehavior.MinimizeToTray">Minimize to System Tray</system:String>
+    <system:String x:Key="Settings.CloseBehavior.ExitDirectly">Exit directly</system:String>
+    <system:String x:Key="Settings.CloseBehavior.RememberChoice">Remember choice</system:String>
+
+    <!--  Update Dialog - NetSparkle UI Localization  -->
+    <system:String x:Key="UpdateDialog.SoftwareUpdate">Software Update</system:String>
+    <system:String x:Key="UpdateDialog.NewVersionAvailable">A new version is available.</system:String>
+    <system:String x:Key="UpdateDialog.VersionInfo">{0} is now available (you have {1}). Would you like to {2} it now?</system:String>
+    <system:String x:Key="UpdateDialog.VersionInfoNoName">Would you like to {0} it now?</system:String>
+    <system:String x:Key="UpdateDialog.SkipVersion">Skip this version</system:String>
+    <system:String x:Key="UpdateDialog.RemindLater">Remind me later</system:String>
+    <system:String x:Key="UpdateDialog.DownloadInstall">Download/Install</system:String>
+    <system:String x:Key="UpdateDialog.Restart">Restart</system:String>
+    <system:String x:Key="UpdateDialog.UpdateCompleted">Update Complete</system:String>
+    <system:String x:Key="UpdateDialog.Install">Install</system:String>
+    <system:String x:Key="UpdateDialog.InstallRelaunch">Install and Relaunch</system:String>
+    <system:String x:Key="UpdateDialog.Downloading">Downloading {0}</system:String>
+    <system:String x:Key="UpdateDialog.DownloadingGeneric">Downloading...</system:String>
+    <system:String x:Key="UpdateDialog.Download">update</system:String>
+    <system:String x:Key="UpdateDialog.CheckingForUpdates">Checking for Updates...</system:String>
+    <system:String x:Key="UpdateDialog.Cancel">Cancel</system:String>
+    <system:String x:Key="UpdateDialog.UpToDate">Your current version is up to date.</system:String>
+    <system:String x:Key="UpdateDialog.VersionSkipped">You have elected to skip this version.</system:String>
+    <system:String x:Key="UpdateDialog.UnknownInstallerFormat">Updater not supported, please execute {0} manually.</system:String>
+    <system:String x:Key="UpdateDialog.ToastMessage">New Version Available</system:String>
+    <system:String x:Key="UpdateDialog.ToastAction">More information</system:String>
+    <system:String x:Key="UpdateDialog.ErrorTitle">Error</system:String>
+    <system:String x:Key="UpdateDialog.InfoTitle">Info</system:String>
+    <system:String x:Key="UpdateDialog.CannotDownloadAppcast">Unable to connect to update server. Please check your network and try again.</system:String>
+    <system:String x:Key="UpdateDialog.DownloadError">There was a problem downloading the update:\n{0}</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgKill">Kill Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgDamage">Damage Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffTop5Rate">Top5 Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgSurvival">Survival Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffKD">KD Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgHeal">Heal Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffAvgAssist">Assist Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffBestKill">Best Kill Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffBestDamage">Best Dmg Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffMostParry">Parry Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffFirstRate">Win Rate Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffMatches">Matches Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffFirstPlace">Wins Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffTopFive">Top5 Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffBestHeal">Best Heal Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffBestAssist">Best Assist Diff</system:String>
+    <system:String x:Key="TeamInfo.DiffRankScore">Rank Diff</system:String>
+    <system:String x:Key="TeamInfo.Title">Team Info</system:String>
+    <system:String x:Key="TeamInfo.WaitingForHeroSelect">Waiting to enter hero selection...</system:String>
+    <system:String x:Key="TeamInfo.HeroSelectRecognizing">Hero selection, identifying teammates...</system:String>
+    <system:String x:Key="TeamInfo.InGameLocked">Match started, team info locked</system:String>
+    <system:String x:Key="TeamInfo.PlayerNotFound">Player not found</system:String>
+    <system:String x:Key="TeamInfo.LoadFailed">Load failed</system:String>
+    <system:String x:Key="TeamInfo.LoadError">Load error</system:String>
+    <system:String x:Key="TeamInfo.QueryFailed">Query Failed</system:String>
+   <system:String x:Key="TeamInfo.RefreshOcr">Re-identify team info</system:String>
+   <system:String x:Key="TeamOverlay.DontShowAgain">Don't show again</system:String>
+
+    <!--  MainWindow - Contact & Update Log  -->
+    <system:String x:Key="MainWindow.ViewUpdateLog">View Update Log</system:String>
+    <system:String x:Key="MainWindow.ContactAuthor">Contact Author</system:String>
+    <system:String x:Key="MainWindow.WeChatInfo">WeChat: Yyu16147</system:String>
+
+
+    <!--  TeamInfo - Player Stats Navigation  -->
+    <system:String x:Key="TeamInfo.ViewPlayerStats">View detailed stats</system:String>
+
+    <!--  TeamOverlay  -->
+    <system:String x:Key="TeamOverlay.Title">Team Info</system:String>
+    <system:String x:Key="TeamOverlay.ViewTeamInfo">View Team Info</system:String>
+    <system:String x:Key="TeamOverlay.ViewTeamInfoButton">View Details</system:String>
+
+    <!--  Feedback  -->
+    <system:String x:Key="Feedback.Title">Feedback</system:String>
+    <system:String x:Key="Feedback.ClientGroupTitle">Client Feedback Group</system:String>
+    <system:String x:Key="Feedback.ClientGroupQQ">Group 1: 146088141</system:String>
+    <system:String x:Key="Feedback.DataGroupTitle">Data Feedback Group</system:String>
+    <system:String x:Key="Feedback.BotDescription">QQ bot can also query stats</system:String>
+    <system:String x:Key="Feedback.DataGroup1">Group 1: 476074617</system:String>
+    <system:String x:Key="Feedback.DataGroup2">Group 2: 649891198</system:String>
+    <system:String x:Key="Feedback.DataGroup3">Group 3: 966720321</system:String>
+    <system:String x:Key="Feedback.QQEntryRequirement">QQ level 32+ (two suns) auto-approve, alt accounts not allowed</system:String>
+    <system:String x:Key="Feedback.WebTitle">Web</system:String>
+    <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
+    <system:String x:Key="Feedback.Close">Close</system:String>
+</ResourceDictionary>
+
+
+
+

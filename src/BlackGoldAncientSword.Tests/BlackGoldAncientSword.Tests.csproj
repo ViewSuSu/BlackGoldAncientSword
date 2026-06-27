@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    <!-- 控制 SourceGenerator 行为：Tests 模式生成 HTTP API 测试代码（GeneratedApiClientTests 等），并跳过 DTO/Client 生成 -->
+    <BgaSourceGenMode>Tests</BgaSourceGenMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="TestData\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Moq" Version="4.20.72" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BlackGoldAncientSword.ScreenCapture\BlackGoldAncientSword.ScreenCapture.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.GameMonitor\BlackGoldAncientSword.GameMonitor.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.Ocr\BlackGoldAncientSword.Ocr.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
+    <ProjectReference Include="..\BlackGoldAncientSword.Modules\BlackGoldAncientSword.Modules.csproj" />
+    <!-- 引入 SourceGenerator 作为 Analyzer，结合 BgaSourceGenMode=Tests 触发 HttpApiTestSourceGenerator -->
+    <ProjectReference Include="..\BlackGoldAncientSword.Framework.SourceGenerator\BlackGoldAncientSword.Framework.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- 复用 Framework 项目里的同一份 api-definitions.json 作为 AdditionalFiles，确保 DTO/Client/测试由同一份定义驱动 -->
+  <ItemGroup>
+    <AdditionalFiles Include="..\BlackGoldAncientSword.Framework\Http\Definitions\**\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="BgaSourceGenMode" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\BlackGoldAncientSword.ScreenCapture\runtimes\win-x64\native\wgc_capture.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>wgc_capture.dll</Link>
+    </Content>
+  </ItemGroup>
+</Project>

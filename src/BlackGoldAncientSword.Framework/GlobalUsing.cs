@@ -1,0 +1,13 @@
+global using BlackGoldAncientSword.Framework.Core.Attributes;
+global using Prism.Modularity;
+global using BlackGoldAncientSword.Framework.Core.Events;
+global using Prism.Commands;
+global using Prism;
+global using Prism.Events;
+global using Prism.Ioc;
+global using Prism.Mvvm;
+global using Prism.Regions;
+global using BlackGoldAncientSword.Framework.Services;
+global using BlackGoldAncientSword.Framework.Services.Abstractions;
+
+global using Mapster;

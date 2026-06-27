@@ -1,0 +1,502 @@
+name: Release Build & Publish
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+
+      - name: Determine version from git tags
+        id: version
+        shell: powershell
+        run: |
+          # 4 段版本号 Major.Minor.Patch.Build，每段 0-99，溢出向高位进位
+          function Bump-Version([string]$v) {
+            $p = $v -split '\.'
+            $major = [int]$p[0]
+            $minor = [int]$p[1]
+            $patch = [int]$p[2]
+            $build = [int]$p[3]
+            $build++
+            if ($build -gt 99) { $build = 0; $patch++ }
+            if ($patch -gt 99) { $patch = 0; $minor++ }
+            if ($minor -gt 99) { $minor = 0; $major++ }
+            return "$major.$minor.$patch.$build"
+          }
+
+          $latestTag = git tag --sort=-v:refname | Where-Object { $_ -match '^v\d+\.\d+\.\d+\.\d+$' } | Select-Object -First 1
+
+          if (-not $latestTag) {
+            $newVersion = "1.0.0.0"
+            Write-Host "No existing 4-segment version tags. Starting at $newVersion"
+          } else {
+            $latestTag -match '^v(\d+\.\d+\.\d+\.\d+)$' | Out-Null
+            $current = $Matches[1]
+            $newVersion = Bump-Version $current
+            Write-Host "Latest tag: $latestTag -> candidate v$newVersion"
+
+            $allTags = git tag
+            while ($allTags -contains "v$newVersion") {
+              $newVersion = Bump-Version $newVersion
+              Write-Host "Tag v$newVersion exists, bumped to v$newVersion"
+            }
+          }
+
+          "new_version=$newVersion" >> $env:GITHUB_OUTPUT
+
+
+      - name: Patch App csproj version
+        shell: powershell
+        run: |
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $proj = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+          $content = Get-Content $proj -Raw -Encoding UTF8
+          $content = $content -replace '<Version>[\d\.]+</Version>', "<Version>$ver</Version>"
+          $content = $content -replace '<AssemblyVersion>[\d\.]+</AssemblyVersion>', "<AssemblyVersion>$ver</AssemblyVersion>"
+          $content = $content -replace '<FileVersion>[\d\.]+</FileVersion>', "<FileVersion>$ver</FileVersion>"
+          $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+          [System.IO.File]::WriteAllText("$pwd/$proj", $content, $utf8NoBom)
+          Write-Host "Patched csproj -> Version=$ver"
+
+
+      - name: Build
+        shell: powershell
+        run: |
+          $projPath = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+          dotnet build $projPath `
+            -c Release `
+            -r win-x64 `
+            /p:Version=${{ steps.version.outputs.new_version }}
+          Write-Host "Build completed"
+
+
+      - name: Publish (self-contained)
+        shell: powershell
+        run: |
+          $projPath = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+          dotnet publish $projPath `
+            -c Release `
+            -r win-x64 `
+            -o publish/Release `
+            --self-contained `
+            /p:PublishSingleFile=true `
+            /p:PublishReadyToRun=true `
+            /p:Version=${{ steps.version.outputs.new_version }}
+          Write-Host "Publish completed"
+
+
+      - name: Publish Updater (self-contained single-file)
+        # Updater csproj 已配 SelfContained=true / PublishSingleFile=true /
+        # IncludeNativeLibrariesForSelfExtract=true / EnableCompressionInSingleFile=true，
+        # 命令行参数显式重申，避免后续有人改 csproj 时 publish 行为悄悄变化。
+        # 产物：单个 .exe（自带 .NET runtime，客户机零运行时依赖），
+        # apphost 启动时把 runtime 抽到 %TEMP%\.net，安装目录除 updater.exe 自身
+        # 没有任何被锁定的 dll，方便整目录覆盖。
+        shell: powershell
+        run: |
+          $updProj = "src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj"
+          dotnet publish $updProj `
+            -c Release `
+            -r win-x64 `
+            -o publish/Updater `
+            --self-contained `
+            /p:PublishSingleFile=true `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:EnableCompressionInSingleFile=true `
+            /p:Version=${{ steps.version.outputs.new_version }}
+          Write-Host "Updater self-contained single-file publish completed"
+
+
+      - name: Merge build + publish output
+        shell: powershell
+        run: |
+          $buildDir = "src/BlackGoldAncientSword.App/bin/Release/net10.0-windows/win-x64"
+          $publishDir = "publish/Release"
+          $updaterDir = "publish/Updater"
+          $mergedDir = "publish/Merged"
+
+          New-Item -ItemType Directory -Force -Path $mergedDir | Out-Null
+
+          # 1. Copy all build output as base
+          Copy-Item -Path "$buildDir\*" -Destination $mergedDir -Recurse -Force
+          Write-Host "Copied build output: $(Get-ChildItem $mergedDir -Recurse | Measure-Object).Count files"
+
+          # 2. Overlay with publish output (publish wins on conflicts)
+          Copy-Item -Path "$publishDir\*" -Destination $mergedDir -Recurse -Force
+          Write-Host "Overlaid publish output: $(Get-ChildItem $mergedDir -Recurse | Measure-Object).Count files total"
+
+          # 3. 复制独立的 Updater single-file exe 进安装目录
+          #    Updater 必须随 App 一起部署，否则"在线更新"按钮 CanOnlineUpdate=false 永远 disabled
+          $updaterExe = Join-Path $updaterDir "BlackGoldAncientSword.Update.exe"
+          if (-not (Test-Path $updaterExe)) {
+            Write-Error "Updater exe not found: $updaterExe"
+            exit 1
+          }
+          Copy-Item -Path $updaterExe -Destination $mergedDir -Force
+          Write-Host "Copied Updater exe into merged: $updaterExe"
+
+
+      - name: Tag & Push
+        shell: powershell
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          $ver = "${{ steps.version.outputs.new_version }}"
+
+          $tagExists = git ls-remote --tags origin "refs/tags/v$ver"
+          if (-not $tagExists) {
+            git tag -a "v$ver" -m "Release v$ver"
+            git push origin "v$ver"
+            Write-Host "Created and pushed tag v$ver"
+          } else {
+            Write-Host "Tag v$ver already exists on remote, skipping creation"
+          }
+
+
+      - name: Generate changelog
+        id: changelog
+        shell: pwsh
+        run: |
+          $newTag = "v${{ steps.version.outputs.new_version }}"
+
+          # 找上一个 4 段版本号 tag，排除本次新建的 newTag
+          $prevTag = git tag --sort=-v:refname | Where-Object { $_ -match '^v\d+\.\d+\.\d+\.\d+$' -and $_ -ne $newTag } | Select-Object -First 1
+
+          if (-not $prevTag) {
+            $rangeLabel = "初次发版"
+            $changelog  = "- 项目首次发版"
+          } else {
+            $rangeLabel = "$prevTag → $newTag"
+            # prev_tag..HEAD 内非 merge、非 [skip ci] commit 标题，附短哈希
+            $rawLog = git log "$prevTag..HEAD" --pretty=format:"- %s (%h)" --no-merges --grep='\[skip ci\]' --invert-grep
+            if (-not $rawLog) {
+              $changelog = "- 本次发版无业务代码改动（仅版本号同步）"
+            } else {
+              $changelog = ($rawLog | Out-String).TrimEnd()
+            }
+          }
+
+          $body = "## 本次更新（$rangeLabel）`n`n$changelog"
+
+          # 多行内容写入 GITHUB_OUTPUT，使用 heredoc 分隔符
+          $delim = "EOF_" + [guid]::NewGuid().ToString('N')
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "release_body<<$delim"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $body
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $delim
+
+          Write-Host "===== Changelog ($rangeLabel) ====="
+          Write-Host $body
+
+
+      - name: Create split zip volumes (≤99MB each)
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path output | Out-Null
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip -v99m "output/BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}-split.zip" "publish/Merged/*"
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          curl.exe -L -o innosetup.exe https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe
+          .\innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+
+
+      - name: Build split installer (DiskSpanning)
+        shell: powershell
+        run: |
+          $issPath = "setup.iss"
+          if (-not (Test-Path $issPath)) {
+            Write-Error "Inno Setup script not found: $issPath"
+            exit 1
+          }
+
+          # Replace version placeholder with actual version
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $issContent = Get-Content $issPath -Raw -Encoding UTF8
+          $issContent = $issContent -replace '#define MyAppVersion "[\d\.]+"', "#define MyAppVersion `"$ver`""
+          [System.IO.File]::WriteAllText($issPath, $issContent, (New-Object System.Text.UTF8Encoding $false))
+          Write-Host "Patched setup.iss MyAppVersion -> $ver"
+
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            /DMyAppVersion=${{ steps.version.outputs.new_version }} `
+            /DUseDiskSpanning `
+            $issPath `
+            /O"output"
+
+          if (-not (Get-ChildItem output/*.exe)) {
+            Write-Error "Installer EXE not generated!"
+            exit 1
+          }
+
+
+      - name: List files to sync to Gitee
+        shell: powershell
+        run: |
+          Write-Host "Files to sync to Gitee:"
+          $uploaded = 0; $skipped = 0
+          Get-ChildItem output/* | ForEach-Object {
+            Write-Host "  $($_.Name) ($($_.Length) bytes)"
+          }
+
+      - name: Sync release to Gitee
+        shell: pwsh
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          $tag = "v${{ steps.version.outputs.new_version }}"
+          $repo = "SususuChang/BlackGoldAncientSword"
+          $token = "${{ secrets.GITEE_TOKEN }}"
+          $apiBase = "https://gitee.com/api/v5/repos/$repo"
+          $maxSize = 100 * 1024 * 1024
+
+          Write-Host "===== Syncing release $tag to Gitee ====="
+
+          # 1. Delete existing release if any
+          $existing = curl.exe -s "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
+          if ($existing.id) {
+            Write-Host "  Delete existing release ID=$($existing.id)"
+            curl.exe -s -X DELETE "$apiBase/releases/$($existing.id)?access_token=$token" | Out-Null
+            curl.exe -s -X DELETE "$apiBase/tags/$tag?access_token=$token" | Out-Null
+            Write-Host "  Existing release and tag deleted"
+          }
+
+          # 2. Create release
+          $body = @{ access_token = $token; tag_name = $tag; name = "Release $tag" }
+          $createResult = curl.exe -s -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
+          $releaseId = ($createResult | ConvertFrom-Json -ErrorAction SilentlyContinue).id
+          if (-not $releaseId) {
+            Write-Host "FAIL to create Gitee release: $createResult"
+            exit 1
+          }
+          Write-Host "  Gitee release created, ID=$releaseId"
+
+          # 3. Upload files ≤100MB
+          $uploaded = 0; $skipped = 0
+          Get-ChildItem output/* | ForEach-Object {
+            if ($_.Length -le $maxSize) {
+              Write-Host ("  Upload: " + $_.Name + " (" + $_.Length + " bytes)")
+              curl.exe -s -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
+              $uploaded++
+            } else {
+              Write-Host ("  Skip: " + $_.Name + " (" + $_.Length + " bytes) - over 100MB")
+              $skipped++
+            }
+          }
+          Write-Host "===== Gitee done: uploaded=$uploaded skipped=$skipped ====="
+      - name: Zip merged output (single-file zip, old updater compat)
+        id: zip
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path output | Out-Null
+
+          $zipName = "BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}.zip"
+          $zipPath = "output/$zipName"
+
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip $zipPath "publish/Merged/*"
+
+          $zipSize = (Get-Item $zipPath).Length
+          "zip_name=$zipName" >> $env:GITHUB_OUTPUT
+          "zip_size=$zipSize" >> $env:GITHUB_OUTPUT
+
+          Write-Host "Created single zip: $zipPath ($zipSize bytes)"
+
+
+      - name: Build single-file installer
+        shell: powershell
+        run: |
+          $issPath = "setup.iss"
+          if (-not (Test-Path $issPath)) {
+            Write-Error "Inno Setup script not found: $issPath"
+            exit 1
+          }
+
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            /DMyAppVersion=${{ steps.version.outputs.new_version }} `
+            $issPath `
+            /O"output"
+
+          if (-not (Get-ChildItem output/*.exe)) {
+            Write-Error "Installer EXE not generated!"
+            exit 1
+          }
+
+      - name: List all output installer files
+        shell: powershell
+        run: |
+          Write-Host "All output files:"
+          Get-ChildItem output/* | ForEach-Object {
+            "installer_file=$($_.Name)" >> $env:GITHUB_OUTPUT
+            Write-Host ("  " + $_.Name + " (" + $_.Length + " bytes)")
+          }
+
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.new_version }}
+          name: Release v${{ steps.version.outputs.new_version }}
+          draft: false
+          prerelease: false
+          body: ${{ steps.changelog.outputs.release_body }}
+          files: |
+            output/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Commit version bump to release
+        # release 分支受保护，直接 push 会被拒绝（GH006）。
+        # 版本号以 git tag 为准，csproj 版本变更仅本地 commit 即可，
+        # 无需推回 release 分支。后续的 Tag & Push 会创建并推送版本 tag，
+        # Sync version to main 会把 csproj 同步到 main（main 未受保护）。
+        shell: pwsh
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $proj = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+
+          git add $proj
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "csproj 无版本变更，跳过 commit"
+          } else {
+            # 用 UTF-8 无 BOM 写 commit message，pwsh 下中文字面量已经是 UTF-8，文件落盘也是 UTF-8
+            $msg = "chore: 同步 App 版本号到 v$ver [skip ci]"
+            $msgPath = "$env:RUNNER_TEMP/commit-msg-release.txt"
+            $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+            [System.IO.File]::WriteAllText($msgPath, $msg, $utf8NoBom)
+            git commit -F $msgPath
+            Write-Host "Committed csproj version bump to release (skip push - branch is protected)"
+          }
+
+
+      - name: Sync version to main
+        # 同上：必须 pwsh 才能让中文 commit message 走 UTF-8 不乱码
+        shell: pwsh
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $proj = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+
+          git fetch origin main
+          git checkout -B main origin/main
+
+          $content = Get-Content $proj -Raw -Encoding UTF8
+          $content = $content -replace '<Version>[\d\.]+</Version>', "<Version>$ver</Version>"
+          $content = $content -replace '<AssemblyVersion>[\d\.]+</AssemblyVersion>', "<AssemblyVersion>$ver</AssemblyVersion>"
+          $content = $content -replace '<FileVersion>[\d\.]+</FileVersion>', "<FileVersion>$ver</FileVersion>"
+          $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+          [System.IO.File]::WriteAllText("$pwd/$proj", $content, $utf8NoBom)
+
+          git add $proj
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "main csproj 已是 v$ver，跳过"
+          } else {
+            $msg = "chore: 同步 App 版本号到 v$ver [skip ci]"
+            $msgPath = "$env:RUNNER_TEMP/commit-msg-main.txt"
+            [System.IO.File]::WriteAllText($msgPath, $msg, $utf8NoBom)
+            git commit -F $msgPath
+            git push origin main
+            Write-Host "Synced csproj version v$ver to main"
+          }
+
+
+      - name: Cleanup on failure (delete all tags / releases)
+        if: failure()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          $ver = "${{ steps.version.outputs.new_version }}"
+          if (-not $ver) {
+            Write-Host "未确定版本号，无需回滚"
+            exit 0
+          }
+          $tag = "v$ver"
+          $repo = "${{ github.repository }}"
+          $giteeRepo = "SususuChang/BlackGoldAncientSword"
+          $giteeToken = "${{ secrets.GITEE_TOKEN }}"
+
+          Write-Host "===== 失败回滚开始: $tag ====="
+
+          # 1. 删除 GitHub release + tag（gh CLI --cleanup-tag 同时删 release 与 tag）
+          try {
+            gh release delete $tag -y --cleanup-tag -R $repo
+            Write-Host "[OK] GitHub release/tag $tag 已删除"
+          } catch {
+            Write-Host "[SKIP] GitHub release $tag 不存在或删除失败: $_"
+          }
+
+          # 2. 兜底再删一次远端 tag（防止 gh --cleanup-tag 不可用）
+          try {
+            git push origin --delete $tag 2>$null
+            Write-Host "[OK] 远端 tag $tag 兜底删除完成"
+          } catch {
+            Write-Host "[SKIP] 远端 tag $tag 删除兜底失败: $_"
+          }
+
+          # 3. 删除 Gitee release（如果已同步）
+          try {
+            $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
+            $releaseInfo = curl.exe -s "$apiBase/releases/tags/$tag?access_token=$giteeToken" | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($releaseInfo.id) {
+              curl.exe -s -X DELETE "$apiBase/releases/$($releaseInfo.id)?access_token=$giteeToken" | Out-Null
+              Write-Host "[OK] Gitee release $tag 已删除"
+            } else {
+              Write-Host "[SKIP] Gitee release $tag 不存在"
+            }
+          } catch {
+            Write-Host "[SKIP] Gitee release $tag 删除失败: $_"
+          }
+
+          # 4. 删除 Gitee tag（如果已同步）
+          try {
+            curl.exe -s -X DELETE "$apiBase/tags/$tag?access_token=$giteeToken" | Out-Null
+            Write-Host "[OK] Gitee tag $tag 已删除"
+          } catch {
+            Write-Host "[SKIP] Gitee tag $tag 删除失败: $_"
+          }
+
+          Write-Host "===== 失败回滚结束 ====="
+          Write-Host "注意: release / main 分支已 push 的版本号 commit 未回滚（避免强推），下次发版会从已有 tag 继续递增"
+          # cleanup 自身应以 0 退出，否则 step 显示为红，且 git push --delete 在 tag 已被 --cleanup-tag 删掉时可能写 $LASTEXITCODE=1
+          exit 0
+

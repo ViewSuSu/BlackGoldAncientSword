@@ -1,0 +1,807 @@
+<Window
+    x:Class="BlackGoldAncientSword.App.Shell.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:chrome="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+    xmlns:consts="clr-namespace:BlackGoldAncientSword.Framework.Core.Consts;assembly=BlackGoldAncientSword.Framework"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions;assembly=BlackGoldAncientSword.Framework"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:prism="http://prismlibrary.com/"
+    xmlns:shell="clr-namespace:BlackGoldAncientSword.App.Shell"
+    xmlns:tb="http://www.hardcodet.net/taskbar"
+    Title="{DynamicResource App.Title}"
+    Width="1180"
+    Height="781"
+    d:DataContext="{d:DesignInstance Type=shell:MainWindowViewModel}"
+    d:Icon="/BlackGoldAncientSword.Resources;component/Images/app.ico"
+    d:Title="{DynamicResource App.Title}"
+    prism:ViewModelLocator.AutoWireViewModel="True"
+    AllowsTransparency="True"
+    Background="Transparent"
+    Icon="/BlackGoldAncientSword.Resources;component/Images/app.ico"
+    WindowStartupLocation="CenterScreen"
+    WindowStyle="None"
+    mc:Ignorable="d">
+    <Window.Resources>
+        <ext:WindowIconConverter x:Key="WindowIconConverter" />
+    </Window.Resources>
+    <chrome:WindowChrome.WindowChrome>
+        <chrome:WindowChrome
+            x:Name="MainWindowChrome"
+            CaptionHeight="0"
+            GlassFrameThickness="0"
+            ResizeBorderThickness="4" />
+    </chrome:WindowChrome.WindowChrome>
+
+    <Grid>
+        <Border
+            Background="#F5F5F5"
+            ClipToBounds="True"
+            CornerRadius="8" Effect="{DynamicResource ShadowElevatedEffect}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="25" />
+                </Grid.RowDefinitions>
+
+                <!--  ==================== Row 0: Title bar ====================  -->
+
+                <!--  Title bar background  -->
+                <Grid Grid.Row="0">
+                <Border Background="{DynamicResource SurfaceSecondaryBrush}" MouseDown="TitleBar_MouseDown" />
+                <!--  Decorative accent line  -->
+                <Border Height="2" VerticalAlignment="Bottom" Background="{DynamicResource AccentPrimaryBrush}" Opacity="0.6" />
+                <Border Height="1" VerticalAlignment="Bottom" Background="{DynamicResource BorderLightBrush}" Margin="0,0,0,2" />
+            </Grid>
+
+                <!--  Window icon + title  -->
+                <StackPanel
+                    Grid.Row="0"
+                    Margin="14,0,0,0"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <Button
+                        Width="13"
+                        Height="13"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Opacity" Value="1" />
+                                <Setter Property="ToolTip" Value="{DynamicResource TitleBar.Back}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CanGoBack}" Value="False">
+                                        <Setter Property="Opacity" Value="0.5" />
+                                        <Setter Property="IsEnabled" Value="False" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Click">
+                                <i:InvokeCommandAction Command="{Binding GoBackCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                        <Image Source="/BlackGoldAncientSword.Resources;component/Images/back.png" Stretch="Uniform" />
+                    </Button>
+                    <Image
+                        Width="18"
+                        Margin="10,0,0,0"
+                        Source="{Binding Icon, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource WindowIconConverter}}"
+                        Stretch="Uniform" />
+                    <TextBlock
+                        Margin="6,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
+                        Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" />
+                    <TextBlock
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{DynamicResource TextMutedBrush}"
+                        Text="——">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding GameStatusText}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
+                        Text="{Binding GameStatusText, Mode=OneWay}" />
+                </StackPanel>
+
+                <!--  Custom title bar buttons  -->
+                <StackPanel
+                    Grid.Row="0"
+                    Margin="0,0,4,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Panel.ZIndex="9999"
+                    Orientation="Horizontal">
+                    <Button
+                        Width="28"
+                        Height="24"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="MinimizeButton_Click"
+                        Cursor="Hand">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="ToolTip" Value="{DynamicResource TitleBar.Minimize}" />
+                            </Style>
+                        </Button.Style>
+                        <Image
+                            Width="16"
+                            Height="16"
+                            Source="/BlackGoldAncientSword.Resources;component/Images/minimize.png"
+                            Stretch="Uniform" />
+                    </Button>
+                    <Button
+                        Width="28"
+                        Height="24"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="MaximizeButton_Click"
+                        Cursor="Hand">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="ToolTip" Value="{DynamicResource TitleBar.Maximize}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                                        <Setter Property="ToolTip" Value="{DynamicResource TitleBar.Restore}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Image
+                            Width="16"
+                            Height="16"
+                            Source="/BlackGoldAncientSword.Resources;component/Images/maximize.png"
+                            Stretch="Uniform" />
+                    </Button>
+                    <Button
+                        Width="28"
+                        Height="24"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="CloseButton_Click"
+                        Cursor="Hand">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="ToolTip" Value="{DynamicResource TitleBar.Close}" />
+                            </Style>
+                        </Button.Style>
+                        <Image
+                            Width="16"
+                            Height="16"
+                            Source="/BlackGoldAncientSword.Resources;component/Images/close.png"
+                            Stretch="Uniform" />
+                    </Button>
+                </StackPanel>
+
+                <!--  Separator: Row 0 / Row 1  -->
+                <Border
+                    Grid.Row="0"
+                    Height="1"
+                    VerticalAlignment="Bottom"
+                    Background="#E0E0E0" />
+
+                <!--  ==================== Row 1: Content area ====================  -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" MinWidth="90" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!--  Left sidebar  -->
+                    <Border
+                        Grid.Column="0"
+                        Margin="0,10,0,0"
+                        Padding="0"
+                        Background="#F5F5F5"
+                        ClipToBounds="True">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0">
+
+                                <!--  Home  -->
+                                <Button ToolTip="{DynamicResource Nav.Home}">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Height" Value="30" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="BorderThickness" Value="3,0,0,0" />
+                                            <Setter Property="BorderBrush" Value="Transparent" />
+                                            <Setter Property="Cursor" Value="Hand" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ActivePage}" Value="HomePage">
+                                                    <Setter Property="Background" Value="#E0E8F0" />
+                                                    <Setter Property="BorderBrush" Value="#4A90D9" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding NavigateToHomeCommand}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Image
+                                            Grid.Column="0"
+                                            Width="14"
+                                            Height="14"
+                                            Margin="0,0,0,0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Source="/BlackGoldAncientSword.Resources;component/Images/home.png"
+                                            Stretch="Uniform" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontSize="13"
+                                            Text="{DynamicResource Nav.Home}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </Button>
+
+                                <!--  Stats  -->
+                                <Button ToolTip="{DynamicResource Nav.Stats}">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Height" Value="30" />
+                                            <Setter Property="Margin" Value="0,0,0,0" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="BorderThickness" Value="3,0,0,0" />
+                                            <Setter Property="BorderBrush" Value="Transparent" />
+                                            <Setter Property="Cursor" Value="Hand" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ActivePage}" Value="StatsPage">
+                                                    <Setter Property="Background" Value="#E0E8F0" />
+                                                    <Setter Property="BorderBrush" Value="#4A90D9" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding NavigateToStatsCommand}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Image
+                                            Grid.Column="0"
+                                            Width="14"
+                                            Height="14"
+                                            Margin="0,0,0,0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Source="/BlackGoldAncientSword.Resources;component/Images/stats.png"
+                                            Stretch="Uniform" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontSize="13"
+                                            Text="{DynamicResource Nav.Stats}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </Button>
+
+                                <!--  Team Info  -->
+                                <Button ToolTip="{DynamicResource TeamInfo.Title}">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Height" Value="30" />
+                                            <Setter Property="Margin" Value="0,0,0,0" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="BorderThickness" Value="3,0,0,0" />
+                                            <Setter Property="BorderBrush" Value="Transparent" />
+                                            <Setter Property="Cursor" Value="Hand" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ActivePage}" Value="TeamInfoPage">
+                                                    <Setter Property="Background" Value="#E0E8F0" />
+                                                    <Setter Property="BorderBrush" Value="#4A90D9" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding NavigateToTeamInfoCommand}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Image
+                                            Grid.Column="0"
+                                            Width="14"
+                                            Height="14"
+                                            Margin="0,0,0,0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Source="/BlackGoldAncientSword.Resources;component/Images/team.png"
+                                            Stretch="Uniform" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontSize="13"
+                                            Text="{DynamicResource TeamInfo.Title}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel
+                                Grid.Row="1"
+                                Margin="0,0,0,12"
+                                VerticalAlignment="Bottom">
+                                <Button ToolTip="{DynamicResource Nav.Settings}">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Height" Value="30" />
+                                            <Setter Property="Margin" Value="0,0,0,0" />
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="BorderThickness" Value="3,0,0,0" />
+                                            <Setter Property="BorderBrush" Value="Transparent" />
+                                            <Setter Property="Cursor" Value="Hand" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ActivePage}" Value="SettingsPage">
+                                                    <Setter Property="Background" Value="#E0E8F0" />
+                                                    <Setter Property="BorderBrush" Value="#4A90D9" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="Click">
+                                            <i:InvokeCommandAction Command="{Binding OpenSettingsCommand}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Image
+                                            Grid.Column="0"
+                                            Width="14"
+                                            Height="14"
+                                            Margin="0,0,0,0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Source="/BlackGoldAncientSword.Resources;component/Images/settings.png"
+                                            Stretch="Uniform" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontSize="13"
+                                            Text="{DynamicResource Nav.Settings}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!--  Grid splitter  -->
+                    <GridSplitter
+                        Grid.Column="1"
+                        Width="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Stretch"
+                        Background="Transparent"
+                        ShowsPreview="True"
+                        Style="{StaticResource ToolBarThumbHorizontalStyle}">
+                        <GridSplitter.Template>
+                            <ControlTemplate>
+                                <Border BorderBrush="LightGray" BorderThickness="0.2" />
+                            </ControlTemplate>
+                        </GridSplitter.Template>
+                    </GridSplitter>
+
+                    <!--  Right content area  -->
+                    <Grid Grid.Column="2">
+                        <ContentControl prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.MainContentRegion}" />
+                    </Grid>
+                </Grid>
+
+                <!--  Separator: Row 1 / Row 2  -->
+                <Border
+                    Grid.Row="1"
+                    Height="1"
+                    VerticalAlignment="Bottom"
+                    Background="#E0E0E0" />
+
+                <!--  ==================== Row 2: Bottom bar ====================  -->
+                <StackPanel
+                    Grid.Row="2"
+                    Margin="12,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="#888888"
+                        Text="{Binding CurrentVersionText}" />
+                    <!--  最新版本标记  -->
+                    <TextBlock
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="#888888"
+                        Text="{DynamicResource MainWindow.LatestVersion}"
+                        Visibility="{Binding IsLatestVersion, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    <!--  发现新版本  -->
+                    <StackPanel
+                        Margin="5,0,0,0"
+                        VerticalAlignment="Center"
+                        Cursor="Hand"
+                        Orientation="Horizontal"
+                        Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="MouseLeftButtonDown">
+                                <i:InvokeCommandAction Command="{Binding CheckForUpdatesCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                        <TextBlock
+                            Margin="0,0,3,0"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="#5B8DEF"
+                            Text="{DynamicResource Settings.UpdateAvailable}" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel
+                    Grid.Row="2"
+                    Margin="0,0,8,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Orientation="Horizontal">
+                    <!--  联系作者  -->
+                    <Grid>
+                        <ToggleButton
+                            x:Name="ContactToggle"
+                            Width="25"
+                            Height="20"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            IsChecked="{Binding IsContactPopupOpen}">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Border Background="Transparent">
+                                                    <Image
+                                                        Width="15"
+                                                        Height="15"
+                                                        Source="/BlackGoldAncientSword.Resources;component/Images/contact.png"
+                                                        Stretch="Uniform" />
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                        <Popup
+                            IsOpen="{Binding IsContactPopupOpen, Mode=TwoWay}"
+                            AllowsTransparency="True"
+                            HorizontalOffset="-80"
+                            Placement="Bottom"
+                            PlacementTarget="{Binding ElementName=ContactToggle}"
+                            StaysOpen="False">
+                            <Border
+                                Background="White"
+                                BorderBrush="#CCCCCC"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12,10">
+                                <StackPanel>
+                                    <TextBlock
+                                        Margin="0,0,0,6"
+                                        FontSize="13"
+                                        FontWeight="Bold"
+                                        Text="{DynamicResource MainWindow.ContactAuthor}" />
+                                    <TextBox
+                                        MinWidth="160"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource TextSecondaryBrush}"
+                                        IsReadOnly="True"
+                                        Text="{DynamicResource MainWindow.WeChatInfo}" />
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <!--  Feedback  -->
+                    <Button
+                        Width="25"
+                        Height="20"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="{DynamicResource Nav.Feedback}">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Click">
+                                <i:InvokeCommandAction Command="{Binding OpenFeedbackCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                        <Image
+                            Width="15"
+                            Height="15"
+                            Source="/BlackGoldAncientSword.Resources;component/Images/feedback.png"
+                            Stretch="Uniform" />
+                    </Button>
+                </StackPanel>
+
+                <!--  ==================== Overlays (span all rows) ====================  -->
+
+                <!--  Announcement overlay (covers entire window, below toast)  -->
+                <ContentControl
+                    Grid.RowSpan="3"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Panel.ZIndex="10000"
+                    x:Name="AnnouncementOverlay"
+                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.AnnouncementRegion}" />                <!--  Feedback overlay (covers entire window, below toast)  -->
+                <ContentControl
+                    Grid.RowSpan="3"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Panel.ZIndex="10000"
+                    x:Name="FeedbackOverlay"
+                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.FeedbackRegion}" />
+
+                <!--  Close prompt overlay (covers entire window, above announcement)  -->
+                <ContentControl
+                    Grid.RowSpan="3"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Panel.ZIndex="10050"
+                    x:Name="ClosePromptOverlay"
+                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.ClosePromptRegion}" />
+
+                <!--  Update notification overlay (covers entire window, above close prompt)  -->
+                <ContentControl
+                    Grid.RowSpan="3"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Panel.ZIndex="10060"
+                    x:Name="UpdateNotificationOverlay"
+                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.UpdateNotificationRegion}" />
+
+            </Grid>
+        </Border>
+
+            <!--  Stacked toast notifications (topmost)  -->
+            <ItemsControl
+                Grid.RowSpan="3"
+                Margin="0,60,0,0"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Panel.ZIndex="99999"
+                IsHitTestVisible="False"
+                ItemsSource="{Binding ToastItems}">
+                <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel />
+                </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border
+                    x:Name="ToastItemBorder"
+                    MaxWidth="500"
+                    Margin="0,0,0,8"
+                    Padding="16,10"
+                    Background="#4CAF50"
+                    BorderBrush="#388E3C"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Loaded="ToastItemBorder_Loaded"
+                    Opacity="0"
+                    RenderTransformOrigin="0.5,0">
+                    <Border.RenderTransform>
+                        <TranslateTransform Y="-40" />
+                    </Border.RenderTransform>
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="14"
+                        Foreground="White"
+                        Text="{Binding Message}"
+                        TextWrapping="Wrap" />
+                    </Border>
+                    <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                        <Setter TargetName="ToastItemBorder" Property="Background" Value="#F44336" />
+                        <Setter TargetName="ToastItemBorder" Property="BorderBrush" Value="#D32F2F" />
+                    </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        <!--  System tray icon (Hardcodet WPF NotifyIcon)  -->
+        <tb:TaskbarIcon
+            x:Name="TrayIcon"
+            IconSource="/BlackGoldAncientSword.Resources;component/Images/app.ico"
+            MenuActivation="RightClick"
+            ToolTipText="{DynamicResource App.Title}"
+            TrayMouseDoubleClick="TrayIcon_TrayMouseDoubleClick">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu Opened="TrayMenu_ContextMenu_Opened">
+                    <MenuItem Header="{Binding GameStatusText}" IsEnabled="False">
+                        <MenuItem.Style>
+                            <Style TargetType="MenuItem">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding GameStatusText}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </MenuItem.Style>
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem Click="TrayMenu_Settings_Click" Header="{DynamicResource Nav.Settings}" />
+                    <MenuItem Click="TrayMenu_Stats_Click" Header="{DynamicResource Nav.Stats}" />
+                    <MenuItem Click="TrayMenu_TeamInfo_Click" Header="{DynamicResource TeamInfo.Title}" />
+                    <!--  Language submenu  -->
+                    <MenuItem Header="{DynamicResource Settings.Category.Language}">
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayLangZhCN" GroupName="TrayLanguageGroup" Click="TrayMenu_Language_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="中文简体" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayLangZhTW" GroupName="TrayLanguageGroup" Click="TrayMenu_Language_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="中文繁體" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayLangEn" GroupName="TrayLanguageGroup" Click="TrayMenu_Language_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="English" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                    </MenuItem>
+                    <!--  Close Behavior submenu  -->
+                    <MenuItem Header="{DynamicResource Settings.Category.CloseBehavior}">
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayCloseMinToTaskbar" GroupName="TrayCloseBehaviorGroup" Click="TrayMenu_CloseBehavior_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Settings.CloseBehavior.MinimizeToTaskbar}" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TrayCloseExitDirectly" GroupName="TrayCloseBehaviorGroup" Click="TrayMenu_CloseBehavior_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Settings.CloseBehavior.ExitDirectly}" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox x:Name="TrayRememberCloseBehavior" Click="TrayMenu_RememberCloseBehavior_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Settings.CloseBehavior.RememberChoice}" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                                </Grid>
+                            </MenuItem.Header>
+                        </MenuItem>
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem StaysOpenOnClick="True">
+                        <MenuItem.Header>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox x:Name="TrayShowTeamOverlay" Click="TrayMenu_ShowTeamOverlay_Click" Width="20" Height="20" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Margin="6,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Settings.ShowTeamOverlayDuringHeroSelection}" MouseLeftButtonDown="TrayMenu_ItemText_MouseLeftButtonDown" />
+                            </Grid>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem Click="TrayMenu_Exit_Click" Header="{DynamicResource TitleBar.Close}" />
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
+    </Grid>
+</Window>

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Authors>小窗同学</Authors>
+    <PackageProjectUrl>https://github.com/ViewSuSu</PackageProjectUrl>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
+  </ItemGroup>
+
+  <!-- Copy ocr_engine (PaddleOCR-json.exe + models) to output directory -->
+  <ItemGroup>
+    <Content Include="..\ocr_engine\**\*"
+             Link="ocr_engine\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('..\ocr_engine')" />
+  </ItemGroup>
+
+</Project>
+
+
