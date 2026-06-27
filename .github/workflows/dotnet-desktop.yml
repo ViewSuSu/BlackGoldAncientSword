@@ -266,7 +266,7 @@ jobs:
           Write-Host "===== Syncing release $tag to Gitee ====="
 
           # 1. Delete existing release if any (release might leave orphan tag on Gitee)
-          $existing = curl.exe "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
+          $existing = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
           if ($existing.id) {
             Write-Host "  Delete existing release ID=$($existing.id)"
             curl.exe --connect-timeout 30 --max-time 120 -v -X DELETE "$apiBase/releases/$($existing.id)" -H "Authorization: Bearer $token" 2>&1 | Out-Null
@@ -486,12 +486,12 @@ jobs:
             Write-Host "[SKIP] 远端 tag $tag 删除兜底失败: $_"
           }
 
-          # 3. 删除 Gitee release（如果已同步）
-          try {
-            $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
-            $releaseInfo = curl.exe "$apiBase/releases/tags/$tag?access_token=$giteeToken" | ConvertFrom-Json -ErrorAction SilentlyContinue
+         # 3. 删除 Gitee release（如果已同步）
+         try {
+           $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
+            $releaseInfo = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/releases/tags/$tag?access_token=$giteeToken" | ConvertFrom-Json -ErrorAction SilentlyContinue
             if ($releaseInfo.id) {
-              curl.exe -X DELETE "$apiBase/releases/$($releaseInfo.id)?access_token=$giteeToken" | Out-Null
+              curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$apiBase/releases/$($releaseInfo.id)?access_token=$giteeToken" | Out-Null
               Write-Host "[OK] Gitee release $tag 已删除"
             } else {
               Write-Host "[SKIP] Gitee release $tag 不存在"
@@ -500,9 +500,9 @@ jobs:
             Write-Host "[SKIP] Gitee release $tag 删除失败: $_"
           }
 
-          # 4. 删除 Gitee tag（如果已同步）
-          try {
-            curl.exe -X DELETE "$apiBase/tags/$tag?access_token=$giteeToken" | Out-Null
+         # 4. 删除 Gitee tag（如果已同步）
+         try {
+            curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$apiBase/tags/$tag?access_token=$giteeToken" | Out-Null
             Write-Host "[OK] Gitee tag $tag 已删除"
           } catch {
             Write-Host "[SKIP] Gitee tag $tag 删除失败: $_"
@@ -512,4 +512,3 @@ jobs:
           Write-Host "注意: release / main 分支已 push 的版本号 commit 未回滚（避免强推），下次发版会从已有 tag 继续递增"
           # cleanup 自身应以 0 退出，否则 step 显示为红，且 git push --delete 在 tag 已被 --cleanup-tag 删掉时可能写 $LASTEXITCODE=1
           exit 0
-
