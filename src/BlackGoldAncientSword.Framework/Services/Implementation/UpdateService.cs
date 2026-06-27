@@ -25,6 +25,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             "https://gitee.com/" + GiteeOwner + "/" + GiteeRepo + "/releases/latest";
         private const string GiteeDownloadBase =
             "https://gitee.com/" + GiteeOwner + "/" + GiteeRepo + "/releases/download";
+        private const string GiteeLatestReleaseApi =
+            "https://gitee.com/api/v5/repos/" + GiteeOwner + "/" + GiteeRepo + "/releases/latest";
         private const string SplitZipFormat = GiteeRepo + "-v{0}-split.zip.001";
 
         /// <summary>
@@ -50,6 +52,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         public string? ZipDownloadUrl { get; private set; }
 
         public string? SplitZipDownloadUrl { get; private set; }
+
+        public List<string>? SplitDownloadUrls { get; private set; }
 
         public string? LatestReleaseNotes { get; private set; }
 
@@ -91,6 +95,13 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     : string.Empty;
 
                 bool available = TryCompare(latest, CurrentVersion) > 0;
+
+                // 从 Gitee API 获取所有分卷 zip 的下载URL和精确大小
+                List<string>? splitUrls = null;
+                if (available)
+                {
+                    splitUrls = await FetchSplitAssetsFromGiteeAsync().ConfigureAwait(false);
+                }
                 Debug.WriteLine($"[{nameof(UpdateService)}] tag={tagName}, current={CurrentVersion}, available={available}");
 
                 SafeInvoke(() =>
@@ -102,6 +113,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     SplitZipDownloadUrl = available && splitUrl != null
                         ? string.Format(GiteeDownloadBase + "/v{0}/" + SplitZipFormat, latest, latest)
                         : null;
+                    SplitDownloadUrls = available ? splitUrls : null;
                     LatestReleaseNotes = available ? notes : null;
                     UpdateAvailabilityChanged?.Invoke(this, available);
                 });
@@ -117,6 +129,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     DownloadUrl = null;
                     ZipDownloadUrl = null;
                     SplitZipDownloadUrl = null;
+                    SplitDownloadUrls = null;
                     LatestReleaseNotes = null;
                     UpdateAvailabilityChanged?.Invoke(this, false);
                 });
@@ -232,6 +245,49 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             return null;
         }
+
+        /// <summary>
+        /// 从 Gitee release API 获取所有 .zip.XXX 分卷的下载 URL 列表和精确总大小。
+        /// 用独立 HttpClient 避免 _httpClient 的 GitHub 专用 Accept 头污染。
+        /// </summary>
+        /// <summary>
+        /// 从 Gitee release API 获取所有 .zip.XXX 分卷的下载 URL 列表。
+        /// Gitee API 不返回 asset size，总大小由 Updater 通过 HEAD 请求获取。
+        /// 用独立 HttpClient 避免 _httpClient 的 GitHub 专用 Accept 头污染。
+        /// </summary>
+        private async Task<List<string>?> FetchSplitAssetsFromGiteeAsync()
+        {
+            try
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword");
+                http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+                var json = await http.GetStringAsync(GiteeLatestReleaseApi).ConfigureAwait(false);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+                    return null;
+
+                var urls = new List<string>();
+                foreach (var asset in assets.EnumerateArray())
+                {
+                    if (!asset.TryGetProperty("name", out var nameEl)) continue;
+                    var name = nameEl.GetString();
+                    if (string.IsNullOrEmpty(name)) continue;
+                    if (!name.Contains(".zip.")) continue;
+                    if (!asset.TryGetProperty("browser_download_url", out var urlEl)) continue;
+                    urls.Add(urlEl.GetString()!);
+                }
+                return urls.Count > 0 ? urls : null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(UpdateService)}] Gitee API 获取分卷列表失败: {ex.Message}");
+                return null;
+            }
+        }
+
 
         private static int TryCompare(string a, string b)
         {

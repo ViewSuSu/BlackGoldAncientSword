@@ -52,7 +52,7 @@ namespace BlackGoldAncientSword.Update.Services
             try
             {
             string extractDir;
-                if (!string.IsNullOrEmpty(_options.SplitUrl))
+                if (_options.SplitUrls is { Count: > 0 })
                 {
                     var combinedPath = await DownloadSplitAsync(_cts.Token).ConfigureAwait(false);
                     extractDir = await ExtractSplitAsync(combinedPath, _cts.Token).ConfigureAwait(false);
@@ -182,11 +182,8 @@ namespace BlackGoldAncientSword.Update.Services
                 ".update_temp_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_tempRoot);
 
-            var baseUrl = _options.SplitUrl!;
-            if (baseUrl.EndsWith(".001"))
-                baseUrl = baseUrl[..^4];
-
             var combinedPath = Path.Combine(_tempRoot, "update.zip");
+            var urls = _options.SplitUrls;
 
             _ui.Invoke(() => _vm.StatusText = "正在连接下载服务器...");
 
@@ -196,90 +193,93 @@ namespace BlackGoldAncientSword.Update.Services
             using var combinedStream = new FileStream(
                 combinedPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
 
-            int partNum = 1;
             long totalDownloaded = 0;
+
+            // Gitee API 不返回文件大小，先通过 HEAD 请求获取 Content-Length 计算总量
             long estimatedTotal = 0;
-
-            while (true)
+            for (int hi = 0; hi < urls.Count; hi++)
             {
-                ct.ThrowIfCancellationRequested();
-                var partUrl = $"{baseUrl}.{partNum:D3}";
-
-                _ui.Invoke(() => _vm.StatusText = "正在更新...");
-
                 try
                 {
-                    using var resp = await http.GetAsync(partUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
-                    resp.EnsureSuccessStatusCode();
-
-                    long partSize = resp.Content.Headers.ContentLength ?? 0;
-                    if (partSize > 0)
-                    {
-                        var newEstimate = partSize * (partNum + 2);
-                        if (newEstimate > estimatedTotal)
-                            estimatedTotal = newEstimate;
-                    }
-
-                    await using var src = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-                    var buffer = new byte[81920];
-                    long partCopied = 0;
-                    int read;
-                    var lastReport = DateTime.UtcNow;
-                    long lastCopied = 0;
-                    double currentSpeed = 0;
-
-                    while ((read = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), ct).ConfigureAwait(false)) > 0)
-                    {
-                        await combinedStream.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                        partCopied += read;
-                        totalDownloaded += read;
-
-                        var now = DateTime.UtcNow;
-                        var dt = (now - lastReport).TotalSeconds;
-                        if (dt >= 0.25)
-                        {
-                            var inst = (totalDownloaded - lastCopied) / dt;
-                            currentSpeed = currentSpeed == 0 ? inst : currentSpeed * 0.6 + inst * 0.4;
-                            lastReport = now;
-                            lastCopied = totalDownloaded;
-
-                            double pct = estimatedTotal > 0
-                                ? Math.Min(DownloadCap, totalDownloaded * DownloadCap / estimatedTotal)
-                                : 0;
-
-                            long _total = totalDownloaded;
-                            double _speed = currentSpeed;
-                            long _est = estimatedTotal;
-
-                            _ui.Invoke(() =>
-                            {
-                                _vm.Percent = pct;
-                                _vm.SizeText = _est > 0
-                                    ? $"{FormatBytes(_total)} / {FormatBytes(_est)}"
-                                    : FormatBytes(_total);
-                                _vm.SpeedText = $"{FormatBytes((long)_speed)}/s";
-                                if (_speed > 1 && _est > _total)
-                                    _vm.EtaText = $"剩余 {FormatEta((_est - _total) / _speed)}";
-                                else
-                                    _vm.EtaText = "剩余 计算中";
-                            });
-                        }
-                    }
-
-                    partNum++;
+                    using var hresp = await http.SendAsync(
+                        new HttpRequestMessage(HttpMethod.Head, urls[hi]), ct).ConfigureAwait(false);
+                    var cl = hresp.Content.Headers.ContentLength;
+                    if (cl.HasValue && cl.Value > 0)
+                        estimatedTotal += cl.Value;
                 }
-                catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+                catch { /* HEAD 失败则忽略，大小留空 */ }
+            }
+
+            _ui.Invoke(() =>
+            {
+                _vm.StatusText = $"正在更新... (0/{urls.Count})";
+                _vm.SizeText = estimatedTotal > 0
+                    ? $"0 / {FormatBytes(estimatedTotal)}"
+                    : "0";
+            });
+
+            for (int idx = 0; idx < urls.Count; idx++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var url = urls[idx];
+
+                _ui.Invoke(() => _vm.StatusText = $"正在更新... ({idx + 1}/{urls.Count})");
+
+                using var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+                resp.EnsureSuccessStatusCode();
+
+                await using var src = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+                var buffer = new byte[81920];
+                int read;
+                var lastReport = DateTime.UtcNow;
+                long lastCopied = 0;
+                double currentSpeed = 0;
+
+                while ((read = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), ct).ConfigureAwait(false)) > 0)
                 {
-                    // 404 = no more parts, normal end
-                    break;
+                    await combinedStream.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                    totalDownloaded += read;
+
+                    var now = DateTime.UtcNow;
+                    var dt = (now - lastReport).TotalSeconds;
+                    if (dt >= 0.25)
+                    {
+                        var inst = (totalDownloaded - lastCopied) / dt;
+                        currentSpeed = currentSpeed == 0 ? inst : currentSpeed * 0.6 + inst * 0.4;
+                        lastReport = now;
+                        lastCopied = totalDownloaded;
+
+                        double pct = estimatedTotal > 0
+                            ? Math.Min(DownloadCap, totalDownloaded * DownloadCap / estimatedTotal)
+                            : 0;
+
+                        long _total = totalDownloaded;
+                        double _speed = currentSpeed;
+                        long _est = estimatedTotal;
+
+                        _ui.Invoke(() =>
+                        {
+                            _vm.Percent = pct;
+                            _vm.SizeText = _est > 0
+                                ? $"{FormatBytes(_total)} / {FormatBytes(_est)}"
+                                : FormatBytes(_total);
+                            _vm.SpeedText = $"{FormatBytes((long)_speed)}/s";
+                            if (_speed > 1 && _est > _total)
+                                _vm.EtaText = $"剩余 {FormatEta((_est - _total) / _speed)}";
+                            else
+                                _vm.EtaText = "剩余 计算中";
+                        });
+                    }
                 }
             }
 
             await combinedStream.FlushAsync(ct).ConfigureAwait(false);
+            estimatedTotal = totalDownloaded;
 
             _ui.Invoke(() =>
             {
                 _vm.Percent = DownloadCap;
+                _vm.SizeText = $"{FormatBytes(totalDownloaded)} / {FormatBytes(totalDownloaded)}";
                 _vm.SpeedText = string.Empty;
                 _vm.EtaText = string.Empty;
                 _vm.StatusText = "下载完成，正在解压...";
@@ -287,6 +287,7 @@ namespace BlackGoldAncientSword.Update.Services
 
             return combinedPath;
         }
+
 
         // ============ 2. 分卷 zip 拼接+解压（SharpCompress） ============
 
