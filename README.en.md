@@ -8,6 +8,12 @@
 
 > This project was inspired by [Zzaphkiel/Seraphine](https://github.com/Zzaphkiel/Seraphine). Thanks to the pioneers for their contributions.
 
+## Project Introduction Video 🎬
+
+[![Bilibili](https://img.shields.io/badge/Project%20Intro-Bilibili-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white)](https://www.bilibili.com/video/BV1WU7p6SE3T/)
+
+Click the button above to watch the project introduction video.
+
 ---
 
 ## Download 📥
