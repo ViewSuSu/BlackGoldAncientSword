@@ -268,9 +268,9 @@ namespace BlackGoldAncientSword.Update.Services
 
                     partNum++;
                 }
-                catch (HttpRequestException)
+                catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    // 404 = no more parts
+                    // 404 = no more parts, normal end
                     break;
                 }
             }
