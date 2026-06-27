@@ -165,24 +165,6 @@ jobs:
           Write-Host "Copied Updater exe into merged: $updaterExe"
 
 
-      - name: Tag & Push
-        shell: powershell
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-          $ver = "${{ steps.version.outputs.new_version }}"
-
-          $tagExists = git ls-remote --tags origin "refs/tags/v$ver"
-          if (-not $tagExists) {
-            git tag -a "v$ver" -m "Release v$ver"
-            git push origin "v$ver"
-            Write-Host "Created and pushed tag v$ver"
-          } else {
-            Write-Host "Tag v$ver already exists on remote, skipping creation"
-          }
-
-
       - name: Generate changelog
         id: changelog
         shell: pwsh
@@ -328,6 +310,24 @@ jobs:
             }
           }
           Write-Host "===== Gitee done: uploaded=$uploaded skipped=$skipped ====="
+      - name: Tag & Push
+        shell: powershell
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          $ver = "${{ steps.version.outputs.new_version }}"
+
+          $tagExists = git ls-remote --tags origin "refs/tags/v$ver"
+          if (-not $tagExists) {
+            git tag -a "v$ver" -m "Release v$ver"
+            git push origin "v$ver"
+            Write-Host "Created and pushed tag v$ver"
+          } else {
+            Write-Host "Tag v$ver already exists on remote, skipping creation"
+          }
+
+
       - name: Zip merged output (single-file zip, old updater compat)
         id: zip
         shell: powershell
