@@ -486,9 +486,9 @@ jobs:
             Write-Host "[SKIP] 远端 tag $tag 删除兜底失败: $_"
           }
 
-         # 3. 删除 Gitee release（如果已同步）
-         try {
-           $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
+          # 3. 删除 Gitee release（如果已同步）
+          try {
+            $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
             $releaseInfo = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/releases/tags/$tag?access_token=$giteeToken" | ConvertFrom-Json -ErrorAction SilentlyContinue
             if ($releaseInfo.id) {
               curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$apiBase/releases/$($releaseInfo.id)?access_token=$giteeToken" | Out-Null
@@ -500,8 +500,8 @@ jobs:
             Write-Host "[SKIP] Gitee release $tag 删除失败: $_"
           }
 
-         # 4. 删除 Gitee tag（如果已同步）
-         try {
+          # 4. 删除 Gitee tag（如果已同步）
+          try {
             curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$apiBase/tags/$tag?access_token=$giteeToken" | Out-Null
             Write-Host "[OK] Gitee tag $tag 已删除"
           } catch {
