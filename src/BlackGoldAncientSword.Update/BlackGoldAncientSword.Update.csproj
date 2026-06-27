@@ -50,9 +50,25 @@
     - Images/close.png：右上角自绘关闭按钮图标
     设计上不引用 BlackGoldAncientSword.Resources 项目，保留 Updater 零项目引用的独立性。
   -->
-  <ItemGroup>
-    <Resource Include="Images\app.ico" />
-    <Resource Include="Images\close.png" />
-  </ItemGroup>
+ <ItemGroup>
+   <Resource Include="Images\app.ico" />
+   <Resource Include="Images\close.png" />
+ </ItemGroup>
+
+ <!--
+   生成后事件：将 Update 编译产物拷贝到 App 层对应配置的输出目录。
+   确保开发/调试时 App 的输出目录中存在 Update.exe，便于测试更新流程。
+ -->
+ <Target Name="CopyUpdateToAppOutput" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
+   <ItemGroup>
+     <_UpdateOutput Include="$(TargetDir)$(AssemblyName).exe" />
+     <_UpdateOutput Include="$(TargetDir)$(AssemblyName).dll" />
+     <_UpdateOutput Include="$(TargetDir)$(AssemblyName).pdb" />
+   </ItemGroup>
+   <Copy SourceFiles="@(_UpdateOutput)"
+          DestinationFolder="$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..\BlackGoldAncientSword.App\bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)'))"
+         SkipUnchangedFiles="true"
+         OverwriteReadOnlyFiles="true" />
+ </Target>
 
 </Project>
