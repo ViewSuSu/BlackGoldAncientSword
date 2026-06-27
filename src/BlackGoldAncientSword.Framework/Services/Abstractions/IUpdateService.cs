@@ -25,6 +25,8 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
         /// </summary>
         string? ZipDownloadUrl { get; }
 
+        string? SplitZipDownloadUrl { get; }
+
         /// <summary>
         /// 最新版本的 release notes（GitHub Release "body"，markdown 源码）。
         /// 仅在 IsUpdateAvailable=true 时有值；可能为空字符串。

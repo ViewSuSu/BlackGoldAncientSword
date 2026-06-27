@@ -28,7 +28,7 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
         public bool HasReleaseNotes => !string.IsNullOrWhiteSpace(_updateService.LatestReleaseNotes);
 
         public bool CanOnlineUpdate =>
-            !string.IsNullOrEmpty(_updateService.ZipDownloadUrl) && File.Exists(UpdaterExePath);
+            (!string.IsNullOrEmpty(_updateService.ZipDownloadUrl) || !string.IsNullOrEmpty(_updateService.SplitZipDownloadUrl)) && File.Exists(UpdaterExePath);
 
         public string ProxyMirrorUrlText => ProxyMirrorUrl;
 
@@ -114,6 +114,12 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
                     };
                     psi.ArgumentList.Add("--url");
                     psi.ArgumentList.Add(zipUrl);
+                    var splitUrl = _updateService.SplitZipDownloadUrl;
+                    if (!string.IsNullOrEmpty(splitUrl))
+                    {
+                        psi.ArgumentList.Add("--split-url");
+                        psi.ArgumentList.Add(splitUrl);
+                    }
                     psi.ArgumentList.Add("--target");
                     psi.ArgumentList.Add(targetDir);
                     psi.ArgumentList.Add("--main-exe");
