@@ -160,24 +160,24 @@ jobs:
           Write-Host "Release created, ID=$releaseId"
 
           # ====== 上传文件（verbose，捕获响应） ======
-          Write-Host "Uploading $($firstFile.Name) ..."
+          Write-Host "Uploading $($firstFile.Name) ($('{0:N1}' -f ($firstFile.Length / 1MB)) MB) ..."
           $start = Get-Date
 
-          # access_token 以 query param 形式传入，避免 multipart 解析问题
-          $uploadUrl = "$apiBase/releases/$releaseId/attach_files?access_token=$token"
-          $uploadResp = curl.exe --connect-timeout 30 --max-time 300 `
-            -X POST $uploadUrl `
+          # access_token 放在 -F 字段中，与原始工作流保持一致
+          $uploadResp = curl.exe --connect-timeout 30 --max-time 600 `
+            -X POST "$apiBase/releases/$releaseId/attach_files" `
+            -F "access_token=$token" `
             -F "file=@$($firstFile.FullName)" `
             --write-out "%{http_code}" 2>&1
 
           $elapsed = (Get-Date) - $start
           $lastExit = $LASTEXITCODE
           Write-Host "Upload curl exit code: $lastExit"
-          Write-Host "Upload response: $uploadResp"
+          Write-Host "Upload HTTP status: $uploadResp"
           Write-Host "Upload took: $([math]::Round($elapsed.TotalSeconds,1))s"
 
           if ($lastExit -ne 0) {
-            Write-Host "ERROR: curl upload failed!"
+            Write-Host "ERROR: curl upload failed (exit code $lastExit)!"
             exit 1
           }
 
