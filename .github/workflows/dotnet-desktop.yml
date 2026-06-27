@@ -265,23 +265,57 @@ jobs:
         shell: powershell
         run: |
           Write-Host "Files to sync to Gitee:"
+          $uploaded = 0; $skipped = 0
           Get-ChildItem output/* | ForEach-Object {
             Write-Host "  $($_.Name) ($($_.Length) bytes)"
           }
 
       - name: Sync release to Gitee
-        uses: YuZhiYuanOrg/release-sync@v1
-        with:
-          platforms: gitee
-          tag: v${{ steps.version.outputs.new_version }}
-          release-name: Release v${{ steps.version.outputs.new_version }}
-          release-body: ${{ steps.changelog.outputs.release_body }}
-          gitee-token: ${{ secrets.GITEE_TOKEN }}
-          gitee-owner: SususuChang
-          gitee-repo: BlackGoldAncientSword
-          gitee-target-commitish: main
-          asset-files: output/*
+        shell: pwsh
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          $tag = "v${{ steps.version.outputs.new_version }}"
+          $repo = "SususuChang/BlackGoldAncientSword"
+          $token = "${{ secrets.GITEE_TOKEN }}"
+          $apiBase = "https://gitee.com/api/v5/repos/$repo"
+          $maxSize = 100 * 1024 * 1024
 
+          Write-Host "===== Syncing release $tag to Gitee =====
+
+          # 1. Create release on Gitee
+          $body = @{ access_token = $token; tag_name = $tag; name = "Release $tag" }
+          $result = curl.exe -s -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
+          $release = $result | ConvertFrom-Json -ErrorAction SilentlyContinue
+          $releaseId = $release.id
+
+          if (-not $releaseId) {
+            Write-Host "Release may already exist, fetching..."
+            $existing = (curl.exe -s "$apiBase/releases/tags/$tag?access_token=$token") | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $releaseId = $existing.id
+            if (-not $releaseId) { Write-Host "FAIL: $result"; exit 1 }
+          }
+          Write-Host "Gitee release ID=$releaseId"
+
+          # 2. Delete old attachments
+          $oldFiles = (curl.exe -s "$apiBase/releases/$releaseId/attach_files?access_token=$token") | ConvertFrom-Json
+          foreach ($f in $oldFiles) {
+            Write-Host "  Delete old: $($f.name)"
+            curl.exe -s -X DELETE "$apiBase/releases/$releaseId/attach_files/$($f.id)?access_token=$token" | Out-Null
+          }
+
+          # 3. Upload ≤100MB files
+          Get-ChildItem output/* | ForEach-Object {
+            if ($_.Length -le $maxSize) {
+              Write-Host ("  Upload: " + $_.Name + " (" + $_.Length + " bytes)")
+              curl.exe -s -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
+              $uploaded++
+            } else {
+              Write-Host ("  Skip: " + $_.Name + " (" + $_.Length + " bytes) - over 100MB")
+              $skipped++
+            }
+          }
+          Write-Host "===== Gitee done: uploaded=$uploaded skipped=$skipped =====
       - name: Zip merged output (single-file zip, old updater compat)
         id: zip
         shell: powershell
