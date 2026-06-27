@@ -299,7 +299,7 @@ jobs:
             if ($_.Length -le $maxSize) {
               $start = Get-Date
               Write-Host ("  [" + $fileIdx + "/" + $total + "] Upload: " + $_.Name + " (" + ('{0:N1}' -f ($_.Length / 1MB)) + " MB)")
-              curl.exe --connect-timeout 30 --max-time 300 -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
+              curl.exe --connect-timeout 30 --speed-limit 10240 --speed-time 120 --max-time 1800 -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
               $elapsed = (Get-Date) - $start
               $secs = [math]::Round($elapsed.TotalSeconds, 1)
               $mbps = if ($secs -gt 0) { [math]::Round(($_.Length / 1MB) / $secs, 1) } else { 0 }
