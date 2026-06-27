@@ -1,0 +1,148 @@
+name: 🔬 Quick Gitee Upload Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-gitee:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+
+      - name: Publish App (self-contained)
+        shell: pwsh
+        run: |
+          dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj `
+            -c Release -r win-x64 -o publish/Release `
+            --self-contained /p:PublishSingleFile=true /p:PublishReadyToRun=true
+          Write-Host "App publish done"
+
+
+      - name: Publish Updater
+        shell: pwsh
+        run: |
+          dotnet publish src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj `
+            -c Release -r win-x64 -o publish/Updater `
+            --self-contained /p:PublishSingleFile=true `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:EnableCompressionInSingleFile=true
+          Write-Host "Updater publish done"
+
+
+      - name: Merge output
+        shell: pwsh
+        run: |
+          $merged = "publish/Merged"
+          New-Item -ItemType Directory -Force -Path $merged | Out-Null
+          Copy-Item -Path "publish/Release/*" -Destination $merged -Recurse -Force
+          $updaterExe = "publish/Updater/BlackGoldAncientSword.Update.exe"
+          if (Test-Path $updaterExe) {
+            Copy-Item -Path $updaterExe -Destination $merged -Force
+          }
+          Write-Host "Merged: $(Get-ChildItem $merged | Measure-Object).Count items"
+
+
+      - name: Create split zip volumes
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path output | Out-Null
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip -v99m "output/BlackGoldAncientSword-v0.0.0.test-split.zip" "publish/Merged/*"
+          Write-Host "Split zip done"
+
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          curl.exe -L -o innosetup.exe https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe
+          .\innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+
+
+      - name: Build split installer (DiskSpanning)
+        shell: pwsh
+        run: |
+          $issPath = "setup.iss"
+          $ver = "0.0.0.test"
+          $issContent = Get-Content $issPath -Raw -Encoding UTF8
+          $issContent = $issContent -replace '#define MyAppVersion "[\d\.]+"', "#define MyAppVersion `"$ver`""
+          [System.IO.File]::WriteAllText($issPath, $issContent, (New-Object System.Text.UTF8Encoding $false))
+          Write-Host "Patched setup.iss"
+
+          $p = Start-Process -FilePath "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            -ArgumentList "/DMyAppVersion=$ver","/DUseDiskSpanning","$issPath",'/O"output"' `
+            -NoNewWindow -Wait -PassThru
+          if ($p.ExitCode -ne 0) { exit 1 }
+          Write-Host "Split installer done"
+
+
+      - name: List output files
+        shell: pwsh
+        run: |
+          Write-Host "Output files:"
+          Get-ChildItem output/* | ForEach-Object {
+            $sizeMb = '{0:N1}' -f ($_.Length / 1MB)
+            Write-Host "  $($_.Name) ($sizeMb MB)"
+          }
+
+
+      - name: Upload first file to Gitee
+        shell: pwsh
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          $tag = "v0.0.0.test-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+          $repo = "SususuChang/BlackGoldAncientSword"
+          $token = $env:GITEE_TOKEN
+          $apiBase = "https://gitee.com/api/v5/repos/$repo"
+
+          Write-Host "===== Test upload to Gitee: $tag ====="
+
+          # 清空上次测试残留
+          curl.exe -s -X DELETE "$apiBase/tags/v0.0.0.test?access_token=$token" 2>$null | Out-Null
+          curl.exe -s -X DELETE "$apiBase/git/refs/tags/v0.0.0.test?access_token=$token" 2>$null | Out-Null
+
+          # 创建 test release
+          $body = @{
+            access_token     = $token
+            tag_name         = $tag
+            name             = "Test Upload $tag"
+            body             = "快速上传测试 - 仅上传第一个分卷文件"
+            target_commitish = "main"
+          }
+          $result = curl.exe -s -X POST "$apiBase/releases" `
+            -H "Content-Type: application/json" `
+            -d ($body | ConvertTo-Json -Compress)
+          $releaseId = ($result | ConvertFrom-Json).id
+          if (-not $releaseId) {
+            Write-Host "FAIL: $result"
+            exit 1
+          }
+          Write-Host "Gitee release created, ID=$releaseId"
+
+          # 只上传第一个文件
+          $firstFile = Get-ChildItem output/* | Select-Object -First 1
+          Write-Host "Uploading (1/${total}): $($firstFile.Name) ($('{0:N1}' -f ($firstFile.Length / 1MB)) MB)"
+
+          $start = Get-Date
+          curl.exe -s -X POST "$apiBase/releases/$releaseId/attach_files" `
+            -F "access_token=$token" `
+            -F "file=@$($firstFile.FullName)"
+          $elapsed = (Get-Date) - $start
+          Write-Host "Upload done in $([math]::Round($elapsed.TotalSeconds,1))s"
+
+          Write-Host "===== Test Gitee upload completed ====="
+          Write-Host "查看: https://gitee.com/$repo/releases/$tag"
