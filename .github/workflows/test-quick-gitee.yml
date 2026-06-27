@@ -104,18 +104,43 @@ jobs:
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+
           $tag = "v0.0.0.test-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
           $repo = "SususuChang/BlackGoldAncientSword"
           $token = $env:GITEE_TOKEN
           $apiBase = "https://gitee.com/api/v5/repos/$repo"
+          $maxSize = 100 * 1024 * 1024
 
           Write-Host "===== Test upload to Gitee: $tag ====="
 
-          # 清空上次测试残留
+          # ====== 列出 output/ 下所有文件 ======
+          $allFiles = @(Get-ChildItem output/*)
+          Write-Host "Files in output/: $($allFiles.Count)"
+          $allFiles | ForEach-Object {
+            Write-Host "  $($_.Name) ($('{0:N1}' -f ($_.Length / 1MB)) MB)"
+          }
+
+          if ($allFiles.Count -eq 0) {
+            Write-Host "ERROR: No files found in output/ !"
+            exit 1
+          }
+
+          # ====== 选第一个 ≤100MB 的文件 ======
+          $firstFile = $allFiles | Where-Object { $_.Length -le $maxSize } | Select-Object -First 1
+          if (-not $firstFile) {
+            Write-Host "ERROR: All files exceed 100MB!"
+            exit 1
+          }
+          Write-Host "Selected file: $($firstFile.Name) ($('{0:N1}' -f ($firstFile.Length / 1MB)) MB)"
+
+          # ====== 清空上次测试残留 ======
           curl.exe -s -X DELETE "$apiBase/tags/v0.0.0.test?access_token=$token" 2>$null | Out-Null
           curl.exe -s -X DELETE "$apiBase/git/refs/tags/v0.0.0.test?access_token=$token" 2>$null | Out-Null
 
-          # 创建 test release
+          # ====== 创建 test release ======
+          Write-Host "Creating release..."
           $body = @{
             access_token     = $token
             tag_name         = $tag
@@ -123,26 +148,38 @@ jobs:
             body             = "快速上传测试 - 仅上传第一个分卷文件"
             target_commitish = "main"
           }
-          $result = curl.exe -s -X POST "$apiBase/releases" `
+          $resp = curl.exe --connect-timeout 30 --max-time 60 -s -X POST "$apiBase/releases" `
             -H "Content-Type: application/json" `
             -d ($body | ConvertTo-Json -Compress)
-          $releaseId = ($result | ConvertFrom-Json).id
+          $releaseId = ($resp | ConvertFrom-Json -ErrorAction SilentlyContinue).id
           if (-not $releaseId) {
-            Write-Host "FAIL: $result"
+            Write-Host "FAIL to create release:"
+            Write-Host $resp
             exit 1
           }
-          Write-Host "Gitee release created, ID=$releaseId"
+          Write-Host "Release created, ID=$releaseId"
 
-          # 只上传第一个文件
-          $firstFile = Get-ChildItem output/* | Select-Object -First 1
-          Write-Host "Uploading (1/${total}): $($firstFile.Name) ($('{0:N1}' -f ($firstFile.Length / 1MB)) MB)"
-
+          # ====== 上传文件（verbose，捕获响应） ======
+          Write-Host "Uploading $($firstFile.Name) ..."
           $start = Get-Date
-          curl.exe -s -X POST "$apiBase/releases/$releaseId/attach_files" `
-            -F "access_token=$token" `
-            -F "file=@$($firstFile.FullName)"
+
+          # access_token 以 query param 形式传入，避免 multipart 解析问题
+          $uploadUrl = "$apiBase/releases/$releaseId/attach_files?access_token=$token"
+          $uploadResp = curl.exe --connect-timeout 30 --max-time 300 `
+            -X POST $uploadUrl `
+            -F "file=@$($firstFile.FullName)" `
+            --write-out "%{http_code}" 2>&1
+
           $elapsed = (Get-Date) - $start
-          Write-Host "Upload done in $([math]::Round($elapsed.TotalSeconds,1))s"
+          $lastExit = $LASTEXITCODE
+          Write-Host "Upload curl exit code: $lastExit"
+          Write-Host "Upload response: $uploadResp"
+          Write-Host "Upload took: $([math]::Round($elapsed.TotalSeconds,1))s"
+
+          if ($lastExit -ne 0) {
+            Write-Host "ERROR: curl upload failed!"
+            exit 1
+          }
 
           Write-Host "===== Test Gitee upload completed ====="
           Write-Host "查看: https://gitee.com/$repo/releases/$tag"
