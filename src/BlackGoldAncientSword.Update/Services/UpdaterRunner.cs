@@ -173,7 +173,7 @@ namespace BlackGoldAncientSword.Update.Services
             return zipPath;
         }
 
-        // ============ 分卷 zip 下载 ============
+       // ============ 分卷 zip 下载 ============
 
         private async Task<string> DownloadSplitAsync(CancellationToken ct)
         {
@@ -183,14 +183,12 @@ namespace BlackGoldAncientSword.Update.Services
             Directory.CreateDirectory(_tempRoot);
 
             var baseUrl = _options.SplitUrl!;
-            // URL: https://.../BlackGoldAncientSword-v1.2.3.4.zip.001
-            // Strip .001 suffix, then enumerate .001/.002/...
             if (baseUrl.EndsWith(".001"))
                 baseUrl = baseUrl[..^4];
 
             var combinedPath = Path.Combine(_tempRoot, "update.zip");
 
-            _ui.Invoke(() => _vm.StatusText = "正在下载更新分卷...");
+            _ui.Invoke(() => _vm.StatusText = "正在连接下载服务器...");
 
             using var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword.Update");
@@ -199,18 +197,75 @@ namespace BlackGoldAncientSword.Update.Services
                 combinedPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
 
             int partNum = 1;
+            long totalDownloaded = 0;
+            long estimatedTotal = 0;
+
             while (true)
             {
                 ct.ThrowIfCancellationRequested();
                 var partUrl = $"{baseUrl}.{partNum:D3}";
 
-                _ui.Invoke(() => _vm.StatusText = $"正在下载更新分卷 {partNum}...");
+                _ui.Invoke(() => _vm.StatusText = "正在更新...");
 
                 try
                 {
                     using var resp = await http.GetAsync(partUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
                     resp.EnsureSuccessStatusCode();
-                    await resp.Content.CopyToAsync(combinedStream, ct).ConfigureAwait(false);
+
+                    long partSize = resp.Content.Headers.ContentLength ?? 0;
+                    if (partSize > 0)
+                    {
+                        var newEstimate = partSize * (partNum + 2);
+                        if (newEstimate > estimatedTotal)
+                            estimatedTotal = newEstimate;
+                    }
+
+                    await using var src = await resp.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+                    var buffer = new byte[81920];
+                    long partCopied = 0;
+                    int read;
+                    var lastReport = DateTime.UtcNow;
+                    long lastCopied = 0;
+                    double currentSpeed = 0;
+
+                    while ((read = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), ct).ConfigureAwait(false)) > 0)
+                    {
+                        await combinedStream.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                        partCopied += read;
+                        totalDownloaded += read;
+
+                        var now = DateTime.UtcNow;
+                        var dt = (now - lastReport).TotalSeconds;
+                        if (dt >= 0.25)
+                        {
+                            var inst = (totalDownloaded - lastCopied) / dt;
+                            currentSpeed = currentSpeed == 0 ? inst : currentSpeed * 0.6 + inst * 0.4;
+                            lastReport = now;
+                            lastCopied = totalDownloaded;
+
+                            double pct = estimatedTotal > 0
+                                ? Math.Min(DownloadCap, totalDownloaded * DownloadCap / estimatedTotal)
+                                : 0;
+
+                            long _total = totalDownloaded;
+                            double _speed = currentSpeed;
+                            long _est = estimatedTotal;
+
+                            _ui.Invoke(() =>
+                            {
+                                _vm.Percent = pct;
+                                _vm.SizeText = _est > 0
+                                    ? $"{FormatBytes(_total)} / {FormatBytes(_est)}"
+                                    : FormatBytes(_total);
+                                _vm.SpeedText = $"{FormatBytes((long)_speed)}/s";
+                                if (_speed > 1 && _est > _total)
+                                    _vm.EtaText = $"剩余 {FormatEta((_est - _total) / _speed)}";
+                                else
+                                    _vm.EtaText = "剩余 计算中";
+                            });
+                        }
+                    }
+
                     partNum++;
                 }
                 catch (HttpRequestException)
@@ -224,7 +279,9 @@ namespace BlackGoldAncientSword.Update.Services
 
             _ui.Invoke(() =>
             {
-                _vm.Percent = 90;
+                _vm.Percent = DownloadCap;
+                _vm.SpeedText = string.Empty;
+                _vm.EtaText = string.Empty;
                 _vm.StatusText = "下载完成，正在解压...";
             });
 
@@ -242,16 +299,18 @@ namespace BlackGoldAncientSword.Update.Services
 
             await Task.Run(() =>
             {
-                using var zip = ZipFile.OpenRead(combinedPath);
-                int total = zip.Entries.Count;
-                int done = 0;
-                long lastUiTick = 0;
+               using var zip = ZipFile.OpenRead(combinedPath);
+                var rootPrefix = FindCommonRoot(zip);
+               int total = zip.Entries.Count;
+               int done = 0;
+               long lastUiTick = 0;
 
-                foreach (var entry in zip.Entries)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    var destPath = Path.GetFullPath(Path.Combine(extractDir, entry.FullName));
-                    if (!destPath.StartsWith(extractDir, StringComparison.OrdinalIgnoreCase))
+               foreach (var entry in zip.Entries)
+               {
+                   ct.ThrowIfCancellationRequested();
+                    var entryName = StripRoot(entry.FullName, rootPrefix);
+                    var destPath = Path.GetFullPath(Path.Combine(extractDir, entryName));
+                   if (!destPath.StartsWith(extractDir, StringComparison.OrdinalIgnoreCase))
                         continue;
 
                     if (string.IsNullOrEmpty(entry.Name))
@@ -298,14 +357,16 @@ namespace BlackGoldAncientSword.Update.Services
 
             await Task.Run(() =>
             {
-                using var zip = ZipFile.OpenRead(zipPath);
-                int total = zip.Entries.Count;
-                int done = 0;
-                long lastUiTick = 0;
-                foreach (var entry in zip.Entries)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    var destPath = Path.GetFullPath(Path.Combine(extractDir, entry.FullName));
+               using var zip = ZipFile.OpenRead(zipPath);
+                var rootPrefix = FindCommonRoot(zip);
+               int total = zip.Entries.Count;
+               int done = 0;
+               long lastUiTick = 0;
+               foreach (var entry in zip.Entries)
+               {
+                   ct.ThrowIfCancellationRequested();
+                    var entryName = StripRoot(entry.FullName, rootPrefix);
+                    var destPath = Path.GetFullPath(Path.Combine(extractDir, entryName));
                     // 防 zip slip
                     if (!destPath.StartsWith(extractDir, StringComparison.OrdinalIgnoreCase))
                         continue;
@@ -633,15 +694,54 @@ namespace BlackGoldAncientSword.Update.Services
             {
                 Debug.WriteLine($"[Updater] 清理临时目录失败: {ex.Message}");
             }
-            _ui.BeginInvoke(() =>
+           _ui.BeginInvoke(() =>
+           {
+               _window.IsCancellable = false;
+               _window.ForceClose();
+               Environment.Exit(code);
+           });
+       }
+
+        /// <summary>
+        /// 找出 zip 条目中最长的公共目录前缀，以便解压时剥离。
+        /// 例如 entries = ["publish/Merged/a.exe", "publish/Merged/sub/b.dll"]
+        /// → 返回 "publish/Merged/"
+        /// </summary>
+        private static string? FindCommonRoot(ZipArchive zip)
+        {
+            string? common = null;
+            foreach (var entry in zip.Entries)
             {
-                _window.IsCancellable = false;
-                _window.ForceClose();
-                Environment.Exit(code);
-            });
+                var full = entry.FullName;
+                if (string.IsNullOrEmpty(full)) continue;
+                full = full.TrimEnd('/');
+
+                if (common == null)
+                {
+                    common = string.IsNullOrEmpty(entry.Name)
+                        ? full
+                        : (Path.GetDirectoryName(full)?.Replace('\\', '/') ?? "");
+                    continue;
+                }
+
+                while (common.Length > 0 && !full.StartsWith(common, StringComparison.OrdinalIgnoreCase))
+                {
+                    var idx = common.LastIndexOf('/');
+                    common = idx >= 0 ? common[..idx] : "";
+                }
+                if (common == "") break;
+            }
+
+            return string.IsNullOrEmpty(common) ? null : common + "/";
         }
 
-        // ============ 工具 ============
+        /// <summary>剥离公共根目录前缀，无前缀则返回原名。</summary>
+        private static string StripRoot(string entryName, string? rootPrefix)
+        {
+            if (rootPrefix != null && entryName.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+                return entryName[rootPrefix.Length..];
+            return entryName;
+        }
 
         private static string FormatBytes(long bytes)
         {
