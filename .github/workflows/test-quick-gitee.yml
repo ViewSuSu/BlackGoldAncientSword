@@ -159,10 +159,11 @@ jobs:
           }
           Write-Host "Release created, ID=$releaseId"
 
-          # ====== 上传文件（verbose，速度检测代替固定超时） ======
+          # ====== 上传文件（实时进度 + 速度检测代替固定超时） ======
           # 不用 --max-time（跨太平洋上传慢），改用速度检测：
           #   --speed-limit 512  --speed-time 120
           #   下载速度 < 512 bytes/s 持续 120 秒才中止
+          # curl 默认进度条（百分比/速度/ETA）输出到 stderr，直接显示在日志
           Write-Host "Uploading $($firstFile.Name) ($('{0:N1}' -f ($firstFile.Length / 1MB)) MB) ..."
           $start = Get-Date
 
@@ -171,13 +172,16 @@ jobs:
             -X POST "$apiBase/releases/$releaseId/attach_files" `
             -F "access_token=$token" `
             -F "file=@$($firstFile.FullName)" `
-            --write-out "%{http_code}" 2>&1
+            --write-out "%{http_code}"
 
           $elapsed = (Get-Date) - $start
           $lastExit = $LASTEXITCODE
-          Write-Host "Upload curl exit code: $lastExit"
-          Write-Host "Upload HTTP status: $uploadResp"
-          Write-Host "Upload took: $([math]::Round($elapsed.TotalSeconds,1))s ($('{0:N1}' -f ($firstFile.Length / 1MB / [math]::Max(1,$elapsed.TotalSeconds))) MB/s)"
+          $speed = if ($elapsed.TotalSeconds -gt 0) { ($firstFile.Length / 1MB) / $elapsed.TotalSeconds } else { 0 }
+          Write-Host "Upload done!"
+          Write-Host "  HTTP status: $uploadResp"
+          Write-Host "  curl exit code: $lastExit"
+          Write-Host "  elapsed: $([math]::Round($elapsed.TotalSeconds,1))s"
+          Write-Host "  avg speed: $('{0:N2}' -f $speed) MB/s"
 
           if ($lastExit -ne 0) {
             Write-Host "ERROR: curl upload failed (exit code $lastExit)!"
