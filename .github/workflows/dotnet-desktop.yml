@@ -204,7 +204,7 @@ jobs:
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path output | Out-Null
-          & "C:\Program Files\7-Zip\7z.exe" a -tzip -v99m "output/BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}-split.zip" "publish/Merged/*"
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip -v99m "$pwd/output/BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}-split.zip" "$pwd/publish/Merged/*"
 
       - name: Install Inno Setup
         shell: pwsh
@@ -431,7 +431,7 @@ jobs:
           $zipName = "BlackGoldAncientSword-v${{ needs.gitee-sync.outputs.new_version }}.zip"
           $zipPath = "output/$zipName"
 
-          & "C:\Program Files\7-Zip\7z.exe" a -tzip $zipPath "publish/Merged/*"
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip "$pwd/output/$zipName" "$pwd/publish/Merged/*"
 
           $zipSize = (Get-Item $zipPath).Length
           "zip_name=$zipName" >> $env:GITHUB_OUTPUT
@@ -545,6 +545,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
           $ver = "${{ needs.gitee-sync.outputs.new_version }}"
           if (-not $ver) {
@@ -573,5 +574,34 @@ jobs:
           }
 
           Write-Host "===== GitHub 失败回滚结束 ====="
+
+          # 3. Gitee 回滚：gitee-sync 已成功，Gitee release + tag 必然已存在，必须清理
+          Write-Host "===== Gitee 失败回滚开始 ====="
+          $giteeRepo = "SususuChang/BlackGoldAncientSword"
+          $giteeToken = $env:GITEE_TOKEN
+          $giteeApi = "https://gitee.com/api/v5/repos/$giteeRepo"
+
+          try {
+            $releaseInfo = curl.exe --connect-timeout 30 --max-time 60 "$giteeApi/releases/tags/$tag?access_token=$giteeToken" | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($releaseInfo.id) {
+              curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$giteeApi/releases/$($releaseInfo.id)?access_token=$giteeToken" | Out-Null
+              Write-Host "[OK] Gitee release $tag 已删除"
+            } else {
+              Write-Host "[SKIP] Gitee release $tag 不存在"
+            }
+          } catch {
+            Write-Host "[SKIP] Gitee release 删除失败: $_"
+          }
+
+          try {
+            curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$giteeApi/tags/$tag?access_token=$giteeToken" | Out-Null
+            Write-Host "[OK] Gitee tag $tag 已删除"
+          } catch {
+            Write-Host "[SKIP] Gitee tag 删除失败: $_"
+          }
+
+          Write-Host "===== Gitee 失败回滚结束 ====="
+          Write-Host "===== GitHub 失败回滚结束 ====="
+
           Write-Host "注意: release / main 分支已 push 的版本号 commit 未回滚（避免强推），下次发版会从已有 tag 继续递增"
           exit 0
