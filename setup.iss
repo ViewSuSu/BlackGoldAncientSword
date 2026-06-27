@@ -16,11 +16,13 @@ DefaultGroupName={#MyAppName}
 OutputDir=.\output
 #ifdef UseDiskSpanning
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-win-x64-Setup-Split
+Compression=zip
+SolidCompression=no
 #else
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-win-x64-Setup
-#endif
 Compression=lzma2
 SolidCompression=yes
+#endif
 #ifdef UseDiskSpanning
 DiskSpanning=yes
 DiskSliceSize=99000000
