@@ -168,7 +168,7 @@ jobs:
           $start = Get-Date
 
           $uploadResp = curl.exe --connect-timeout 30 `
-            --speed-limit 512 --speed-time 120 `
+            --speed-limit 10240 --speed-time 120 --max-time 1800 `
             -X POST "$apiBase/releases/$releaseId/attach_files" `
             -F "access_token=$token" `
             -F "file=@$($firstFile.FullName)" `
