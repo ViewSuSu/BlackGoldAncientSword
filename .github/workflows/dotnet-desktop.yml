@@ -305,13 +305,21 @@ jobs:
 
           # 3. Upload files ≤100MB
           $uploaded = 0; $skipped = 0
+          $total = @(Get-ChildItem output/*).Length
+          $fileIdx = 0
           Get-ChildItem output/* | ForEach-Object {
+            $fileIdx++
             if ($_.Length -le $maxSize) {
-              Write-Host ("  Upload: " + $_.Name + " (" + $_.Length + " bytes)")
+              $start = Get-Date
+              Write-Host ("  [" + $fileIdx + "/" + $total + "] Upload: " + $_.Name + " (" + (""{0:N1}"" -f ($_.Length / 1MB)) + " MB)")
               curl.exe -s -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
+              $elapsed = (Get-Date) - $start
+              $secs = [math]::Round($elapsed.TotalSeconds, 1)
+              $mbps = if ($secs -gt 0) { [math]::Round(($_.Length / 1MB) / $secs, 1) } else { 0 }
+              Write-Host ("    Done: " + $_.Name + " in " + $secs + "s (" + $mbps + " MB/s)")
               $uploaded++
             } else {
-              Write-Host ("  Skip: " + $_.Name + " (" + $_.Length + " bytes) - over 100MB")
+              Write-Host ("  [" + $fileIdx + "/" + $total + "] Skip: " + $_.Name + " (" + (""{0:N1}"" -f ($_.Length / 1MB)) + " MB) - over 100MB")
               $skipped++
             }
           }
