@@ -289,8 +289,9 @@ jobs:
             curl.exe -X DELETE "$apiBase/releases/$($existing.id)?access_token=$token" 2>&1 | Out-Null
           }
 
-          # 2. Always delete orphan tag (ignore if tag does not exist)
+          # 2. Always delete orphan tag (try multiple API endpoints)
           curl.exe -X DELETE "$apiBase/tags/$tag?access_token=$token" 2>&1 | Out-Null
+          curl.exe -X DELETE "$apiBase/git/refs/tags/$tag?access_token=$token" 2>&1 | Out-Null
 
 
           # 2. Create release
