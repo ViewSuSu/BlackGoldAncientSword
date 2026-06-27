@@ -25,7 +25,7 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
         /// </summary>
         string? ZipDownloadUrl { get; }
 
-        string? SplitZipDownloadUrl { get; }
+        System.Collections.Generic.List<string>? SplitDownloadUrls { get; }
 
         /// <summary>
         /// 最新版本的 release notes（GitHub Release "body"，markdown 源码）。
