@@ -281,30 +281,29 @@ jobs:
           $apiBase = "https://gitee.com/api/v5/repos/$repo"
           $maxSize = 100 * 1024 * 1024
 
-          Write-Host "===== Syncing release $tag to Gitee =====
+          Write-Host "===== Syncing release $tag to Gitee ====="
 
-          # 1. Create release on Gitee
+          # 1. Delete existing release if any
+          $existing = curl.exe -s "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
+          if ($existing.id) {
+            Write-Host "  Delete existing release ID=$($existing.id)"
+            curl.exe -s -X DELETE "$apiBase/releases/$($existing.id)?access_token=$token" | Out-Null
+            curl.exe -s -X DELETE "$apiBase/tags/$tag?access_token=$token" | Out-Null
+            Write-Host "  Existing release and tag deleted"
+          }
+
+          # 2. Create release
           $body = @{ access_token = $token; tag_name = $tag; name = "Release $tag" }
-          $result = curl.exe -s -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
-          $release = $result | ConvertFrom-Json -ErrorAction SilentlyContinue
-          $releaseId = $release.id
-
+          $createResult = curl.exe -s -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
+          $releaseId = ($createResult | ConvertFrom-Json -ErrorAction SilentlyContinue).id
           if (-not $releaseId) {
-            Write-Host "Release may already exist, fetching..."
-            $existing = (curl.exe -s "$apiBase/releases/tags/$tag?access_token=$token") | ConvertFrom-Json -ErrorAction SilentlyContinue
-            $releaseId = $existing.id
-            if (-not $releaseId) { Write-Host "FAIL: $result"; exit 1 }
+            Write-Host "FAIL to create Gitee release: $createResult"
+            exit 1
           }
-          Write-Host "Gitee release ID=$releaseId"
+          Write-Host "  Gitee release created, ID=$releaseId"
 
-          # 2. Delete old attachments
-          $oldFiles = (curl.exe -s "$apiBase/releases/$releaseId/attach_files?access_token=$token") | ConvertFrom-Json
-          foreach ($f in $oldFiles) {
-            Write-Host "  Delete old: $($f.name)"
-            curl.exe -s -X DELETE "$apiBase/releases/$releaseId/attach_files/$($f.id)?access_token=$token" | Out-Null
-          }
-
-          # 3. Upload ≤100MB files
+          # 3. Upload files ≤100MB
+          $uploaded = 0; $skipped = 0
           Get-ChildItem output/* | ForEach-Object {
             if ($_.Length -le $maxSize) {
               Write-Host ("  Upload: " + $_.Name + " (" + $_.Length + " bytes)")
@@ -315,7 +314,7 @@ jobs:
               $skipped++
             }
           }
-          Write-Host "===== Gitee done: uploaded=$uploaded skipped=$skipped =====
+          Write-Host "===== Gitee done: uploaded=$uploaded skipped=$skipped ====="
       - name: Zip merged output (single-file zip, old updater compat)
         id: zip
         shell: powershell
