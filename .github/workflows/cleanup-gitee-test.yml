@@ -1,0 +1,38 @@
+name: 🧹 Cleanup Gitee Test Releases
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup test releases and tags
+        shell: bash
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          REPO="SususuChang/BlackGoldAncientSword"
+          TOKEN="$GITEE_TOKEN"
+          API="https://gitee.com/api/v5/repos/$REPO"
+
+          echo "===== Listing all releases ====="
+          # Gitee API returns releases ordered by created_at DESC
+          # Use pagination to get all
+          for page in 1 2 3; do
+            releases=$(curl -s "$API/releases?access_token=$TOKEN&per_page=20&page=$page")
+            count=$(echo "$releases" | jq '. | length')
+            if [ "$count" = "0" ] || [ -z "$count" ]; then break; fi
+
+            for tag in $(echo "$releases" | jq -r '.[].tag_name // empty'); do
+              if echo "$tag" | grep -q "^v0\.0\.0\.test"; then
+                echo "Delete test release: $tag"
+                curl -s -X DELETE "$API/releases/tags/$tag?access_token=$TOKEN" > /dev/null
+                echo "Delete test tag: $tag"
+                curl -s -X DELETE "$API/tags/$tag?access_token=$TOKEN" > /dev/null
+                curl -s -X DELETE "$API/git/refs/tags/$tag?access_token=$TOKEN" > /dev/null
+              fi
+            done
+          done
+
+          echo "===== Cleanup complete ====="
