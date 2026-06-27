@@ -51,8 +51,17 @@ namespace BlackGoldAncientSword.Update.Services
         {
             try
             {
-                var zipPath = await DownloadAsync(_cts.Token).ConfigureAwait(false);
-                var extractDir = await ExtractAsync(zipPath, _cts.Token).ConfigureAwait(false);
+            string extractDir;
+                if (!string.IsNullOrEmpty(_options.SplitUrl))
+                {
+                    var combinedPath = await DownloadSplitAsync(_cts.Token).ConfigureAwait(false);
+                    extractDir = await ExtractSplitAsync(combinedPath, _cts.Token).ConfigureAwait(false);
+                }
+                else
+                {
+                    var zipPath = await DownloadAsync(_cts.Token).ConfigureAwait(false);
+                    extractDir = await ExtractAsync(zipPath, _cts.Token).ConfigureAwait(false);
+                }
                 await EnsureMainAppClosedAsync().ConfigureAwait(false);
                 // 进入文件覆盖阶段：禁止用户中途取消（半覆盖无法回滚）
                 _ui.Invoke(() => _window.IsCancellable = false);
@@ -164,6 +173,119 @@ namespace BlackGoldAncientSword.Update.Services
             return zipPath;
         }
 
+        // ============ 分卷 zip 下载 ============
+
+        private async Task<string> DownloadSplitAsync(CancellationToken ct)
+        {
+            _tempRoot = Path.Combine(
+                _options.TargetDirectory,
+                ".update_temp_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_tempRoot);
+
+            var baseUrl = _options.SplitUrl!;
+            // URL: https://.../BlackGoldAncientSword-v1.2.3.4.zip.001
+            // Strip .001 suffix, then enumerate .001/.002/...
+            if (baseUrl.EndsWith(".001"))
+                baseUrl = baseUrl[..^4];
+
+            var combinedPath = Path.Combine(_tempRoot, "update.zip");
+
+            _ui.Invoke(() => _vm.StatusText = "正在下载更新分卷...");
+
+            using var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword.Update");
+
+            using var combinedStream = new FileStream(
+                combinedPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+
+            int partNum = 1;
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+                var partUrl = $"{baseUrl}.{partNum:D3}";
+
+                _ui.Invoke(() => _vm.StatusText = $"正在下载更新分卷 {partNum}...");
+
+                try
+                {
+                    using var resp = await http.GetAsync(partUrl, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+                    resp.EnsureSuccessStatusCode();
+                    await resp.Content.CopyToAsync(combinedStream, ct).ConfigureAwait(false);
+                    partNum++;
+                }
+                catch (HttpRequestException)
+                {
+                    // 404 = no more parts
+                    break;
+                }
+            }
+
+            await combinedStream.FlushAsync(ct).ConfigureAwait(false);
+
+            _ui.Invoke(() =>
+            {
+                _vm.Percent = 90;
+                _vm.StatusText = "下载完成，正在解压...";
+            });
+
+            return combinedPath;
+        }
+
+        // ============ 2. 分卷 zip 拼接+解压（SharpCompress） ============
+
+        private async Task<string> ExtractSplitAsync(string combinedPath, CancellationToken ct)
+        {
+            var extractDir = Path.Combine(_tempRoot!, "extracted");
+            Directory.CreateDirectory(extractDir);
+
+            _ui.Invoke(() => _vm.StatusText = "正在解压更新包...");
+
+            await Task.Run(() =>
+            {
+                using var zip = ZipFile.OpenRead(combinedPath);
+                int total = zip.Entries.Count;
+                int done = 0;
+                long lastUiTick = 0;
+
+                foreach (var entry in zip.Entries)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var destPath = Path.GetFullPath(Path.Combine(extractDir, entry.FullName));
+                    if (!destPath.StartsWith(extractDir, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    if (string.IsNullOrEmpty(entry.Name))
+                    {
+                        Directory.CreateDirectory(destPath);
+                    }
+                    else
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                        entry.ExtractToFile(destPath, overwrite: true);
+                    }
+                    done++;
+
+                    var nowTick = Environment.TickCount64;
+                    if (done == total || nowTick - lastUiTick >= 80)
+                    {
+                        lastUiTick = nowTick;
+                        double p = 90 + (8 * (double)done / total);
+                        int _done = done;
+                        int _total = total;
+                        _ui.Invoke(() =>
+                        {
+                            _vm.Percent = p;
+                            _vm.StatusText = $"正在解压更新包... {_done} / {_total}";
+                        });
+                    }
+                }
+            }, ct).ConfigureAwait(false);
+
+            _ui.Invoke(() => _vm.Percent = 98);
+            return extractDir;
+        }
+
+        // ============ 3. 单 .zip 解压（System.IO.Compression） ============
         // ============ 2. 解压 ============
 
         private async Task<string> ExtractAsync(string zipPath, CancellationToken ct)

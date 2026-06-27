@@ -1,4 +1,4 @@
-﻿#define MyAppName "BlackGoldAncientSword"
+#define MyAppName "BlackGoldAncientSword"
 #ifndef MyAppVersion
 #define MyAppVersion "0.0.0"
 #endif
@@ -14,9 +14,17 @@ AppPublisherURL={#MyAppURL}
 DefaultDirName=D:\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=.\output
+#ifdef UseDiskSpanning
+OutputBaseFilename={#MyAppName}-{#MyAppVersion}-win-x64-Setup-Split
+#else
 OutputBaseFilename={#MyAppName}-{#MyAppVersion}-win-x64-Setup
+#endif
 Compression=lzma2
 SolidCompression=yes
+#ifdef UseDiskSpanning
+DiskSpanning=yes
+DiskSliceSize=99000000
+#endif
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64
 SetupIconFile=src\BlackGoldAncientSword.Resources\Images\app.ico
