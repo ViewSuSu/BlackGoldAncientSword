@@ -284,18 +284,18 @@ jobs:
           Write-Host "===== Syncing release $tag to Gitee ====="
 
           # 1. Delete existing release if any
-          $existing = curl.exe -s "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
+          $existing = curl.exe "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
           if ($existing.id) {
             Write-Host "  Delete existing release ID=$($existing.id)"
-            curl.exe -s -X DELETE "$apiBase/releases/$($existing.id)?access_token=$token" | Out-Null
-            curl.exe -s -X DELETE "$apiBase/tags/$tag?access_token=$token" | Out-Null
+            curl.exe -X DELETE "$apiBase/releases/$($existing.id)?access_token=$token" | Out-Null
+            curl.exe -X DELETE "$apiBase/tags/$tag?access_token=$token" | Out-Null
             Write-Host "  Existing release and tag deleted"
           }
 
           # 2. Create release
           $releaseBody = "${{ steps.changelog.outputs.release_body }}"
           $body = @{ access_token = $token; tag_name = $tag; name = "Release $tag"; body = $releaseBody; target_commitish = "main" }
-          $createResult = curl.exe -s -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
+          $createResult = curl.exe -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
           $releaseId = ($createResult | ConvertFrom-Json -ErrorAction SilentlyContinue).id
           if (-not $releaseId) {
             Write-Host "FAIL to create Gitee release: $createResult"
@@ -312,7 +312,7 @@ jobs:
             if ($_.Length -le $maxSize) {
               $start = Get-Date
               Write-Host ("  [" + $fileIdx + "/" + $total + "] Upload: " + $_.Name + " (" + (""{0:N1}"" -f ($_.Length / 1MB)) + " MB)")
-              curl.exe -s -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
+              curl.exe -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
               $elapsed = (Get-Date) - $start
               $secs = [math]::Round($elapsed.TotalSeconds, 1)
               $mbps = if ($secs -gt 0) { [math]::Round(($_.Length / 1MB) / $secs, 1) } else { 0 }
@@ -485,9 +485,9 @@ jobs:
           # 3. 删除 Gitee release（如果已同步）
           try {
             $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
-            $releaseInfo = curl.exe -s "$apiBase/releases/tags/$tag?access_token=$giteeToken" | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $releaseInfo = curl.exe "$apiBase/releases/tags/$tag?access_token=$giteeToken" | ConvertFrom-Json -ErrorAction SilentlyContinue
             if ($releaseInfo.id) {
-              curl.exe -s -X DELETE "$apiBase/releases/$($releaseInfo.id)?access_token=$giteeToken" | Out-Null
+              curl.exe -X DELETE "$apiBase/releases/$($releaseInfo.id)?access_token=$giteeToken" | Out-Null
               Write-Host "[OK] Gitee release $tag 已删除"
             } else {
               Write-Host "[SKIP] Gitee release $tag 不存在"
@@ -498,7 +498,7 @@ jobs:
 
           # 4. 删除 Gitee tag（如果已同步）
           try {
-            curl.exe -s -X DELETE "$apiBase/tags/$tag?access_token=$giteeToken" | Out-Null
+            curl.exe -X DELETE "$apiBase/tags/$tag?access_token=$giteeToken" | Out-Null
             Write-Host "[OK] Gitee tag $tag 已删除"
           } catch {
             Write-Host "[SKIP] Gitee tag $tag 删除失败: $_"
