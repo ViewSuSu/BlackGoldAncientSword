@@ -317,9 +317,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gitee-build-artifacts
-          path: |
-            publish/
-            output/
+          path: publish/
           compression-level: 0
           retention-days: 1
 
