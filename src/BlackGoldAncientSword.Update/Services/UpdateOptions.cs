@@ -55,7 +55,6 @@ namespace BlackGoldAncientSword.Update.Services
                     case "--split-url" when i + 1 < args.Length:
                         opts.SplitUrls.Add(args[++i]);
                         break;
-                        break;
                     case "--target" when i + 1 < args.Length:
                         opts.TargetDirectory = Path.GetFullPath(args[++i]);
                         break;
