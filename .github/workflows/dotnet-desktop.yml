@@ -267,62 +267,76 @@ jobs:
           Write-Host "===== Syncing release $tag to Gitee ====="
 
           # 1. Delete existing Gitee release matching this tag (if any)
-          Write-Host "  Checking for existing Gitee release: $tag ..."
-          $existingRelease = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/releases/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
-          if ($existingRelease.id) {
-            Write-Host ("    Found existing release ID=$($existingRelease.id), deleting...")
-            $success = $false
-            for ($r = 0; $r -lt 3; $r++) {
-              if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
-              $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
-                '--connect-timeout','30','--max-time','120','-X','DELETE',
-                "$apiBase/releases/$($existingRelease.id)?access_token=$token"
-              )
-              if ($p.ExitCode -eq 0) { $success = $true; break }
-              Write-Host ("      Release delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
+          Write-Host "  Step 1: Checking for existing Gitee release: $tag ..."
+          $rawRelease = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/releases/tags/$tag?access_token=$token"
+          if ($rawRelease -match '^\s*[\[{]') {
+            $existingRelease = $rawRelease | ConvertFrom-Json
+            # Handle array response (take first element)
+            if ($existingRelease -is [array]) { $existingRelease = $existingRelease[0] }
+            if ($existingRelease.id) {
+              Write-Host ("    Found existing release ID=$($existingRelease.id), deleting...")
+              $success = $false
+              for ($r = 0; $r -lt 3; $r++) {
+                if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
+                $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
+                  '--connect-timeout','30','--max-time','120','-X','DELETE',
+                  "$apiBase/releases/$($existingRelease.id)?access_token=$token"
+                )
+                if ($p.ExitCode -eq 0) { $success = $true; break }
+                Write-Host ("      Release delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
+              }
+              if (-not $success) { Write-Error "Failed to delete existing release $($existingRelease.id)"; exit 1 }
+              Write-Host "    Existing release deleted."
+            } else {
+              Write-Host "    No existing release for $tag."
             }
-            if (-not $success) { Write-Error "Failed to delete existing release $($existingRelease.id)"; exit 1 }
-            Write-Host "    Existing release deleted."
           } else {
-            Write-Host "    No existing release for $tag, skip."
+            Write-Host ("    Release lookup returned non-JSON (" + $rawRelease.Length + " bytes), treating as no release.")
           }
 
-          # 2. Delete existing Gitee tag matching this tag (if any — try both endpoints)
-          Write-Host "  Checking for existing Gitee tag: $tag ..."
-          $existingTag = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/tags/$tag?access_token=$token" | ConvertFrom-Json -ErrorAction SilentlyContinue
-          if ($existingTag.name) {
-            Write-Host ("    Found existing tag $($existingTag.name), deleting...")
-            $success = $false
-            for ($r = 0; $r -lt 3; $r++) {
-              if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
-              $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
-                '--connect-timeout','30','--max-time','120','-X','DELETE',
-                "$apiBase/tags/$tag?access_token=$token"
-              )
-              if ($p.ExitCode -eq 0) { $success = $true; break }
-              # Fallback: try /git/refs/tags/ endpoint
-              $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
-                '--connect-timeout','30','--max-time','120','-X','DELETE',
-                "$apiBase/git/refs/tags/$tag?access_token=$token"
-              )
-              if ($p.ExitCode -eq 0) { $success = $true; break }
-              Write-Host ("      Tag delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
-            }
-            if (-not $success) { Write-Error "Failed to delete existing tag $tag"; exit 1 }
-            Write-Host "    Existing tag deleted."
-          } else {
-            Write-Host "    No existing tag for $tag, skip."
+          # 2. Always attempt to delete orphan tag (Gitee GET endpoint unreliable)
+          Write-Host "  Step 2: Force-deleting any orphan tag: $tag ..."
+          $tagDeleted = $false
+          for ($r = 0; $r -lt 3; $r++) {
+            if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
+            $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
+              '--connect-timeout','30','--max-time','120','-X','DELETE',
+              "$apiBase/tags/$tag?access_token=$token"
+            )
+            if ($p.ExitCode -eq 0) { $tagDeleted = $true; Write-Host "    Orphan tag deleted (attempt $($r+1))."; break }
+            # Fallback: try /git/refs/tags/ endpoint
+            $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
+              '--connect-timeout','30','--max-time','120','-X','DELETE',
+              "$apiBase/git/refs/tags/$tag?access_token=$token"
+            )
+            if ($p.ExitCode -eq 0) { $tagDeleted = $true; Write-Host "    Orphan tag deleted via git/refs (attempt $($r+1))."; break }
+            Write-Host ("      Tag delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
+          }
+          if (-not $tagDeleted) {
+            Write-Host "    Tag deletion did not succeed (may not exist, will retry on conflict)."
           }
 
 
-          # 3. Create release (env var avoids multi-line string interpolation issue)
+          # 3. Create release (with tag-conflict retry)
+          Write-Host "  Step 3: Creating Gitee release..."
           $releaseBody = $env:RELEASE_BODY
           $body = @{ access_token = $token; tag_name = $tag; name = "Release $tag"; body = $releaseBody; target_commitish = "main" }
-          $createResult = curl.exe --connect-timeout 30 --max-time 120 -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
-          $releaseId = ($createResult | ConvertFrom-Json -ErrorAction SilentlyContinue).id
-          if (-not $releaseId) {
+          $releaseId = $null
+          for ($cr = 0; $cr -lt 3; $cr++) {
+            if ($cr -gt 0) {
+              Write-Host "    Create retry $($cr+1)/3: force-deleting tag first..."
+              curl.exe --connect-timeout 30 --max-time 120 -X DELETE "$apiBase/tags/$tag?access_token=$token" | Out-Null
+              curl.exe --connect-timeout 30 --max-time 120 -X DELETE "$apiBase/git/refs/tags/$tag?access_token=$token" | Out-Null
+              Start-Sleep -Seconds (5 * $cr)
+            }
+            $createResult = curl.exe --connect-timeout 30 --max-time 120 -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
+            $releaseId = ($createResult | ConvertFrom-Json -ErrorAction SilentlyContinue).id
+            if ($releaseId) { break }
             $errText = if ($createResult -is [string]) { $createResult } else { ($createResult | Out-String).Trim() }
-            Write-Host "FAIL to create Gitee release: $errText"
+            Write-Host ("    Create failed: " + $errText.Substring(0, [Math]::Min(200, $errText.Length)))
+          }
+          if (-not $releaseId) {
+            Write-Error "FAIL to create Gitee release after 3 attempts"
             exit 1
           }
           Write-Host "  Gitee release created, ID=$releaseId"
