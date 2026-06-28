@@ -262,7 +262,7 @@ jobs:
           $repo = "SususuChang/BlackGoldAncientSword"
           $token = $env:GITEE_TOKEN
           $apiBase = "https://gitee.com/api/v5/repos/$repo"
-          $maxSize = 100 * 1024 * 1024
+          [long] $maxSize = 100L * 1024L * 1024L
 
           Write-Host "===== Syncing release $tag to Gitee ====="
 
@@ -297,10 +297,26 @@ jobs:
           Get-ChildItem output/* | ForEach-Object {
             $fileIdx++
             if ($_.Length -le $maxSize) {
-              $start = Get-Date
               Write-Host ("  [" + $fileIdx + "/" + $total + "] Upload: " + $_.Name + " (" + ('{0:N1}' -f ($_.Length / 1MB)) + " MB)")
-              curl.exe --connect-timeout 30 --speed-limit 10240 --speed-time 120 --max-time 1800 -X POST "$apiBase/releases/$releaseId/attach_files" -F "access_token=$token" -F "file=@$($_.FullName)" | Out-Null
-              $elapsed = (Get-Date) - $start
+
+              $maxTimePerFile = [Math]::Max(600, [Math]::Min(7200, [int]($_.Length / 5120 + 300)))
+              $success = $false
+              for ($retry = 0; $retry -lt 3; $retry++) {
+                if ($retry -gt 0) {
+                  $waitSec = 15 * [Math]::Pow(2, $retry - 1)
+                  Write-Host ("    Retry " + ($retry + 1) + "/3 after " + $waitSec + "s...")
+                  Start-Sleep -Seconds $waitSec
+                }
+                $uploadStart = Get-Date
+                $cmdArgs = @('-X','POST',"$apiBase/releases/$releaseId/attach_files",
+                  '-F',"access_token=$token",'-F',"file=@$($_.FullName);",
+                  '--connect-timeout','30','--max-time',"$maxTimePerFile")
+                $proc = Start-Process -FilePath 'curl.exe' -ArgumentList $cmdArgs -NoNewWindow -Wait -PassThru
+                $elapsed = (Get-Date) - $uploadStart
+                if ($proc.ExitCode -eq 0) { $success = $true; break }
+                Write-Host ("    Failed (" + [math]::Round($elapsed.TotalSeconds, 0) + "s, exit=" + $proc.ExitCode + ", max=" + $maxTimePerFile + "s)")
+              }
+              if (-not $success) { Write-Error ("Upload failed after 3 retries: " + $_.Name); continue }
               $secs = [math]::Round($elapsed.TotalSeconds, 1)
               $mbps = if ($secs -gt 0) { [math]::Round(($_.Length / 1MB) / $secs, 1) } else { 0 }
               Write-Host ("    Done: " + $_.Name + " in " + $secs + "s (" + $mbps + " MB/s)")
