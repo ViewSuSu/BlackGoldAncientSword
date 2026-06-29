@@ -38,32 +38,22 @@ git add -A
 git commit -m "<message>"
 ```
 
-### 4. Push（必须走代理）
+### 4. Push
 
-Push 前必须设置代理，push 后清理。详见 `git-proxy` 技能：
+网络出口、代理选路、自带 git fallback 等**统一由全局 `git-proxy` skill** 处理，本 skill 不再保留任何端口/代理配置。
 
 ```powershell
-# 设置代理（http.proxy + https.proxy + 环境变量，与 GitHub Desktop 共用系统代理配置）
-git config --local http.proxy http://127.0.0.1:7897
-git config --local https.proxy http://127.0.0.1:7897
-$env:HTTP_PROXY = "http://127.0.0.1:7897"
-$env:HTTPS_PROXY = "http://127.0.0.1:7897"
-
-# 推送
 git push origin <current-branch>
-
-# 清理代理
-git config --local --unset http.proxy
-git config --local --unset https.proxy
-Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
+
+如果遇到 `Failed to connect` / `Connection was reset` / `Could not resolve host` 等网络错误，按全局 `git-proxy` skill 的步骤：探测可用通道 → `git -c http.proxy=$proxy push` 或回落 GitHub Desktop 自带 git.exe。
 
 ## 原则
 
 - 必须先完整分析 diff 再写 message，不能跳过分析直接提交
 - 不要主动切换分支，在当前分支操作
 - 不要 `git add` 特定文件后分批提交，一次性 `git add -A` 全部提交
-- Push 前必须检查 `git-proxy` 技能，确保代理已配置
+- Push 走全局 `git-proxy` skill，**不要**在本仓库 / 项目 skill 里硬编码代理端口
 
 ## 分支推送策略
 
@@ -89,18 +79,18 @@ Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
   gh pr merge --merge --auto
   ```
 
-- 如果只有 GitHub Personal Access Token（无 `gh`），也可用 GitHub REST API：
+- 如果只有 GitHub Personal Access Token（无 `gh`），可用 GitHub REST API。**网络出口走全局 `git-proxy` skill**：先按其探测流程拿到可用 `$proxy`，再注入到 curl：
 
   ```powershell
   # 创建 PR
-  curl -x http://127.0.0.1:7897 -X POST `
+  curl.exe -x $proxy -X POST `
     -H "Authorization: Bearer $env:GITHUB_TOKEN" `
     -H "Accept: application/vnd.github+json" `
     https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/pulls `
     -d '{"title":"Release","head":"main","base":"release","body":"发版合并"}'
 
   # 合并 PR（用上一步返回的 number 替换 <PR_NUMBER>）
-  curl -x http://127.0.0.1:7897 -X PUT `
+  curl.exe -x $proxy -X PUT `
     -H "Authorization: Bearer $env:GITHUB_TOKEN" `
     -H "Accept: application/vnd.github+json" `
     https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/pulls/<PR_NUMBER>/merge `
