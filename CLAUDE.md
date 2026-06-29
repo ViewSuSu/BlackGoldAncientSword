@@ -43,6 +43,5 @@
 | [git-commit](.claude/skills/git-commit/SKILL.md) | 分析 diff、中文详细 commit、push、发版到 release |
 | [rebuild-guard](.claude/skills/rebuild-guard/SKILL.md) | 对话收尾时强制 kill + dotnet build，确保 0 error |
 | [gitee-token](.claude/skills/gitee-token/SKILL.md) | Gitee API 调用令牌（清理 release/tag、上传附件等） |
-| [release-protection-bypass](.claude/skills/release-protection-bypass/SKILL.md) | 发版时若 release 分支保护阻断 PR/push：备份 → 临时解除 → 操作 → 立即按原配置恢复 |
 
 > 同等内容在 `.codex/skills/` 下也存在一份，供 codex 使用；两者保持同步。
