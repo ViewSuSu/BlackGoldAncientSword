@@ -98,19 +98,10 @@ dotnet build src/BlackGoldAncientSword.slnx
 ```powershell
 git add -A
 git commit -m "<message>"
-# 设置代理（与 GitHub Desktop 共享系统代理配置）
-git config --local http.proxy http://127.0.0.1:7897
-git config --local https.proxy http://127.0.0.1:7897
-$env:HTTP_PROXY = "http://127.0.0.1:7897"
-$env:HTTPS_PROXY = "http://127.0.0.1:7897"
-
 git push origin <current-branch>
-
-# 清理代理
-git config --local --unset http.proxy
-git config --local --unset https.proxy
-Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY -ErrorAction SilentlyContinue
 ```
+
+> 网络出口（代理探测、自带 git fallback）统一由全局 `git-proxy` skill 处理，本 skill 不再保留任何端口/代理配置。push 报网络错时按全局 skill 走。
 
 ### 4. 创建 main → release 的 PR 并合并
 
