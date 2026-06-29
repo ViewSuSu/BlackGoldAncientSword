@@ -1,6 +1,6 @@
 ---
 name: naraka-stats-assistant
-description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整发版流程：分析 git diff、中文详细 commit、push 当前分支（通常是 main），然后在 GitHub 上创建 main → release 的 PR 并合并（release 分支保护已重启，禁止本地直推，只能走 PR）。
+description: 永劫无间战绩助手项目技能。提供项目架构、模块组织、编码约定和开发工作流指导。当在此项目中编写、审查或重构代码时使用。当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整发版流程：分析 git diff、中文详细 commit、push 当前分支（通常是 main），然后本地把 main 合并进 release 并直接 `git push origin release` 触发 dotnet-desktop.yml。
 license: MIT
 ---
 
@@ -103,31 +103,29 @@ git push origin <current-branch>
 
 > 网络出口（代理探测、自带 git fallback）统一由全局 `git-proxy` skill 处理，本 skill 不再保留任何端口/代理配置。push 报网络错时按全局 skill 走。
 
-### 4. 创建 main → release 的 PR 并合并
+### 4. 本地把 main 合并进 release 并直接 push
 
-`release` 分支已开启分支保护（含 `enforce_admins`），**禁止本地直推**，所有变更必须通过 PR 合并：
+```powershell
+git checkout release
+git pull origin release
+git merge --no-ff main
+git push origin release
+git checkout main
+```
 
-- 推荐做法：在浏览器打开
-  `https://github.com/ViewSuSu/BlackGoldAncientSword/compare/release...main?expand=1`
-  填写 PR 标题（例如 `Release vX.Y.Z.W`），提交 PR，再点击 **Merge pull request**（保留 merge commit）触发 `dotnet-desktop.yml`。
-- 如果本机已安装 GitHub CLI：
-
-  ```powershell
-  gh pr create --base release --head main --title "Release" --body "发版合并"
-  gh pr merge --merge --auto
-  ```
-
-- 如果只有 PAT（无 `gh`）：通过 GitHub REST API 调用 `POST /repos/.../pulls` 创建 PR，再调用 `PUT /repos/.../pulls/<number>/merge` 完成合并。
+- 合并模式使用 `--no-ff`（保留 merge commit），不要 squash/rebase
+- push 成功即触发 `dotnet-desktop.yml` 完成构建与发布
+- 若合并出现冲突，停止并报告，由人工解决
+- 完成后切回 `main`，避免后续误在 release 上写代码
 
 ### 分支推送策略
 
 - `main`：允许本地直推
-- `release`：**已开启分支保护（含 `enforce_admins`）**，禁止本地直推 / force push / 删除；只能通过 PR 合并
+- `release`：允许本地直推（用于发版合并）；不做 force push / 删除
 - 其它功能分支：允许直推
 
 ### 原则
 
-- 严禁 `git push origin release` 直推；保护规则会拒绝
-- 合并模式使用 `--merge`（保留 merge commit），不要 squash/rebase
-- 若 PR 出现冲突，停止并报告，由人工解决
-- 不在本地执行任何修改 `release` 历史的命令
+- 合并模式使用 `--no-ff`（保留 merge commit）
+- 若合并冲突，停止并报告，由人工解决
+- 不在本地执行任何修改 `release` 历史的命令（rebase、reset、amend 已 push 的 commit 等）

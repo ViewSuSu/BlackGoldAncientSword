@@ -377,8 +377,8 @@ jobs:
           retention-days: 1
 
 
-      - name: Cleanup Gitee on failure
-        if: failure()
+      - name: Cleanup Gitee on failure or cancel
+        if: ${{ failure() || cancelled() }}
         shell: pwsh
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
@@ -392,32 +392,50 @@ jobs:
           $giteeRepo = "SususuChang/BlackGoldAncientSword"
           $giteeToken = "${{ secrets.GITEE_TOKEN }}"
 
-          Write-Host "===== Gitee 失败回滚开始: $tag ====="
+          Write-Host "===== Gitee 回滚开始 (失败或取消): $tag ====="
+          $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
+          $giteePushUrl = "https://SususuChang:$giteeToken@gitee.com/$giteeRepo.git"
 
-          # 1. 删除 Gitee release（如果已创建）
-          try {
-            $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
-            $releaseInfo = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/releases/tags/$tag?access_token=$giteeToken" | ConvertFrom-Json -ErrorAction SilentlyContinue
-            if ($releaseInfo.id) {
-              curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$apiBase/releases/$($releaseInfo.id)?access_token=$giteeToken" | Out-Null
-              Write-Host "[OK] Gitee release $tag 已删除"
+          # 1. 删除 Gitee release：列表扫描 + DELETE by id + 重试
+          #    （releases/tags/$tag 端点不可靠，必须扫列表匹配 tag_name）
+          $rawList = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/releases?access_token=$giteeToken&per_page=100"
+          if ($rawList -match '^\s*\[') {
+            $allReleases = $rawList | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $match = $allReleases | Where-Object { $_.tag_name -eq $tag } | Select-Object -First 1
+            if ($match.id) {
+              $releaseDeleted = $false
+              for ($r = 0; $r -lt 3; $r++) {
+                if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
+                $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
+                  '--connect-timeout','30','--max-time','120','-X','DELETE',
+                  "$apiBase/releases/$($match.id)?access_token=$giteeToken"
+                )
+                if ($p.ExitCode -eq 0) { $releaseDeleted = $true; break }
+                Write-Host ("    Release delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
+              }
+              if ($releaseDeleted) { Write-Host "[OK] Gitee release $tag (id=$($match.id)) 已删除" }
+              else { Write-Host "[FAIL] Gitee release $tag (id=$($match.id)) 删除失败" }
             } else {
-              Write-Host "[SKIP] Gitee release $tag 不存在"
+              Write-Host "[SKIP] Gitee release $tag 不在列表中"
             }
-          } catch {
-            Write-Host "[SKIP] Gitee release $tag 删除失败: $_"
+          } else {
+            Write-Host "[SKIP] Gitee release 列表返回非 JSON，跳过 release 删除"
           }
 
-          # 2. 删除 Gitee tag（如果已创建）
-          try {
-            $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
-            curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$apiBase/tags/$tag?access_token=$giteeToken" | Out-Null
-            Write-Host "[OK] Gitee tag $tag 已删除"
-          } catch {
-            Write-Host "[SKIP] Gitee tag $tag 删除失败: $_"
+          # 2. 删除 Gitee tag：必须用 git push --delete（REST DELETE /tags 返回假成功）
+          $tagDeleted = $false
+          for ($r = 0; $r -lt 3; $r++) {
+            if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
+            $p = Start-Process -FilePath 'git' -NoNewWindow -Wait -PassThru -ArgumentList @(
+              'push','--delete',$giteePushUrl,"refs/tags/$tag"
+            )
+            if ($p.ExitCode -eq 0) { $tagDeleted = $true; break }
+            Write-Host ("    Tag delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
           }
+          if ($tagDeleted) { Write-Host "[OK] Gitee tag $tag 已删除" }
+          else { Write-Host "[SKIP] Gitee tag $tag 删除失败（可能本就不存在）" }
 
-          Write-Host "===== Gitee 失败回滚结束 ====="
+          Write-Host "===== Gitee 回滚结束 ====="
           exit 0
 
 
@@ -593,8 +611,8 @@ jobs:
           }
 
 
-      - name: Cleanup GitHub on failure
-        if: failure()
+      - name: Cleanup GitHub on failure or cancel
+        if: ${{ failure() || cancelled() }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -608,7 +626,7 @@ jobs:
           $tag = "v$ver"
           $repo = "${{ github.repository }}"
 
-          Write-Host "===== GitHub 失败回滚开始: $tag ====="
+          Write-Host "===== GitHub 回滚开始 (失败或取消): $tag ====="
 
           # 1. 删除 GitHub release + tag（gh CLI --cleanup-tag 同时删 release 与 tag）
           try {
@@ -626,35 +644,55 @@ jobs:
             Write-Host "[SKIP] 远端 tag $tag 删除兜底失败: $_"
           }
 
-          Write-Host "===== GitHub 失败回滚结束 ====="
+          Write-Host "===== GitHub 回滚结束 ====="
 
           # 3. Gitee 回滚：gitee-sync 已成功，Gitee release + tag 必然已存在，必须清理
-          Write-Host "===== Gitee 失败回滚开始 ====="
+          Write-Host "===== Gitee 回滚开始 ====="
           $giteeRepo = "SususuChang/BlackGoldAncientSword"
           $giteeToken = $env:GITEE_TOKEN
           $giteeApi = "https://gitee.com/api/v5/repos/$giteeRepo"
+          $giteePushUrl = "https://SususuChang:$giteeToken@gitee.com/$giteeRepo.git"
 
-          try {
-            $releaseInfo = curl.exe --connect-timeout 30 --max-time 60 "$giteeApi/releases/tags/$tag?access_token=$giteeToken" | ConvertFrom-Json -ErrorAction SilentlyContinue
-            if ($releaseInfo.id) {
-              curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$giteeApi/releases/$($releaseInfo.id)?access_token=$giteeToken" | Out-Null
-              Write-Host "[OK] Gitee release $tag 已删除"
+          # 3a. 删除 Gitee release：列表扫描 + DELETE by id + 重试
+          $rawList = curl.exe --connect-timeout 30 --max-time 60 "$giteeApi/releases?access_token=$giteeToken&per_page=100"
+          if ($rawList -match '^\s*\[') {
+            $allReleases = $rawList | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $match = $allReleases | Where-Object { $_.tag_name -eq $tag } | Select-Object -First 1
+            if ($match.id) {
+              $releaseDeleted = $false
+              for ($r = 0; $r -lt 3; $r++) {
+                if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
+                $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
+                  '--connect-timeout','30','--max-time','120','-X','DELETE',
+                  "$giteeApi/releases/$($match.id)?access_token=$giteeToken"
+                )
+                if ($p.ExitCode -eq 0) { $releaseDeleted = $true; break }
+                Write-Host ("    Release delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
+              }
+              if ($releaseDeleted) { Write-Host "[OK] Gitee release $tag (id=$($match.id)) 已删除" }
+              else { Write-Host "[FAIL] Gitee release $tag (id=$($match.id)) 删除失败" }
             } else {
-              Write-Host "[SKIP] Gitee release $tag 不存在"
+              Write-Host "[SKIP] Gitee release $tag 不在列表中"
             }
-          } catch {
-            Write-Host "[SKIP] Gitee release 删除失败: $_"
+          } else {
+            Write-Host "[SKIP] Gitee release 列表返回非 JSON，跳过 release 删除"
           }
 
-          try {
-            curl.exe --connect-timeout 30 --max-time 60 -X DELETE "$giteeApi/tags/$tag?access_token=$giteeToken" | Out-Null
-            Write-Host "[OK] Gitee tag $tag 已删除"
-          } catch {
-            Write-Host "[SKIP] Gitee tag 删除失败: $_"
+          # 3b. 删除 Gitee tag：必须用 git push --delete（REST DELETE /tags 返回假成功）
+          $tagDeleted = $false
+          for ($r = 0; $r -lt 3; $r++) {
+            if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
+            $p = Start-Process -FilePath 'git' -NoNewWindow -Wait -PassThru -ArgumentList @(
+              'push','--delete',$giteePushUrl,"refs/tags/$tag"
+            )
+            if ($p.ExitCode -eq 0) { $tagDeleted = $true; break }
+            Write-Host ("    Tag delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
           }
+          if ($tagDeleted) { Write-Host "[OK] Gitee tag $tag 已删除" }
+          else { Write-Host "[SKIP] Gitee tag $tag 删除失败（可能本就不存在）" }
 
-          Write-Host "===== Gitee 失败回滚结束 ====="
-          Write-Host "===== GitHub 失败回滚结束 ====="
+          Write-Host "===== Gitee 回滚结束 ====="
+          Write-Host "===== GitHub 回滚结束 ====="
 
           Write-Host "注意: release / main 分支已 push 的版本号 commit 未回滚（避免强推），下次发版会从已有 tag 继续递增"
           exit 0
