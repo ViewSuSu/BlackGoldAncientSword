@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整发版流程：commit + push 当前分支 →（在 GitHub 上）创建 main → release 的 PR 并合并（release 分支保护已重启，禁止本地直推，只能走 PR）。
+description: 在当前分支分析 git diff 差异，用中文撰写详细的 commit message，然后 git commit 并 push。当用户只说"推送"、"提交"、"commit"、"push"、"提交并推送"时仅执行 commit+push；当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时，执行完整发版流程：commit + push 当前分支（通常是 main），然后本地把 main 合并进 release 并直接 `git push origin release` 触发 dotnet-desktop.yml。
 ---
 
 # Git Commit 工作流
@@ -58,53 +58,35 @@ git push origin <current-branch>
 ## 分支推送策略
 
 - `main`：允许本地直推
-- `release`：**已开启分支保护（含 `enforce_admins`）**，禁止本地直推 / force push / 删除，所有变更必须通过 PR 合并进来
+- `release`：允许本地直推（用于发版合并）；不做 force push / 删除
 - 其它功能/特性分支：允许直推
 
 ## 完整发版流程（当用户说"发布"、"发版"、"上线"、"合并到release"、"release"时）
 
 执行上述 1-4 步（分析差异 → 撰写 commit message → commit → push 当前源分支，通常是 `main`）后，继续以下步骤：
 
-### 5. 创建 main → release 的 PR
+### 5. 本地把 main 合并进 release 并直接 push
 
-`release` 分支保护已重启，**不再允许本地直推**。发版必须通过 GitHub 上的 PR 完成合并：
+```powershell
+git checkout release
+git pull origin release
+git merge --no-ff main
+git push origin release
+git checkout main
+```
 
-- 推荐做法：在浏览器打开
-  `https://github.com/ViewSuSu/BlackGoldAncientSword/compare/release...main?expand=1`
-  填写 PR 标题（例如 `Release vX.Y.Z.W`），提交 PR，再点击 **Merge pull request**（保留 merge commit）触发 `dotnet-desktop.yml`。
-- 如果本机已安装 GitHub CLI，可改用：
-
-  ```powershell
-  gh pr create --base release --head main --title "Release" --body "发版合并"
-  gh pr merge --merge --auto
-  ```
-
-- 如果只有 GitHub Personal Access Token（无 `gh`），可用 GitHub REST API。**网络出口走全局 `git-proxy` skill**：先按其探测流程拿到可用 `$proxy`，再注入到 curl：
-
-  ```powershell
-  # 创建 PR
-  curl.exe -x $proxy -X POST `
-    -H "Authorization: Bearer $env:GITHUB_TOKEN" `
-    -H "Accept: application/vnd.github+json" `
-    https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/pulls `
-    -d '{"title":"Release","head":"main","base":"release","body":"发版合并"}'
-
-  # 合并 PR（用上一步返回的 number 替换 <PR_NUMBER>）
-  curl.exe -x $proxy -X PUT `
-    -H "Authorization: Bearer $env:GITHUB_TOKEN" `
-    -H "Accept: application/vnd.github+json" `
-    https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/pulls/<PR_NUMBER>/merge `
-    -d '{"merge_method":"merge"}'
-  ```
+- 合并模式使用 `--no-ff`（保留 merge commit），不要 squash/rebase
+- push 成功即触发 `dotnet-desktop.yml`
+- 若合并冲突，停止并报告，由人工解决
+- 完成后切回 `main`，避免后续误在 release 上写代码
 
 ### 6. 确认结果
 
 - `main` 已 push 到远端
-- `main` → `release` 的 PR 已创建并合并，`dotnet-desktop.yml` 已被触发
+- `release` 已合并 main 并 push，`dotnet-desktop.yml` 已被触发
 
 ### 发版原则
 
-- **`release` 分支保护已开启，不允许本地直推**：禁止 `git push origin release`、禁止 force push、禁止删除，对管理员同样生效（`enforce_admins`）
-- 合并模式使用 `--merge`（保留 merge commit），不要用 squash/rebase
-- 若 PR 出现冲突，停止并报告，由人工解决后再触发合并
-- 不在本地执行任何修改 `release` 分支历史的命令
+- 合并模式使用 `--no-ff`（保留 merge commit），不要 squash/rebase
+- 若合并冲突，停止并报告，由人工解决
+- 不在本地执行任何修改 `release` 历史的命令（rebase、reset、amend 已 push 的 commit 等）
