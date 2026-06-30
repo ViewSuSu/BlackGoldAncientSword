@@ -467,7 +467,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: gitee-build-artifacts
-          path: .
+          path: publish
 
 
       - name: Install Inno Setup
