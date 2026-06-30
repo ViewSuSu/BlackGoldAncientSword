@@ -134,9 +134,11 @@ OCR 识别采用的 OBS 录屏同源技术，可以忽略游戏的遮挡界面�
 
 另外，OCR 有时无法识别某些特殊字符，如果遇到识别不出的情况，可以考虑使用 QQ 截图文字识别等方式手动补充。
 
-**Q：为什么安装包/程序这么大（200MB+）？**
+**Q：为什么安装包/程序这么大？**
 
-程序采用**自包含发布（self-contained）**，内置了 .NET 运行时，无需用户额外安装 .NET 环境即可直接运行。此外，程序自带的 OCR 文字识别引擎（PaddleOCR）需要依赖 Intel 数学核心库（mklml.dll，约 88MB）和 OpenCV 计算机视觉库（opencv_world4100.dll，约 62MB）。这两个原生 AI/视觉库连同 .NET 运行时占了安装包的绝大部分体积。没有它们就无法实现队友昵称的自动截图识别，所以"庞大"是必要的代价 😅。
+程序采用**自包含发布（self-contained）**，内置了 .NET 运行时，无需用户额外安装 .NET 环境即可直接运行。此外，程序自带的 OCR 文字识别引擎依赖 **PP-OCRv5 ONNX 模型（约 22MB）+ ONNX Runtime 原生库 + SkiaSharp 图像编解码库**，这部分总计约 50MB。这些原生 AI/视觉组件连同 .NET 运行时占了安装包的大部分体积。没有它们就无法实现队友昵称的自动截图识别，所以"庞大"是必要的代价 😅。
+
+> v1.0.0.3 起，OCR 引擎已从 PaddleOCR-json 子进程方案（含约 150MB Paddle Inference + MKL + OpenCV 原生 dll）切换到 RapidOcrNet 进程内 ONNX Runtime 方案，识别模型升级至 PP-OCRv5，安装包整体减重约 100MB，对特殊字符（如日文假名、拉丁扩展）的覆盖也大幅提升。
 
 **Q：为什么进入英雄选择环节时屏幕出现黄色边框？**
 
@@ -234,8 +236,8 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
        │                │
        ▼                ▼
 ┌──────────────┐ ┌──────────────────┐
-│     Ocr      │ │ PaddleOCR-json   │
-│ (子进程封装) │ │  .exe + 模型     │
+│     Ocr      │ │ RapidOcrNet +    │
+│ (进程内 ONNX)│ │ PP-OCRv5 (ONNX)  │
 └──────────────┘ └──────────────────┘
 ```
 
@@ -249,7 +251,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | **核心框架** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM 基类、Prism 基础设施、服务抽象与实现、HTTP API |
 | **游戏监控** | `BlackGoldAncientSword.GameMonitor` | ClassLib | 进程检测、Player.log 解析、战局状态机 |
 | **屏幕捕获** | `BlackGoldAncientSword.ScreenCapture` | ClassLib | Windows Graphics Capture API + SharpDX，含原生 wgc_capture.dll |
-| **OCR 引擎** | `BlackGoldAncientSword.Ocr` | ClassLib | PaddleOCR-json.exe 子进程封装 |
+| **OCR 引擎** | `BlackGoldAncientSword.Ocr` | ClassLib | RapidOcrNet（PP-OCRv5 ONNX）进程内推理封装 |
 | **资源** | `BlackGoldAncientSword.Resources` | ClassLib | 多语言 XAML 资源字典、图标、图片 |
 | **源码生成** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | 编译期从 JSON 定义生成 HTTP 客户端与测试代码 |
 | **测试** | `BlackGoldAncientSword.Tests` | xUnit | OCR、屏幕捕获、游戏监控、HTTP、更新流程测试 |
@@ -267,7 +269,8 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | **对象映射** | Mapster 7.4 | DTO ↔ ViewModel |
 | **JSON** | `System.Text.Json`（含源码生成上下文） | 序列化 / 反序列化（已全量替换 Newtonsoft.Json） |
 | **屏幕捕获** | SharpDX.Direct3D11 + 原生 WGC DLL (C++/WinRT) | 游戏窗口截图 |
-| **OCR** | PaddleOCR-json.exe（常驻子进程） | 多语言文字识别 |
+| **OCR** | RapidOcrNet 2.0.0 + ONNX Runtime 1.24（进程内推理，PP-OCRv5 模型） | 多语言文字识别（中/英/日/拉丁/西里尔等单模型覆盖） |
+| **图像处理** | SkiaSharp 3.119 | OCR 入口 byte[] → SKBitmap 解码 |
 | **系统托盘** | Hardcodet.NotifyIcon.Wpf | 托盘图标与菜单 |
 | **测试** | xUnit + Moq | 单元测试与集成测试 |
 | **打包** | Self-Contained + PublishSingleFile | App、Updater 均为单文件独立部署 (win-x64) |
@@ -358,10 +361,9 @@ src/
 │   └── runtimes/win-x64/native/
 │       └── wgc_capture.dll                 # 原生 C++/WinRT 捕获库
 │
-├── BlackGoldAncientSword.Ocr/              # OCR 引擎
+├── BlackGoldAncientSword.Ocr/              # OCR 引擎（进程内 ONNX Runtime）
 │   ├── IOcrService.cs                      # 服务接口
-│   ├── OcrEngine.cs                        # PaddleOCR-json.exe 封装
-│   ├── JobObjectHelper.cs                  # JobObject 兜底回收子进程
+│   ├── OcrEngine.cs                        # RapidOcrNet（PP-OCRv5）封装
 │   └── OcrAutoRegister.cs                  # 服务自动注册
 │
 ├── BlackGoldAncientSword.Resources/        # 多语言资源
@@ -379,10 +381,12 @@ src/
     ├── Update/                             # 更新流程测试
     └── TestData/                           # 测试数据
 
-ocr_engine/                                 # PaddleOCR-json 引擎与模型（被 Ocr 项目拷贝至输出目录）
-├── PaddleOCR-json.exe                      # OCR 引擎可执行文件
-├── models/                                 # OCR 模型（ch / cht / en / cyrillic / japan / korean）
-└── *.dll                                   # 运行时依赖（onnxruntime、opencv_world、mklml 等）
+ocr_engine/                                 # PP-OCRv5 ONNX 模型与字典（被 Ocr 项目拷贝至输出目录）
+└── models/v5/                              # PP-OCRv5 中文 mobile 模型 (~22MB)
+    ├── ch_PP-OCRv5_det_mobile.onnx         # 文本检测 DBNet
+    ├── ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx  # 方向分类
+    ├── ch_PP-OCRv5_rec_mobile.onnx         # 字符识别 CRNN
+    └── ppocrv5_dict.txt                    # 字典（18383 字符，覆盖中/英/日/拉丁扩展等）
 ```
 
 ---
@@ -464,7 +468,7 @@ public static class PageNames
 1. `GameStatusMonitor` 检测到 `HeroSelection` 状态
 2. `TeamInfoPageViewModel` 启动 OCR 轮询循环
 3. `ScreenCaptureService` 通过 **Windows Graphics Capture API**（原生 C++/WinRT DLL → SharpDX D3D11）截取游戏窗口，使用 `ArrayPool` 复用全帧缓冲，按 `ScreenQuadrant` 切出三个 region 拼图
-4. `OcrEngine` 与 **PaddleOCR-json.exe** 之间是**单例常驻子进程 + stdin/stdout 管道 + image_base64 零磁盘 IO**：模型仅在首次调用 `PrewarmAsync` 时加载（约 600～1500 ms），后续每次识别只跑推理（约 100～250 ms）；`JobObject` 保证宿主退出时子进程被 OS 兜底清理
+4. `OcrEngine` 基于 **RapidOcrNet + ONNX Runtime 进程内推理**：byte[] → SkiaSharp 解码为 `SKBitmap` → 单次 `Detect()` 串联跑 det（DBNet）→ cls（方向分类，可关）→ rec（CRNN）三段 ONNX 推理。模型 + 字典首次调用 `PrewarmAsync` 时加载（约 200～500 ms），并跑一次最小推理触发 ONNX session 内部 buffer 与 kernel 编译。`SemaphoreSlim` 串行化保护 RapidOcr 内部状态，无子进程 / 无 IPC / 无 JobObject 兜底
 5. `TeamInfoOcrService` / `TeamOcrCoordinator` 解析 OCR 结果，提取队友昵称
 6. 调用战绩 API 查询每个队友的数据，并排展示
 

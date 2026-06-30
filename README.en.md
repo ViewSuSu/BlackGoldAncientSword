@@ -132,9 +132,11 @@ OCR recognition uses the same underlying technology as OBS screen capture, captu
 
 OCR may also fail on certain special characters. When that happens, use QQ screenshot OCR or similar tools as a manual workaround.
 
-**Q: Why is the installer / program so large (200MB+)?**
+**Q: Why is the installer / program so large?**
 
-The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. The built-in OCR engine (PaddleOCR) also depends on the Intel Math Kernel Library (mklml.dll, ~88MB) and the OpenCV computer vision library (opencv_world4100.dll, ~62MB). These two native AI/vision libraries, together with the .NET runtime, account for the vast majority of the download size. Without them, automatic OCR of teammate nicknames would not be possible — the "bulk" is a necessary price 😅.
+The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. The built-in OCR engine also relies on the **PP-OCRv5 ONNX models (~22MB) + ONNX Runtime native libraries + SkiaSharp image codecs**, totalling roughly 50MB. These native AI/vision components, together with the .NET runtime, account for the bulk of the download size. Without them, automatic OCR of teammate nicknames would not be possible — the size is a necessary price 😅.
+
+> Starting with v1.0.0.3, the OCR engine has switched from the PaddleOCR-json subprocess design (which dragged in ~150MB of Paddle Inference + MKL + OpenCV native DLLs) to RapidOcrNet running in-process on ONNX Runtime, with the recognizer upgraded to PP-OCRv5. The installer is about 100MB lighter, and character coverage for things like Japanese kana and Latin-Extended is substantially better.
 
 **Q: Why do I see a yellow border around my screen when entering hero selection?**
 
@@ -232,8 +234,8 @@ Before using this program, please ensure you have read, understood, and agreed t
        │                │
        ▼                ▼
 ┌──────────────┐ ┌──────────────────┐
-│     Ocr      │ │ PaddleOCR-json   │
-│ (subprocess) │ │  .exe + models   │
+│     Ocr      │ │ RapidOcrNet +    │
+│ (in-process) │ │ PP-OCRv5 (ONNX)  │
 └──────────────┘ └──────────────────┘
 ```
 
@@ -247,7 +249,7 @@ Before using this program, please ensure you have read, understood, and agreed t
 | **Core Framework** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM base, Prism infra, service abstractions/implementations, HTTP API |
 | **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | ClassLib | Process detection, Player.log parsing, battle state machine |
 | **Screen Capture** | `BlackGoldAncientSword.ScreenCapture` | ClassLib | Windows Graphics Capture API + SharpDX + native `wgc_capture.dll` |
-| **OCR Engine** | `BlackGoldAncientSword.Ocr` | ClassLib | PaddleOCR-json.exe subprocess wrapper |
+| **OCR Engine** | `BlackGoldAncientSword.Ocr` | ClassLib | RapidOcrNet (PP-OCRv5 ONNX) in-process inference wrapper |
 | **Resources** | `BlackGoldAncientSword.Resources` | ClassLib | Multi-language XAML resource dictionaries, icons, images |
 | **Source Gen** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | Compile-time HTTP client + test code generation from JSON |
 | **Tests** | `BlackGoldAncientSword.Tests` | xUnit | OCR, screen capture, game monitor, HTTP, update tests |
@@ -265,7 +267,8 @@ Before using this program, please ensure you have read, understood, and agreed t
 | **Mapping** | Mapster 7.4 | DTO ↔ ViewModel |
 | **JSON** | `System.Text.Json` (with source-generated context) | Serialization / deserialization (fully replaced Newtonsoft.Json) |
 | **Screen Capture** | SharpDX.Direct3D11 + native WGC DLL (C++/WinRT) | Game window capture |
-| **OCR** | PaddleOCR-json.exe (long-lived child process) | Multi-language text recognition |
+| **OCR** | RapidOcrNet 2.0.0 + ONNX Runtime 1.24 (in-process, PP-OCRv5 models) | Multi-language text recognition (single model covers ZH / EN / JA / Latin / Cyrillic, etc.) |
+| **Image I/O** | SkiaSharp 3.119 | OCR entry-point `byte[]` → `SKBitmap` decode |
 | **System Tray** | Hardcodet.NotifyIcon.Wpf | Tray icon and context menu |
 | **Tests** | xUnit + Moq | Unit and integration tests |
 | **Packaging** | Self-Contained + PublishSingleFile | Both App and Updater shipped as single-file .exe (win-x64) |
@@ -356,10 +359,9 @@ src/
 │   └── runtimes/win-x64/native/
 │       └── wgc_capture.dll                 # Native C++/WinRT capture library
 │
-├── BlackGoldAncientSword.Ocr/              # OCR engine
+├── BlackGoldAncientSword.Ocr/              # OCR engine (in-process ONNX Runtime)
 │   ├── IOcrService.cs                      # Service interface
-│   ├── OcrEngine.cs                        # PaddleOCR-json.exe wrapper
-│   ├── JobObjectHelper.cs                  # JobObject fallback for child-process cleanup
+│   ├── OcrEngine.cs                        # RapidOcrNet (PP-OCRv5) wrapper
 │   └── OcrAutoRegister.cs                  # Service auto-registration
 │
 ├── BlackGoldAncientSword.Resources/        # Multi-language resources
@@ -377,10 +379,12 @@ src/
     ├── Update/                             # Update flow tests
     └── TestData/                           # Test data
 
-ocr_engine/                                 # PaddleOCR-json engine + models (copied to output by Ocr)
-├── PaddleOCR-json.exe                      # OCR engine executable
-├── models/                                 # OCR models (ch / cht / en / cyrillic / japan / korean)
-└── *.dll                                   # Runtime deps (onnxruntime, opencv_world, mklml, etc.)
+ocr_engine/                                 # PP-OCRv5 ONNX models + dict (copied to output by Ocr)
+└── models/v5/                              # PP-OCRv5 Chinese mobile models (~22MB total)
+    ├── ch_PP-OCRv5_det_mobile.onnx         # Text detection (DBNet)
+    ├── ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx  # Orientation classifier
+    ├── ch_PP-OCRv5_rec_mobile.onnx         # Character recognition (CRNN)
+    └── ppocrv5_dict.txt                    # Dictionary (18,383 characters; covers ZH/EN/JA/Latin-Extended)
 ```
 
 ---
@@ -460,7 +464,7 @@ The outer `GameLogMonitor` is just a façade that orchestrates lifetime and even
 1. `GameStatusMonitor` detects `HeroSelection` state
 2. `TeamInfoPageViewModel` starts the OCR polling loop
 3. `ScreenCaptureService` captures the game window via **Windows Graphics Capture API** (native C++/WinRT DLL → SharpDX D3D11), reusing full-frame buffers from `ArrayPool` and slicing three regions via `ScreenQuadrant` into a single composite image
-4. `OcrEngine` talks to **PaddleOCR-json.exe** as a **singleton long-lived child process** over stdin/stdout pipes using `image_base64` (zero disk IO). Models load once on the first `PrewarmAsync` call (~600–1500 ms); subsequent calls only run inference (~100–250 ms). A `JobObject` guarantees the child is reaped by the OS if the host crashes
+4. `OcrEngine` runs **RapidOcrNet + ONNX Runtime in-process**: `byte[]` → SkiaSharp decodes to `SKBitmap` → a single `Detect()` call chains three ONNX inferences (det / DBNet → cls / orientation, optional → rec / CRNN). Models + dictionary load on the first `PrewarmAsync` call (~200–500 ms) and the same call runs a tiny inference to trigger ONNX session buffer / kernel JIT. A `SemaphoreSlim` serializes access to RapidOcr's internal state. No subprocess, no IPC, no JobObject
 5. `TeamInfoOcrService` / `TeamOcrCoordinator` parse the OCR output and extract teammate nicknames
 6. The stats API is queried for each teammate and the results are displayed side-by-side
 

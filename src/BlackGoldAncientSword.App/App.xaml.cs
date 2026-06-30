@@ -94,6 +94,20 @@ namespace BlackGoldAncientSword.App
                 // 设置加载失败：所有依赖 settings.Current 的模块都会用默认值；至少留日志方便诊断"为什么我的设置没生效"。
                 Debug.WriteLine($"[{nameof(App)}] Settings load / update check init failed: {ex}");
             }
+
+            try
+            {
+                // OCR 预热：加载 PP-OCRv5 三段 ONNX 模型 + 字典约 200~500 ms，再跑一次最小推理触发
+                // ONNX session 内部 buffer / kernel JIT。Task.Run 推到 ThreadPool，避免阻塞 UI 线程；
+                // 业务首次 RecognizeAsync（英雄选择阶段队友识别）时模型已驻留内存，省掉冷启动等待。
+                var ocr = Container.Resolve<IOcrService>();
+                Task.Run(() => ocr.PrewarmAsync()).SafeFireAndForget("App.OcrPrewarm");
+            }
+            catch (Exception ex)
+            {
+                // 预热调度失败：业务首次 OCR 仍会自动加载模型，只是用户首次队伍识别会感受到冷启动延迟。
+                Debug.WriteLine($"[{nameof(App)}] OCR prewarm schedule failed: {ex}");
+            }
         }
 
         protected override void OnExit(System.Windows.ExitEventArgs e)

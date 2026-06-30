@@ -78,19 +78,34 @@ public class OcrEngine : IOcrService, IDisposable
     /// </remarks>
     public async Task PrewarmAsync(CancellationToken ct = default)
     {
+        Debug.WriteLine($"[{nameof(OcrEngine)}] 预热开始,模型目录={_modelDir}");
+        var totalSw = Stopwatch.StartNew();
+
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            if (_initialized)
+            {
+                Debug.WriteLine($"[{nameof(OcrEngine)}] 预热跳过 (模型已加载)");
+                return;
+            }
+
+            var loadSw = Stopwatch.StartNew();
             EnsureInitialized();
+            loadSw.Stop();
+            Debug.WriteLine($"[{nameof(OcrEngine)}] 模型加载完成 ({loadSw.ElapsedMilliseconds} ms)");
 
             // 8×8 白底,跑一遍 det/rec 触发 ONNX 内部初始化。
+            var inferSw = Stopwatch.StartNew();
             using var bmp = new SKBitmap(8, 8, SKColorType.Bgra8888, SKAlphaType.Premul);
             bmp.Erase(SKColors.White);
             _ = _ocr.Detect(bmp, DefaultOptions);
+            inferSw.Stop();
+            Debug.WriteLine($"[{nameof(OcrEngine)}] 首次推理完成 ({inferSw.ElapsedMilliseconds} ms),预热总耗时 {totalSw.ElapsedMilliseconds} ms");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[{nameof(OcrEngine)}] 预热失败: {ex.Message}");
+            Debug.WriteLine($"[{nameof(OcrEngine)}] 预热失败 ({totalSw.ElapsedMilliseconds} ms): {ex}");
         }
         finally
         {
