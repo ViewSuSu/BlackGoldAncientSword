@@ -14,17 +14,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ============================================================
-  # Job 1: Gitee Release — 构建 + 分卷打包 + Gitee 标签/发布/上传
-  #         成功后，产物传给 github-release job
-  # ============================================================
-  gitee-sync:
+  build-and-release:
     runs-on: windows-latest
     permissions:
       contents: write
-    outputs:
-      new_version: ${{ steps.version.outputs.new_version }}
-      release_body: ${{ steps.changelog.outputs.release_body }}
 
     steps:
       - name: Checkout
@@ -200,12 +193,6 @@ jobs:
           Write-Host $body
 
 
-      - name: Create split zip volumes (≤99MB each)
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path output | Out-Null
-          & "C:\Program Files\7-Zip\7z.exe" a -tzip -v99m "$pwd/output/BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}-split.zip" "$pwd/publish/Merged/*"
-
       - name: Install Inno Setup
         shell: pwsh
         run: |
@@ -214,6 +201,14 @@ jobs:
           curl.exe -L -o innosetup.exe https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe
           .\innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
           "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+
+
+      - name: Create split zip volumes (<=99MB each)
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path output | Out-Null
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip -v99m "$pwd/output/BlackGoldAncientSword-v${{ steps.version.outputs.new_version }}-split.zip" "$pwd/publish/Merged/*"
+          Write-Host "Split zip created."
 
 
       - name: Build split installer (DiskSpanning)
@@ -225,7 +220,6 @@ jobs:
             exit 1
           }
 
-          # Replace version placeholder with actual version
           $ver = "${{ steps.version.outputs.new_version }}"
           $issContent = Get-Content $issPath -Raw -Encoding UTF8
           $issContent = $issContent -replace '#define MyAppVersion "[\d\.]+"', "#define MyAppVersion `"$ver`""
@@ -237,247 +231,49 @@ jobs:
             -NoNewWindow -Wait -PassThru
           if ($p.ExitCode -ne 0) { exit 1 }
 
-          if (-not (Get-ChildItem output/*.exe)) {
-            Write-Error "Installer EXE not generated!"
+          if (-not (Get-ChildItem output/*-Split*.exe -ErrorAction SilentlyContinue)) {
+            Write-Error "Split installer EXE not generated!"
             exit 1
           }
+          Write-Host "Split installer created."
 
 
-      - name: List files to sync to Gitee
+      - name: Build full installer (single-file)
         shell: powershell
         run: |
-          Write-Host "Files to sync to Gitee:"
-          Get-ChildItem output/* | ForEach-Object {
-            Write-Host "  $($_.Name) ($($_.Length) bytes)"
-          }
+          $issPath = "setup.iss"
+          $ver = "${{ steps.version.outputs.new_version }}"
 
+          $p = Start-Process -FilePath "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            -ArgumentList "/DMyAppVersion=$ver","$issPath",'/O"output"' `
+            -NoNewWindow -Wait -PassThru
+          if ($p.ExitCode -ne 0) { exit 1 }
 
-      - name: Prepare Gitee release (delete old + create new)
-        shell: pwsh
-        env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          RELEASE_BODY: ${{ steps.changelog.outputs.release_body }}
-        run: |
-          $tag = "v${{ steps.version.outputs.new_version }}"
-          $repo = "SususuChang/BlackGoldAncientSword"
-          $token = $env:GITEE_TOKEN
-          $apiBase = "https://gitee.com/api/v5/repos/$repo"
-          [long] $maxSize = 100L * 1024L * 1024L
-
-          Write-Host "===== Preparing Gitee release $tag ====="
-
-          # 1. Delete ALL existing Gitee releases (free attachment quota) and their tags.
-          #    Gitee free repos have a 1 GB attachment quota shared across all releases.
-          #    We keep only the latest release, so purge everything before creating new one.
-          Write-Host "  Step 1: Purging ALL existing Gitee releases to free attachment quota..."
-          $rawReleaseList = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/releases?access_token=$token&per_page=100"
-          if ($rawReleaseList -match '^\s*\[') {
-            $allReleases = $rawReleaseList | ConvertFrom-Json
-            if ($allReleases.Count -gt 0) {
-              Write-Host "    Found $($allReleases.Count) existing release(s), deleting all..."
-              foreach ($rel in $allReleases) {
-                Write-Host ("    Deleting release ID=$($rel.id) tag=$($rel.tag_name)...")
-                $success = $false
-                for ($r = 0; $r -lt 3; $r++) {
-                  if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
-                  $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
-                    '--connect-timeout','30','--max-time','120','-X','DELETE',
-                    "$apiBase/releases/$($rel.id)?access_token=$token"
-                  )
-                  if ($p.ExitCode -eq 0) { $success = $true; break }
-                  Write-Host ("      Release delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
-                }
-                if (-not $success) { Write-Host "    WARNING: failed to delete release $($rel.id), continuing..." }
-                else { Write-Host "    Release $($rel.id) deleted." }
-                # Also delete its tag (best-effort, ignore failures)
-                git push --delete $giteePushUrl "refs/tags/$($rel.tag_name)" 2>&1 | Out-Null
-                curl.exe --connect-timeout 15 --max-time 30 -X DELETE "$apiBase/tags/$($rel.tag_name)?access_token=$token" 2>&1 | Out-Null
-              }
-            } else {
-              Write-Host "    No existing releases found."
-            }
-          } else {
-            Write-Host ("    Release list returned non-JSON (" + $rawReleaseList.Length + " bytes), skip purge.")
-          }
-
-          # 2. Delete orphan tag via git push --delete (Gitee REST DELETE returns fake success)
-          Write-Host "  Step 2: Deleting orphan tag via git push --delete: $tag ..."
-          $giteePushUrl = "https://SususuChang:$token@gitee.com/SususuChang/BlackGoldAncientSword.git"
-          $tagDeleted = $false
-          for ($r = 0; $r -lt 3; $r++) {
-            if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
-            $p = Start-Process -FilePath 'git' -NoNewWindow -Wait -PassThru -ArgumentList @(
-              'push','--delete',$giteePushUrl,"refs/tags/$tag"
-            )
-            if ($p.ExitCode -eq 0) { $tagDeleted = $true; Write-Host "    Orphan tag deleted via git (attempt $($r+1))."; break }
-            Write-Host ("      Tag delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
-          }
-          if (-not $tagDeleted) {
-            Write-Host "    Tag deletion did not succeed (may not exist, will retry on create conflict)."
-          }
-
-          # 3. Create release (with tag-conflict retry using git push --delete)
-          Write-Host "  Step 3: Creating Gitee release..."
-          $releaseBody = $env:RELEASE_BODY
-          $body = @{ access_token = $token; tag_name = $tag; name = "Release $tag"; body = $releaseBody; target_commitish = "main" }
-          $releaseId = $null
-          for ($cr = 0; $cr -lt 3; $cr++) {
-            if ($cr -gt 0) {
-              Write-Host "    Create retry $($cr+1)/3: force-deleting tag via git..."
-              git push --delete $giteePushUrl "refs/tags/$tag" 2>&1 | Out-Null
-              Start-Sleep -Seconds (5 * $cr)
-            }
-            $createResult = curl.exe --connect-timeout 30 --max-time 120 -X POST "$apiBase/releases" -H "Content-Type: application/json" -d ($body | ConvertTo-Json -Compress)
-            $releaseId = ($createResult | ConvertFrom-Json -ErrorAction SilentlyContinue).id
-            if ($releaseId) { break }
-            $errText = if ($createResult -is [string]) { $createResult } else { ($createResult | Out-String).Trim() }
-            Write-Host ("    Create failed: " + $errText.Substring(0, [Math]::Min(200, $errText.Length)))
-          }
-          if (-not $releaseId) {
-            Write-Error "FAIL to create Gitee release after 3 attempts"
+          $fullExe = Get-ChildItem "output/*$ver*Setup.exe" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'Split' } | Select-Object -First 1
+          if (-not $fullExe) {
+            Write-Error "Full installer EXE not generated!"
             exit 1
           }
-          Write-Host "  Gitee release created, ID=$releaseId"
-
-          # 把 release_id 导出到后续 step（Python 上传脚本读取）
-          "GITEE_RELEASE_ID=$releaseId" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          Write-Host "  Exported GITEE_RELEASE_ID=$releaseId for next step"
+          Write-Host "Full installer created: $($fullExe.Name)"
 
 
-      - name: Setup Python for Gitee upload
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-
-      - name: Install Gitee upload deps
-        shell: pwsh
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install requests "requests-toolbelt>=1.0.0" "tqdm>=4.66.0"
-
-
-      - name: Upload assets to Gitee (Python, byte-level progress)
-        shell: pwsh
-        env:
-          GITEE_REPO: SususuChang/BlackGoldAncientSword
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          GITEE_ASSETS_DIR: output
-          GITEE_PARALLEL: "3"
-          GITEE_MAX_RETRIES: "3"
-          GITEE_TIMEOUT_CEIL: "14400"
-          PYTHONIOENCODING: utf-8
-          PYTHONUNBUFFERED: "1"
-        run: |
-          # GITEE_RELEASE_ID 由前置 step 通过 $env:GITHUB_ENV 注入
-          python scripts/gitee-upload-assets.py
-
-
-      - name: Upload build artifacts for GitHub job
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitee-build-artifacts
-          path: publish/
-          compression-level: 0
-          retention-days: 1
-
-
-      - name: Cleanup Gitee on failure or cancel
-        if: ${{ failure() || cancelled() }}
-        shell: pwsh
-        env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      - name: Create full zip (single file)
+        shell: powershell
         run: |
           $ver = "${{ steps.version.outputs.new_version }}"
-          if (-not $ver) {
-            Write-Host "未确定版本号，无需回滚"
-            exit 0
-          }
-          $tag = "v$ver"
-          $giteeRepo = "SususuChang/BlackGoldAncientSword"
-          $giteeToken = "${{ secrets.GITEE_TOKEN }}"
-
-          Write-Host "===== Gitee 回滚开始 (失败或取消): $tag ====="
-          $apiBase = "https://gitee.com/api/v5/repos/$giteeRepo"
-          $giteePushUrl = "https://SususuChang:$giteeToken@gitee.com/$giteeRepo.git"
-
-          # 1. 删除 Gitee release：列表扫描 + DELETE by id + 重试
-          #    （releases/tags/$tag 端点不可靠，必须扫列表匹配 tag_name）
-          $rawList = curl.exe --connect-timeout 30 --max-time 60 "$apiBase/releases?access_token=$giteeToken&per_page=100"
-          if ($rawList -match '^\s*\[') {
-            $allReleases = $rawList | ConvertFrom-Json -ErrorAction SilentlyContinue
-            $match = $allReleases | Where-Object { $_.tag_name -eq $tag } | Select-Object -First 1
-            if ($match.id) {
-              $releaseDeleted = $false
-              for ($r = 0; $r -lt 3; $r++) {
-                if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
-                $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
-                  '--connect-timeout','30','--max-time','120','-X','DELETE',
-                  "$apiBase/releases/$($match.id)?access_token=$giteeToken"
-                )
-                if ($p.ExitCode -eq 0) { $releaseDeleted = $true; break }
-                Write-Host ("    Release delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
-              }
-              if ($releaseDeleted) { Write-Host "[OK] Gitee release $tag (id=$($match.id)) 已删除" }
-              else { Write-Host "[FAIL] Gitee release $tag (id=$($match.id)) 删除失败" }
-            } else {
-              Write-Host "[SKIP] Gitee release $tag 不在列表中"
-            }
-          } else {
-            Write-Host "[SKIP] Gitee release 列表返回非 JSON，跳过 release 删除"
-          }
-
-          # 2. 删除 Gitee tag：必须用 git push --delete（REST DELETE /tags 返回假成功）
-          $tagDeleted = $false
-          for ($r = 0; $r -lt 3; $r++) {
-            if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
-            $p = Start-Process -FilePath 'git' -NoNewWindow -Wait -PassThru -ArgumentList @(
-              'push','--delete',$giteePushUrl,"refs/tags/$tag"
-            )
-            if ($p.ExitCode -eq 0) { $tagDeleted = $true; break }
-            Write-Host ("    Tag delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
-          }
-          if ($tagDeleted) { Write-Host "[OK] Gitee tag $tag 已删除" }
-          else { Write-Host "[SKIP] Gitee tag $tag 删除失败（可能本就不存在）" }
-
-          Write-Host "===== Gitee 回滚结束 ====="
-          exit 0
+          $zipName = "BlackGoldAncientSword-v$ver.zip"
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip "$pwd/output/$zipName" "$pwd/publish/Merged/*"
+          $zipSize = (Get-Item "output/$zipName").Length
+          Write-Host "Full zip created: $zipName ($zipSize bytes)"
 
 
-  # ============================================================
-  # Job 2: GitHub Release — 仅在 Gitee 成功后执行
-  #         创建 GitHub tag、单文件打包、GitHub Release、版本同步
-  # ============================================================
-  github-release:
-    needs: gitee-sync
-    runs-on: windows-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-
-      - name: Download build artifacts from Gitee job
-        uses: actions/download-artifact@v4
-        with:
-          name: gitee-build-artifacts
-          path: publish
-
-
-      - name: Install Inno Setup
-        shell: pwsh
+      - name: List all output files
+        shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
-          curl.exe -L -o innosetup.exe https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe
-          .\innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
-          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+          Write-Host "All output files:"
+          Get-ChildItem output/* | ForEach-Object {
+            Write-Host ("  " + $_.Name + " (" + $_.Length + " bytes)")
+          }
 
 
       - name: Tag & Push
@@ -486,7 +282,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          $ver = "${{ needs.gitee-sync.outputs.new_version }}"
+          $ver = "${{ steps.version.outputs.new_version }}"
 
           $tagExists = git ls-remote --tags origin "refs/tags/v$ver"
           if (-not $tagExists) {
@@ -498,62 +294,14 @@ jobs:
           }
 
 
-      - name: Zip merged output (single-file zip, old updater compat)
-        id: zip
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path output | Out-Null
-
-          $zipName = "BlackGoldAncientSword-v${{ needs.gitee-sync.outputs.new_version }}.zip"
-          $zipPath = "output/$zipName"
-
-          & "C:\Program Files\7-Zip\7z.exe" a -tzip "$pwd/output/$zipName" "$pwd/publish/Merged/*"
-
-          $zipSize = (Get-Item $zipPath).Length
-          "zip_name=$zipName" >> $env:GITHUB_OUTPUT
-          "zip_size=$zipSize" >> $env:GITHUB_OUTPUT
-
-          Write-Host "Created single zip: $zipPath ($zipSize bytes)"
-
-
-      - name: Build single-file installer
-        shell: powershell
-        run: |
-          $issPath = "setup.iss"
-          if (-not (Test-Path $issPath)) {
-            Write-Error "Inno Setup script not found: $issPath"
-            exit 1
-          }
-
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
-            /DMyAppVersion=${{ needs.gitee-sync.outputs.new_version }} `
-            $issPath `
-            /O"output"
-
-          if (-not (Get-ChildItem output/*.exe)) {
-            Write-Error "Installer EXE not generated!"
-            exit 1
-          }
-
-
-      - name: List all output installer files
-        shell: powershell
-        run: |
-          Write-Host "All output files:"
-          Get-ChildItem output/* | ForEach-Object {
-            "installer_file=$($_.Name)" >> $env:GITHUB_OUTPUT
-            Write-Host ("  " + $_.Name + " (" + $_.Length + " bytes)")
-          }
-
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.gitee-sync.outputs.new_version }}
-          name: Release v${{ needs.gitee-sync.outputs.new_version }}
+          tag_name: v${{ steps.version.outputs.new_version }}
+          name: Release v${{ steps.version.outputs.new_version }}
           draft: false
           prerelease: false
-          body: ${{ needs.gitee-sync.outputs.release_body }}
+          body: ${{ steps.changelog.outputs.release_body }}
           files: |
             output/*
         env:
@@ -566,7 +314,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          $ver = "${{ needs.gitee-sync.outputs.new_version }}"
+          $ver = "${{ steps.version.outputs.new_version }}"
           $proj = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
 
           git add $proj
@@ -589,7 +337,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          $ver = "${{ needs.gitee-sync.outputs.new_version }}"
+          $ver = "${{ steps.version.outputs.new_version }}"
           $proj = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
 
           git fetch origin main
@@ -616,14 +364,13 @@ jobs:
           }
 
 
-      - name: Cleanup GitHub on failure or cancel
+      - name: Cleanup on failure or cancel
         if: ${{ failure() || cancelled() }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
-          $ver = "${{ needs.gitee-sync.outputs.new_version }}"
+          $ver = "${{ steps.version.outputs.new_version }}"
           if (-not $ver) {
             Write-Host "未确定版本号，无需回滚"
             exit 0
@@ -633,7 +380,7 @@ jobs:
 
           Write-Host "===== GitHub 回滚开始 (失败或取消): $tag ====="
 
-          # 1. 删除 GitHub release + tag（gh CLI --cleanup-tag 同时删 release 与 tag）
+          # 删除 GitHub release + tag
           try {
             gh release delete $tag -y --cleanup-tag -R $repo
             Write-Host "[OK] GitHub release/tag $tag 已删除"
@@ -641,7 +388,7 @@ jobs:
             Write-Host "[SKIP] GitHub release $tag 不存在或删除失败: $_"
           }
 
-          # 2. 兜底再删一次远端 tag（防止 gh --cleanup-tag 不可用）
+          # 兜底再删一次远端 tag
           try {
             git push origin --delete $tag 2>$null
             Write-Host "[OK] 远端 tag $tag 兜底删除完成"
@@ -650,54 +397,5 @@ jobs:
           }
 
           Write-Host "===== GitHub 回滚结束 ====="
-
-          # 3. Gitee 回滚：gitee-sync 已成功，Gitee release + tag 必然已存在，必须清理
-          Write-Host "===== Gitee 回滚开始 ====="
-          $giteeRepo = "SususuChang/BlackGoldAncientSword"
-          $giteeToken = $env:GITEE_TOKEN
-          $giteeApi = "https://gitee.com/api/v5/repos/$giteeRepo"
-          $giteePushUrl = "https://SususuChang:$giteeToken@gitee.com/$giteeRepo.git"
-
-          # 3a. 删除 Gitee release：列表扫描 + DELETE by id + 重试
-          $rawList = curl.exe --connect-timeout 30 --max-time 60 "$giteeApi/releases?access_token=$giteeToken&per_page=100"
-          if ($rawList -match '^\s*\[') {
-            $allReleases = $rawList | ConvertFrom-Json -ErrorAction SilentlyContinue
-            $match = $allReleases | Where-Object { $_.tag_name -eq $tag } | Select-Object -First 1
-            if ($match.id) {
-              $releaseDeleted = $false
-              for ($r = 0; $r -lt 3; $r++) {
-                if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
-                $p = Start-Process -FilePath 'curl.exe' -NoNewWindow -Wait -PassThru -ArgumentList @(
-                  '--connect-timeout','30','--max-time','120','-X','DELETE',
-                  "$giteeApi/releases/$($match.id)?access_token=$giteeToken"
-                )
-                if ($p.ExitCode -eq 0) { $releaseDeleted = $true; break }
-                Write-Host ("    Release delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
-              }
-              if ($releaseDeleted) { Write-Host "[OK] Gitee release $tag (id=$($match.id)) 已删除" }
-              else { Write-Host "[FAIL] Gitee release $tag (id=$($match.id)) 删除失败" }
-            } else {
-              Write-Host "[SKIP] Gitee release $tag 不在列表中"
-            }
-          } else {
-            Write-Host "[SKIP] Gitee release 列表返回非 JSON，跳过 release 删除"
-          }
-
-          # 3b. 删除 Gitee tag：必须用 git push --delete（REST DELETE /tags 返回假成功）
-          $tagDeleted = $false
-          for ($r = 0; $r -lt 3; $r++) {
-            if ($r -gt 0) { Start-Sleep -Seconds (10 * $r) }
-            $p = Start-Process -FilePath 'git' -NoNewWindow -Wait -PassThru -ArgumentList @(
-              'push','--delete',$giteePushUrl,"refs/tags/$tag"
-            )
-            if ($p.ExitCode -eq 0) { $tagDeleted = $true; break }
-            Write-Host ("    Tag delete retry " + ($r + 2) + "/3 (exit=" + $p.ExitCode + ")")
-          }
-          if ($tagDeleted) { Write-Host "[OK] Gitee tag $tag 已删除" }
-          else { Write-Host "[SKIP] Gitee tag $tag 删除失败（可能本就不存在）" }
-
-          Write-Host "===== Gitee 回滚结束 ====="
-          Write-Host "===== GitHub 回滚结束 ====="
-
           Write-Host "注意: release / main 分支已 push 的版本号 commit 未回滚（避免强推），下次发版会从已有 tag 继续递增"
           exit 0
