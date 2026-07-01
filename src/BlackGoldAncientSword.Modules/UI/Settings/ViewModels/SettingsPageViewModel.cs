@@ -20,6 +20,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         private readonly IImageCacheService _cacheService;
         private readonly IUpdateService _updateService;
         private readonly IClipboardService _clipboard;
+        private readonly IUIDispatcher _uiDispatcher;
 
         /// <summary>立即异步落盘。设置项变更点必须实时持久化，避免"改完立即关闭/Kill 进程"
         /// 导致丢失。所有设置项均为单次用户动作（点击单选/勾选/选完文件夹），不存在高频
@@ -161,7 +162,8 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             IMainContentNavigationService navigation,
             IImageCacheService cacheService,
             IUpdateService updateService,
-            IClipboardService clipboard)
+            IClipboardService clipboard,
+            IUIDispatcher uiDispatcher)
         {
             _settings = settings;
             _localization = localization;
@@ -170,11 +172,61 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             _cacheService = cacheService;
             _updateService = updateService;
             _clipboard = clipboard;
+            _uiDispatcher = uiDispatcher;
             Debug.WriteLine($"[{nameof(SettingsPageViewModel)}] UpdateService 注入成功，当前版本: {_updateService.CurrentVersion}");
 
             _dataPath = _settings.Current.DataSavePath;
             _cachePath = _settings.Current.CachePath;
-            RefreshCacheSizeAsync().SafeFireAndForget("Settings.RefreshCacheSize");
+            RefreshCacheSizeAsync().SafeFireAndForget($"{nameof(SettingsPageViewModel)}.{nameof(RefreshCacheSizeAsync)}");
+
+            // 订阅配置广播：托盘菜单改动、FileSystemWatcher 检测到外部改写，都会走这里刷新 UI。
+            // 事件可能在后台线程回调，Handler 内部再 marshal 到 UI 线程。
+            _settings.SettingsChanged += OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object? sender, EventArgs e)
+        {
+            // 已 Dispose 后仍收到事件（订阅解除前的最后一次触发）时静默返回
+            if (_isDisposed) return;
+
+            if (_uiDispatcher.CheckAccess())
+            {
+                ApplySettingsSnapshotToUi();
+            }
+            else
+            {
+                _uiDispatcher.BeginInvoke(ApplySettingsSnapshotToUi);
+            }
+        }
+
+        /// <summary>
+        /// 从 <see cref="_settings"/>.Current 拉取最新值刷新绑定属性。
+        /// 关键点：直接写底层字段 + 手动 RaisePropertyChanged，绕过公有 setter，避免触发 SaveImmediate 形成
+        /// "外部改动 → 广播 → VM 更新 → 再次 SaveAsync → 再次广播" 的循环回响。
+        /// </summary>
+        private void ApplySettingsSnapshotToUi()
+        {
+            _dataPath = _settings.Current.DataSavePath;
+            _cachePath = _settings.Current.CachePath;
+
+            RaisePropertyChanged(nameof(DataPath));
+            RaisePropertyChanged(nameof(CachePath));
+            RaisePropertyChanged(nameof(SelectedCloseBehavior));
+            RaisePropertyChanged(nameof(RememberCloseBehavior));
+            RaisePropertyChanged(nameof(SelectedLanguage));
+            RaisePropertyChanged(nameof(ShowTeamOverlayDuringHeroSelection));
+        }
+
+        private bool _isDisposed;
+        protected override void Dispose(bool disposing)
+        {
+            if (_isDisposed) { base.Dispose(disposing); return; }
+            _isDisposed = true;
+            if (disposing)
+            {
+                _settings.SettingsChanged -= OnSettingsChanged;
+            }
+            base.Dispose(disposing);
         }
 
         protected override async void OnNavigatedToExecute(NavigationContext navigationContext)

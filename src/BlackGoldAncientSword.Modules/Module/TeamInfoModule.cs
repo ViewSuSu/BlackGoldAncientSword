@@ -7,7 +7,16 @@ namespace BlackGoldAncientSword.Modules.Module
     [Module(OnDemand = false)]
     public class TeamInfoModule : IModule
     {
-        public void OnInitialized(IContainerProvider containerProvider) { }
+        public void OnInitialized(IContainerProvider containerProvider)
+        {
+            // Eager 解析：冷启动若游戏已处于英雄选择阶段（用户进入英雄选择后才打开程序的场景），
+            // GameLogMonitor.StartAsync 会在 replay 完毕后 PublishSnapshot 触发 BattleJoined。
+            // 该事件需要 TeamInfoPageViewModel 已订阅 GameStatusRecognized 才能启动 OCR loop。
+            // 而该 VM 默认 lazy 实例化（首次导航到 TeamInfoPage 时才 ctor），若用户未切换到该页则永不订阅。
+            // 这里在模块 Init 阶段（早于 MainWindowVM ctor 的 fire-and-forget StartAsync）主动 resolve 一次，
+            // 保证 ctor 中的订阅在快照事件到达前完成。
+            containerProvider.Resolve<TeamInfoPageViewModel>();
+        }
 
         public void RegisterTypes(IContainerRegistry containerRegistry)
         {

@@ -10,7 +10,7 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
 {
     public class AnnouncementPageViewModel : ViewModelBase
     {
-        private readonly IGitHubReleaseService _releaseService;
+        private readonly IGiteeReleaseService _releaseService;
         private readonly IUIDispatcher _uiDispatcher;
 
         public ObservableCollection<UpdateHistoryItem> UpdateHistory { get; } = new();
@@ -26,7 +26,7 @@ namespace BlackGoldAncientSword.Modules.UI.Announcement.ViewModels
             }
         }
 
-        public AnnouncementPageViewModel(IGitHubReleaseService releaseService, IUIDispatcher uiDispatcher)
+        public AnnouncementPageViewModel(IGiteeReleaseService releaseService, IUIDispatcher uiDispatcher)
         {
             _releaseService = releaseService;
             _uiDispatcher = uiDispatcher;

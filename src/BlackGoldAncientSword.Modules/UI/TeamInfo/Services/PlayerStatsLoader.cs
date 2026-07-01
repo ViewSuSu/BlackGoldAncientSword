@@ -95,7 +95,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 if (score >= 2500) return _localizedText.Get("Rank.BoJin", "铂金");
                 if (score >= 2000) return _localizedText.Get("Rank.HuangJin", "黄金");
                 if (score >= 1500) return _localizedText.Get("Rank.BaiYin", "白银");
-                return _localizedText.Get("Rank.QingTong", "青铜");
+                if (score >= 1000) return _localizedText.Get("Rank.QingTong", "青铜");
+                return string.Empty;
             }
             else
             {
@@ -116,7 +117,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         {
             if (!((GameMode)gameMode).IsRankMode()) return 0;
             if (score >= 4500) return (int)((score - 4500) / 100);
-            int[] thresholds = { 4500, 4000, 3500, 3000, 2500, 2000, 1500, 0 };
+            int[] thresholds = { 4500, 4000, 3500, 3000, 2500, 2000, 1500, 1000 };
             for (int t = 0; t < thresholds.Length - 1; t++)
             {
                 if (score >= thresholds[t + 1])
@@ -138,17 +139,18 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             if (score >= 2500) return (score - 2500) % 100;
             if (score >= 2000) return (score - 2000) % 100;
             if (score >= 1500) return (score - 1500) % 100;
-            return score % 100;
+            if (score >= 1000) return (score - 1000) % 100;
+            return 0;
         }
 
         /// <summary>
         /// 获取子段位名称（五、四、三、二、一），每小段 100 分
-        /// 仅对排位模式 1500~4499 分有效
+        /// 仅对排位模式 1000~4499 分有效
         /// </summary>
         private static string GetSubTierName(double score, int gameMode)
         {
             if (!((GameMode)gameMode).IsRankMode()) return string.Empty;
-            if (score < 1500 || score >= 4500) return string.Empty;
+            if (score < 1000 || score >= 4500) return string.Empty;
 
             var tierBase = GetTierBaseForSubTier(score);
             var offset = score - tierBase;
@@ -171,6 +173,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             if (score >= 2500) return 2500;
             if (score >= 2000) return 2000;
             if (score >= 1500) return 1500;
+            if (score >= 1000) return 1000;
             return 0;
         }
 

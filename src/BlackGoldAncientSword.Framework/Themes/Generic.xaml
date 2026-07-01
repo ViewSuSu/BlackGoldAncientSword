@@ -12,6 +12,22 @@
         <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <!-- ====================== HandyControl 主色覆盖为柔和青草绿 ====================== -->
+    <Color x:Key="PrimaryColor">#FF7EA089</Color>
+    <Color x:Key="DarkPrimaryColor">#FF6C8F77</Color>
+    <Color x:Key="DarkerPrimaryColor">#FF587E65</Color>
+    <Color x:Key="LightPrimaryColor">#FFE6EEDF</Color>
+    <Color x:Key="AccentColor">#FF7EA089</Color>
+    <Color x:Key="DarkAccentColor">#FF6C8F77</Color>
+    <Color x:Key="TitleColor">#FF7EA089</Color>
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#FF7EA089" />
+    <SolidColorBrush x:Key="DarkPrimaryBrush" Color="#FF6C8F77" />
+    <SolidColorBrush x:Key="DarkerPrimaryBrush" Color="#FF587E65" />
+    <SolidColorBrush x:Key="LightPrimaryBrush" Color="#FFE6EEDF" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#FF7EA089" />
+    <SolidColorBrush x:Key="DarkAccentBrush" Color="#FF6C8F77" />
+    <SolidColorBrush x:Key="TitleBrush" Color="#FF7EA089" />
+
     <!-- ====================== 全局 ListBoxItem 样式 ====================== -->
     <Style TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent" />

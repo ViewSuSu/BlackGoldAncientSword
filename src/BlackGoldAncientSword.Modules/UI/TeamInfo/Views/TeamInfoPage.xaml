@@ -23,11 +23,13 @@
                 </Grid.RowDefinitions>
                 <Border
                     Grid.Row="0"
-                    Margin="10,0,10,8"
-                    Padding="10,8"
-                    BorderBrush="{DynamicResource BorderLightBrush}"
+                    Margin="10,8,10,10"
+                    Padding="14,10"
+                    Background="{DynamicResource SurfaceGradientBrush}"
+                    BorderBrush="{DynamicResource BorderMediumBrush}"
                     BorderThickness="1"
-                    CornerRadius="5"
+                    CornerRadius="10"
+                    Effect="{DynamicResource ShadowCardEffect}"
                     Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid ext:PageTransitionBehavior.IsEnabled="True" RenderTransformOrigin="0.5,0">
                         <Grid.ColumnDefinitions>
@@ -182,17 +184,12 @@
                         Grid.RowSpan="20"
                         Grid.Column="0"
                         Padding="14,12"
-                        Background="{DynamicResource SurfaceSecondaryBrush}"
-                        CornerRadius="8"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Border.Effect>
-                            <DropShadowEffect
-                                BlurRadius="6"
-                                Opacity="0.08"
-                                ShadowDepth="1"
-                                Color="#000000" />
-                        </Border.Effect>
-                    </Border>
+                        Background="{DynamicResource CardGradientBrush}"
+                        BorderBrush="{DynamicResource BorderMediumBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Effect="{DynamicResource ShadowCardEffect}"
+                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Border
                         Grid.Row="0"
                         Grid.RowSpan="20"
@@ -206,13 +203,14 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             ArcThickness="4"
-                            Foreground="#4A90D9"
+                            Foreground="{DynamicResource AccentPrimaryBrush}"
                             IsIndeterminate="True" />
                     </Border>
                     <Border
                         Grid.Row="1"
                         Grid.RowSpan="19"
                         Grid.Column="0"
+                        Panel.ZIndex="10"
                         Background="{DynamicResource SurfaceSecondaryBrush}"
                         CornerRadius="8"
                         Visibility="{Binding Member0.HasStatusError, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -229,19 +227,12 @@
                         Grid.RowSpan="20"
                         Grid.Column="2"
                         Padding="14,12"
-                        Background="{DynamicResource SurfaceSecondaryBrush}"
+                        Background="{DynamicResource CardGradientBrush}"
                         BorderBrush="{DynamicResource AccentPrimaryBrush}"
                         BorderThickness="2"
-                        CornerRadius="8"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Border.Effect>
-                            <DropShadowEffect
-                                BlurRadius="6"
-                                Opacity="0.08"
-                                ShadowDepth="1"
-                                Color="#000000" />
-                        </Border.Effect>
-                    </Border>
+                        CornerRadius="10"
+                        Effect="{DynamicResource ShadowElevatedEffect}"
+                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Border
                         Grid.Row="0"
                         Grid.RowSpan="20"
@@ -255,13 +246,14 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             ArcThickness="4"
-                            Foreground="#4A90D9"
+                            Foreground="{DynamicResource AccentPrimaryBrush}"
                             IsIndeterminate="True" />
                     </Border>
                     <Border
                         Grid.Row="1"
                         Grid.RowSpan="19"
                         Grid.Column="2"
+                        Panel.ZIndex="10"
                         Background="{DynamicResource SurfaceSecondaryBrush}"
                         CornerRadius="8"
                         Visibility="{Binding Member1.HasStatusError, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -278,17 +270,12 @@
                         Grid.RowSpan="20"
                         Grid.Column="4"
                         Padding="14,12"
-                        Background="{DynamicResource SurfaceSecondaryBrush}"
-                        CornerRadius="8"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Border.Effect>
-                            <DropShadowEffect
-                                BlurRadius="6"
-                                Opacity="0.08"
-                                ShadowDepth="1"
-                                Color="#000000" />
-                        </Border.Effect>
-                    </Border>
+                        Background="{DynamicResource CardGradientBrush}"
+                        BorderBrush="{DynamicResource BorderMediumBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Effect="{DynamicResource ShadowCardEffect}"
+                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Border
                         Grid.Row="0"
                         Grid.RowSpan="20"
@@ -302,13 +289,14 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             ArcThickness="4"
-                            Foreground="#4A90D9"
+                            Foreground="{DynamicResource AccentPrimaryBrush}"
                             IsIndeterminate="True" />
                     </Border>
                     <Border
                         Grid.Row="1"
                         Grid.RowSpan="19"
                         Grid.Column="4"
+                        Panel.ZIndex="10"
                         Background="{DynamicResource SurfaceSecondaryBrush}"
                         CornerRadius="8"
                         Visibility="{Binding Member2.HasStatusError, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -353,7 +341,7 @@
                             <TextBlock
                                 Text="{DynamicResource Nav.Detail}"
                                 FontSize="12"
-                                Foreground="#4A90D9"
+                                Foreground="{DynamicResource AccentPrimaryBrush}"
                                 TextDecorations="Underline" />
                         </Button>
                     </Grid>
@@ -390,7 +378,7 @@
                             <TextBlock
                                 Text="{DynamicResource Nav.Detail}"
                                 FontSize="12"
-                                Foreground="#4A90D9"
+                                Foreground="{DynamicResource AccentPrimaryBrush}"
                                 TextDecorations="Underline" />
                         </Button>
                     </Grid>
@@ -427,7 +415,7 @@
                             <TextBlock
                                 Text="{DynamicResource Nav.Detail}"
                                 FontSize="12"
-                                Foreground="#4A90D9"
+                                Foreground="{DynamicResource AccentPrimaryBrush}"
                                 TextDecorations="Underline" />
                         </Button>
                     </Grid>
@@ -444,18 +432,19 @@
                             Grid.Column="0"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
-                            <Border
-                                Width="56"
-                                Height="56"
-                                BorderBrush="{DynamicResource BorderLightBrush}"
-                                BorderThickness="1"
-                                ClipToBounds="True"
-                                CornerRadius="5">
-                                <Image
-                                    Width="56"
-                                    Height="56"
-                                    Source="{Binding Member0.AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
-                                    Stretch="UniformToFill" />
+                            <Border Width="56" Height="56"
+                                    Background="{DynamicResource GoldRingGradientBrush}"
+                                    CornerRadius="28" Padding="2">
+                                <Border Background="{DynamicResource SurfaceTertiaryBrush}"
+                                        CornerRadius="26" ClipToBounds="True">
+                                    <Border.Clip>
+                                        <EllipseGeometry Center="26,26" RadiusX="26" RadiusY="26" />
+                                    </Border.Clip>
+                                    <Image Width="52" Height="52"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Stretch="UniformToFill"
+                                           Source="{Binding Member0.AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                </Border>
                             </Border>
                             <TextBlock
                                 Margin="0,4,0,0"
@@ -487,7 +476,7 @@
                                         Width="10"
                                         Height="10"
                                         Data="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"
-                                        Fill="#999999"
+                                        Fill="{DynamicResource TextMutedBrush}"
                                         Stretch="Uniform" />
                                 </Button>
                             </StackPanel>
@@ -556,18 +545,19 @@
                             Grid.Column="0"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
-                            <Border
-                                Width="56"
-                                Height="56"
-                                BorderBrush="{DynamicResource BorderLightBrush}"
-                                BorderThickness="1"
-                                ClipToBounds="True"
-                                CornerRadius="5">
-                                <Image
-                                    Width="56"
-                                    Height="56"
-                                    Source="{Binding Member1.AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
-                                    Stretch="UniformToFill" />
+                            <Border Width="56" Height="56"
+                                    Background="{DynamicResource GoldRingGradientBrush}"
+                                    CornerRadius="28" Padding="2">
+                                <Border Background="{DynamicResource SurfaceTertiaryBrush}"
+                                        CornerRadius="26" ClipToBounds="True">
+                                    <Border.Clip>
+                                        <EllipseGeometry Center="26,26" RadiusX="26" RadiusY="26" />
+                                    </Border.Clip>
+                                    <Image Width="52" Height="52"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Stretch="UniformToFill"
+                                           Source="{Binding Member1.AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                </Border>
                             </Border>
                             <TextBlock
                                 Margin="0,4,0,0"
@@ -599,7 +589,7 @@
                                         Width="10"
                                         Height="10"
                                         Data="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"
-                                        Fill="#999999"
+                                        Fill="{DynamicResource TextMutedBrush}"
                                         Stretch="Uniform" />
                                 </Button>
                             </StackPanel>
@@ -668,18 +658,19 @@
                             Grid.Column="0"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
-                            <Border
-                                Width="56"
-                                Height="56"
-                                BorderBrush="{DynamicResource BorderLightBrush}"
-                                BorderThickness="1"
-                                ClipToBounds="True"
-                                CornerRadius="5">
-                                <Image
-                                    Width="56"
-                                    Height="56"
-                                    Source="{Binding Member2.AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
-                                    Stretch="UniformToFill" />
+                            <Border Width="56" Height="56"
+                                    Background="{DynamicResource GoldRingGradientBrush}"
+                                    CornerRadius="28" Padding="2">
+                                <Border Background="{DynamicResource SurfaceTertiaryBrush}"
+                                        CornerRadius="26" ClipToBounds="True">
+                                    <Border.Clip>
+                                        <EllipseGeometry Center="26,26" RadiusX="26" RadiusY="26" />
+                                    </Border.Clip>
+                                    <Image Width="52" Height="52"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Stretch="UniformToFill"
+                                           Source="{Binding Member2.AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                </Border>
                             </Border>
                             <TextBlock
                                 Margin="0,4,0,0"
@@ -711,7 +702,7 @@
                                         Width="10"
                                         Height="10"
                                         Data="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z"
-                                        Fill="#999999"
+                                        Fill="{DynamicResource TextMutedBrush}"
                                         Stretch="Uniform" />
                                 </Button>
                             </StackPanel>
@@ -772,22 +763,22 @@
                         Grid.Column="0"
                         Height="1"
                         Margin="14,6,14,6"
-                        Background="#E8E8E8"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        Background="{DynamicResource BorderLightBrush}"
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Border
                         Grid.Row="2"
                         Grid.Column="2"
                         Height="1"
                         Margin="14,6,14,6"
-                        Background="#E8E8E8"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        Background="{DynamicResource BorderLightBrush}"
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Border
                         Grid.Row="2"
                         Grid.Column="4"
                         Height="1"
                         Margin="14,6,14,6"
-                        Background="#E8E8E8"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        Background="{DynamicResource BorderLightBrush}"
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Border
                         Grid.Row="2"
                         Grid.Column="0"
@@ -795,7 +786,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -838,7 +829,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -881,7 +872,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -905,7 +896,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -948,7 +939,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -991,7 +982,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1015,7 +1006,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1058,7 +1049,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1101,7 +1092,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1125,7 +1116,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1168,7 +1159,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1211,7 +1202,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1235,7 +1226,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1278,7 +1269,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1321,7 +1312,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1345,7 +1336,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1388,7 +1379,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1431,7 +1422,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1455,7 +1446,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1498,7 +1489,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1541,7 +1532,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1565,7 +1556,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1608,7 +1599,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1651,7 +1642,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1675,7 +1666,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1718,7 +1709,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1761,7 +1752,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1785,7 +1776,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1828,7 +1819,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1871,7 +1862,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1895,7 +1886,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1938,7 +1929,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -1981,7 +1972,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2005,7 +1996,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2048,7 +2039,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2091,7 +2082,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2115,7 +2106,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2158,7 +2149,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2201,7 +2192,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2225,7 +2216,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2268,7 +2259,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2311,7 +2302,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2335,7 +2326,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2378,7 +2369,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2421,7 +2412,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2445,7 +2436,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2488,7 +2479,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2531,7 +2522,7 @@
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2553,7 +2544,7 @@
                         Grid.Column="0"
                         Margin="14,2,14,2"
                         Padding="8,0"
-                        Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2594,7 +2585,7 @@
                         Grid.Column="2"
                         Margin="14,2,14,2"
                         Padding="8,0"
-                        Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2635,7 +2626,7 @@
                         Grid.Column="4"
                         Margin="14,2,14,2"
                         Padding="8,0"
-                        Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <DockPanel>
                             <TextBlock
                                 VerticalAlignment="Center"
@@ -2663,7 +2654,7 @@
                     Width="56"
                     Height="56"
                     ArcThickness="4"
-                    Foreground="#4A90D9"
+                    Foreground="{DynamicResource AccentPrimaryBrush}"
                     IsIndeterminate="True" />
                 <TextBlock
                     Margin="0,16,0,0"

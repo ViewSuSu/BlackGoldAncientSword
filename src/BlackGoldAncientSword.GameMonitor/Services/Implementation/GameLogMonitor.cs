@@ -44,6 +44,10 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
 
             await ReplayExistingContentAsync(fullPath).ConfigureAwait(false);
 
+            // Replay 完毕后按当前状态机内容补发一次事件，让已订阅的 UI 反映现网对局阶段
+            // （冷启动进入正在进行的对局时不再显示空）。
+            PublishSnapshot();
+
             var logDir = Path.GetDirectoryName(fullPath) ?? ".";
             var logFile = Path.GetFileName(fullPath);
 
@@ -119,6 +123,18 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
 
                 _pollCts.Dispose();
                 _pollCts = null;
+            }
+        }
+
+        public void PublishSnapshot()
+        {
+            if (_stateMachine.IsInBattle)
+            {
+                BattleStarted?.Invoke(this, _stateMachine.CurrentSnapshot);
+            }
+            else if (_stateMachine.IsJoined)
+            {
+                BattleJoined?.Invoke(this, _stateMachine.CurrentSnapshot);
             }
         }
 

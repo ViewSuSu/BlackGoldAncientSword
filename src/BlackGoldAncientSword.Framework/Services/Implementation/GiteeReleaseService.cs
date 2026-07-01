@@ -11,9 +11,15 @@ using BlackGoldAncientSword.Framework.Services.Abstractions;
 namespace BlackGoldAncientSword.Framework.Services.Implementation
 {
     [Component(ComponentLifetime.Singleton)]
-    public class GitHubReleaseService : IGitHubReleaseService
+    public class GiteeReleaseService : IGiteeReleaseService
     {
-        private const string ReleasesUrl = "https://api.github.com/repos/ViewSuSu/BlackGoldAncientSword/releases";
+        private const string GiteeOwner = "SususuChang";
+        private const string GiteeRepo = "BlackGoldAncientSword";
+        private const string ReleasesUrl =
+            "https://gitee.com/api/v5/repos/" + GiteeOwner + "/" + GiteeRepo +
+            "/releases?page=1&per_page=20&direction=desc";
+        private const string ReleasePageBase =
+            "https://gitee.com/" + GiteeOwner + "/" + GiteeRepo + "/releases/tag/";
 
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -27,43 +33,43 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             Timeout = TimeSpan.FromSeconds(10)
         };
 
-        static GitHubReleaseService()
+        static GiteeReleaseService()
         {
-            _http.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/vnd.github+json");
+            _http.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json");
             _http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "BlackGoldAncientSword");
-            _http.DefaultRequestHeaders.TryAddWithoutValidation("X-GitHub-Api-Version", "2022-11-28");
         }
 
-        public async Task<List<GitHubReleaseInfo>> GetReleasesAsync()
+        public async Task<List<GiteeReleaseInfo>> GetReleasesAsync()
         {
             try
             {
                 var json = await _http.GetStringAsync(ReleasesUrl);
-                var rawList = JsonSerializer.Deserialize<List<GitHubReleaseRaw>>(json, _jsonOptions);
-                if (rawList == null) return new List<GitHubReleaseInfo>();
+                var rawList = JsonSerializer.Deserialize<List<GiteeReleaseRaw>>(json, _jsonOptions);
+                if (rawList == null) return new List<GiteeReleaseInfo>();
 
-                var result = new List<GitHubReleaseInfo>(rawList.Count);
+                var result = new List<GiteeReleaseInfo>(rawList.Count);
                 foreach (var r in rawList)
                 {
-                    result.Add(new GitHubReleaseInfo
+                    var tag = r.TagName ?? string.Empty;
+                    result.Add(new GiteeReleaseInfo
                     {
-                        TagName = r.TagName ?? string.Empty,
+                        TagName = tag,
                         Name = r.Name ?? string.Empty,
                         Body = r.Body ?? string.Empty,
-                        PublishedAt = r.PublishedAt ?? string.Empty,
-                        HtmlUrl = r.HtmlUrl ?? string.Empty
+                        PublishedAt = r.CreatedAt ?? string.Empty,
+                        HtmlUrl = string.IsNullOrEmpty(tag) ? string.Empty : ReleasePageBase + tag
                     });
                 }
                 return result;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[GitHubReleaseService] 获取 releases 失败: {ex.Message}");
-                return new List<GitHubReleaseInfo>();
+                Debug.WriteLine($"[{nameof(GiteeReleaseService)}] 获取 Gitee releases 失败: {ex.Message}");
+                return new List<GiteeReleaseInfo>();
             }
         }
 
-        private class GitHubReleaseRaw
+        private class GiteeReleaseRaw
         {
             [JsonPropertyName("tag_name")]
             public string? TagName { get; set; }
@@ -74,11 +80,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             [JsonPropertyName("body")]
             public string? Body { get; set; }
 
-            [JsonPropertyName("published_at")]
-            public string? PublishedAt { get; set; }
-
-            [JsonPropertyName("html_url")]
-            public string? HtmlUrl { get; set; }
+            [JsonPropertyName("created_at")]
+            public string? CreatedAt { get; set; }
         }
     }
 }

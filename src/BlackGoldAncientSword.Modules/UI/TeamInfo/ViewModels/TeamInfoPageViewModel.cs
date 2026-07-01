@@ -168,6 +168,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public bool HasMember2 => TeamMembers.Count > 2;
         public bool HasThreeMembers => TeamMembers.Count >= 3;
 
+        // 成员卡片"内容行"（战绩表格）可见性：仅在成员存在且没有查询失败时显示。
+        // 查询失败时改由错误覆盖层承担整卡显示，避免旧数据行泄漏出来。
+        public bool Member0Ready => HasMember0 && !TeamMembers[0].HasStatusError;
+        public bool Member1Ready => HasMember1 && !TeamMembers[1].HasStatusError;
+        public bool Member2Ready => HasMember2 && !TeamMembers[2].HasStatusError;
+
         // === Diffs ===
         public ObservableCollection<MemberDiffItem> DiffLeft { get; }
         public ObservableCollection<MemberDiffItem> DiffRight { get; }
@@ -949,6 +955,27 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             RaisePropertyChanged(nameof(HasMember1));
             RaisePropertyChanged(nameof(HasMember2));
             RaisePropertyChanged(nameof(HasThreeMembers));
+            RaisePropertyChanged(nameof(Member0Ready));
+            RaisePropertyChanged(nameof(Member1Ready));
+            RaisePropertyChanged(nameof(Member2Ready));
+            // 订阅每个成员的 HasStatusError 变化，实时刷新 Ready 属性，
+            // 避免 StatusText 变更后 UI 未同步导致查询失败态仍显示旧数据行。
+            for (int i = 0; i < TeamMembers.Count; i++)
+            {
+                var idx = i;
+                var m = TeamMembers[i];
+                m.PropertyChanged -= OnMemberPropertyChanged;
+                m.PropertyChanged += OnMemberPropertyChanged;
+            }
+        }
+
+        private void OnMemberPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(TeamMemberInfo.HasStatusError)
+                && e.PropertyName != nameof(TeamMemberInfo.StatusText)) return;
+            RaisePropertyChanged(nameof(Member0Ready));
+            RaisePropertyChanged(nameof(Member1Ready));
+            RaisePropertyChanged(nameof(Member2Ready));
         }
 
         private static void ClearImageMemoryCaches()

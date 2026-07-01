@@ -29,8 +29,8 @@ DiskSliceSize=99000000
 #endif
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64
-SetupIconFile=src\BlackGoldAncientSword.Resources\Images\app.ico
-ShowLanguageDialog=yes
+SetupIconFile=src\BlackGoldAncientSword.Resources\Images\setup.ico
+ShowLanguageDialog=no
 UninstallDisplayIcon={app}\BlackGoldAncientSword.App.exe
 
 [Languages]

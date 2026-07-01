@@ -3,12 +3,12 @@ using System.Threading.Tasks;
 
 namespace BlackGoldAncientSword.Framework.Services.Abstractions
 {
-    public interface IGitHubReleaseService
+    public interface IGiteeReleaseService
     {
-        Task<List<GitHubReleaseInfo>> GetReleasesAsync();
+        Task<List<GiteeReleaseInfo>> GetReleasesAsync();
     }
 
-    public class GitHubReleaseInfo
+    public class GiteeReleaseInfo
     {
         public string TagName { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;

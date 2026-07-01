@@ -129,6 +129,25 @@ jobs:
           Write-Host "Updater self-contained single-file publish completed"
 
 
+      - name: Publish Downloader (self-contained single-file)
+        shell: powershell
+        run: |
+          # Downloader 定位：离线安装包下载器，独立单 exe，双击即启。
+          # 不放进主程序 Merged 安装目录，仅作为 GitHub Release 独立附件发布，
+          # 供无法访问 GitHub / 需 Gitee 分卷镜像的用户手动下载。
+          $dlProj = "src/BlackGoldAncientSword.Downloader/BlackGoldAncientSword.Downloader.csproj"
+          dotnet publish $dlProj `
+            -c Release `
+            -r win-x64 `
+            -o publish/Downloader `
+            --self-contained `
+            /p:PublishSingleFile=true `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:EnableCompressionInSingleFile=true `
+            /p:Version=${{ steps.version.outputs.new_version }}
+          Write-Host "Downloader self-contained single-file publish completed"
+
+
       - name: Merge build + publish output
         shell: powershell
         run: |
@@ -255,6 +274,47 @@ jobs:
             exit 1
           }
           Write-Host "Full installer created: $($fullExe.Name)"
+
+
+      - name: Copy full installer as versionless alias
+        shell: powershell
+        run: |
+          # 目的：产出一份不含版本号的完整安装包副本，配合 GitHub
+          #   /releases/latest/download/BlackGoldAncientSword-win-x64-Setup.exe
+          # magic redirect，让分享链接永久指向"最新版完整安装包"。
+          # 原带版本号的产物保持不变，旧程序 / 精确版本引用仍能命中。
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $src = "output/BlackGoldAncientSword-$ver-win-x64-Setup.exe"
+          $dst = "output/BlackGoldAncientSword-win-x64-Setup.exe"
+          if (-not (Test-Path $src)) {
+            Write-Error "Full installer not found: $src"
+            exit 1
+          }
+          Copy-Item -Path $src -Destination $dst -Force
+          $len = (Get-Item $dst).Length
+          Write-Host "Copied versionless alias: $dst ($len bytes)"
+
+
+      - name: Copy Downloader exe into output (versioned + versionless)
+        shell: powershell
+        run: |
+          # 产出两份 Downloader 单文件 exe 作为 Release 附件：
+          # - 带版本号：BlackGoldAncientSword-v{ver}-win-x64-Downloader.exe（归档定位）
+          # - 无版本号：BlackGoldAncientSword-win-x64-Downloader.exe（配合
+          #   /releases/latest/download/ magic redirect，永久指向最新版下载器）
+          $ver = "${{ steps.version.outputs.new_version }}"
+          $src = "publish/Downloader/BlackGoldAncientSword.Downloader.exe"
+          if (-not (Test-Path $src)) {
+            Write-Error "Downloader exe not found: $src"
+            exit 1
+          }
+          $verDst   = "output/BlackGoldAncientSword-v$ver-win-x64-Downloader.exe"
+          $aliasDst = "output/BlackGoldAncientSword-win-x64-Downloader.exe"
+          Copy-Item -Path $src -Destination $verDst   -Force
+          Copy-Item -Path $src -Destination $aliasDst -Force
+          $len = (Get-Item $verDst).Length
+          Write-Host "Copied Downloader exe: $verDst ($len bytes)"
+          Write-Host "Copied Downloader exe alias: $aliasDst"
 
 
       - name: Create full zip (single file)

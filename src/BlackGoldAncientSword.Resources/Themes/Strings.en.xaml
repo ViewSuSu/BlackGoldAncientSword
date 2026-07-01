@@ -53,7 +53,7 @@
     <system:String x:Key="Stats.AvgDamage">Avg Damage</system:String>
     <system:String x:Key="Stats.Points">pts</system:String>
     <system:String x:Key="Stats.Season">Season:</system:String>
-    <system:String x:Key="Stats.RecentBattles">Recent 10 Battles</system:String>
+    <system:String x:Key="Stats.RecentBattles">Recent Battles</system:String>
     <system:String x:Key="Stats.LoadError">Failed to load stats. Check your network and try again.</system:String>
     <system:String x:Key="Stats.NoPlayerName">Please configure a player name in Settings first</system:String>
     <system:String x:Key="Stats.GameNotInstalled">Game not installed</system:String>

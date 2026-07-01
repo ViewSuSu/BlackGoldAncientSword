@@ -96,10 +96,11 @@
                 </StackPanel>
             </Grid>
 
-            <!--  === NOT FOUND OVERLAY ===  -->
+            <!--  === NOT FOUND OVERLAY ===  只覆盖内容区（保留顶部搜索栏 Row=0 供用户重新输入）  -->
             <Border
                 Grid.Row="1"
                 Grid.RowSpan="4"
+                Panel.ZIndex="10"
                 Background="{DynamicResource SurfaceSecondaryBrush}"
                 Visibility="{Binding ShowNotFound, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock
@@ -114,20 +115,24 @@
             <Grid Grid.Row="1">
                 <StackPanel>
                     <StackPanel Margin="0,5,0,5">
-                        <!--  Avatar - centered  -->
+                        <!--  Avatar - centered  金色渐变环 + 圆形头像 -->
                         <Border
-                            Width="48"
-                            Height="48"
+                            Width="56"
+                            Height="56"
                             HorizontalAlignment="Center"
-                            BorderBrush="{DynamicResource BorderLightBrush}"
-                            BorderThickness="1"
-                            ClipToBounds="True"
-                            CornerRadius="5">
-                            <Image
-                                Width="48"
-                                Height="48"
-                                Source="{Binding AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
-                                Stretch="UniformToFill" />
+                            Background="{DynamicResource GoldRingGradientBrush}"
+                            CornerRadius="28"
+                            Padding="2">
+                            <Border Background="{DynamicResource SurfaceTertiaryBrush}"
+                                    CornerRadius="26" ClipToBounds="True">
+                                <Border.Clip>
+                                    <EllipseGeometry Center="26,26" RadiusX="26" RadiusY="26" />
+                                </Border.Clip>
+                                <Image Width="52" Height="52"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Stretch="UniformToFill"
+                                       Source="{Binding AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}" />
+                            </Border>
                         </Border>
 
                         <!--  Level + Name - centered below avatar  -->
@@ -422,7 +427,7 @@
                     <DataGrid.ColumnHeaderStyle>
                         <Style BasedOn="{StaticResource ModernDataGridColumnHeaderStyle}" TargetType="DataGridColumnHeader">
                             <Setter Property="HorizontalContentAlignment" Value="Center" />
-                            <Setter Property="Background" Value="#F2F3F5" />
+                            <Setter Property="Background" Value="{DynamicResource SurfaceTertiaryBrush}" />
                         </Style>
                     </DataGrid.ColumnHeaderStyle>
                     <DataGrid.CellStyle>
@@ -440,7 +445,7 @@
                         <Style BasedOn="{StaticResource ModernDataGridRowStyle}" TargetType="DataGridRow">
                             <Style.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#DAE8F7" />
+                                    <Setter Property="Background" Value="{DynamicResource AccentLightBrush}" />
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -483,15 +488,24 @@
                                 <DataTemplate>
                                     <Grid MinWidth="180" HorizontalAlignment="Stretch">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="28" />
+                                            <ColumnDefinition Width="36" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <Image
-                                            Grid.Column="0"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"
-                                            Source="{Binding HeroIcon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
-                                            Stretch="Uniform" />
+                                        <!-- 英雄头像圆框：1px 描边 + 圆形裁切 -->
+                                        <Border Grid.Column="0" Width="30" Height="30"
+                                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                Background="{DynamicResource SurfaceTertiaryBrush}"
+                                                BorderBrush="{DynamicResource BorderLightBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="15" ClipToBounds="True">
+                                            <Border.Clip>
+                                                <EllipseGeometry Center="15,15" RadiusX="15" RadiusY="15" />
+                                            </Border.Clip>
+                                            <Image Width="30" Height="30"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Stretch="UniformToFill"
+                                                   Source="{Binding HeroIcon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                        </Border>
                                         <ItemsControl
                                             Grid.Column="1"
                                             Margin="4,0,0,0"
@@ -619,11 +633,11 @@
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center"
                                           Visibility="{Binding IsRankMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="50" />
-                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions>
                                             <RowDefinition />
@@ -639,7 +653,9 @@
                                             Text="{Binding RankDisplayText}" />
                                         <StackPanel
                                             Grid.Column="1"
+                                            Grid.RowSpan="2"
                                             HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
                                             Orientation="Horizontal">
                                             <Image
                                                 Width="14"
@@ -699,6 +715,30 @@
                                         FontSize="11"
                                         Foreground="{DynamicResource TextMutedBrush}"
                                         Text="{Binding BattleTime}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <!--  详情按钮列 (空标题, 宽 40)  -->
+                        <DataGridTemplateColumn Width="40">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button
+                                        Height="22"
+                                        Padding="0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Cursor="Hand"
+                                        Command="{Binding DataContext.OpenBattleDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip="查看对局详情">
+                                        <TextBlock
+                                            FontSize="12"
+                                            Foreground="{DynamicResource AccentPrimaryBrush}"
+                                            TextDecorations="Underline"
+                                            Text="详情" />
+                                    </Button>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

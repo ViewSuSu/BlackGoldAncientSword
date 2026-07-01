@@ -46,6 +46,18 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             return InvokeAsync(() => NarakaApiClient.GetBattleDetailAsync(roleId, battleId, ct));
         }
 
+        /// <summary>查询单场对局个人详情（等同于 FetchHonorTitlesAsync，语义更贴近“对局详情”业务）。</summary>
+        public Task<GetBattleDetailResponse?> FetchBattleDetailAsync(string roleId, string battleId, CancellationToken ct)
+        {
+            return InvokeAsync(() => NarakaApiClient.GetBattleDetailAsync(roleId, battleId, ct));
+        }
+
+        /// <summary>查询单场对局的队伍详情（队友装备/伤害）。</summary>
+        public Task<GetTeamBattleDetailResponse?> FetchTeamBattleDetailAsync(string roleId, string battleId, CancellationToken ct)
+        {
+            return InvokeAsync(() => NarakaApiClient.GetTeamBattleDetailAsync(roleId, battleId, ct));
+        }
+
         /// <summary>
         /// 统一包装：把 API 抛出的非取消异常吞掉并返回 null，
         /// 这样 VM 端只需做 null 判断，不必散落 try/catch。

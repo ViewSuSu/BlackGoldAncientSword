@@ -19,3 +19,19 @@ src/ocr_service/__pycache__/
 # --- Editor / IDE settings (per-machine) ---
 .vscode/
 .claude/worktrees/
+# --- AI coding assistants (local-only, never upload) ---
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.claude/
+.codex/
+.cursor/
+.cursorrules
+.cursorignore
+.github/copilot-instructions.md
+.aider*
+.continue/
+.windsurfrules
+.roo/
+.roomodes
+.clinerules

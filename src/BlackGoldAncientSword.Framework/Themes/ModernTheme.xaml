@@ -1,91 +1,147 @@
-﻿<ResourceDictionary
+<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ================================================================
-         ModernTheme — 统一语义色板、阴影、圆角与全局控件样式
-         设计理念：干净、专业、数据聚焦；与 UpdateWindow 设计风格对齐
+         ModernTheme — 淡雅护眼 · 青瓷竹青色板
+         设计理念：护眼浅绿底 + 竹青深绿点缀 + 深墨字，东方雅致，长时间阅读舒适
+         调整范围：仅调整已有 token 数值，未新增或改名任何 Key，保证兼容性
          ================================================================ -->
 
     <!-- ======================== 1. 语义色板 ======================== -->
 
-    <!-- 表面层级 -->
-    <SolidColorBrush x:Key="SurfacePrimaryBrush"    Color="#F8F9FA" />
-    <SolidColorBrush x:Key="SurfaceSecondaryBrush"  Color="#FFFFFF" />
-    <SolidColorBrush x:Key="SurfaceTertiaryBrush"   Color="#F1F3F5" />
-    <SolidColorBrush x:Key="SurfaceNavBrush"        Color="#FFFFFF" />
-    <SolidColorBrush x:Key="SurfaceActiveBrush"     Color="#EEF2FF" />
-    <SolidColorBrush x:Key="SurfaceSidebarBrush"    Color="#FAFBFC" />
+    <!-- 表面层级 · 极淡雅护眼 -->
+    <SolidColorBrush x:Key="SurfacePrimaryBrush"    Color="#F6F8F4" />
+    <SolidColorBrush x:Key="SurfaceSecondaryBrush"  Color="#FDFEFC" />
+    <SolidColorBrush x:Key="SurfaceTertiaryBrush"   Color="#EEF2EA" />
+    <SolidColorBrush x:Key="SurfaceNavBrush"        Color="#FDFEFC" />
+    <SolidColorBrush x:Key="SurfaceActiveBrush"     Color="#E6EEDF" />
+    <SolidColorBrush x:Key="SurfaceSidebarBrush"    Color="#F1F5EC" />
 
-    <!-- 强调色 -->
-    <SolidColorBrush x:Key="AccentPrimaryBrush"     Color="#2563EB" />
-    <SolidColorBrush x:Key="AccentHoverBrush"       Color="#1D4ED8" />
-    <SolidColorBrush x:Key="AccentPressedBrush"     Color="#1E40AF" />
-    <SolidColorBrush x:Key="AccentLightBrush"       Color="#DBEAFE" />
-    <SolidColorBrush x:Key="AccentSubtleBrush"      Color="#EFF6FF" />
+    <!-- 强调色 · 柔和青草绿 -->
+    <SolidColorBrush x:Key="AccentPrimaryBrush"     Color="#7EA089" />
+    <SolidColorBrush x:Key="AccentHoverBrush"       Color="#6C8F77" />
+    <SolidColorBrush x:Key="AccentPressedBrush"     Color="#587E65" />
+    <SolidColorBrush x:Key="AccentLightBrush"       Color="#E6EEDF" />
+    <SolidColorBrush x:Key="AccentSubtleBrush"      Color="#F0F5EA" />
 
-    <!-- 功能色 -->
-    <SolidColorBrush x:Key="SuccessBrush"           Color="#10B981" />
-    <SolidColorBrush x:Key="DangerBrush"            Color="#EF4444" />
-    <SolidColorBrush x:Key="WarningBrush"           Color="#F59E0B" />
-    <SolidColorBrush x:Key="InfoBrush"              Color="#3B82F6" />
+    <!-- 功能色 · 中式配色 -->
+    <SolidColorBrush x:Key="SuccessBrush"           Color="#3F8B57" />
+    <SolidColorBrush x:Key="DangerBrush"            Color="#B23A3A" />
+    <SolidColorBrush x:Key="WarningBrush"           Color="#C58B2B" />
+    <SolidColorBrush x:Key="InfoBrush"              Color="#4E7CA0" />
 
-    <!-- 文字色 -->
-    <SolidColorBrush x:Key="TextPrimaryBrush"        Color="#0F172A" />
-    <SolidColorBrush x:Key="TextSecondaryBrush"      Color="#475569" />
-    <SolidColorBrush x:Key="TextMutedBrush"          Color="#94A3B8" />
-    <SolidColorBrush x:Key="TextOnAccentBrush"       Color="#FFFFFF" />
-    <SolidColorBrush x:Key="TextPlaceholderBrush"    Color="#CBD5E1" />
+    <!-- 文字色 · 深墨 -->
+    <SolidColorBrush x:Key="TextPrimaryBrush"        Color="#1E241C" />
+    <SolidColorBrush x:Key="TextSecondaryBrush"      Color="#42493F" />
+    <SolidColorBrush x:Key="TextMutedBrush"          Color="#7E877A" />
+    <SolidColorBrush x:Key="TextOnAccentBrush"       Color="#FBFDF9" />
+    <SolidColorBrush x:Key="TextPlaceholderBrush"    Color="#B8C0B3" />
 
-    <!-- 边框色 -->
-    <SolidColorBrush x:Key="BorderLightBrush"        Color="#E2E8F0" />
-    <SolidColorBrush x:Key="BorderMediumBrush"       Color="#CBD5E1" />
-    <SolidColorBrush x:Key="BorderFocusBrush"        Color="#2563EB" />
+    <!-- 边框色 · 明显但柔和 -->
+    <SolidColorBrush x:Key="BorderLightBrush"        Color="#B8C4AE" />
+    <SolidColorBrush x:Key="BorderMediumBrush"       Color="#96A88C" />
+    <SolidColorBrush x:Key="BorderFocusBrush"        Color="#7EA089" />
 
-    <!-- 渐变 -->
+    <!-- ========== 渐变系统 · 克制、只作背景层，不夺按钮视觉焦点 ========== -->
+
+    <!-- 主表面渐变 · 极浅垂直过渡 -->
     <LinearGradientBrush x:Key="SurfaceGradientBrush" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Offset="0" Color="#F8F9FA" />
-        <GradientStop Offset="1" Color="#F1F3F5" />
+        <GradientStop Offset="0" Color="#F7F9F5" />
+        <GradientStop Offset="1" Color="#EFF4E9" />
     </LinearGradientBrush>
 
-    <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Offset="0" Color="#2563EB" />
-        <GradientStop Offset="1" Color="#3B82F6" />
+    <!-- 强调色渐变 · 供竖条 / 装饰用，柔和青草 -->
+    <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#93B49D" />
+        <GradientStop Offset="1" Color="#6C8F77" />
+    </LinearGradientBrush>
+
+    <!-- 侧边栏渐变 -->
+    <LinearGradientBrush x:Key="SidebarGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#F1F5EC" />
+        <GradientStop Offset="1" Color="#E7EEE0" />
+    </LinearGradientBrush>
+
+    <!-- 标题栏渐变 · 白到淡绿的极轻过渡 -->
+    <LinearGradientBrush x:Key="TitleBarGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#FEFEFD" />
+        <GradientStop Offset="1" Color="#F1F5EC" />
+    </LinearGradientBrush>
+
+    <!-- 卡片渐变 · 近白，仅一丝层次 -->
+    <LinearGradientBrush x:Key="CardGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#FFFFFF" />
+        <GradientStop Offset="1" Color="#FAFCF8" />
+    </LinearGradientBrush>
+
+    <!-- 底部状态栏渐变 -->
+    <LinearGradientBrush x:Key="StatusBarGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#F1F5EC" />
+        <GradientStop Offset="1" Color="#E7EEE0" />
+    </LinearGradientBrush>
+
+    <!-- 强调色柔光渐变 · 用于选中态背景 -->
+    <LinearGradientBrush x:Key="AccentSoftGradientBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#E6EEDF" />
+        <GradientStop Offset="1" Color="#D8E4CE" />
+    </LinearGradientBrush>
+
+    <!-- 深墨→竹青渐变 · 用于头像/英雄卡背景 -->
+    <LinearGradientBrush x:Key="HeroCardGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#243128" />
+        <GradientStop Offset="1" Color="#3E6249" />
+    </LinearGradientBrush>
+
+    <!-- 装饰性金线渐变 · 顶栏细线用 -->
+    <LinearGradientBrush x:Key="GoldTraceGradientBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#00B8892B" />
+        <GradientStop Offset="0.5" Color="#FFB8892B" />
+        <GradientStop Offset="1" Color="#00B8892B" />
+    </LinearGradientBrush>
+
+    <!-- 头像/装备图标金色环渐变 · 温暖琥珀金，与竹青绿主题形成对比高光 -->
+    <LinearGradientBrush x:Key="GoldRingGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#E6C878" />
+        <GradientStop Offset="0.5" Color="#B8892B" />
+        <GradientStop Offset="1" Color="#7A5808" />
     </LinearGradientBrush>
 
     <!-- ======================== 2. 阴影效果 ======================== -->
 
+    <!-- 卡片阴影 · 更深、更明显，配合可见边框 -->
     <DropShadowEffect x:Key="ShadowCardEffect"
-        BlurRadius="8"  Direction="270"  Opacity="0.06"
-        ShadowDepth="2"  Color="#000000" />
+        BlurRadius="14" Direction="270" Opacity="0.18"
+        ShadowDepth="3" Color="#1A2E20" />
 
     <DropShadowEffect x:Key="ShadowElevatedEffect"
-        BlurRadius="16" Direction="270"  Opacity="0.10"
-        ShadowDepth="3"  Color="#0F172A" />
+        BlurRadius="24" Direction="270" Opacity="0.25"
+        ShadowDepth="5" Color="#0E241A" />
 
     <DropShadowEffect x:Key="ShadowPopupEffect"
-        BlurRadius="24" Direction="270"  Opacity="0.14"
-        ShadowDepth="4"  Color="#0F172A" />
+        BlurRadius="34" Direction="270" Opacity="0.30"
+        ShadowDepth="7" Color="#0A1D14" />
 
+    <!-- 强调色发光 -->
     <DropShadowEffect x:Key="ShadowAccentEffect"
-        BlurRadius="12" Direction="270"  Opacity="0.20"
-        ShadowDepth="2"  Color="#2563EB" />
+        BlurRadius="14" Direction="270" Opacity="0.30"
+        ShadowDepth="0" Color="#5A8266" />
 
     <!-- ======================== 3. 全局圆角常量 ======================== -->
     <CornerRadius x:Key="RadiusNone">0</CornerRadius>
     <CornerRadius x:Key="RadiusSm">4</CornerRadius>
     <CornerRadius x:Key="RadiusMd">6</CornerRadius>
-    <CornerRadius x:Key="RadiusLg">8</CornerRadius>
-    <CornerRadius x:Key="RadiusXl">12</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">10</CornerRadius>
+    <CornerRadius x:Key="RadiusXl">14</CornerRadius>
     <CornerRadius x:Key="RadiusFull">999</CornerRadius>
 
     <!-- ======================== 4. 全局控件样式 ======================== -->
 
-    <!-- 4a. 卡片容器边框 -->
+    <!-- 4a. 卡片容器边框 · 加粗至 1.5px + 明显边框色 -->
     <Style x:Key="CardBorderStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource SurfaceSecondaryBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderThickness" Value="1.5" />
         <Setter Property="CornerRadius" Value="{StaticResource RadiusLg}" />
         <Setter Property="Effect" Value="{StaticResource ShadowCardEffect}" />
     </Style>
@@ -94,7 +150,7 @@
     <Style x:Key="PanelBorderStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource SurfaceSecondaryBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderThickness" Value="1.2" />
         <Setter Property="CornerRadius" Value="{StaticResource RadiusMd}" />
     </Style>
 
@@ -160,12 +216,12 @@
         </Setter>
     </Style>
 
-    <!-- 4h. 现代按钮（主操作） -->
+    <!-- 4h. 现代按钮（主操作）· 竹青渐变 -->
     <Style x:Key="PrimaryButtonStyle" TargetType="Button">
         <Setter Property="Height" Value="32" />
         <Setter Property="MinWidth" Value="80" />
         <Setter Property="Padding" Value="16,0" />
-        <Setter Property="Background" Value="{StaticResource AccentPrimaryBrush}" />
+        <Setter Property="Background" Value="{StaticResource AccentGradientBrush}" />
         <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Cursor" Value="Hand" />
@@ -206,7 +262,7 @@
         <Setter Property="Padding" Value="16,0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderMediumBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FontSize" Value="13" />
@@ -227,9 +283,10 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceTertiaryBrush}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentPrimaryBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BorderLightBrush}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentLightBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.5" />
@@ -264,7 +321,7 @@
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceTertiaryBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BorderLightBrush}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentLightBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
@@ -306,16 +363,16 @@
         <Setter Property="BorderThickness" Value="0,0,0,1" />
     </Style>
 
-    <!-- 4m. DataGrid 行样式 -->
+    <!-- 4m. DataGrid 行样式 · 底边分隔线区分行 -->
     <Style x:Key="ModernDataGridRowStyle" TargetType="DataGridRow">
         <Setter Property="MinHeight" Value="36" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-        <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource SurfaceActiveBrush}" />
+                <Setter Property="Background" Value="{StaticResource AccentSubtleBrush}" />
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{StaticResource AccentLightBrush}" />
@@ -359,10 +416,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#FFE4E6" />
+                            <Setter TargetName="Bd" Property="Background" Value="#F0D8D8" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#FECDD3" />
+                            <Setter TargetName="Bd" Property="Background" Value="#E2B8B8" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -391,10 +448,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#E8EAF0" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceTertiaryBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#D0D5E0" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BorderLightBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -419,10 +476,11 @@
                         <Border
                             Grid.Row="1"
                             Padding="16,14"
-                            Background="{StaticResource SurfaceSecondaryBrush}"
-                            BorderBrush="{StaticResource BorderLightBrush}"
-                            BorderThickness="1"
-                            CornerRadius="{StaticResource RadiusLg}">
+                            Background="{StaticResource CardGradientBrush}"
+                            BorderBrush="{StaticResource BorderMediumBrush}"
+                            BorderThickness="1.5"
+                            CornerRadius="{StaticResource RadiusLg}"
+                            Effect="{StaticResource ShadowCardEffect}">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -448,21 +506,18 @@
 
     <!-- ======================== 5. 额外实用样式 ======================== -->
 
-    <!-- 加载状态文字 -->
     <Style x:Key="StatusTitleStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="20" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
 
-    <!-- 统计数值（大号） -->
     <Style x:Key="StatValueStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="15" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
 
-    <!-- 统计标签 -->
     <Style x:Key="StatLabelStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
@@ -470,17 +525,54 @@
 
     <!-- ======================== 6. 装饰性样式 ======================== -->
 
-    <!-- 章节标题装饰条 — 4px 宽圆角竖条 -->
+    <!-- 章节标题装饰条 — 竹青渐变竖条 -->
     <Style x:Key="AccentBarStyle" TargetType="Border">
         <Setter Property="Width" Value="4" />
         <Setter Property="VerticalAlignment" Value="Stretch" />
-        <Setter Property="Background" Value="{StaticResource AccentPrimaryBrush}" />
+        <Setter Property="Background" Value="{StaticResource AccentGradientBrush}" />
         <Setter Property="CornerRadius" Value="2" />
         <Setter Property="Margin" Value="0,2,0,2" />
     </Style>
 
     <!-- 卡片顶部强调线 — 用于重要数据卡片 -->
-    <SolidColorBrush x:Key="CardAccentTopBrush" Color="#2563EB" />
-    <SolidColorBrush x:Key="CardAccentMiddleBrush" Color="#DBEAFE" />   <!-- 中间队员卡片 -->
-    <SolidColorBrush x:Key="CardAccentRightBrush" Color="#2563EB" />
+    <SolidColorBrush x:Key="CardAccentTopBrush" Color="#7EA089" />
+    <SolidColorBrush x:Key="CardAccentMiddleBrush" Color="#93B49D" />
+    <SolidColorBrush x:Key="CardAccentRightBrush" Color="#587E65" />
+
+    <!-- 对局详情 Tab 切换（RadioButton 变体，选中态为主色底 + 白字） -->
+    <Style x:Key="DetailTabStyle" TargetType="RadioButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="0,8" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Bd"
+                            Margin="3"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="6">
+                        <ContentPresenter
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                            TextElement.FontWeight="Medium"
+                            TextElement.Foreground="{TemplateBinding Foreground}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentLightBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentPrimaryBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

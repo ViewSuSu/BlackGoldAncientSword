@@ -37,9 +37,9 @@
 
     <Grid>
         <Border
-            Background="#F5F5F5"
+            Background="{DynamicResource SurfaceGradientBrush}"
             ClipToBounds="True"
-            CornerRadius="8" Effect="{DynamicResource ShadowElevatedEffect}">
+            CornerRadius="10" Effect="{DynamicResource ShadowElevatedEffect}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="30" />
@@ -51,10 +51,10 @@
 
                 <!--  Title bar background  -->
                 <Grid Grid.Row="0">
-                <Border Background="{DynamicResource SurfaceSecondaryBrush}" MouseDown="TitleBar_MouseDown" />
-                <!--  Decorative accent line  -->
-                <Border Height="2" VerticalAlignment="Bottom" Background="{DynamicResource AccentPrimaryBrush}" Opacity="0.6" />
-                <Border Height="1" VerticalAlignment="Bottom" Background="{DynamicResource BorderLightBrush}" Margin="0,0,0,2" />
+                <Border Background="{DynamicResource TitleBarGradientBrush}" MouseDown="TitleBar_MouseDown" />
+                <!--  Decorative gradient accent line + gold shimmer trace  -->
+                <Border Height="2" VerticalAlignment="Bottom" Background="{DynamicResource AccentGradientBrush}" Opacity="0.9" />
+                <Border Height="1" VerticalAlignment="Bottom" Background="{DynamicResource GoldTraceGradientBrush}" Opacity="0.65" />
             </Grid>
 
                 <!--  Window icon + title  -->
@@ -202,7 +202,7 @@
                     Grid.Row="0"
                     Height="1"
                     VerticalAlignment="Bottom"
-                    Background="#E0E0E0" />
+                    Background="{DynamicResource BorderLightBrush}" />
 
                 <!--  ==================== Row 1: Content area ====================  -->
                 <Grid Grid.Row="1">
@@ -217,7 +217,7 @@
                         Grid.Column="0"
                         Margin="0,10,0,0"
                         Padding="0"
-                        Background="#F5F5F5"
+                        Background="{DynamicResource SidebarGradientBrush}"
                         ClipToBounds="True">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -241,8 +241,8 @@
                                             <Setter Property="Cursor" Value="Hand" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding ActivePage}" Value="HomePage">
-                                                    <Setter Property="Background" Value="#E0E8F0" />
-                                                    <Setter Property="BorderBrush" Value="#4A90D9" />
+                                                    <Setter Property="Background" Value="{DynamicResource AccentSoftGradientBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentGradientBrush}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -290,8 +290,8 @@
                                             <Setter Property="Cursor" Value="Hand" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding ActivePage}" Value="StatsPage">
-                                                    <Setter Property="Background" Value="#E0E8F0" />
-                                                    <Setter Property="BorderBrush" Value="#4A90D9" />
+                                                    <Setter Property="Background" Value="{DynamicResource AccentSoftGradientBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentGradientBrush}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -339,8 +339,8 @@
                                             <Setter Property="Cursor" Value="Hand" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding ActivePage}" Value="TeamInfoPage">
-                                                    <Setter Property="Background" Value="#E0E8F0" />
-                                                    <Setter Property="BorderBrush" Value="#4A90D9" />
+                                                    <Setter Property="Background" Value="{DynamicResource AccentSoftGradientBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentGradientBrush}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -392,8 +392,8 @@
                                             <Setter Property="Cursor" Value="Hand" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding ActivePage}" Value="SettingsPage">
-                                                    <Setter Property="Background" Value="#E0E8F0" />
-                                                    <Setter Property="BorderBrush" Value="#4A90D9" />
+                                                    <Setter Property="Background" Value="{DynamicResource AccentSoftGradientBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentGradientBrush}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -456,7 +456,7 @@
                     Grid.Row="1"
                     Height="1"
                     VerticalAlignment="Bottom"
-                    Background="#E0E0E0" />
+                    Background="{DynamicResource BorderLightBrush}" />
 
                 <!--  ==================== Row 2: Bottom bar ====================  -->
                 <StackPanel
@@ -468,14 +468,14 @@
                     <TextBlock
                         VerticalAlignment="Center"
                         FontSize="11"
-                        Foreground="#888888"
+                        Foreground="{DynamicResource TextMutedBrush}"
                         Text="{Binding CurrentVersionText}" />
                     <!--  最新版本标记  -->
                     <TextBlock
                         Margin="5,0,0,0"
                         VerticalAlignment="Center"
                         FontSize="11"
-                        Foreground="#888888"
+                        Foreground="{DynamicResource TextMutedBrush}"
                         Text="{DynamicResource MainWindow.LatestVersion}"
                         Visibility="{Binding IsLatestVersion, Converter={StaticResource BoolToVisibilityConverter}}" />
                     <!--  发现新版本  -->
@@ -494,7 +494,7 @@
                             Margin="0,0,3,0"
                             VerticalAlignment="Center"
                             FontSize="11"
-                            Foreground="#5B8DEF"
+                            Foreground="{DynamicResource AccentPrimaryBrush}"
                             Text="{DynamicResource Settings.UpdateAvailable}" />
                     </StackPanel>
                 </StackPanel>
@@ -541,11 +541,12 @@
                             PlacementTarget="{Binding ElementName=ContactToggle}"
                             StaysOpen="False">
                             <Border
-                                Background="White"
-                                BorderBrush="#CCCCCC"
+                                Background="{DynamicResource SurfaceSecondaryBrush}"
+                                BorderBrush="{DynamicResource BorderLightBrush}"
                                 BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="12,10">
+                                CornerRadius="8"
+                                Padding="14,12"
+                                Effect="{DynamicResource ShadowPopupEffect}">
                                 <StackPanel>
                                     <TextBlock
                                         Margin="0,0,0,6"
@@ -630,6 +631,17 @@
                     Panel.ZIndex="10060"
                     x:Name="UpdateNotificationOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.UpdateNotificationRegion}" />
+
+                <!--  Battle detail overlay (below close prompt, above announcement)  -->
+                <ContentControl
+                    Grid.RowSpan="3"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Panel.ZIndex="10005"
+                    x:Name="BattleDetailOverlay"
+                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.BattleDetailRegion}" />
 
             </Grid>
         </Border>

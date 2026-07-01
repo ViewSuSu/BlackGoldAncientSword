@@ -11,5 +11,6 @@
         public const string ClosePromptPage = nameof(ClosePromptPage);
         public const string FeedbackPage = nameof(FeedbackPage);
         public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
+        public const string BattleDetailPage = nameof(BattleDetailPage);
     }
 }

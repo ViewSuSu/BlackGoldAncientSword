@@ -9,4 +9,5 @@
   <Project Path="BlackGoldAncientSword.Tests\BlackGoldAncientSword.Tests.csproj" />
   <Project Path="BlackGoldAncientSword.App\BlackGoldAncientSword.App.csproj" />
   <Project Path="BlackGoldAncientSword.Update\BlackGoldAncientSword.Update.csproj" />
+  <Project Path="BlackGoldAncientSword.Downloader\BlackGoldAncientSword.Downloader.csproj" />
 </Solution>
