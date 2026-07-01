@@ -224,6 +224,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private void OnGameStatusRecognized(object? sender, GameStatusChangedEventArgs args)
         {
+            BlackGoldAncientSword.Framework.Core.Infrastructure.DiagLog.Write(
+                "VM", $"OnGameStatusRecognized status={args.Status}, dataLoaded={_ocrDataLoadedSuccessfully}");
+
             // 非英雄选择状态时立即取消 OCR 循环，无需等待 UI 线程调度。
             // GameLogMonitor 在 ThreadPool 上触发事件，HandleGameStatusOnUiThread 通过
             // _uiDispatcher.InvokeAsync marshal 到 UI 线程，从事件触发到实际执行 StopOcrLoop
@@ -327,6 +330,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private void StartOcrLoop()
         {
+            BlackGoldAncientSword.Framework.Core.Infrastructure.DiagLog.Write(
+                "VM", $"StartOcrLoop 入口, dataLoaded={_ocrDataLoadedSuccessfully}, isRunning={_isOcrRunning}");
+
             // 如果上一轮已成功完成完整识别（有 UID、数据已加载），不再重复启动 OCR 轮询。
             // 用户仍可通过右上角的刷新按钮手动触发单次识别（RefreshOcrCommand → RefreshOcrOnceAsync）。
             if (_ocrDataLoadedSuccessfully)

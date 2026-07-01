@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal;
 
 namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
@@ -36,13 +37,16 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
 
         public async Task StartAsync()
         {
+            DiagLog.Write("GLM", "StartAsync 入口, IsRunning=" + IsRunning);
             if (IsRunning) return;
 
             var fullPath = Framework.Services.AppSettings.GetDefaultGameLogPath();
+            DiagLog.Write("GLM", $"日志路径={fullPath}, Exists={File.Exists(fullPath)}");
             if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
                 return;
 
             await ReplayExistingContentAsync(fullPath).ConfigureAwait(false);
+            DiagLog.Write("GLM", $"Replay 结束, isInBattle={_stateMachine.IsInBattle}, isJoined={_stateMachine.IsJoined}, battleId={_stateMachine.CurrentBattleId}, lastPos={_stateMachine.LastPosition}");
 
             // Replay 完毕后按当前状态机内容补发一次事件，让已订阅的 UI 反映现网对局阶段
             // （冷启动进入正在进行的对局时不再显示空）。
@@ -64,6 +68,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                 _pollCts.Token);
 
             IsRunning = true;
+            DiagLog.Write("GLM", "StartAsync 完成, FSW+Poll 已启动");
         }
 
         public void Stop()
@@ -130,11 +135,17 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         {
             if (_stateMachine.IsInBattle)
             {
+                DiagLog.Write("GLM", "PublishSnapshot -> BattleStarted");
                 BattleStarted?.Invoke(this, _stateMachine.CurrentSnapshot);
             }
             else if (_stateMachine.IsJoined)
             {
+                DiagLog.Write("GLM", "PublishSnapshot -> BattleJoined");
                 BattleJoined?.Invoke(this, _stateMachine.CurrentSnapshot);
+            }
+            else
+            {
+                DiagLog.Write("GLM", "PublishSnapshot -> 无事件 (非对局中)");
             }
         }
 
@@ -218,8 +229,11 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             var events = _stateMachine.ProcessContent(completeContent);
             _stateMachine.CommitReadPosition(startPos + consumedBytes);
 
+            if (events.Count > 0)
+                DiagLog.Write("GLM", $"ReadNewContent: {events.Count} 事件, range=[{startPos},{endPos}), consumed={consumedBytes}");
             foreach (var (kind, args) in events)
             {
+                DiagLog.Write("GLM", $"emit {kind}, battleId={args.BattleId}, mapId={args.MapId}");
                 switch (kind)
                 {
                     case BattleEventKind.Joined:

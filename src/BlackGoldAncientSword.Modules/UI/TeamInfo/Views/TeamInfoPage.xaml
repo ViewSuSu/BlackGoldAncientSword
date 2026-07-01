@@ -761,27 +761,6 @@
                     <Border
                         Grid.Row="2"
                         Grid.Column="0"
-                        Height="1"
-                        Margin="14,6,14,6"
-                        Background="{DynamicResource BorderLightBrush}"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Border
-                        Grid.Row="2"
-                        Grid.Column="2"
-                        Height="1"
-                        Margin="14,6,14,6"
-                        Background="{DynamicResource BorderLightBrush}"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Border
-                        Grid.Row="2"
-                        Grid.Column="4"
-                        Height="1"
-                        Margin="14,6,14,6"
-                        Background="{DynamicResource BorderLightBrush}"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Border
-                        Grid.Row="2"
-                        Grid.Column="0"
                         Margin="14,2,14,2"
                         Padding="8,0"
                         BorderBrush="{DynamicResource BorderLightBrush}"

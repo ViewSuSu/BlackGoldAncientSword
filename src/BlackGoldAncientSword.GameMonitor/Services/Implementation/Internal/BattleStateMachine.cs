@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
 {
@@ -152,11 +153,50 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
         /// </summary>
         public (BattleEventKind kind, BattleEventArgs args) ProcessLine(string line)
         {
-            // —— 1) ID 提取（无事件副作用）——
+            // —— 1) ID 提取 ——
+            // battle_tid 变化处理：若旧 id 非空且与新 id 不同，且 _isInBattle/_joinedBattle 仍为 true，
+            // 说明上一局没有触发正常 Ended（游戏 crash / 玩家杀进程 / 非常规退出对局，无 TeamBattle Destroy
+            // / GridMapManager Destroy 日志），残留状态会让"开始连接战斗服务器"分支中的
+            // alreadyInBattle 保护把新一局的 Joined 事件全部吞掉 → OCR 循环永远不启动。
+            // 因此在检测到新 battle_tid 时强制视为老局隐式 Ended，reset in-battle/joined，
+            // 并 emit 一个 Ended 事件让上层可以正确清理 UI。
+            // 真正的 mid-battle 掉线重连场景 battle_tid 保持不变，走 else 分支不受影响。
             var battleTidMatch = BattleTidRegex.Match(line);
+            BattleEventArgs? implicitEndedArgs = null;
             if (battleTidMatch.Success)
             {
-                lock (_stateLock) { _currentBattleId = battleTidMatch.Groups[1].Value; }
+                var newBattleId = battleTidMatch.Groups[1].Value;
+                lock (_stateLock)
+                {
+                    var oldBattleId = _currentBattleId;
+                    _currentBattleId = newBattleId;
+
+                    if (!string.IsNullOrEmpty(oldBattleId)
+                        && !string.Equals(oldBattleId, newBattleId, StringComparison.Ordinal)
+                        && (_isInBattle || _joinedBattle))
+                    {
+                        if (!_suppressEvents)
+                        {
+                            implicitEndedArgs = new BattleEventArgs
+                            {
+                                BattleId = oldBattleId,
+                                MapId = _currentMapId ?? string.Empty,
+                                RoomId = _currentRoomId ?? string.Empty,
+                                RoomType = _currentRoomType ?? string.Empty,
+                                Timestamp = DateTimeOffset.Now
+                            };
+                        }
+                        _isInBattle = false;
+                        _joinedBattle = false;
+                        _currentMapId = null;
+                    }
+                }
+            }
+            if (implicitEndedArgs != null)
+            {
+                // 老局隐式结束事件先行返回，本行剩余的 Joined/Started/Ended 判断留给状态机的下一行处理
+                // （battle_tid 通常独占一行输出，不会与 "开始连接战斗服务器" 等关键 marker 同行）。
+                return (BattleEventKind.Ended, implicitEndedArgs);
             }
 
             var mapIdMatch = MapIdRegex.Match(line);
@@ -193,6 +233,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
                     }
                     suppressed = _suppressEvents;
                 }
+                DiagLog.Write("BSM", $"命中 '开始连接战斗服务器', alreadyInBattle={alreadyInBattle}, suppressed={suppressed}, battleId={_currentBattleId}");
                 if (!alreadyInBattle && !suppressed)
                 {
                     return (BattleEventKind.Joined, CreateCurrentBattleArgs());

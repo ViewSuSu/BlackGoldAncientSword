@@ -228,6 +228,15 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     /// 同名误识保留两条以便后续 HTTP 查询失败时仍可见。
     /// </para>
     /// </summary>
+    /// <summary>
+    /// rec 置信度低于该阈值的检测框判为幻影丢弃。
+    /// </summary>
+    /// <remarks>
+    /// 白字二值化后主检测置信度稳定 ≥ 0.9，幻影（如 hero_selection_team_02 M 区域中被过滤的 `-` 竖块，
+    /// conf ≈ 0.63）远低于 0.7，天然分水岭。设 0.7 可清幻影且不伤合法昵称。
+    /// </remarks>
+    private const double MinOcrConfidence = 0.7;
+
     private static string[] BucketAndExtractNames(
         (int xStart, int xEnd)[] regionXRanges, List<OcrResult> results)
     {
@@ -243,6 +252,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         var buckets = new string[regionXRanges.Length];
         foreach (var r in results)
         {
+            if (r.Confidence < MinOcrConfidence) continue;
             var cx = (r.Box.TopLeft.X + r.Box.TopRight.X) / 2;
             int best = -1;
             int bestDist = int.MaxValue;
@@ -321,7 +331,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
                 ranges[i] = (-1, -1);
                 continue;
             }
-            BlitInvertedRegion(rawBgra, fullWidth, cx, cy, cw, ch,
+            BlitBinarizedWhiteRegion(rawBgra, fullWidth, cx, cy, cw, ch,
                 bmp, totalW, dstX, 0);
             ranges[i] = (dstX, dstX + cw);
             dstX += cw + StitchSpacerPx;
@@ -330,8 +340,23 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         return (bmp, ranges);
     }
 
-    /// <summary>把 rawBgra 中 [cx,cy,cw,ch] 区域反色后拷贝到目标 BMP 像素区的 (dstX, dstY) 位置。</summary>
-    private static void BlitInvertedRegion(
+    /// <summary>游戏昵称为纯白字，min(B,G,R) ≥ 该阈值判为白字像素。</summary>
+    /// <remarks>
+    /// 200 是甜点值：低于 200 会把 AA 边缘 + 血条/装饰的浅色噪声吸进白字集合（引入幻影 `1ILA` 等）；
+    /// 高于 220 会把 `耍` 这类细笔画像素判为背景导致 rec 认错（`耍→要`）。
+    /// </remarks>
+    private const int WhiteTextThreshold = 200;
+
+    /// <summary>
+    /// 白字二值化：源 [cx,cy,cw,ch] 内 min(B,G,R) ≥ <see cref="WhiteTextThreshold"/> 判为白字 → 输出黑 (0x00)；
+    /// 其余像素判为背景/干扰 → 输出白 (0xFF)。等价于"只保留白字 + 反色"一步搞定。
+    /// <para>
+    /// 相比原始 BGR 全通道反色：非白色的血条/图标/装饰在 min-channel 阈值下未通过，
+    /// 直接抹平为纯白背景，det 阶段不会把它们识别成幻影文字。
+    /// alpha 通道强制 0xFF。
+    /// </para>
+    /// </summary>
+    private static void BlitBinarizedWhiteRegion(
         byte[] rawBgra, int srcFullWidth, int cx, int cy, int cw, int ch,
         byte[] dstBmp, int dstFullWidth, int dstX, int dstY)
     {
@@ -345,9 +370,13 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             {
                 int s = srcOffset + x * 4;
                 int d = dstOffset + x * 4;
-                dstBmp[d]     = (byte)(255 - rawBgra[s]);
-                dstBmp[d + 1] = (byte)(255 - rawBgra[s + 1]);
-                dstBmp[d + 2] = (byte)(255 - rawBgra[s + 2]);
+                byte b = rawBgra[s];
+                byte g = rawBgra[s + 1];
+                byte r = rawBgra[s + 2];
+                byte v = Math.Min(b, Math.Min(g, r)) >= WhiteTextThreshold ? (byte)0x00 : (byte)0xFF;
+                dstBmp[d]     = v;
+                dstBmp[d + 1] = v;
+                dstBmp[d + 2] = v;
                 dstBmp[d + 3] = 0xFF;
             }
         }
@@ -369,22 +398,18 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     }
 
     /// <summary>
-    /// 裁剪指定区域、反色并编码为 32bpp BMP 字节流，供 OCR 使用。
+    /// 裁剪指定区域、白字二值化并编码为 32bpp BMP 字节流，供 OCR 使用。
     /// <para>
-    /// 旧实现走 System.Drawing.Bitmap + PNG (DEFLATE 压缩)，每帧三次 PNG 编码占用十几 ms × 3；
-    /// PaddleOCR-json 内部用 OpenCV imdecode 通吃 BMP/JPG/PNG，BMP 仅 54 字节头 + 原始像素 dump，
-    /// 编码开销近乎为零，故在热路径上换成 BMP。
+    /// 白字二值化替代了原先的 BGR 全通道反色：昵称是纯白字，血条/图标/装饰是彩色，
+    /// 通过 min-channel 阈值把非白像素抹为纯白背景，避免 det 阶段把彩色 UI 误识为幻影文字
+    /// （如 `13`、`不`、`ILA` 等）。参见 <see cref="BlitBinarizedWhiteRegion"/>。
     /// </para>
     /// <para>
-    /// 同时合并裁剪/反色为一次扫描：旧实现裁剪 → 临时 byte[] 反色 → LockBits/Marshal.Copy → Bitmap.Save 共三次大块拷贝，
-    /// 新实现单次循环直接把反色后的像素写入 BMP 像素区。
-    /// </para>
-    /// <para>
-    /// 旧实现额外存在 alpha 反色 bug：0xFF → 0x00 把不透明像素反成全透明，仅靠 OpenCV 默认按 BGR 解码丢弃 alpha 才"碰巧能工作"。
-    /// 新实现仅反色 BGR 三个通道，alpha 强制 0xFF。
+    /// 保留 BMP 编码：PaddleOCR / RapidOcr 内部走 OpenCV imdecode 通吃 BMP，54 字节头 + 原始像素 dump，
+    /// 编码开销近乎为零。BITMAPINFOHEADER.biHeight 写负值表示 top-down，与源 rawBgra 顺序一致无需翻行。
     /// </para>
     /// </summary>
-    public static (byte[]? imageBytes, int cropW, int cropH) CropAndInvert(
+    public static (byte[]? imageBytes, int cropW, int cropH) CropAndBinarizeWhite(
         byte[] rawBgra, int fullWidth, int fullHeight, OcrRegion region)
     {
         var cropX = (int)(region.X * fullWidth);
@@ -399,23 +424,21 @@ public class TeamInfoOcrService : ITeamInfoOcrService
 
         if (cropW <= 0 || cropH <= 0) return (null, 0, 0);
 
-        return (EncodeInvertedBmp(rawBgra, fullWidth, cropX, cropY, cropW, cropH), cropW, cropH);
+        return (EncodeBinarizedWhiteBmp(rawBgra, fullWidth, cropX, cropY, cropW, cropH), cropW, cropH);
     }
 
     // 32bpp BGRA BMP：BITMAPFILEHEADER (14B) + BITMAPINFOHEADER (40B) + 像素数据。
     private const int BmpHeaderSize = 54;
 
     /// <summary>
-    /// 直接拼装 32bpp top-down BMP 字节流。BITMAPINFOHEADER.biHeight 写负值 = 像素自上而下存储，
-    /// 与源 rawBgra 顺序一致，无需翻转行。
-    /// 反色仅作用于 BGR 三通道,alpha 强制 0xFF (旧实现把 alpha 也反色会全透明)。
+    /// 拼装 32bpp top-down BMP 字节流，像素区通过白字二值化生成。
     /// </summary>
-    private static byte[] EncodeInvertedBmp(
+    private static byte[] EncodeBinarizedWhiteBmp(
         byte[] rawBgra, int fullWidth, int cropX, int cropY, int cropW, int cropH)
     {
         var bmp = new byte[BmpHeaderSize + cropW * cropH * 4];
         WriteBmpHeader(bmp, cropW, cropH);
-        BlitInvertedRegion(rawBgra, fullWidth, cropX, cropY, cropW, cropH, bmp, cropW, 0, 0);
+        BlitBinarizedWhiteRegion(rawBgra, fullWidth, cropX, cropY, cropW, cropH, bmp, cropW, 0, 0);
         return bmp;
     }
 }

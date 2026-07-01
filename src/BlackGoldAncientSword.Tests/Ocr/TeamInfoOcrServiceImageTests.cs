@@ -65,7 +65,7 @@ public class TeamInfoOcrServiceImageTests
         for (int i = 0; i < TeamRegions.Length; i++)
         {
             // OCR 使用反色版本（BMP 编码，PaddleOCR-json 走 OpenCV imdecode 通吃）
-            var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
+            var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndBinarizeWhite(
                 rawBgra, fullWidth, fullHeight, TeamRegions[i]);
 
             if (imageBytes == null)
@@ -197,7 +197,7 @@ public class TeamInfoOcrServiceImageTests
         // 预热一轮：触发模型加载，不计时。
         foreach (var region in TeamRegions)
         {
-            var (bytes, _, _) = TeamInfoOcrService.CropAndInvert(rawBgra, fullWidth, fullHeight, region);
+            var (bytes, _, _) = TeamInfoOcrService.CropAndBinarizeWhite(rawBgra, fullWidth, fullHeight, region);
             if (bytes != null) await engine.RecognizeAsync(bytes);
         }
 
@@ -208,7 +208,7 @@ public class TeamInfoOcrServiceImageTests
             var sw = System.Diagnostics.Stopwatch.StartNew();
             foreach (var region in TeamRegions)
             {
-                var (bytes, _, _) = TeamInfoOcrService.CropAndInvert(rawBgra, fullWidth, fullHeight, region);
+                var (bytes, _, _) = TeamInfoOcrService.CropAndBinarizeWhite(rawBgra, fullWidth, fullHeight, region);
                 if (bytes != null) await engine.RecognizeAsync(bytes);
             }
             sw.Stop();
@@ -266,7 +266,7 @@ public class TeamInfoOcrServiceImageTests
 
             for (int i = 0; i < TeamRegions.Length; i++)
             {
-                var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
+                var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndBinarizeWhite(
                     rawBgra, fullWidth, fullHeight, TeamRegions[i]);
 
                 if (imageBytes == null)

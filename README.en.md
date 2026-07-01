@@ -200,7 +200,7 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 ## Solution Overview
 
-`src/BlackGoldAncientSword.slnx` contains **10 projects**: 8 class libraries + 2 executables (the main App and the standalone Updater).
+`src/BlackGoldAncientSword.slnx` contains **11 projects**: 8 class libraries + 3 executables (main App, standalone Updater, offline Downloader).
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -215,12 +215,18 @@ Before using this program, please ensure you have read, understood, and agreed t
 │ Download/Extract/Overlay  │                         │
 └──────────────────────────┘                          │
                                                       │
+┌──────────────────────────┐  ← shipped standalone, not a runtime dep of App
+│ BlackGoldAncientSword.   │
+│ Downloader (offline dl,  │  Streams split installer from Gitee →
+│ WinExe)                  │  launches Setup.exe → self-exits
+└──────────────────────────┘
+                                                      │
         ┌─────────────────────┬──────────────────────┘
         │                     │
         ▼                     ▼                     ▼
 ┌────────────┐        ┌──────────────┐        ┌───────────┐
 │  Modules   │        │  Framework   │        │ Resources │
-│ (9 UI page │ ◄────► │ (Core + 13   │ ◄──────│ (i18n XAML│
+│ (10 UI page│ ◄────► │ (Core + 13   │ ◄──────│ (i18n XAML│
 │  modules)  │        │  service IF) │        │  + icons) │
 └─────┬──────┘        └──────┬───────┘        └───────────┘
       │                      │
@@ -243,9 +249,10 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 | Layer | Project | Output | Responsibility |
 |---|---|---|---|
-| **Main App** | `BlackGoldAncientSword.App` | WinExe | App entry, main window, sidebar nav, tray, launches Updater |
+| **Main App** | `BlackGoldAncientSword.App` | WinExe | App entry, main window, sidebar nav, tray, launches Updater, background OCR prewarm at startup |
 | **Updater** | `BlackGoldAncientSword.Update` | WinExe | Standalone online-update process, zero business deps (HandyControl only) |
-| **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 9 Prism `IModule` pages, on-demand loading |
+| **Offline Downloader** | `BlackGoldAncientSword.Downloader` | WinExe | Standalone single-file exe. Streams split installer from Gitee release → launches Setup.exe → self-exits. Zero API deps (uses 302 + CDN) |
+| **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 10 Prism `IModule` pages, on-demand loading |
 | **Core Framework** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM base, Prism infra, service abstractions/implementations, HTTP API |
 | **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | ClassLib | Process detection, Player.log parsing, battle state machine |
 | **Screen Capture** | `BlackGoldAncientSword.ScreenCapture` | ClassLib | Windows Graphics Capture API + SharpDX + native `wgc_capture.dll` |
@@ -262,6 +269,7 @@ Before using this program, please ensure you have read, understood, and agreed t
 |---|---|---|
 | **Runtime** | .NET 10.0 (`net10.0-windows`) | Target framework |
 | **UI** | WPF + HandyControl 3.5 | Desktop UI and control library |
+| **Theme** | Custom ModernTheme (celadon / bamboo-green eye-friendly palette) | Soft pale-green surface + deep-green accent + ink text, comfortable for long reading sessions |
 | **MVVM** | Prism 8.1 (`Prism.DryIoc`) | DI container, region navigation, modularization |
 | **HTTP** | Compile-time source generator | Generate strongly-typed API clients from `api-definitions.json` |
 | **Mapping** | Mapster 7.4 | DTO ↔ ViewModel |
@@ -294,6 +302,15 @@ src/
 │   ├── Shell/UpdateWindow.xaml(.cs)        # Progress window
 │   └── ViewModels/UpdateViewModel.cs       # Progress & status bindings
 │
+├── BlackGoldAncientSword.Downloader/       # Offline installer downloader (WinExe, standalone single-file)
+│   ├── App.xaml(.cs)                       # Entry; process-level temp cleanup safety net
+│   ├── Services/
+│   │   ├── DownloaderRunner.cs             # Orchestrates: query Gitee latest → stream split volumes → launch Setup
+│   │   ├── GiteeAssetsFetcher.cs           # Uses 302 + CDN — no Gitee REST API calls (avoids rate limits)
+│   │   └── InstallerForegrounder.cs        # Launches Setup.exe and brings it to foreground
+│   ├── Shell/DownloadWindow.xaml(.cs)      # Progress window (bar + 4-stat live refresh)
+│   └── ViewModels/DownloadViewModel.cs
+│
 ├── BlackGoldAncientSword.Framework/        # Core framework
 │   ├── Core/
 │   │   ├── Attributes/                     # ComponentAttribute (auto-DI marker)
@@ -319,10 +336,11 @@ src/
 │   ├── HttpApiSourceGenerator.cs           # Generates NarakaApiClient + DTOs (Client mode)
 │   └── HttpApiTestSourceGenerator.cs       # Generates HTTP API test code (Tests mode)
 │
-├── BlackGoldAncientSword.Modules/          # UI page modules (9 Prism IModule)
+├── BlackGoldAncientSword.Modules/          # UI page modules (10 Prism IModule)
 │   ├── Mappings/BattleMappingRegister.cs   # Mapster mapping registration
-│   ├── Module/                             # 9 IModule registrations
+│   ├── Module/                             # 10 IModule registrations
 │   │   ├── AnnouncementModule.cs           # Announcements
+│   │   ├── BattleDetailModule.cs           # Battle detail overlay (personal / team / top5 tabs)
 │   │   ├── ClosePromptModule.cs            # Close confirmation dialog
 │   │   ├── FeedbackModule.cs               # Feedback
 │   │   ├── HomeModule.cs                   # Home (game status monitor)
@@ -332,6 +350,7 @@ src/
 │   │   ├── TeamInfoModule.cs               # Team info (OCR + comparison)
 │   │   └── UpdateNotificationModule.cs     # New version prompt / launch Updater
 │   └── UI/                                 # ViewModels + Views per module
+│       ├── BattleDetail/                   # Battle detail: parallel fetch personal / team / top5
 │       ├── Stats/Services/                 # Stats aggregation services
 │       ├── TeamInfo/Services/              # TeamInfoOcrService, TeamOcrCoordinator
 │       └── UpdateNotification/ViewModels/  # Launches BlackGoldAncientSword.Update.exe
@@ -398,7 +417,7 @@ ocr_engine/                                 # PP-OCRv5 ONNX models + dict (copie
 | `IAppAssemblyMarker` | `AppAssemblyMarker` | Assembly locator marker (for XAML resource resolution) |
 | `IApplicationLifetime` | `WpfApplicationLifetime` | Exit / restart application |
 | `IClipboardService` | `WpfClipboardService` | Clipboard read/write |
-| `IGitHubReleaseService` | `GitHubReleaseService` | Fetch GitHub releases list and assets |
+| `IGiteeReleaseService` | `GiteeReleaseService` | Fetch Gitee releases list and assets (uses 302 tag probe + CDN HEAD probing, zero API deps) |
 | `IImageCacheService` | `ImageCacheService` | On-disk image cache |
 | `ILocalizationService` | `LocalizationService` | Switch language at runtime (reload XAML resource dictionaries) |
 | `ILocalizedTextProvider` | `WpfLocalizedTextProvider` | Read localized strings from code |
@@ -407,7 +426,7 @@ ocr_engine/                                 # PP-OCRv5 ONNX models + dict (copie
 | `ITeamOverlayService` | `TeamOverlayService` | Bottom-right team overlay during hero selection |
 | `ITipMessageService` | `TipMessageService` | Global toast / tip messages |
 | `IUIDispatcher` | `WpfUIDispatcher` | Cross-thread UI dispatch wrapper |
-| `IUpdateService` | `UpdateService` | Compare versions, resolve latest release zip URL |
+| `IUpdateService` | `UpdateService` | Compare versions, resolve latest Gitee release Setup / zip / split-volume URLs (via 302 + CDN, avoids API rate limits) |
 
 `GameMonitor`, `Ocr`, `ScreenCapture` each expose their own interfaces (`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService`, `IOcrService`, `IScreenCaptureService`), registered into the DI container via their `*AutoRegister.cs`.
 
@@ -440,6 +459,7 @@ public static class PageNames
     public const string ClosePromptPage        = nameof(ClosePromptPage);
     public const string FeedbackPage           = nameof(FeedbackPage);
     public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
+    public const string BattleDetailPage       = nameof(BattleDetailPage);
 }
 ```
 
@@ -487,8 +507,9 @@ Multi-language support via WPF `ResourceDictionary`. All UI text is defined in `
 Updates are a two-process collaboration:
 
 - **Main app side** (`Modules/UI/UpdateNotification/ViewModels/UpdateNotificationPageViewModel.cs`)
-  - Detects new versions via `IUpdateService` + `IGitHubReleaseService`
+  - Detects new versions via `IUpdateService` (Gitee release page 302 tag probe + CDN HEAD probing for split volumes)
   - On "Update Online" click, launches `BlackGoldAncientSword.Update.exe` in the install directory with `--url <zip URL>`, `--target <install dir>`, `--main-exe BlackGoldAncientSword.App.exe`
+  - For users with no network or GitHub blocked, `BlackGoldAncientSword-win-x64-Downloader.exe` on the Gitee release page streams the split installer and launches Setup automatically
 - **Updater side** (`BlackGoldAncientSword.Update`)
   - Standalone process. Does not reference any business project (HandyControl only) — avoids DLL locking so the whole install directory can be safely overlaid
   - `UpdaterRunner` orchestrates: download zip (0–90%) → extract (90–98%) → prompt to close main app → full overlay → relaunch main app → exit
@@ -518,6 +539,9 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 
 # Release publish updater (self-contained single-file .exe, must sit next to the main app)
 dotnet publish src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj -c Release -o publish/Updater
+
+# Release publish offline downloader (self-contained single-file .exe, shipped as a standalone Release asset, not bundled into the install directory)
+dotnet publish src/BlackGoldAncientSword.Downloader/BlackGoldAncientSword.Downloader.csproj -c Release -o publish/Downloader
 ```
 
 > Project rule: after any code change, run `dotnet build src/BlackGoldAncientSword.slnx` and reach 0 errors before considering the change done.
@@ -537,16 +561,17 @@ Two workflows under `.github/workflows/`:
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `main-build.yml` | push / PR → `main` | Validation build (`dotnet build src/BlackGoldAncientSword.slnx`), no publish |
-| `dotnet-desktop.yml` | push → `release` | Full release: bump version → build App → publish App + Updater (self-contained) → pack zip + Inno Setup installer → create GitHub Release |
+| `dotnet-desktop.yml` | push → `release` | Full release: bump version → build App → publish App + Updater + Downloader (self-contained) → pack zip + Inno Setup full / split installers → create GitHub Release |
 
 Release flow highlights:
 
 1. Infer version from existing git tags (`v*.*.*.*` pattern), auto-increment the build segment
 2. Patch `App.csproj`: `Version` / `AssemblyVersion` / `FileVersion`
-3. Publish both App and Updater as self-contained single-file .exe
-4. Merge publish outputs → zip as `BlackGoldAncientSword-v{version}.zip`
-5. Build `BlackGoldAncientSword-{version}-win-x64-Setup.exe` via `setup.iss` (Inno Setup script)
-6. Create a GitHub Release with auto-generated commit-title list since the previous tag
+3. Publish App, Updater, and Downloader as self-contained single-file .exe
+4. Merge build + publish outputs, drop the Updater exe into the install directory, then zip as `BlackGoldAncientSword-v{version}.zip` + 7z split volumes `-split.zip.NNN` (≤99MB each)
+5. Build both a full installer `BlackGoldAncientSword-{version}-win-x64-Setup.exe` and a DiskSpanning split installer `-Split.exe` + `.bin` via `setup.iss`
+6. Produce versionless aliases (`BlackGoldAncientSword-win-x64-Setup.exe` / `-Downloader.exe`) that pair with `/releases/latest/download/` magic redirects for permanent "latest version" share links
+7. Create a GitHub Release with auto-generated commit-title list since the previous tag
 
 > The `release` branch has branch protection enabled: no direct push, no force push, no deletion, and `enforce_admins` is on (so administrators are bound by the same rules). Every change must land via a pull request. Day-to-day work happens on `main`; to ship a release, first commit + push `main` via the [git-commit](.claude/skills/git-commit/SKILL.md) skill, then open a `main` → `release` pull request on GitHub and merge it — that merge is what triggers `dotnet-desktop.yml`.
 

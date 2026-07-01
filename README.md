@@ -202,7 +202,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 
 ## 解决方案概览
 
-`src/BlackGoldAncientSword.slnx` 共包含 **10 个项目**：8 个类库 + 2 个可执行程序（主程序 App、独立更新器 Update）。
+`src/BlackGoldAncientSword.slnx` 共包含 **11 个项目**：8 个类库 + 3 个可执行程序（主程序 App、独立更新器 Update、离线下载器 Downloader）。
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -217,12 +217,18 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 │ 下载/解压/覆盖/重启       │                          │
 └──────────────────────────┘                          │
                                                       │
+┌──────────────────────────┐  ← 独立发布，非主程序运行时依赖
+│ BlackGoldAncientSword.   │
+│ Downloader (离线下载器,   │  Gitee 分卷安装包下载 →
+│ WinExe)                  │  拉起 Setup 完成安装
+└──────────────────────────┘
+                                                      │
         ┌─────────────────────┬──────────────────────┘
         │                     │
         ▼                     ▼                     ▼
 ┌────────────┐        ┌──────────────┐        ┌───────────┐
 │  Modules   │        │  Framework   │        │ Resources │
-│ (9 个 UI   │ ◄────► │ (Core + 13   │ ◄──────│ (多语言   │
+│ (10 个 UI  │ ◄────► │ (Core + 13   │ ◄──────│ (多语言   │
 │  页面模块) │        │ 个服务接口)  │        │  XAML+图) │
 └─────┬──────┘        └──────┬───────┘        └───────────┘
       │                      │
@@ -245,9 +251,10 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 
 | 层 | 项目 | 输出类型 | 职责 |
 |---|---|---|---|
-| **主程序** | `BlackGoldAncientSword.App` | WinExe | WPF 应用入口、主窗口、侧边栏导航、托盘、启动更新器 |
+| **主程序** | `BlackGoldAncientSword.App` | WinExe | WPF 应用入口、主窗口、侧边栏导航、托盘、启动更新器、启动期后台预热 OCR |
 | **更新器** | `BlackGoldAncientSword.Update` | WinExe | 独立在线更新进程，零业务依赖（仅 HandyControl） |
-| **UI 模块** | `BlackGoldAncientSword.Modules` | ClassLib | 9 个 Prism `IModule` 页面，按需加载 |
+| **离线下载器** | `BlackGoldAncientSword.Downloader` | WinExe | 独立单文件 exe，从 Gitee release 顺序流式下载分卷安装包 → 拉起 Setup.exe → 自身退出。零 API 依赖（走 302 + CDN） |
+| **UI 模块** | `BlackGoldAncientSword.Modules` | ClassLib | 10 个 Prism `IModule` 页面，按需加载 |
 | **核心框架** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM 基类、Prism 基础设施、服务抽象与实现、HTTP API |
 | **游戏监控** | `BlackGoldAncientSword.GameMonitor` | ClassLib | 进程检测、Player.log 解析、战局状态机 |
 | **屏幕捕获** | `BlackGoldAncientSword.ScreenCapture` | ClassLib | Windows Graphics Capture API + SharpDX，含原生 wgc_capture.dll |
@@ -264,6 +271,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 |---|---|---|
 | **运行时** | .NET 10.0 (`net10.0-windows`) | 目标框架 |
 | **UI** | WPF + HandyControl 3.5 | 桌面界面与控件库 |
+| **主题** | 自定义 ModernTheme（青瓷竹青护眼配色） | 淡雅护眼浅绿底 + 竹青深绿点缀 + 深墨字，长时间阅读舒适 |
 | **MVVM 框架** | Prism 8.1 (`Prism.DryIoc`) | DI 容器、区域导航、模块化 |
 | **HTTP** | 编译期源码生成器 | 从 `api-definitions.json` 自动生成强类型 API 客户端 |
 | **对象映射** | Mapster 7.4 | DTO ↔ ViewModel |
@@ -296,6 +304,15 @@ src/
 │   ├── Shell/UpdateWindow.xaml(.cs)        # 进度窗口
 │   └── ViewModels/UpdateViewModel.cs       # 进度与状态绑定
 │
+├── BlackGoldAncientSword.Downloader/       # 离线安装包下载器（WinExe，独立单文件）
+│   ├── App.xaml(.cs)                       # 入口，进程级兜底清理临时目录
+│   ├── Services/
+│   │   ├── DownloaderRunner.cs             # 编排：查 Gitee latest → 顺序流式下载分卷 → 拉起 Setup
+│   │   ├── GiteeAssetsFetcher.cs           # 走 302 + CDN，零 Gitee API 依赖（避 rate limit）
+│   │   └── InstallerForegrounder.cs        # 拉起主 Setup exe 并前台化
+│   ├── Shell/DownloadWindow.xaml(.cs)      # 下载进度窗口（进度 + 4-stat 实时刷新）
+│   └── ViewModels/DownloadViewModel.cs
+│
 ├── BlackGoldAncientSword.Framework/        # 核心框架
 │   ├── Core/
 │   │   ├── Attributes/                     # ComponentAttribute（DI 自动注册标记）
@@ -321,10 +338,11 @@ src/
 │   ├── HttpApiSourceGenerator.cs           # 生成 NarakaApiClient + DTO（Client 模式）
 │   └── HttpApiTestSourceGenerator.cs       # 生成 HTTP API 测试代码（Tests 模式）
 │
-├── BlackGoldAncientSword.Modules/          # UI 页面模块（9 个 Prism IModule）
+├── BlackGoldAncientSword.Modules/          # UI 页面模块（10 个 Prism IModule）
 │   ├── Mappings/BattleMappingRegister.cs   # Mapster 映射注册
-│   ├── Module/                             # 9 个 IModule 注册
+│   ├── Module/                             # 10 个 IModule 注册
 │   │   ├── AnnouncementModule.cs           # 公告
+│   │   ├── BattleDetailModule.cs           # 对局详情浮层（personal/team/top5 三 Tab）
 │   │   ├── ClosePromptModule.cs            # 关闭确认弹窗
 │   │   ├── FeedbackModule.cs               # 意见反馈
 │   │   ├── HomeModule.cs                   # 首页（游戏状态监控）
@@ -334,6 +352,7 @@ src/
 │   │   ├── TeamInfoModule.cs               # 队伍信息（OCR + 对比）
 │   │   └── UpdateNotificationModule.cs     # 新版本提示 / 启动更新器
 │   └── UI/                                 # 各模块的 ViewModels + Views
+│       ├── BattleDetail/                   # 对局详情：并行拉 personal/team/top5
 │       ├── Stats/Services/                 # 战绩聚合服务
 │       ├── TeamInfo/Services/              # TeamInfoOcrService、TeamOcrCoordinator
 │       └── UpdateNotification/ViewModels/  # 拉起 BlackGoldAncientSword.Update.exe
@@ -400,7 +419,7 @@ ocr_engine/                                 # PP-OCRv5 ONNX 模型与字典（�
 | `IAppAssemblyMarker` | `AppAssemblyMarker` | 程序集定位标记（XAML 资源解析） |
 | `IApplicationLifetime` | `WpfApplicationLifetime` | 退出 / 重启应用 |
 | `IClipboardService` | `WpfClipboardService` | 剪贴板读写 |
-| `IGitHubReleaseService` | `GitHubReleaseService` | 拉取 GitHub Releases 列表与资产 |
+| `IGiteeReleaseService` | `GiteeReleaseService` | 拉取 Gitee Releases 列表与资产（含 302 tag 探测 + CDN 分卷 HEAD 探测，零 API 依赖） |
 | `IImageCacheService` | `ImageCacheService` | 图片磁盘缓存 |
 | `ILocalizationService` | `LocalizationService` | 动态切换语言（重载 XAML 资源字典） |
 | `ILocalizedTextProvider` | `WpfLocalizedTextProvider` | 代码侧读取本地化字符串 |
@@ -409,7 +428,7 @@ ocr_engine/                                 # PP-OCRv5 ONNX 模型与字典（�
 | `ITeamOverlayService` | `TeamOverlayService` | 英雄选择时的右下角队伍弹窗 |
 | `ITipMessageService` | `TipMessageService` | 全局 Toast / 提示消息 |
 | `IUIDispatcher` | `WpfUIDispatcher` | 跨线程 UI 调度封装 |
-| `IUpdateService` | `UpdateService` | 比对版本、解析最新 release 的 zip 资产 URL |
+| `IUpdateService` | `UpdateService` | 比对版本、解析最新 Gitee release 的 Setup / zip / 分卷 URL（走 302 + CDN，避 API rate limit） |
 
 `GameMonitor`、`Ocr`、`ScreenCapture` 各自暴露自身的接口（`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService`、`IOcrService`、`IScreenCaptureService`），通过各模块的 `*AutoRegister.cs` 注册到 DI 容器。
 
@@ -442,6 +461,7 @@ public static class PageNames
     public const string ClosePromptPage        = nameof(ClosePromptPage);
     public const string FeedbackPage           = nameof(FeedbackPage);
     public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
+    public const string BattleDetailPage       = nameof(BattleDetailPage);
 }
 ```
 
@@ -491,8 +511,9 @@ API 客户端**不手写**，而是通过 `BlackGoldAncientSword.Framework.Sourc
 更新由两端协作完成：
 
 - **主程序侧**（`Modules/UI/UpdateNotification/ViewModels/UpdateNotificationPageViewModel.cs`）
-  - 通过 `IUpdateService` + `IGitHubReleaseService` 检测新版本
+  - 通过 `IUpdateService`（走 Gitee release 网页 302 提取 tag + CDN HEAD 探测分卷）检测新版本
   - 用户点击"在线更新"后，启动同目录下的 `BlackGoldAncientSword.Update.exe`，传入 `--url <zip 下载地址>`、`--target <安装目录>`、`--main-exe BlackGoldAncientSword.App.exe`
+  - 无网 / GitHub 被墙用户可从 Gitee Release 页面下载 `BlackGoldAncientSword-win-x64-Downloader.exe`（离线下载器），双击后自动流式拉取分卷安装包并调起 Setup
 - **更新器侧**（`BlackGoldAncientSword.Update`）
   - 独立进程，不引用任何业务项目（仅依赖 HandyControl），避免 DLL 被锁定影响整目录覆盖
   - `UpdaterRunner` 编排：下载 zip（0–90%）→ 解压（90–98%）→ 提示关闭主程序 → 全量覆盖 → 重新拉起主程序 → 自身退出
@@ -522,6 +543,9 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 
 # Release 发布更新器（自包含单文件 exe，需与主程序放同目录）
 dotnet publish src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj -c Release -o publish/Updater
+
+# Release 发布离线下载器（自包含单文件 exe，作为 Release 独立附件发布，不进主程序安装目录）
+dotnet publish src/BlackGoldAncientSword.Downloader/BlackGoldAncientSword.Downloader.csproj -c Release -o publish/Downloader
 ```
 
 > 项目约定：对代码做任何修改后必须运行 `dotnet build src/BlackGoldAncientSword.slnx`，0 error 才算完成。
@@ -541,16 +565,17 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 | 工作流 | 触发 | 用途 |
 |---|---|---|
 | `main-build.yml` | push / PR → `main` | 校验性构建（`dotnet build src/BlackGoldAncientSword.slnx`），不发布 |
-| `dotnet-desktop.yml` | push → `release` | 完整发版：版本号自增 → 编译 App → 发布 App + Updater（自包含单文件）→ 打包 zip + Inno Setup 安装包 → 创建 GitHub Release |
+| `dotnet-desktop.yml` | push → `release` | 完整发版：版本号自增 → 编译 App → 发布 App + Updater + Downloader（自包含单文件）→ 打包 zip + Inno Setup 全量 / 分卷安装包 → 创建 GitHub Release |
 
 发版流程要点：
 
 1. 从已有 git tags（`v*.*.*.*` 形式）推断版本号并自增 build 段
 2. 修改 `App.csproj` 的 `Version` / `AssemblyVersion` / `FileVersion`
-3. 分别发布 App 与 Update 为自包含单文件 .exe
-4. 合并 publish 输出 → 压缩为 `BlackGoldAncientSword-v{version}.zip`
-5. 用 `setup.iss`（Inno Setup 脚本）生成 `BlackGoldAncientSword-{version}-win-x64-Setup.exe`
-6. 创建 GitHub Release，自动列举上一版本到本次的 commit 标题
+3. 分别发布 App、Update、Downloader 为自包含单文件 .exe
+4. 合并 build + publish 输出并把 Updater exe 一并塞进安装目录 → 压缩为 `BlackGoldAncientSword-v{version}.zip` + 7z 分卷 `-split.zip.NNN`（≤99MB / 卷）
+5. 用 `setup.iss`（Inno Setup 脚本）分别生成全量安装包 `BlackGoldAncientSword-{version}-win-x64-Setup.exe` 与 DiskSpanning 分卷安装包 `-Split.exe` + `.bin`
+6. 额外产出两份无版本号别名（`BlackGoldAncientSword-win-x64-Setup.exe` / `-Downloader.exe`），配合 `/releases/latest/download/` magic redirect 提供永久指向最新版的分享链接
+7. 创建 GitHub Release，自动列举上一版本到本次的 commit 标题
 
 > `release` 分支已开启分支保护：禁直推 / 禁 force-push / 禁删除，且对管理员同样生效（`enforce_admins`），所有变更必须通过 PR 合并进来。日常开发在 `main` 分支进行；发版时先由 [git-commit](.claude/skills/git-commit/SKILL.md) skill commit + push `main`，随后在 GitHub 上创建 `main` → `release` 的 PR 并合并，由此触发 `dotnet-desktop.yml` 完成发版。
 

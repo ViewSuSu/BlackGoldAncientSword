@@ -41,7 +41,7 @@ public class DuoTeamInfoOcrServiceImageTests
     private static async Task<string> RecognizeRegionAsync(
         OcrEngine engine, byte[] rawBgra, int fullWidth, int fullHeight, OcrRegion region)
     {
-        var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
+        var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndBinarizeWhite(
             rawBgra, fullWidth, fullHeight, region);
         if (imageBytes == null) return "";
 

@@ -20,20 +20,27 @@
     WindowStyle="None"
     mc:Ignorable="d">
     <Window.Resources>
-        <!-- 深墨底 · 与主程序护眼绿主题的深色形态呼应，游戏叠加场景保持暗色以便阅读 -->
+        <!-- 与主程序 ModernTheme 完全一致的青瓷竹青护眼浅色板 -->
+        <!-- body = CardGradientBrush -->
         <LinearGradientBrush x:Key="OverlayCardBrush" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Offset="0" Color="#252B24" />
-            <GradientStop Offset="1" Color="#1D231C" />
+            <GradientStop Offset="0" Color="#FFFFFF" />
+            <GradientStop Offset="1" Color="#FAFCF8" />
         </LinearGradientBrush>
+        <!-- title/tool = TitleBarGradientBrush -->
         <LinearGradientBrush x:Key="OverlayTitleBarBrush" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Offset="0" Color="#2D3529" />
-            <GradientStop Offset="1" Color="#242A21" />
+            <GradientStop Offset="0" Color="#FEFEFD" />
+            <GradientStop Offset="1" Color="#F1F5EC" />
         </LinearGradientBrush>
-        <SolidColorBrush x:Key="OverlayBorderBrush" Color="#3D4638" />
-        <SolidColorBrush x:Key="OverlayTextPrimary" Color="#E8E4D6" />
-        <SolidColorBrush x:Key="OverlayTextSecondary" Color="#B4AF9E" />
-        <SolidColorBrush x:Key="OverlayTextMuted" Color="#8A8574" />
-        <SolidColorBrush x:Key="OverlayAvatarBg" Color="#2F362B" />
+        <!-- 描边 = BorderMediumBrush -->
+        <SolidColorBrush x:Key="OverlayBorderBrush" Color="#96A88C" />
+        <!-- 主字 = TextPrimaryBrush -->
+        <SolidColorBrush x:Key="OverlayTextPrimary" Color="#1E241C" />
+        <!-- 次字 = TextSecondaryBrush -->
+        <SolidColorBrush x:Key="OverlayTextSecondary" Color="#42493F" />
+        <!-- 弱字 = TextMutedBrush -->
+        <SolidColorBrush x:Key="OverlayTextMuted" Color="#7E877A" />
+        <!-- 头像底 = SurfaceTertiaryBrush -->
+        <SolidColorBrush x:Key="OverlayAvatarBg" Color="#EEF2EA" />
     </Window.Resources>
     <Border
         Margin="8"
@@ -43,10 +50,11 @@
         CornerRadius="12">
         <Border.Effect>
             <DropShadowEffect
-                BlurRadius="18"
-                Direction="315"
-                Opacity="0.45"
-                ShadowDepth="4" />
+                BlurRadius="24"
+                Color="#0E241A"
+                Direction="270"
+                Opacity="0.25"
+                ShadowDepth="5" />
         </Border.Effect>
         <Grid>
             <Grid.RowDefinitions>
