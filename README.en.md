@@ -2,6 +2,8 @@
 
 [![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]() [![WPF](https://img.shields.io/badge/UI-WPF%20%2B%20Prism%208.1-purple?style=flat)]() [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
 
+[![GitHub](https://img.shields.io/badge/GitHub-ViewSuSu%2FBlackGoldAncientSword-181717?style=flat&logo=github&logoColor=white)](https://github.com/ViewSuSu/BlackGoldAncientSword) [![Gitee](https://img.shields.io/badge/Gitee-SususuChang%2FBlackGoldAncientSword-C71D23?style=flat&logo=gitee&logoColor=white)](https://gitee.com/SususuChang/BlackGoldAncientSword)
+
 # BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
 
 > A desktop companion app for querying *NARAKA: BLADEPOINT* player statistics and match data.
