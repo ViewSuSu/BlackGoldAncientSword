@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
-using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
@@ -12,10 +11,8 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
     {
         private const string UpdaterExeName = "BlackGoldAncientSword.Update.exe";
         private const string MainAppExeName = "BlackGoldAncientSword.App.exe";
-        private const string ProxyMirrorUrl = "https://ghproxylist.com/";
 
         private readonly IUpdateService _updateService;
-        private readonly IClipboardService _clipboardService;
 
         public string LatestVersion => _updateService.LatestVersion ?? string.Empty;
 
@@ -30,12 +27,9 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
         public bool CanOnlineUpdate =>
             (!string.IsNullOrEmpty(_updateService.ZipDownloadUrl) || (_updateService.SplitDownloadUrls is { Count: > 0 })) && File.Exists(UpdaterExePath);
 
-        public string ProxyMirrorUrlText => ProxyMirrorUrl;
-
-        public UpdateNotificationPageViewModel(IUpdateService updateService, IClipboardService clipboardService)
+        public UpdateNotificationPageViewModel(IUpdateService updateService)
         {
             _updateService = updateService;
-            _clipboardService = clipboardService;
             RaisePropertyChanged(nameof(LatestVersion));
             RaisePropertyChanged(nameof(DownloadUrl));
             RaisePropertyChanged(nameof(HasDownloadUrl));
@@ -58,30 +52,6 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
                     Debug.WriteLine($"[{nameof(UpdateNotificationPageViewModel)}.{nameof(OpenDownloadCommand)}] 浏览器打开失败: {ex}");
-                }
-            });
-
-        private DelegateCommand? _copyDownloadUrlCommand;
-        public DelegateCommand CopyDownloadUrlCommand =>
-            _copyDownloadUrlCommand ??= new DelegateCommand(() =>
-            {
-                var url = _updateService.DownloadUrl;
-                if (string.IsNullOrEmpty(url)) return;
-                _clipboardService.TrySetText(url);
-                eventAggregator.GetEvent<TipMessageEvent>().Publish(new TipMessageWithHighlightArgs("下载链接已复制到剪贴板"));
-            });
-
-        private DelegateCommand? _openProxyMirrorCommand;
-        public DelegateCommand OpenProxyMirrorCommand =>
-            _openProxyMirrorCommand ??= new DelegateCommand(() =>
-            {
-                try
-                {
-                    Process.Start(new ProcessStartInfo(ProxyMirrorUrl) { UseShellExecute = true });
-                }
-                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
-                {
-                    Debug.WriteLine($"[{nameof(UpdateNotificationPageViewModel)}.{nameof(OpenProxyMirrorCommand)}] 打开代理站点失败: {ex}");
                 }
             });
 

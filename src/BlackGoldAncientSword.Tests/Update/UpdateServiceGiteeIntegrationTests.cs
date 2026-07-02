@@ -1,6 +1,7 @@
 using System.Net.Http;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.Framework.Services.Implementation;
+using Moq;
 
 namespace BlackGoldAncientSword.Tests.Update;
 
@@ -28,8 +29,11 @@ public class UpdateServiceGiteeIntegrationTests
         }
     }
 
-    private static UpdateService CreateService() =>
-        new UpdateService(new SyncUIDispatcher(), new FakeAppMarker());
+    private static UpdateService CreateService(IReleaseNotesFetcher? notesFetcher = null) =>
+        new UpdateService(
+            new SyncUIDispatcher(),
+            new FakeAppMarker(),
+            notesFetcher ?? new GiteeReleaseNotesFetcher());
 
     /// <summary>
     /// 探测下载 URL 是否可达。区分两种资产：
@@ -130,21 +134,21 @@ public class UpdateServiceGiteeIntegrationTests
             return;
         }
 
-        var hasAny =
-            !string.IsNullOrEmpty(svc.DownloadUrl) ||
-            !string.IsNullOrEmpty(svc.ZipDownloadUrl) ||
-            !string.IsNullOrEmpty(svc.SplitZipDownloadUrl) ||
-            (svc.SplitDownloadUrls?.Count ?? 0) > 0;
+        // DownloadUrl 现语义为 Downloader.exe alias（Gitee 特有 `releases/download/latest/{file}`
+        // 伪 tag 语法，302 → attach_files → foruda CDN）。可达性依赖 latest release 是否已上传该附件，
+        // 本测试不作可达性断言（附件缺失时 404 属预期）。
+        Assert.Equal(
+            "https://gitee.com/SususuChang/BlackGoldAncientSword/releases/download/latest/BlackGoldAncientSword-win-x64-Downloader.exe",
+            svc.DownloadUrl);
 
-        Assert.True(hasAny, "更新可用时应至少有一个下载 URL");
+        // ZipDownloadUrl 是直接拼死不做 HEAD 探测，release 未附带全 zip 时 URL 会 404，语义上
+        // 只是"若存在则给在线更新用"，可达性不作断言。SplitDownloadUrls 是 HEAD 探测过存在的分卷，
+        // 保留可达性断言。
+        Assert.True(
+            (svc.SplitDownloadUrls?.Count ?? 0) > 0,
+            "更新可用时至少应有一组 split zip 分卷可用于在线更新");
 
-        var probed = new List<string>();
-        if (!string.IsNullOrEmpty(svc.DownloadUrl)) probed.Add(svc.DownloadUrl!);
-        if (!string.IsNullOrEmpty(svc.ZipDownloadUrl)) probed.Add(svc.ZipDownloadUrl!);
-        if (svc.SplitDownloadUrls is { Count: > 0 })
-            probed.AddRange(svc.SplitDownloadUrls);
-
-        Assert.NotEmpty(probed);
+        var probed = new List<string>(svc.SplitDownloadUrls!);
 
         foreach (var url in probed)
         {
@@ -153,14 +157,44 @@ public class UpdateServiceGiteeIntegrationTests
             var (ok, len) = await ProbeUrlAsync(url);
             Assert.True(ok, $"下载 URL 不可达: {url}");
 
-            // release asset 走 HEAD，Content-Length 必须 > 0；
-            // 源码归档 zip 走 GET headers-only，Gitee 不返回 Content-Length，只校验可达。
             var isReleaseAsset = url.Contains("/releases/download/", StringComparison.OrdinalIgnoreCase);
             if (isReleaseAsset)
             {
                 Assert.True(len > 0, $"release asset Content-Length 应 > 0: {url}");
             }
         }
+    }
+
+    /// <summary>
+    /// 验证 UpdateService 把 IReleaseNotesFetcher.FetchAsync 的结果原样赋给 LatestReleaseNotes，
+    /// 确保新版本弹窗（UpdateNotificationPage）里 ReleaseNotes/HasReleaseNotes 绑定链路通。
+    /// </summary>
+    [Fact]
+    public async Task CheckForUpdatesAsync_PipesFetcherResult_IntoLatestReleaseNotes()
+    {
+        if (!await IsGiteeReachableAsync())
+        {
+            Assert.True(true, "Gitee 不可达，跳过。");
+            return;
+        }
+
+        const string mockNotes = "MOCK_RELEASE_NOTES\n- line1\n- line2";
+        var fetcherMock = new Mock<IReleaseNotesFetcher>();
+        fetcherMock
+            .Setup(f => f.FetchAsync(It.IsAny<string>()))
+            .ReturnsAsync(mockNotes);
+
+        var svc = CreateService(fetcherMock.Object);
+        await svc.CheckForUpdatesAsync(showNoUpdateMessage: false);
+
+        if (!svc.IsUpdateAvailable)
+        {
+            Assert.True(true, "已是最新版本，本机 CurrentVersion 已≥Gitee latest，跳过。");
+            return;
+        }
+
+        Assert.Equal(mockNotes, svc.LatestReleaseNotes);
+        fetcherMock.Verify(f => f.FetchAsync(svc.LatestVersion!), Times.Once);
     }
 
     [Fact]

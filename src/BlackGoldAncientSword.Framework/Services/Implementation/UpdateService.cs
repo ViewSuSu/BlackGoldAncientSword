@@ -20,9 +20,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
     ///   `releases/tag/v{version}`，直接从 Location 头提取 tag，走网页域名不走 API。
     /// 资产 URL：按 CI workflow (dotnet-desktop.yml) 的命名规则拼死，分卷 zip 通过 HEAD
     ///   探测 .001/.002/... 到 404 停，全程走 CDN foruda.gitee.com，不受 API 限流约束。
-    /// LatestReleaseNotes：网页正文抓取代价高、DOM 易变，故本实现留空；UI 侧
-    ///   HasReleaseNotes 为 false 时会自动隐藏更新说明区域，用户仍可通过 ReleasePageUrl
-    ///   点入查看完整 release notes。
+    /// LatestReleaseNotes：由 <see cref="IReleaseNotesFetcher"/> 从 `releases/tag/{tag}` 非浏览器 UA
+    ///   返回的 JSON 中拿 release.description（同域名，非 /api/v5，不受限流）。拉取失败返 null，
+    ///   UI 侧 HasReleaseNotes 变 false 自动隐藏更新说明区域。
     /// </summary>
     [Component(ComponentLifetime.Singleton)]
     public class UpdateService : IUpdateService
@@ -34,8 +34,15 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         private const string GiteeDownloadBase =
             "https://gitee.com/" + GiteeOwner + "/" + GiteeRepo + "/releases/download";
 
-        // 与 setup.iss OutputBaseFilename 完全对齐；{0} = 版本号（不含 v 前缀）
-        private const string InstallerNameFormat = GiteeRepo + "-{0}-win-x64-Setup-Split.exe";
+        // Downloader 单文件 exe 的无版本号 alias。
+        // Gitee 用伪 tag `latest` 语法 `releases/download/latest/{file}` 永久指向最新 release 的同名附件，
+        // 302 → attach_files/... → foruda.gitee.com CDN。与本地版本号无关，随 Gitee latest 变化。
+        // 注意：这是 Gitee 特有语法，与 GitHub 的 `releases/latest/download/{file}` 位置相反。
+        // 附件名参考 .github/workflows/dotnet-desktop.yml 步骤 "Copy Downloader exe into output"。
+        private const string DownloaderAliasName = GiteeRepo + "-win-x64-Downloader.exe";
+        private const string DownloaderLatestDownloadUrl =
+            "https://gitee.com/" + GiteeOwner + "/" + GiteeRepo +
+            "/releases/download/latest/" + DownloaderAliasName;
 
         // 与 workflow "Create full zip" 步骤对齐；{0} = 版本号
         private const string ZipNameFormat = GiteeRepo + "-v{0}.zip";
@@ -51,6 +58,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             new(@"/releases/tag/v(\d+\.\d+\.\d+\.\d+)", RegexOptions.Compiled);
 
         private readonly IUIDispatcher _uiDispatcher;
+        private readonly IReleaseNotesFetcher _releaseNotesFetcher;
         private readonly HttpClient _redirectHttpClient;
         private readonly HttpClient _headHttpClient;
         private bool _autoPopupEnabled;
@@ -75,9 +83,13 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public event EventHandler<bool>? UpdateAvailabilityChanged;
 
-        public UpdateService(IUIDispatcher uiDispatcher, IAppAssemblyMarker appAssemblyMarker)
+        public UpdateService(
+            IUIDispatcher uiDispatcher,
+            IAppAssemblyMarker appAssemblyMarker,
+            IReleaseNotesFetcher releaseNotesFetcher)
         {
             _uiDispatcher = uiDispatcher;
+            _releaseNotesFetcher = releaseNotesFetcher;
             CurrentVersion = GetCurrentVersion(appAssemblyMarker);
 
             // 独立句柄：一个禁 auto-redirect 用来抓 302 Location 拿最新 tag，
@@ -115,13 +127,15 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     return;
                 }
 
-                var installerUrl = string.Format(
-                    GiteeDownloadBase + "/v{0}/" + InstallerNameFormat, latest, latest);
+                // DownloadUrl 语义：更新弹窗里"点击打开浏览器下载"的目标——固定指向 Downloader.exe alias，
+                // 不再指向带版本号的 Setup-Split.exe。用户拿到的永远是最新版下载器。
+                var installerUrl = DownloaderLatestDownloadUrl;
                 var zipUrl = string.Format(
                     GiteeDownloadBase + "/v{0}/" + ZipNameFormat, latest, latest);
                 var splitUrls = await ProbeSplitUrlsAsync(latest).ConfigureAwait(false);
                 string? splitZipUrlFirst =
                     (splitUrls is { Count: > 0 }) ? splitUrls[0] : null;
+                var releaseNotes = await _releaseNotesFetcher.FetchAsync(latest).ConfigureAwait(false);
 
                 SafeInvoke(() =>
                 {
@@ -131,7 +145,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     ZipDownloadUrl = zipUrl;
                     SplitZipDownloadUrl = splitZipUrlFirst;
                     SplitDownloadUrls = splitUrls;
-                    LatestReleaseNotes = null;
+                    LatestReleaseNotes = releaseNotes;
                     UpdateAvailabilityChanged?.Invoke(this, true);
                 });
             }
