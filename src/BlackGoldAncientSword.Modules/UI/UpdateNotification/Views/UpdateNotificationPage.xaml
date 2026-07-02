@@ -49,75 +49,28 @@
                     Text="{DynamicResource UpdateNotification.Message}"
                     TextWrapping="Wrap" />
 
-                <!--  下载 URL 行：可点击打开浏览器 + 右侧复制按钮  -->
-                <Grid
-                    Margin="0,0,0,6"
+                <!--  下载链接：可点击打开浏览器下载最新版 Downloader.exe  -->
+                <Border
+                    Margin="0,0,0,12"
+                    Padding="8,6"
+                    Background="{DynamicResource SurfaceTertiaryBrush}"
+                    CornerRadius="4"
                     Visibility="{Binding HasDownloadUrl, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Border
-                        Grid.Column="0"
-                        Padding="8,6"
-                        VerticalAlignment="Center"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        CornerRadius="4">
-                        <TextBlock
-                            FontSize="12"
-                            TextTrimming="CharacterEllipsis"
-                            TextWrapping="NoWrap"
-                            ToolTip="{Binding DownloadUrl}">
-                            <Hyperlink Foreground="{DynamicResource AccentPrimaryBrush}" TextDecorations="Underline">
-                                <i:Interaction.Triggers>
-                                    <i:EventTrigger EventName="Click">
-                                        <i:InvokeCommandAction Command="{Binding OpenDownloadCommand}" />
-                                    </i:EventTrigger>
-                                </i:Interaction.Triggers>
-                                <Run Text="{Binding DownloadUrl, Mode=OneWay}" />
-                            </Hyperlink>
-                        </TextBlock>
-                    </Border>
-                    <Button
-                        Grid.Column="1"
-                        Width="32"
-                        Height="28"
-                        Margin="6,0,0,0"
-                        VerticalAlignment="Center"
-                        Background="Transparent"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="1"
-                        Command="{Binding CopyDownloadUrlCommand}"
-                        ToolTip="{DynamicResource UpdateNotification.CopyUrl}">
-                        <!--  复制图标（Path 几何，不依赖字体 / Emoji）  -->
-                        <Path
-                            Width="14"
-                            Height="14"
-                            Data="M4,1 L11,1 L11,3 L13,3 L13,15 L5,15 L5,13 L3,13 L3,3 L4,3 Z M5,3 L5,11 L11,11 L11,3 Z M7,5 L13,5 L13,13 L7,13 Z"
-                            Fill="{DynamicResource TextSecondaryBrush}"
-                            Stretch="Uniform" />
-                    </Button>
-                </Grid>
-
-                <!--  国内代理专线  -->
-                <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
-                    <TextBlock FontSize="12">
+                    <TextBlock
+                        FontSize="12"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="NoWrap"
+                        ToolTip="{Binding DownloadUrl}">
                         <Hyperlink Foreground="{DynamicResource AccentPrimaryBrush}" TextDecorations="Underline">
                             <i:Interaction.Triggers>
                                 <i:EventTrigger EventName="Click">
-                                    <i:InvokeCommandAction Command="{Binding OpenProxyMirrorCommand}" />
+                                    <i:InvokeCommandAction Command="{Binding OpenDownloadCommand}" />
                                 </i:EventTrigger>
                             </i:Interaction.Triggers>
-                            <Run Text="{DynamicResource UpdateNotification.ProxyMirror}" />
+                            <Run Text="{Binding DownloadUrl, Mode=OneWay}" />
                         </Hyperlink>
                     </TextBlock>
-                    <TextBlock
-                        Margin="8,0,0,0"
-                        VerticalAlignment="Center"
-                        FontSize="11"
-                        Foreground="{DynamicResource TextMutedBrush}"
-                        Text="{DynamicResource UpdateNotification.ProxyHint}" />
-                </StackPanel>
+                </Border>
 
                 <!--  折叠的更新说明（release notes）  -->
                 <Expander
