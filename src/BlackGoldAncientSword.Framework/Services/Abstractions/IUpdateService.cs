@@ -13,7 +13,9 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
         string? LatestVersion { get; }
 
         /// <summary>
-        /// 当前最新版本的安装包直链（Gitee Release asset 中的 .exe browser_download_url）。
+        /// 更新弹窗中"点击打开浏览器下载"目标 URL。
+        /// 指向 Downloader 单文件 exe 的 `releases/latest/download/` 无版本号 alias，
+        /// 由 Gitee magic redirect 永久跳到最新 release 附件，与本地版本号无关。
         /// 仅在 IsUpdateAvailable=true 时为非 null。
         /// </summary>
         string? DownloadUrl { get; }
