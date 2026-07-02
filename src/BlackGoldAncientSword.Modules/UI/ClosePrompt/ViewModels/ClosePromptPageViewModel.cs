@@ -2,6 +2,7 @@ using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Events;
+using BlackGoldAncientSword.Framework.Core.Extensions;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Modules.UI.ClosePrompt.ViewModels
@@ -10,6 +11,7 @@ namespace BlackGoldAncientSword.Modules.UI.ClosePrompt.ViewModels
     {
         private readonly ISettingsService _settingsService;
         private readonly IApplicationLifetime _appLifetime;
+        private readonly IUIDispatcher _uiDispatcher;
 
         private bool _rememberChoice;
         public bool RememberChoice
@@ -20,15 +22,60 @@ namespace BlackGoldAncientSword.Modules.UI.ClosePrompt.ViewModels
                 if (_rememberChoice == value) return;
                 _rememberChoice = value;
                 RaisePropertyChanged(nameof(RememberChoice));
+
+                // 勾选变化即持久化：写入内存 + SaveAsync，SaveAsync 完成后 SettingsService 广播
+                // SettingsChanged，已打开的设置页 ViewModel 同步刷新 RememberCloseBehavior 绑定。
+                // 落盘与 UI 保持严格实时同步——用户要求"落盘数据跟 UI 实时同步"。
+                _settingsService.Current.CloseBehaviorRemembered = value;
+                _settingsService.SaveAsync().SafeFireAndForget(
+                    $"{nameof(ClosePromptPageViewModel)}.{nameof(RememberChoice)}.SaveAsync");
             }
         }
 
         public ClosePromptPageViewModel(
             ISettingsService settingsService,
-            IApplicationLifetime appLifetime)
+            IApplicationLifetime appLifetime,
+            IUIDispatcher uiDispatcher)
         {
             _settingsService = settingsService;
             _appLifetime = appLifetime;
+            _uiDispatcher = uiDispatcher;
+
+            // 从持久化值初始化，避免每次弹出对话框都重置为 false
+            _rememberChoice = _settingsService.Current.CloseBehaviorRemembered;
+
+            // 订阅外部改动（例如设置页勾选/托盘菜单切换）：对话框浮层与设置页同屏可见时保持双向一致
+            _settingsService.SettingsChanged += OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(object? sender, EventArgs e)
+        {
+            if (_isDisposed) return;
+            if (_uiDispatcher.CheckAccess())
+                ApplyRememberFromSettings();
+            else
+                _uiDispatcher.BeginInvoke(ApplyRememberFromSettings);
+        }
+
+        private void ApplyRememberFromSettings()
+        {
+            var value = _settingsService.Current.CloseBehaviorRemembered;
+            if (_rememberChoice == value) return;
+            // 直接写底字段，绕过 setter 中的 SaveAsync 分支，防止外部广播 → 本地更新 → 再次 SaveAsync 的回响循环
+            _rememberChoice = value;
+            RaisePropertyChanged(nameof(RememberChoice));
+        }
+
+        private bool _isDisposed;
+        protected override void Dispose(bool disposing)
+        {
+            if (_isDisposed) { base.Dispose(disposing); return; }
+            _isDisposed = true;
+            if (disposing)
+            {
+                _settingsService.SettingsChanged -= OnSettingsChanged;
+            }
+            base.Dispose(disposing);
         }
 
         private DelegateCommand? _minimizeToTaskbarCommand;

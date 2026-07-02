@@ -17,5 +17,11 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Abstractions
         /// <summary>异步启动日志监视。</summary>
         Task StartAsync();
         void Stop();
+
+        /// <summary>
+        /// 按当前状态机内容补发一次事件（BattleStarted / BattleJoined），
+        /// 供订阅方在启动后订阅、或在游戏进程重新检测到时同步 UI 状态。无活跃对局则不发。
+        /// </summary>
+        void PublishSnapshot();
     }
 }

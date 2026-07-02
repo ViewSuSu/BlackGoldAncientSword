@@ -403,6 +403,43 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public ObservableCollection<StatEntryItem> DetailStats { get; }
         public ObservableCollection<RecentBattleDisplayItem> RecentBattles { get; }
 
+        // === 打开对局详情 Overlay ===
+        // 传整行 RecentBattleDisplayItem，把已经算好的段位/星数/分差直接透传给 BattleDetail，
+        // 避免在详情侧重复实现段位计算逻辑。
+        private DelegateCommand<RecentBattleDisplayItem>? _openBattleDetailCommand;
+        public DelegateCommand<RecentBattleDisplayItem> OpenBattleDetailCommand =>
+            _openBattleDetailCommand ??= new DelegateCommand<RecentBattleDisplayItem>(row =>
+            {
+                if (row == null || string.IsNullOrWhiteSpace(row.BattleId) || row.BattleId == "0")
+                    return;
+
+                // 按需加载 BattleDetailModule
+                try
+                {
+                    var moduleManager = containerProvider.Resolve<IModuleManager>();
+                    moduleManager.LoadModule(nameof(PageNames.BattleDetailPage).Replace("Page", "Module"));
+                }
+                catch { }
+
+                var parameters = new NavigationParameters
+                {
+                    { nameof(PageNames.BattleDetailPage), row.BattleId },
+                    { "RoleId", _roleId },
+                    { "GameMode", row.GameMode },
+                    { "ModeCategoryText", row.GameModeCategoryText },
+                    { "ModeTeamSizeText", row.GameModeTeamSizeText },
+                    { "RankDisplayText", row.RankDisplayText },
+                    { "StarCount", row.StarCount },
+                    { "HasStars", row.HasStars },
+                    { "ScoreNumber", row.ScoreNumber },
+                    { "ScoreDiff", row.ScoreDiff },
+                    { "ScoreDiffDisplay", row.ScoreDiffDisplay },
+                    { "ShowScoreNumber", row.ShowScoreNumber },
+                    { "IsRankMode", row.IsRankMode },
+                };
+                regionManager.RequestNavigate(GlobalConstant.BattleDetailRegion, PageNames.BattleDetailPage, parameters);
+            });
+
                 // === Per-section loading states ===
         private bool _isPlayerInfoLoading;
         public bool IsPlayerInfoLoading
@@ -679,6 +716,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         var modeCode = (int)(b.Subtype ?? b.GameMode ?? 0);
                         RecentBattles.Add(new RecentBattleDisplayItem
                         {
+                            BattleId = ((long)(b.BattleId ?? 0)).ToString(System.Globalization.CultureInfo.InvariantCulture),
                             Rank = b.Rank ?? 0,
                             HonorTitles = new ObservableCollection<HonorTitleDisplayItem>(),
                             HeroIcon = b.Hero?.HeroIcon ?? string.Empty,
@@ -989,7 +1027,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 if (score >= 2500) return L("Stats.RankName.Solo.2500", "铂金");
                 if (score >= 2000) return L("Stats.RankName.Solo.2000", "黄金");
                 if (score >= 1500) return L("Stats.RankName.Solo.1500", "白银");
-                return L("Stats.RankName.Solo.0", "青铜");
+                if (score >= 1000) return L("Stats.RankName.Solo.1000", "青铜");
+                return string.Empty;
             }
             else
             {
@@ -1036,7 +1075,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             if (score >= 4500)
                 return (score - 4500) % 100; // 星阶段位内分数
 
-            if (score >= 1500)
+            if (score >= 1000)
             {
                 var tierBase = GetTierBase(score, true);
                 return (score - tierBase) % 100; // 子段内分数
@@ -1062,6 +1101,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 if (score >= 2500) return 2500;
                 if (score >= 2000) return 2000;
                 if (score >= 1500) return 1500;
+                if (score >= 1000) return 1000;
                 return 0;
             }
             else
@@ -1081,12 +1121,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         /// <summary>
         /// 获取子段位名称（五、四、三、二、一），每小段 100 分
-        /// 仅对排位模式 1500~4499 分有效
+        /// 仅对排位模式 1000~4499 分有效
         /// </summary>
         private static string GetSubTierName(double score, bool isTianxuan)
         {
             if (!isTianxuan) return string.Empty;
-            if (score < 1500 || score >= 4500) return string.Empty;
+            if (score < 1000 || score >= 4500) return string.Empty;
 
             var tierBase = GetTierBase(score, isTianxuan);
             var offset = score - tierBase;
@@ -1116,6 +1156,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
     public class RecentBattleDisplayItem
     {
+        public string BattleId { get; set; } = string.Empty;
         public double Rank { get; set; }
         public ObservableCollection<HonorTitleDisplayItem> HonorTitles { get; set; } = new();
         public string HeroIcon { get; set; } = string.Empty;

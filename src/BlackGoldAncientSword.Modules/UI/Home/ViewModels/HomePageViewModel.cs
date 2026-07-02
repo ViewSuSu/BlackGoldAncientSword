@@ -102,6 +102,10 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
                     catch (Exception ex) { Debug.WriteLine($"[HomePage] GameLogMonitor start error: {ex.Message}"); }
                     try { _gameStatusMonitor.Start(); }
                     catch (Exception ex) { Debug.WriteLine($"[HomePage] GameStatusMonitor start error: {ex.Message}"); }
+                    // StartAsync 若已被 MainWindowVM 调过会早退，本 VM 的订阅器就错过了 replay-snapshot；
+                    // 再补发一次，保证本页 UI 与当前对局阶段一致（无活跃对局则不发）。
+                    try { _gameLogMonitor.PublishSnapshot(); }
+                    catch (Exception ex) { Debug.WriteLine($"[HomePage] PublishSnapshot error: {ex.Message}"); }
                 }
             }
             else if (!found && IsGameRunning)

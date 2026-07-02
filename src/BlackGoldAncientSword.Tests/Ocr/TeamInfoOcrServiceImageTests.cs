@@ -9,9 +9,9 @@ public class TeamInfoOcrServiceImageTests
 {
     private static readonly OcrRegion[] TeamRegions = new[]
     {
-        new OcrRegion { X = 0.301953, Y = 0.899306, Width = 0.123661, Height = 0.039583 },
-        new OcrRegion { X = 0.475000, Y = 0.897222, Width = 0.125447, Height = 0.041667 },
-        new OcrRegion { X = 0.646484, Y = 0.897917, Width = 0.138672, Height = 0.036806 },
+        new OcrRegion { X = 0.300781, Y = 0.910000, Width = 0.110938, Height = 0.033750 },
+        new OcrRegion { X = 0.470313, Y = 0.910000, Width = 0.112500, Height = 0.033750 },
+        new OcrRegion { X = 0.644531, Y = 0.910000, Width = 0.118750, Height = 0.033750 },
     };
 
     [Fact]
@@ -65,7 +65,7 @@ public class TeamInfoOcrServiceImageTests
         for (int i = 0; i < TeamRegions.Length; i++)
         {
             // OCR 使用反色版本（BMP 编码，PaddleOCR-json 走 OpenCV imdecode 通吃）
-            var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
+            var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndBinarizeWhite(
                 rawBgra, fullWidth, fullHeight, TeamRegions[i]);
 
             if (imageBytes == null)
@@ -197,7 +197,7 @@ public class TeamInfoOcrServiceImageTests
         // 预热一轮：触发模型加载，不计时。
         foreach (var region in TeamRegions)
         {
-            var (bytes, _, _) = TeamInfoOcrService.CropAndInvert(rawBgra, fullWidth, fullHeight, region);
+            var (bytes, _, _) = TeamInfoOcrService.CropAndBinarizeWhite(rawBgra, fullWidth, fullHeight, region);
             if (bytes != null) await engine.RecognizeAsync(bytes);
         }
 
@@ -208,7 +208,7 @@ public class TeamInfoOcrServiceImageTests
             var sw = System.Diagnostics.Stopwatch.StartNew();
             foreach (var region in TeamRegions)
             {
-                var (bytes, _, _) = TeamInfoOcrService.CropAndInvert(rawBgra, fullWidth, fullHeight, region);
+                var (bytes, _, _) = TeamInfoOcrService.CropAndBinarizeWhite(rawBgra, fullWidth, fullHeight, region);
                 if (bytes != null) await engine.RecognizeAsync(bytes);
             }
             sw.Stop();
@@ -266,7 +266,7 @@ public class TeamInfoOcrServiceImageTests
 
             for (int i = 0; i < TeamRegions.Length; i++)
             {
-                var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndInvert(
+                var (imageBytes, cropW, cropH) = TeamInfoOcrService.CropAndBinarizeWhite(
                     rawBgra, fullWidth, fullHeight, TeamRegions[i]);
 
                 if (imageBytes == null)

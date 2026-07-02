@@ -2,6 +2,9 @@
 
 [![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]() [![WPF](https://img.shields.io/badge/UI-WPF%20%2B%20Prism%208.1-purple?style=flat)]() [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
 
+- **GitHub repository**: https://github.com/ViewSuSu/BlackGoldAncientSword
+- **Gitee mirror**: https://gitee.com/SususuChang/BlackGoldAncientSword
+
 # BlackGoldAncientSword — Naraka Bladepoint Stats Assistant
 
 > A desktop companion app for querying *NARAKA: BLADEPOINT* player statistics and match data.
@@ -132,9 +135,11 @@ OCR recognition uses the same underlying technology as OBS screen capture, captu
 
 OCR may also fail on certain special characters. When that happens, use QQ screenshot OCR or similar tools as a manual workaround.
 
-**Q: Why is the installer / program so large (200MB+)?**
+**Q: Why is the installer / program so large?**
 
-The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. The built-in OCR engine (PaddleOCR) also depends on the Intel Math Kernel Library (mklml.dll, ~88MB) and the OpenCV computer vision library (opencv_world4100.dll, ~62MB). These two native AI/vision libraries, together with the .NET runtime, account for the vast majority of the download size. Without them, automatic OCR of teammate nicknames would not be possible — the "bulk" is a necessary price 😅.
+The app is published as a **self-contained** deployment, which bundles the .NET runtime so users can run it without installing .NET separately. The built-in OCR engine also relies on the **PP-OCRv5 ONNX models (~22MB) + ONNX Runtime native libraries + SkiaSharp image codecs**, totalling roughly 50MB. These native AI/vision components, together with the .NET runtime, account for the bulk of the download size. Without them, automatic OCR of teammate nicknames would not be possible — the size is a necessary price 😅.
+
+> Starting with v1.0.0.3, the OCR engine has switched from the PaddleOCR-json subprocess design (which dragged in ~150MB of Paddle Inference + MKL + OpenCV native DLLs) to RapidOcrNet running in-process on ONNX Runtime, with the recognizer upgraded to PP-OCRv5. The installer is about 100MB lighter, and character coverage for things like Japanese kana and Latin-Extended is substantially better.
 
 **Q: Why do I see a yellow border around my screen when entering hero selection?**
 
@@ -198,7 +203,7 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 ## Solution Overview
 
-`src/BlackGoldAncientSword.slnx` contains **10 projects**: 8 class libraries + 2 executables (the main App and the standalone Updater).
+`src/BlackGoldAncientSword.slnx` contains **11 projects**: 8 class libraries + 3 executables (main App, standalone Updater, offline Downloader).
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -213,12 +218,18 @@ Before using this program, please ensure you have read, understood, and agreed t
 │ Download/Extract/Overlay  │                         │
 └──────────────────────────┘                          │
                                                       │
+┌──────────────────────────┐  ← shipped standalone, not a runtime dep of App
+│ BlackGoldAncientSword.   │
+│ Downloader (offline dl,  │  Streams split installer from Gitee →
+│ WinExe)                  │  launches Setup.exe → self-exits
+└──────────────────────────┘
+                                                      │
         ┌─────────────────────┬──────────────────────┘
         │                     │
         ▼                     ▼                     ▼
 ┌────────────┐        ┌──────────────┐        ┌───────────┐
 │  Modules   │        │  Framework   │        │ Resources │
-│ (9 UI page │ ◄────► │ (Core + 13   │ ◄──────│ (i18n XAML│
+│ (10 UI page│ ◄────► │ (Core + 13   │ ◄──────│ (i18n XAML│
 │  modules)  │        │  service IF) │        │  + icons) │
 └─────┬──────┘        └──────┬───────┘        └───────────┘
       │                      │
@@ -232,8 +243,8 @@ Before using this program, please ensure you have read, understood, and agreed t
        │                │
        ▼                ▼
 ┌──────────────┐ ┌──────────────────┐
-│     Ocr      │ │ PaddleOCR-json   │
-│ (subprocess) │ │  .exe + models   │
+│     Ocr      │ │ RapidOcrNet +    │
+│ (in-process) │ │ PP-OCRv5 (ONNX)  │
 └──────────────┘ └──────────────────┘
 ```
 
@@ -241,13 +252,14 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 | Layer | Project | Output | Responsibility |
 |---|---|---|---|
-| **Main App** | `BlackGoldAncientSword.App` | WinExe | App entry, main window, sidebar nav, tray, launches Updater |
+| **Main App** | `BlackGoldAncientSword.App` | WinExe | App entry, main window, sidebar nav, tray, launches Updater, background OCR prewarm at startup |
 | **Updater** | `BlackGoldAncientSword.Update` | WinExe | Standalone online-update process, zero business deps (HandyControl only) |
-| **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 9 Prism `IModule` pages, on-demand loading |
+| **Offline Downloader** | `BlackGoldAncientSword.Downloader` | WinExe | Standalone single-file exe. Streams split installer from Gitee release → launches Setup.exe → self-exits. Zero API deps (uses 302 + CDN) |
+| **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 10 Prism `IModule` pages, on-demand loading |
 | **Core Framework** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM base, Prism infra, service abstractions/implementations, HTTP API |
 | **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | ClassLib | Process detection, Player.log parsing, battle state machine |
 | **Screen Capture** | `BlackGoldAncientSword.ScreenCapture` | ClassLib | Windows Graphics Capture API + SharpDX + native `wgc_capture.dll` |
-| **OCR Engine** | `BlackGoldAncientSword.Ocr` | ClassLib | PaddleOCR-json.exe subprocess wrapper |
+| **OCR Engine** | `BlackGoldAncientSword.Ocr` | ClassLib | RapidOcrNet (PP-OCRv5 ONNX) in-process inference wrapper |
 | **Resources** | `BlackGoldAncientSword.Resources` | ClassLib | Multi-language XAML resource dictionaries, icons, images |
 | **Source Gen** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | Compile-time HTTP client + test code generation from JSON |
 | **Tests** | `BlackGoldAncientSword.Tests` | xUnit | OCR, screen capture, game monitor, HTTP, update tests |
@@ -260,12 +272,14 @@ Before using this program, please ensure you have read, understood, and agreed t
 |---|---|---|
 | **Runtime** | .NET 10.0 (`net10.0-windows`) | Target framework |
 | **UI** | WPF + HandyControl 3.5 | Desktop UI and control library |
+| **Theme** | Custom ModernTheme (celadon / bamboo-green eye-friendly palette) | Soft pale-green surface + deep-green accent + ink text, comfortable for long reading sessions |
 | **MVVM** | Prism 8.1 (`Prism.DryIoc`) | DI container, region navigation, modularization |
 | **HTTP** | Compile-time source generator | Generate strongly-typed API clients from `api-definitions.json` |
 | **Mapping** | Mapster 7.4 | DTO ↔ ViewModel |
 | **JSON** | `System.Text.Json` (with source-generated context) | Serialization / deserialization (fully replaced Newtonsoft.Json) |
 | **Screen Capture** | SharpDX.Direct3D11 + native WGC DLL (C++/WinRT) | Game window capture |
-| **OCR** | PaddleOCR-json.exe (long-lived child process) | Multi-language text recognition |
+| **OCR** | RapidOcrNet 2.0.0 + ONNX Runtime 1.24 (in-process, PP-OCRv5 models) | Multi-language text recognition (single model covers ZH / EN / JA / Latin / Cyrillic, etc.) |
+| **Image I/O** | SkiaSharp 3.119 | OCR entry-point `byte[]` → `SKBitmap` decode |
 | **System Tray** | Hardcodet.NotifyIcon.Wpf | Tray icon and context menu |
 | **Tests** | xUnit + Moq | Unit and integration tests |
 | **Packaging** | Self-Contained + PublishSingleFile | Both App and Updater shipped as single-file .exe (win-x64) |
@@ -290,6 +304,15 @@ src/
 │   │   └── UpdaterRunner.cs                # Orchestrates: download → extract → close main → overlay → relaunch
 │   ├── Shell/UpdateWindow.xaml(.cs)        # Progress window
 │   └── ViewModels/UpdateViewModel.cs       # Progress & status bindings
+│
+├── BlackGoldAncientSword.Downloader/       # Offline installer downloader (WinExe, standalone single-file)
+│   ├── App.xaml(.cs)                       # Entry; process-level temp cleanup safety net
+│   ├── Services/
+│   │   ├── DownloaderRunner.cs             # Orchestrates: query Gitee latest → stream split volumes → launch Setup
+│   │   ├── GiteeAssetsFetcher.cs           # Uses 302 + CDN — no Gitee REST API calls (avoids rate limits)
+│   │   └── InstallerForegrounder.cs        # Launches Setup.exe and brings it to foreground
+│   ├── Shell/DownloadWindow.xaml(.cs)      # Progress window (bar + 4-stat live refresh)
+│   └── ViewModels/DownloadViewModel.cs
 │
 ├── BlackGoldAncientSword.Framework/        # Core framework
 │   ├── Core/
@@ -316,10 +339,11 @@ src/
 │   ├── HttpApiSourceGenerator.cs           # Generates NarakaApiClient + DTOs (Client mode)
 │   └── HttpApiTestSourceGenerator.cs       # Generates HTTP API test code (Tests mode)
 │
-├── BlackGoldAncientSword.Modules/          # UI page modules (9 Prism IModule)
+├── BlackGoldAncientSword.Modules/          # UI page modules (10 Prism IModule)
 │   ├── Mappings/BattleMappingRegister.cs   # Mapster mapping registration
-│   ├── Module/                             # 9 IModule registrations
+│   ├── Module/                             # 10 IModule registrations
 │   │   ├── AnnouncementModule.cs           # Announcements
+│   │   ├── BattleDetailModule.cs           # Battle detail overlay (personal / team / top5 tabs)
 │   │   ├── ClosePromptModule.cs            # Close confirmation dialog
 │   │   ├── FeedbackModule.cs               # Feedback
 │   │   ├── HomeModule.cs                   # Home (game status monitor)
@@ -329,6 +353,7 @@ src/
 │   │   ├── TeamInfoModule.cs               # Team info (OCR + comparison)
 │   │   └── UpdateNotificationModule.cs     # New version prompt / launch Updater
 │   └── UI/                                 # ViewModels + Views per module
+│       ├── BattleDetail/                   # Battle detail: parallel fetch personal / team / top5
 │       ├── Stats/Services/                 # Stats aggregation services
 │       ├── TeamInfo/Services/              # TeamInfoOcrService, TeamOcrCoordinator
 │       └── UpdateNotification/ViewModels/  # Launches BlackGoldAncientSword.Update.exe
@@ -356,10 +381,9 @@ src/
 │   └── runtimes/win-x64/native/
 │       └── wgc_capture.dll                 # Native C++/WinRT capture library
 │
-├── BlackGoldAncientSword.Ocr/              # OCR engine
+├── BlackGoldAncientSword.Ocr/              # OCR engine (in-process ONNX Runtime)
 │   ├── IOcrService.cs                      # Service interface
-│   ├── OcrEngine.cs                        # PaddleOCR-json.exe wrapper
-│   ├── JobObjectHelper.cs                  # JobObject fallback for child-process cleanup
+│   ├── OcrEngine.cs                        # RapidOcrNet (PP-OCRv5) wrapper
 │   └── OcrAutoRegister.cs                  # Service auto-registration
 │
 ├── BlackGoldAncientSword.Resources/        # Multi-language resources
@@ -377,10 +401,12 @@ src/
     ├── Update/                             # Update flow tests
     └── TestData/                           # Test data
 
-ocr_engine/                                 # PaddleOCR-json engine + models (copied to output by Ocr)
-├── PaddleOCR-json.exe                      # OCR engine executable
-├── models/                                 # OCR models (ch / cht / en / cyrillic / japan / korean)
-└── *.dll                                   # Runtime deps (onnxruntime, opencv_world, mklml, etc.)
+ocr_engine/                                 # PP-OCRv5 ONNX models + dict (copied to output by Ocr)
+└── models/v5/                              # PP-OCRv5 Chinese mobile models (~22MB total)
+    ├── ch_PP-OCRv5_det_mobile.onnx         # Text detection (DBNet)
+    ├── ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx  # Orientation classifier
+    ├── ch_PP-OCRv5_rec_mobile.onnx         # Character recognition (CRNN)
+    └── ppocrv5_dict.txt                    # Dictionary (18,383 characters; covers ZH/EN/JA/Latin-Extended)
 ```
 
 ---
@@ -394,7 +420,7 @@ ocr_engine/                                 # PaddleOCR-json engine + models (co
 | `IAppAssemblyMarker` | `AppAssemblyMarker` | Assembly locator marker (for XAML resource resolution) |
 | `IApplicationLifetime` | `WpfApplicationLifetime` | Exit / restart application |
 | `IClipboardService` | `WpfClipboardService` | Clipboard read/write |
-| `IGitHubReleaseService` | `GitHubReleaseService` | Fetch GitHub releases list and assets |
+| `IGiteeReleaseService` | `GiteeReleaseService` | Fetch Gitee releases list and assets (uses 302 tag probe + CDN HEAD probing, zero API deps) |
 | `IImageCacheService` | `ImageCacheService` | On-disk image cache |
 | `ILocalizationService` | `LocalizationService` | Switch language at runtime (reload XAML resource dictionaries) |
 | `ILocalizedTextProvider` | `WpfLocalizedTextProvider` | Read localized strings from code |
@@ -403,7 +429,7 @@ ocr_engine/                                 # PaddleOCR-json engine + models (co
 | `ITeamOverlayService` | `TeamOverlayService` | Bottom-right team overlay during hero selection |
 | `ITipMessageService` | `TipMessageService` | Global toast / tip messages |
 | `IUIDispatcher` | `WpfUIDispatcher` | Cross-thread UI dispatch wrapper |
-| `IUpdateService` | `UpdateService` | Compare versions, resolve latest release zip URL |
+| `IUpdateService` | `UpdateService` | Compare versions, resolve latest Gitee release Setup / zip / split-volume URLs (via 302 + CDN, avoids API rate limits) |
 
 `GameMonitor`, `Ocr`, `ScreenCapture` each expose their own interfaces (`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService`, `IOcrService`, `IScreenCaptureService`), registered into the DI container via their `*AutoRegister.cs`.
 
@@ -436,6 +462,7 @@ public static class PageNames
     public const string ClosePromptPage        = nameof(ClosePromptPage);
     public const string FeedbackPage           = nameof(FeedbackPage);
     public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
+    public const string BattleDetailPage       = nameof(BattleDetailPage);
 }
 ```
 
@@ -460,7 +487,7 @@ The outer `GameLogMonitor` is just a façade that orchestrates lifetime and even
 1. `GameStatusMonitor` detects `HeroSelection` state
 2. `TeamInfoPageViewModel` starts the OCR polling loop
 3. `ScreenCaptureService` captures the game window via **Windows Graphics Capture API** (native C++/WinRT DLL → SharpDX D3D11), reusing full-frame buffers from `ArrayPool` and slicing three regions via `ScreenQuadrant` into a single composite image
-4. `OcrEngine` talks to **PaddleOCR-json.exe** as a **singleton long-lived child process** over stdin/stdout pipes using `image_base64` (zero disk IO). Models load once on the first `PrewarmAsync` call (~600–1500 ms); subsequent calls only run inference (~100–250 ms). A `JobObject` guarantees the child is reaped by the OS if the host crashes
+4. `OcrEngine` runs **RapidOcrNet + ONNX Runtime in-process**: `byte[]` → SkiaSharp decodes to `SKBitmap` → a single `Detect()` call chains three ONNX inferences (det / DBNet → cls / orientation, optional → rec / CRNN). Models + dictionary load on the first `PrewarmAsync` call (~200–500 ms) and the same call runs a tiny inference to trigger ONNX session buffer / kernel JIT. A `SemaphoreSlim` serializes access to RapidOcr's internal state. No subprocess, no IPC, no JobObject
 5. `TeamInfoOcrService` / `TeamOcrCoordinator` parse the OCR output and extract teammate nicknames
 6. The stats API is queried for each teammate and the results are displayed side-by-side
 
@@ -483,8 +510,9 @@ Multi-language support via WPF `ResourceDictionary`. All UI text is defined in `
 Updates are a two-process collaboration:
 
 - **Main app side** (`Modules/UI/UpdateNotification/ViewModels/UpdateNotificationPageViewModel.cs`)
-  - Detects new versions via `IUpdateService` + `IGitHubReleaseService`
+  - Detects new versions via `IUpdateService` (Gitee release page 302 tag probe + CDN HEAD probing for split volumes)
   - On "Update Online" click, launches `BlackGoldAncientSword.Update.exe` in the install directory with `--url <zip URL>`, `--target <install dir>`, `--main-exe BlackGoldAncientSword.App.exe`
+  - For users with no network or GitHub blocked, `BlackGoldAncientSword-win-x64-Downloader.exe` on the Gitee release page streams the split installer and launches Setup automatically
 - **Updater side** (`BlackGoldAncientSword.Update`)
   - Standalone process. Does not reference any business project (HandyControl only) — avoids DLL locking so the whole install directory can be safely overlaid
   - `UpdaterRunner` orchestrates: download zip (0–90%) → extract (90–98%) → prompt to close main app → full overlay → relaunch main app → exit
@@ -514,6 +542,9 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 
 # Release publish updater (self-contained single-file .exe, must sit next to the main app)
 dotnet publish src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj -c Release -o publish/Updater
+
+# Release publish offline downloader (self-contained single-file .exe, shipped as a standalone Release asset, not bundled into the install directory)
+dotnet publish src/BlackGoldAncientSword.Downloader/BlackGoldAncientSword.Downloader.csproj -c Release -o publish/Downloader
 ```
 
 > Project rule: after any code change, run `dotnet build src/BlackGoldAncientSword.slnx` and reach 0 errors before considering the change done.
@@ -533,16 +564,17 @@ Two workflows under `.github/workflows/`:
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `main-build.yml` | push / PR → `main` | Validation build (`dotnet build src/BlackGoldAncientSword.slnx`), no publish |
-| `dotnet-desktop.yml` | push → `release` | Full release: bump version → build App → publish App + Updater (self-contained) → pack zip + Inno Setup installer → create GitHub Release |
+| `dotnet-desktop.yml` | push → `release` | Full release: bump version → build App → publish App + Updater + Downloader (self-contained) → pack zip + Inno Setup full / split installers → create GitHub Release |
 
 Release flow highlights:
 
 1. Infer version from existing git tags (`v*.*.*.*` pattern), auto-increment the build segment
 2. Patch `App.csproj`: `Version` / `AssemblyVersion` / `FileVersion`
-3. Publish both App and Updater as self-contained single-file .exe
-4. Merge publish outputs → zip as `BlackGoldAncientSword-v{version}.zip`
-5. Build `BlackGoldAncientSword-{version}-win-x64-Setup.exe` via `setup.iss` (Inno Setup script)
-6. Create a GitHub Release with auto-generated commit-title list since the previous tag
+3. Publish App, Updater, and Downloader as self-contained single-file .exe
+4. Merge build + publish outputs, drop the Updater exe into the install directory, then zip as `BlackGoldAncientSword-v{version}.zip` + 7z split volumes `-split.zip.NNN` (≤99MB each)
+5. Build both a full installer `BlackGoldAncientSword-{version}-win-x64-Setup.exe` and a DiskSpanning split installer `-Split.exe` + `.bin` via `setup.iss`
+6. Produce versionless aliases (`BlackGoldAncientSword-win-x64-Setup.exe` / `-Downloader.exe`) that pair with `/releases/latest/download/` magic redirects for permanent "latest version" share links
+7. Create a GitHub Release with auto-generated commit-title list since the previous tag
 
 > The `release` branch has branch protection enabled: no direct push, no force push, no deletion, and `enforce_admins` is on (so administrators are bound by the same rules). Every change must land via a pull request. Day-to-day work happens on `main`; to ship a release, first commit + push `main` via the [git-commit](.claude/skills/git-commit/SKILL.md) skill, then open a `main` → `release` pull request on GitHub and merge it — that merge is what triggers `dotnet-desktop.yml`.
 

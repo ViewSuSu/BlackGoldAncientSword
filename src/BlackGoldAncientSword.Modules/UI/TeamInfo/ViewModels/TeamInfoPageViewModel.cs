@@ -168,6 +168,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public bool HasMember2 => TeamMembers.Count > 2;
         public bool HasThreeMembers => TeamMembers.Count >= 3;
 
+        // 成员卡片"内容行"（战绩表格）可见性：仅在成员存在且没有查询失败时显示。
+        // 查询失败时改由错误覆盖层承担整卡显示，避免旧数据行泄漏出来。
+        public bool Member0Ready => HasMember0 && !TeamMembers[0].HasStatusError;
+        public bool Member1Ready => HasMember1 && !TeamMembers[1].HasStatusError;
+        public bool Member2Ready => HasMember2 && !TeamMembers[2].HasStatusError;
+
         // === Diffs ===
         public ObservableCollection<MemberDiffItem> DiffLeft { get; }
         public ObservableCollection<MemberDiffItem> DiffRight { get; }
@@ -218,6 +224,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private void OnGameStatusRecognized(object? sender, GameStatusChangedEventArgs args)
         {
+            BlackGoldAncientSword.Framework.Core.Infrastructure.DiagLog.Write(
+                "VM", $"OnGameStatusRecognized status={args.Status}, dataLoaded={_ocrDataLoadedSuccessfully}");
+
             // 非英雄选择状态时立即取消 OCR 循环，无需等待 UI 线程调度。
             // GameLogMonitor 在 ThreadPool 上触发事件，HandleGameStatusOnUiThread 通过
             // _uiDispatcher.InvokeAsync marshal 到 UI 线程，从事件触发到实际执行 StopOcrLoop
@@ -321,6 +330,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private void StartOcrLoop()
         {
+            BlackGoldAncientSword.Framework.Core.Infrastructure.DiagLog.Write(
+                "VM", $"StartOcrLoop 入口, dataLoaded={_ocrDataLoadedSuccessfully}, isRunning={_isOcrRunning}");
+
             // 如果上一轮已成功完成完整识别（有 UID、数据已加载），不再重复启动 OCR 轮询。
             // 用户仍可通过右上角的刷新按钮手动触发单次识别（RefreshOcrCommand → RefreshOcrOnceAsync）。
             if (_ocrDataLoadedSuccessfully)
@@ -949,6 +961,27 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             RaisePropertyChanged(nameof(HasMember1));
             RaisePropertyChanged(nameof(HasMember2));
             RaisePropertyChanged(nameof(HasThreeMembers));
+            RaisePropertyChanged(nameof(Member0Ready));
+            RaisePropertyChanged(nameof(Member1Ready));
+            RaisePropertyChanged(nameof(Member2Ready));
+            // 订阅每个成员的 HasStatusError 变化，实时刷新 Ready 属性，
+            // 避免 StatusText 变更后 UI 未同步导致查询失败态仍显示旧数据行。
+            for (int i = 0; i < TeamMembers.Count; i++)
+            {
+                var idx = i;
+                var m = TeamMembers[i];
+                m.PropertyChanged -= OnMemberPropertyChanged;
+                m.PropertyChanged += OnMemberPropertyChanged;
+            }
+        }
+
+        private void OnMemberPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(TeamMemberInfo.HasStatusError)
+                && e.PropertyName != nameof(TeamMemberInfo.StatusText)) return;
+            RaisePropertyChanged(nameof(Member0Ready));
+            RaisePropertyChanged(nameof(Member1Ready));
+            RaisePropertyChanged(nameof(Member2Ready));
         }
 
         private static void ClearImageMemoryCaches()

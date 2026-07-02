@@ -2,6 +2,9 @@
 
 [![Windows](https://img.shields.io/badge/Windows-10%2F11%20x64-0078D6?style=flat&logo=windows&logoColor=white)]() [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)]() [![WPF](https://img.shields.io/badge/UI-WPF%20%2B%20Prism%208.1-purple?style=flat)]() [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
 
+- **GitHub 仓库**：https://github.com/ViewSuSu/BlackGoldAncientSword
+- **Gitee 镜像**：https://gitee.com/SususuChang/BlackGoldAncientSword
+
 # 黑金古刀-永劫助手（BlackGoldAncientSword）
 
 > 查询《永劫无间》（NARAKA: BLADEPOINT）玩家战绩数据的桌面辅助工具。
@@ -134,9 +137,11 @@ OCR 识别采用的 OBS 录屏同源技术，可以忽略游戏的遮挡界面�
 
 另外，OCR 有时无法识别某些特殊字符，如果遇到识别不出的情况，可以考虑使用 QQ 截图文字识别等方式手动补充。
 
-**Q：为什么安装包/程序这么大（200MB+）？**
+**Q：为什么安装包/程序这么大？**
 
-程序采用**自包含发布（self-contained）**，内置了 .NET 运行时，无需用户额外安装 .NET 环境即可直接运行。此外，程序自带的 OCR 文字识别引擎（PaddleOCR）需要依赖 Intel 数学核心库（mklml.dll，约 88MB）和 OpenCV 计算机视觉库（opencv_world4100.dll，约 62MB）。这两个原生 AI/视觉库连同 .NET 运行时占了安装包的绝大部分体积。没有它们就无法实现队友昵称的自动截图识别，所以"庞大"是必要的代价 😅。
+程序采用**自包含发布（self-contained）**，内置了 .NET 运行时，无需用户额外安装 .NET 环境即可直接运行。此外，程序自带的 OCR 文字识别引擎依赖 **PP-OCRv5 ONNX 模型（约 22MB）+ ONNX Runtime 原生库 + SkiaSharp 图像编解码库**，这部分总计约 50MB。这些原生 AI/视觉组件连同 .NET 运行时占了安装包的大部分体积。没有它们就无法实现队友昵称的自动截图识别，所以"庞大"是必要的代价 😅。
+
+> v1.0.0.3 起，OCR 引擎已从 PaddleOCR-json 子进程方案（含约 150MB Paddle Inference + MKL + OpenCV 原生 dll）切换到 RapidOcrNet 进程内 ONNX Runtime 方案，识别模型升级至 PP-OCRv5，安装包整体减重约 100MB，对特殊字符（如日文假名、拉丁扩展）的覆盖也大幅提升。
 
 **Q：为什么进入英雄选择环节时屏幕出现黄色边框？**
 
@@ -200,7 +205,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 
 ## 解决方案概览
 
-`src/BlackGoldAncientSword.slnx` 共包含 **10 个项目**：8 个类库 + 2 个可执行程序（主程序 App、独立更新器 Update）。
+`src/BlackGoldAncientSword.slnx` 共包含 **11 个项目**：8 个类库 + 3 个可执行程序（主程序 App、独立更新器 Update、离线下载器 Downloader）。
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -215,12 +220,18 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 │ 下载/解压/覆盖/重启       │                          │
 └──────────────────────────┘                          │
                                                       │
+┌──────────────────────────┐  ← 独立发布，非主程序运行时依赖
+│ BlackGoldAncientSword.   │
+│ Downloader (离线下载器,   │  Gitee 分卷安装包下载 →
+│ WinExe)                  │  拉起 Setup 完成安装
+└──────────────────────────┘
+                                                      │
         ┌─────────────────────┬──────────────────────┘
         │                     │
         ▼                     ▼                     ▼
 ┌────────────┐        ┌──────────────┐        ┌───────────┐
 │  Modules   │        │  Framework   │        │ Resources │
-│ (9 个 UI   │ ◄────► │ (Core + 13   │ ◄──────│ (多语言   │
+│ (10 个 UI  │ ◄────► │ (Core + 13   │ ◄──────│ (多语言   │
 │  页面模块) │        │ 个服务接口)  │        │  XAML+图) │
 └─────┬──────┘        └──────┬───────┘        └───────────┘
       │                      │
@@ -234,8 +245,8 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
        │                │
        ▼                ▼
 ┌──────────────┐ ┌──────────────────┐
-│     Ocr      │ │ PaddleOCR-json   │
-│ (子进程封装) │ │  .exe + 模型     │
+│     Ocr      │ │ RapidOcrNet +    │
+│ (进程内 ONNX)│ │ PP-OCRv5 (ONNX)  │
 └──────────────┘ └──────────────────┘
 ```
 
@@ -243,13 +254,14 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 
 | 层 | 项目 | 输出类型 | 职责 |
 |---|---|---|---|
-| **主程序** | `BlackGoldAncientSword.App` | WinExe | WPF 应用入口、主窗口、侧边栏导航、托盘、启动更新器 |
+| **主程序** | `BlackGoldAncientSword.App` | WinExe | WPF 应用入口、主窗口、侧边栏导航、托盘、启动更新器、启动期后台预热 OCR |
 | **更新器** | `BlackGoldAncientSword.Update` | WinExe | 独立在线更新进程，零业务依赖（仅 HandyControl） |
-| **UI 模块** | `BlackGoldAncientSword.Modules` | ClassLib | 9 个 Prism `IModule` 页面，按需加载 |
+| **离线下载器** | `BlackGoldAncientSword.Downloader` | WinExe | 独立单文件 exe，从 Gitee release 顺序流式下载分卷安装包 → 拉起 Setup.exe → 自身退出。零 API 依赖（走 302 + CDN） |
+| **UI 模块** | `BlackGoldAncientSword.Modules` | ClassLib | 10 个 Prism `IModule` 页面，按需加载 |
 | **核心框架** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM 基类、Prism 基础设施、服务抽象与实现、HTTP API |
 | **游戏监控** | `BlackGoldAncientSword.GameMonitor` | ClassLib | 进程检测、Player.log 解析、战局状态机 |
 | **屏幕捕获** | `BlackGoldAncientSword.ScreenCapture` | ClassLib | Windows Graphics Capture API + SharpDX，含原生 wgc_capture.dll |
-| **OCR 引擎** | `BlackGoldAncientSword.Ocr` | ClassLib | PaddleOCR-json.exe 子进程封装 |
+| **OCR 引擎** | `BlackGoldAncientSword.Ocr` | ClassLib | RapidOcrNet（PP-OCRv5 ONNX）进程内推理封装 |
 | **资源** | `BlackGoldAncientSword.Resources` | ClassLib | 多语言 XAML 资源字典、图标、图片 |
 | **源码生成** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | 编译期从 JSON 定义生成 HTTP 客户端与测试代码 |
 | **测试** | `BlackGoldAncientSword.Tests` | xUnit | OCR、屏幕捕获、游戏监控、HTTP、更新流程测试 |
@@ -262,12 +274,14 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 |---|---|---|
 | **运行时** | .NET 10.0 (`net10.0-windows`) | 目标框架 |
 | **UI** | WPF + HandyControl 3.5 | 桌面界面与控件库 |
+| **主题** | 自定义 ModernTheme（青瓷竹青护眼配色） | 淡雅护眼浅绿底 + 竹青深绿点缀 + 深墨字，长时间阅读舒适 |
 | **MVVM 框架** | Prism 8.1 (`Prism.DryIoc`) | DI 容器、区域导航、模块化 |
 | **HTTP** | 编译期源码生成器 | 从 `api-definitions.json` 自动生成强类型 API 客户端 |
 | **对象映射** | Mapster 7.4 | DTO ↔ ViewModel |
 | **JSON** | `System.Text.Json`（含源码生成上下文） | 序列化 / 反序列化（已全量替换 Newtonsoft.Json） |
 | **屏幕捕获** | SharpDX.Direct3D11 + 原生 WGC DLL (C++/WinRT) | 游戏窗口截图 |
-| **OCR** | PaddleOCR-json.exe（常驻子进程） | 多语言文字识别 |
+| **OCR** | RapidOcrNet 2.0.0 + ONNX Runtime 1.24（进程内推理，PP-OCRv5 模型） | 多语言文字识别（中/英/日/拉丁/西里尔等单模型覆盖） |
+| **图像处理** | SkiaSharp 3.119 | OCR 入口 byte[] → SKBitmap 解码 |
 | **系统托盘** | Hardcodet.NotifyIcon.Wpf | 托盘图标与菜单 |
 | **测试** | xUnit + Moq | 单元测试与集成测试 |
 | **打包** | Self-Contained + PublishSingleFile | App、Updater 均为单文件独立部署 (win-x64) |
@@ -292,6 +306,15 @@ src/
 │   │   └── UpdaterRunner.cs                # 编排：下载→解压→关主程序→覆盖→重启
 │   ├── Shell/UpdateWindow.xaml(.cs)        # 进度窗口
 │   └── ViewModels/UpdateViewModel.cs       # 进度与状态绑定
+│
+├── BlackGoldAncientSword.Downloader/       # 离线安装包下载器（WinExe，独立单文件）
+│   ├── App.xaml(.cs)                       # 入口，进程级兜底清理临时目录
+│   ├── Services/
+│   │   ├── DownloaderRunner.cs             # 编排：查 Gitee latest → 顺序流式下载分卷 → 拉起 Setup
+│   │   ├── GiteeAssetsFetcher.cs           # 走 302 + CDN，零 Gitee API 依赖（避 rate limit）
+│   │   └── InstallerForegrounder.cs        # 拉起主 Setup exe 并前台化
+│   ├── Shell/DownloadWindow.xaml(.cs)      # 下载进度窗口（进度 + 4-stat 实时刷新）
+│   └── ViewModels/DownloadViewModel.cs
 │
 ├── BlackGoldAncientSword.Framework/        # 核心框架
 │   ├── Core/
@@ -318,10 +341,11 @@ src/
 │   ├── HttpApiSourceGenerator.cs           # 生成 NarakaApiClient + DTO（Client 模式）
 │   └── HttpApiTestSourceGenerator.cs       # 生成 HTTP API 测试代码（Tests 模式）
 │
-├── BlackGoldAncientSword.Modules/          # UI 页面模块（9 个 Prism IModule）
+├── BlackGoldAncientSword.Modules/          # UI 页面模块（10 个 Prism IModule）
 │   ├── Mappings/BattleMappingRegister.cs   # Mapster 映射注册
-│   ├── Module/                             # 9 个 IModule 注册
+│   ├── Module/                             # 10 个 IModule 注册
 │   │   ├── AnnouncementModule.cs           # 公告
+│   │   ├── BattleDetailModule.cs           # 对局详情浮层（personal/team/top5 三 Tab）
 │   │   ├── ClosePromptModule.cs            # 关闭确认弹窗
 │   │   ├── FeedbackModule.cs               # 意见反馈
 │   │   ├── HomeModule.cs                   # 首页（游戏状态监控）
@@ -331,6 +355,7 @@ src/
 │   │   ├── TeamInfoModule.cs               # 队伍信息（OCR + 对比）
 │   │   └── UpdateNotificationModule.cs     # 新版本提示 / 启动更新器
 │   └── UI/                                 # 各模块的 ViewModels + Views
+│       ├── BattleDetail/                   # 对局详情：并行拉 personal/team/top5
 │       ├── Stats/Services/                 # 战绩聚合服务
 │       ├── TeamInfo/Services/              # TeamInfoOcrService、TeamOcrCoordinator
 │       └── UpdateNotification/ViewModels/  # 拉起 BlackGoldAncientSword.Update.exe
@@ -358,10 +383,9 @@ src/
 │   └── runtimes/win-x64/native/
 │       └── wgc_capture.dll                 # 原生 C++/WinRT 捕获库
 │
-├── BlackGoldAncientSword.Ocr/              # OCR 引擎
+├── BlackGoldAncientSword.Ocr/              # OCR 引擎（进程内 ONNX Runtime）
 │   ├── IOcrService.cs                      # 服务接口
-│   ├── OcrEngine.cs                        # PaddleOCR-json.exe 封装
-│   ├── JobObjectHelper.cs                  # JobObject 兜底回收子进程
+│   ├── OcrEngine.cs                        # RapidOcrNet（PP-OCRv5）封装
 │   └── OcrAutoRegister.cs                  # 服务自动注册
 │
 ├── BlackGoldAncientSword.Resources/        # 多语言资源
@@ -379,10 +403,12 @@ src/
     ├── Update/                             # 更新流程测试
     └── TestData/                           # 测试数据
 
-ocr_engine/                                 # PaddleOCR-json 引擎与模型（被 Ocr 项目拷贝至输出目录）
-├── PaddleOCR-json.exe                      # OCR 引擎可执行文件
-├── models/                                 # OCR 模型（ch / cht / en / cyrillic / japan / korean）
-└── *.dll                                   # 运行时依赖（onnxruntime、opencv_world、mklml 等）
+ocr_engine/                                 # PP-OCRv5 ONNX 模型与字典（被 Ocr 项目拷贝至输出目录）
+└── models/v5/                              # PP-OCRv5 中文 mobile 模型 (~22MB)
+    ├── ch_PP-OCRv5_det_mobile.onnx         # 文本检测 DBNet
+    ├── ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx  # 方向分类
+    ├── ch_PP-OCRv5_rec_mobile.onnx         # 字符识别 CRNN
+    └── ppocrv5_dict.txt                    # 字典（18383 字符，覆盖中/英/日/拉丁扩展等）
 ```
 
 ---
@@ -396,7 +422,7 @@ ocr_engine/                                 # PaddleOCR-json 引擎与模型（�
 | `IAppAssemblyMarker` | `AppAssemblyMarker` | 程序集定位标记（XAML 资源解析） |
 | `IApplicationLifetime` | `WpfApplicationLifetime` | 退出 / 重启应用 |
 | `IClipboardService` | `WpfClipboardService` | 剪贴板读写 |
-| `IGitHubReleaseService` | `GitHubReleaseService` | 拉取 GitHub Releases 列表与资产 |
+| `IGiteeReleaseService` | `GiteeReleaseService` | 拉取 Gitee Releases 列表与资产（含 302 tag 探测 + CDN 分卷 HEAD 探测，零 API 依赖） |
 | `IImageCacheService` | `ImageCacheService` | 图片磁盘缓存 |
 | `ILocalizationService` | `LocalizationService` | 动态切换语言（重载 XAML 资源字典） |
 | `ILocalizedTextProvider` | `WpfLocalizedTextProvider` | 代码侧读取本地化字符串 |
@@ -405,7 +431,7 @@ ocr_engine/                                 # PaddleOCR-json 引擎与模型（�
 | `ITeamOverlayService` | `TeamOverlayService` | 英雄选择时的右下角队伍弹窗 |
 | `ITipMessageService` | `TipMessageService` | 全局 Toast / 提示消息 |
 | `IUIDispatcher` | `WpfUIDispatcher` | 跨线程 UI 调度封装 |
-| `IUpdateService` | `UpdateService` | 比对版本、解析最新 release 的 zip 资产 URL |
+| `IUpdateService` | `UpdateService` | 比对版本、解析最新 Gitee release 的 Setup / zip / 分卷 URL（走 302 + CDN，避 API rate limit） |
 
 `GameMonitor`、`Ocr`、`ScreenCapture` 各自暴露自身的接口（`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService`、`IOcrService`、`IScreenCaptureService`），通过各模块的 `*AutoRegister.cs` 注册到 DI 容器。
 
@@ -438,6 +464,7 @@ public static class PageNames
     public const string ClosePromptPage        = nameof(ClosePromptPage);
     public const string FeedbackPage           = nameof(FeedbackPage);
     public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
+    public const string BattleDetailPage       = nameof(BattleDetailPage);
 }
 ```
 
@@ -464,7 +491,7 @@ public static class PageNames
 1. `GameStatusMonitor` 检测到 `HeroSelection` 状态
 2. `TeamInfoPageViewModel` 启动 OCR 轮询循环
 3. `ScreenCaptureService` 通过 **Windows Graphics Capture API**（原生 C++/WinRT DLL → SharpDX D3D11）截取游戏窗口，使用 `ArrayPool` 复用全帧缓冲，按 `ScreenQuadrant` 切出三个 region 拼图
-4. `OcrEngine` 与 **PaddleOCR-json.exe** 之间是**单例常驻子进程 + stdin/stdout 管道 + image_base64 零磁盘 IO**：模型仅在首次调用 `PrewarmAsync` 时加载（约 600～1500 ms），后续每次识别只跑推理（约 100～250 ms）；`JobObject` 保证宿主退出时子进程被 OS 兜底清理
+4. `OcrEngine` 基于 **RapidOcrNet + ONNX Runtime 进程内推理**：byte[] → SkiaSharp 解码为 `SKBitmap` → 单次 `Detect()` 串联跑 det（DBNet）→ cls（方向分类，可关）→ rec（CRNN）三段 ONNX 推理。模型 + 字典首次调用 `PrewarmAsync` 时加载（约 200～500 ms），并跑一次最小推理触发 ONNX session 内部 buffer 与 kernel 编译。`SemaphoreSlim` 串行化保护 RapidOcr 内部状态，无子进程 / 无 IPC / 无 JobObject 兜底
 5. `TeamInfoOcrService` / `TeamOcrCoordinator` 解析 OCR 结果，提取队友昵称
 6. 调用战绩 API 查询每个队友的数据，并排展示
 
@@ -487,8 +514,9 @@ API 客户端**不手写**，而是通过 `BlackGoldAncientSword.Framework.Sourc
 更新由两端协作完成：
 
 - **主程序侧**（`Modules/UI/UpdateNotification/ViewModels/UpdateNotificationPageViewModel.cs`）
-  - 通过 `IUpdateService` + `IGitHubReleaseService` 检测新版本
+  - 通过 `IUpdateService`（走 Gitee release 网页 302 提取 tag + CDN HEAD 探测分卷）检测新版本
   - 用户点击"在线更新"后，启动同目录下的 `BlackGoldAncientSword.Update.exe`，传入 `--url <zip 下载地址>`、`--target <安装目录>`、`--main-exe BlackGoldAncientSword.App.exe`
+  - 无网 / GitHub 被墙用户可从 Gitee Release 页面下载 `BlackGoldAncientSword-win-x64-Downloader.exe`（离线下载器），双击后自动流式拉取分卷安装包并调起 Setup
 - **更新器侧**（`BlackGoldAncientSword.Update`）
   - 独立进程，不引用任何业务项目（仅依赖 HandyControl），避免 DLL 被锁定影响整目录覆盖
   - `UpdaterRunner` 编排：下载 zip（0–90%）→ 解压（90–98%）→ 提示关闭主程序 → 全量覆盖 → 重新拉起主程序 → 自身退出
@@ -518,6 +546,9 @@ dotnet publish src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj -c
 
 # Release 发布更新器（自包含单文件 exe，需与主程序放同目录）
 dotnet publish src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj -c Release -o publish/Updater
+
+# Release 发布离线下载器（自包含单文件 exe，作为 Release 独立附件发布，不进主程序安装目录）
+dotnet publish src/BlackGoldAncientSword.Downloader/BlackGoldAncientSword.Downloader.csproj -c Release -o publish/Downloader
 ```
 
 > 项目约定：对代码做任何修改后必须运行 `dotnet build src/BlackGoldAncientSword.slnx`，0 error 才算完成。
@@ -537,16 +568,17 @@ dotnet test src/BlackGoldAncientSword.Tests/BlackGoldAncientSword.Tests.csproj
 | 工作流 | 触发 | 用途 |
 |---|---|---|
 | `main-build.yml` | push / PR → `main` | 校验性构建（`dotnet build src/BlackGoldAncientSword.slnx`），不发布 |
-| `dotnet-desktop.yml` | push → `release` | 完整发版：版本号自增 → 编译 App → 发布 App + Updater（自包含单文件）→ 打包 zip + Inno Setup 安装包 → 创建 GitHub Release |
+| `dotnet-desktop.yml` | push → `release` | 完整发版：版本号自增 → 编译 App → 发布 App + Updater + Downloader（自包含单文件）→ 打包 zip + Inno Setup 全量 / 分卷安装包 → 创建 GitHub Release |
 
 发版流程要点：
 
 1. 从已有 git tags（`v*.*.*.*` 形式）推断版本号并自增 build 段
 2. 修改 `App.csproj` 的 `Version` / `AssemblyVersion` / `FileVersion`
-3. 分别发布 App 与 Update 为自包含单文件 .exe
-4. 合并 publish 输出 → 压缩为 `BlackGoldAncientSword-v{version}.zip`
-5. 用 `setup.iss`（Inno Setup 脚本）生成 `BlackGoldAncientSword-{version}-win-x64-Setup.exe`
-6. 创建 GitHub Release，自动列举上一版本到本次的 commit 标题
+3. 分别发布 App、Update、Downloader 为自包含单文件 .exe
+4. 合并 build + publish 输出并把 Updater exe 一并塞进安装目录 → 压缩为 `BlackGoldAncientSword-v{version}.zip` + 7z 分卷 `-split.zip.NNN`（≤99MB / 卷）
+5. 用 `setup.iss`（Inno Setup 脚本）分别生成全量安装包 `BlackGoldAncientSword-{version}-win-x64-Setup.exe` 与 DiskSpanning 分卷安装包 `-Split.exe` + `.bin`
+6. 额外产出两份无版本号别名（`BlackGoldAncientSword-win-x64-Setup.exe` / `-Downloader.exe`），配合 `/releases/latest/download/` magic redirect 提供永久指向最新版的分享链接
+7. 创建 GitHub Release，自动列举上一版本到本次的 commit 标题
 
 > `release` 分支已开启分支保护：禁直推 / 禁 force-push / 禁删除，且对管理员同样生效（`enforce_admins`），所有变更必须通过 PR 合并进来。日常开发在 `main` 分支进行；发版时先由 [git-commit](.claude/skills/git-commit/SKILL.md) skill commit + push `main`，随后在 GitHub 上创建 `main` → `release` 的 PR 并合并，由此触发 `dotnet-desktop.yml` 完成发版。
 
