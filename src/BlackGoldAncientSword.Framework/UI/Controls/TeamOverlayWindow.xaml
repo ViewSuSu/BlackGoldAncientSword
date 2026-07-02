@@ -79,7 +79,7 @@
                     </Grid.ColumnDefinitions>
                     <!-- 左侧金色小圆点 + 标题 -->
                     <Ellipse Grid.Column="0" Width="8" Height="8" VerticalAlignment="Center"
-                             Fill="{DynamicResource GoldRingGradientBrush}" />
+                             Fill="{DynamicResource AccentGradientBrush}" />
                     <TextBlock Grid.Column="1" Margin="8,0,0,0"
                                VerticalAlignment="Center"
                                FontSize="13" FontWeight="SemiBold"
@@ -124,7 +124,7 @@
                             <!-- 头像：金色渐变环 + 深墨底圆形 -->
                             <Border Width="44" Height="44"
                                     HorizontalAlignment="Center"
-                                    Background="{DynamicResource GoldRingGradientBrush}"
+                                    Background="{DynamicResource AccentGradientBrush}"
                                     CornerRadius="22" Padding="2">
                                 <Border Background="{StaticResource OverlayAvatarBg}"
                                         CornerRadius="20" ClipToBounds="True">
@@ -149,7 +149,7 @@
                             <hc:CircleProgressBar Width="36" Height="36" Margin="0,4,0,0"
                                                   HorizontalAlignment="Center"
                                                   ArcThickness="3"
-                                                  Foreground="{DynamicResource GoldRingGradientBrush}"
+                                                  Foreground="{DynamicResource AccentGradientBrush}"
                                                   IsIndeterminate="True"
                                                   Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             <!-- Rank 内容 -->
@@ -169,7 +169,7 @@
                                         Width="36" Height="36"
                                         HorizontalAlignment="Center"
                                         Background="{StaticResource OverlayAvatarBg}"
-                                        BorderBrush="{DynamicResource GoldRingGradientBrush}"
+                                        BorderBrush="{DynamicResource AccentGradientBrush}"
                                         BorderThickness="1"
                                         CornerRadius="5"
                                         ClipToBounds="True">
@@ -242,7 +242,7 @@
                             ToolTip="{DynamicResource TeamOverlay.ViewTeamInfo}">
                         <TextBlock VerticalAlignment="Center"
                                    FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource GoldRingGradientBrush}"
+                                   Foreground="{DynamicResource AccentGradientBrush}"
                                    Text="{DynamicResource TeamOverlay.ViewTeamInfoButton}"
                                    TextDecorations="Underline" />
                     </Button>

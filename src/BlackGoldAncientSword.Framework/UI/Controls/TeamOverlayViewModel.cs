@@ -57,7 +57,6 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
                 NavigateToTeamInfoRequested?.Invoke(this, EventArgs.Empty);
                 var navigation = containerProvider.Resolve<IMainContentNavigationService>();
                 navigation.NavigateTo(PageNames.TeamInfoPage);
-                CloseRequested?.Invoke(this, EventArgs.Empty);
             });
         }
 
