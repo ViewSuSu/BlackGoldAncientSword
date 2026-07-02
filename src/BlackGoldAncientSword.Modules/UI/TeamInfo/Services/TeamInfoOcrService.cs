@@ -9,7 +9,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services;
 /// <summary>
 /// 队伍信息 OCR 识别服务实现。
 /// 截取游戏窗口的队友名字区域，通过 PaddleOCR 识别玩家名称。
-/// 截图为白字暗底，OCR 前自动反色处理。
+/// 生产管线：裸色 (Raw) 直送 OCR。裸色保留完整字符纹理，识别率优于白字二值化：
+/// 前后 `.` 装饰点、`耍`vs`要` 等细笔画字符均能保住。
+/// 白字二值化实现 (<see cref="CropAndBinarizeWhite"/>) 保留供离线对比测试，未接入生产。
 /// </summary>
 [Component(ComponentLifetime.Singleton)]
 public class TeamInfoOcrService : ITeamInfoOcrService
@@ -18,23 +20,26 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     private readonly IOcrService _ocr;
 
     /// <summary>
-    /// 三个队友名字区域的归一化坐标（基于 2048×1152 参考分辨率）。
+    /// 三个队友名字区域的归一化坐标（基于 2560×1600 参考分辨率, 16:10）。
+    /// 校准点：红色边框像素扫描得出的红框内框。
+    /// 绝对像素: L(770,1456,284x54) / M(1204,1456,288x54) / R(1650,1456,304x54)。
     /// </summary>
     internal static readonly OcrRegion[] TeamRegions = new[]
     {
-        new OcrRegion { X = 0.301953, Y = 0.899306, Width = 0.123661, Height = 0.039583 },  // 左侧
-        new OcrRegion { X = 0.475000, Y = 0.897222, Width = 0.125447, Height = 0.041667 },  // 中间
-        new OcrRegion { X = 0.646484, Y = 0.897917, Width = 0.138672, Height = 0.036806 },  // 右侧
+        new OcrRegion { X = 0.300781, Y = 0.910000, Width = 0.110938, Height = 0.033750 },  // 左侧
+        new OcrRegion { X = 0.470313, Y = 0.910000, Width = 0.112500, Height = 0.033750 },  // 中间
+        new OcrRegion { X = 0.644531, Y = 0.910000, Width = 0.118750, Height = 0.033750 },  // 右侧
     };
 
     /// <summary>
-    /// 双排两个队友名字区域的归一化坐标（基于 2048×1152 参考分辨率）。
-    /// 位于英雄选择界面底部，与三排区域 Y 坐标无重叠。
+    /// 双排两个队友名字区域的归一化坐标（基于 2560×1600 参考分辨率, 16:10）。
+    /// 校准点：红色边框像素扫描得出的红框内框。
+    /// 绝对像素: L(990,1454,282x56) / R(1428,1454,302x56)。
     /// </summary>
     internal static readonly OcrRegion[] DuoRegions = new[]
     {
-        new OcrRegion { X = 0.386719, Y = 0.906250, Width = 0.110547, Height = 0.040000 },  // 左侧
-        new OcrRegion { X = 0.557813, Y = 0.906250, Width = 0.119141, Height = 0.040000 },  // 右侧
+        new OcrRegion { X = 0.386719, Y = 0.908750, Width = 0.110156, Height = 0.035000 },  // 左侧
+        new OcrRegion { X = 0.557813, Y = 0.908750, Width = 0.117969, Height = 0.035000 },  // 右侧
     };
 
     /// <summary>
@@ -50,14 +55,15 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     /// 必须靠 X 完全避开 duo 玩家 X 范围。
     /// </para>
     /// <para>
-    /// 左截 X=[0.302, 0.352]：在 duo 左玩家 0.386 之前，安全。
-    /// 右截 X=[0.685, 0.785]：在 duo 右玩家 0.677 之后留 ~16px buffer，安全。
+    /// (2560×1600 校准后) trio L X=[0.301,0.412], duo L X=[0.387,0.497], trio R X=[0.645,0.763], duo R X=[0.558,0.676]。
+    /// 左截 X=[0.301, 0.371]：在 duo 左玩家 0.387 之前留 ~41px buffer，安全。
+    /// 右截 X=[0.693, 0.763]：在 duo 右玩家 0.676 之后留 ~43px buffer，安全。
     /// </para>
     /// </summary>
     internal static readonly OcrRegion[] TrioDetectRegions = new[]
     {
-        new OcrRegion { X = 0.301953, Y = 0.899306, Width = 0.050, Height = 0.039583 }, // trio 左 region 最左截
-        new OcrRegion { X = 0.685000, Y = 0.897917, Width = 0.100, Height = 0.036806 }, // trio 右 region 最右截
+        new OcrRegion { X = 0.300781, Y = 0.910000, Width = 0.070, Height = 0.033750 }, // trio 左 region 最左截
+        new OcrRegion { X = 0.693000, Y = 0.910000, Width = 0.070, Height = 0.033750 }, // trio 右 region 最右截
     };
 
     public TeamInfoOcrService(IScreenCaptureService screenCapture, IOcrService ocr)
@@ -228,6 +234,15 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     /// 同名误识保留两条以便后续 HTTP 查询失败时仍可见。
     /// </para>
     /// </summary>
+    /// <summary>
+    /// rec 置信度低于该阈值的检测框判为幻影丢弃。
+    /// </summary>
+    /// <remarks>
+    /// 裸色管线下主检测置信度稳定 ≥ 0.85，幻影（如 hero_selection_team_02 M 区域中被过滤的 `-` 竖块，
+    /// conf ≈ 0.63）远低于 0.7，天然分水岭。设 0.7 可清幻影且不伤合法昵称。
+    /// </remarks>
+    private const double MinOcrConfidence = 0.7;
+
     private static string[] BucketAndExtractNames(
         (int xStart, int xEnd)[] regionXRanges, List<OcrResult> results)
     {
@@ -243,6 +258,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         var buckets = new string[regionXRanges.Length];
         foreach (var r in results)
         {
+            if (r.Confidence < MinOcrConfidence) continue;
             var cx = (r.Box.TopLeft.X + r.Box.TopRight.X) / 2;
             int best = -1;
             int bestDist = int.MaxValue;
@@ -272,8 +288,9 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     }
 
     /// <summary>
-    /// 把多个 region 横向拼接成一张大反色 BMP,region 之间夹 <see cref="StitchSpacerPx"/>
-    /// 像素白色空隙让 detector 自动切成独立 box。返回 BMP 字节 + 每个 region 在拼图中的 X 范围。
+    /// 把多个 region 横向裸色拼接成一张大 BMP，region 之间夹 <see cref="StitchSpacerPx"/> 像素
+    /// 纯黑 spacer（匹配名条深色底、与白字文本形成对比）让 detector 自动切成独立 box。
+    /// 返回 BMP 字节 + 每个 region 在拼图中的 X 范围。
     /// </summary>
     private const int StitchSpacerPx = 80;
 
@@ -306,11 +323,14 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         int pixelBytes = totalW * maxH * 4;
         var bmp = new byte[BmpHeaderSize + pixelBytes];
         WriteBmpHeader(bmp, totalW, maxH);
-        // 3. 整张像素区初始化为反色后的"白底"(0xFF, 0xFF, 0xFF, 0xFF)。
-        //    用 Span.Fill(0xFF) 一次性填,然后再覆盖各 region 数据。
-        bmp.AsSpan(BmpHeaderSize).Fill(0xFF);
 
-        // 4. 依次把每个 region 反色后写到大图对应 X 偏移处(垂直顶对齐)。
+        // 3. 裸色管线：spacer 用纯黑 (0x00, 0x00, 0x00, 0xFF)，匹配名条深色底、与白字文本形成对比让 detector 切 box。
+        //    整张先填 0，然后行末统一把 alpha 补 0xFF。
+        var pxSpan = bmp.AsSpan(BmpHeaderSize);
+        pxSpan.Clear();
+        for (int i = 3; i < pxSpan.Length; i += 4) pxSpan[i] = 0xFF;
+
+        // 4. 依次把每个 region 裸色像素拷到大图对应 X 偏移处 (垂直顶对齐)。
         var ranges = new (int xStart, int xEnd)[regions.Length];
         int dstX = 0;
         for (int i = 0; i < regions.Length; i++)
@@ -321,7 +341,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
                 ranges[i] = (-1, -1);
                 continue;
             }
-            BlitInvertedRegion(rawBgra, fullWidth, cx, cy, cw, ch,
+            BlitRawRegion(rawBgra, fullWidth, cx, cy, cw, ch,
                 bmp, totalW, dstX, 0);
             ranges[i] = (dstX, dstX + cw);
             dstX += cw + StitchSpacerPx;
@@ -330,8 +350,45 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         return (bmp, ranges);
     }
 
-    /// <summary>把 rawBgra 中 [cx,cy,cw,ch] 区域反色后拷贝到目标 BMP 像素区的 (dstX, dstY) 位置。</summary>
-    private static void BlitInvertedRegion(
+    /// <summary>
+    /// 裸色拷贝：源 [cx,cy,cw,ch] 直接搬到目标 BMP (dstX, dstY) 处，alpha 强置 0xFF。
+    /// 替代 <see cref="BlitBinarizedWhiteRegion"/> 用于生产管线。
+    /// 保留裸色让 OCR 拥有完整字符纹理信息，避免二值化阈值造成 `.` 装饰点吞掉 / `耍→要` 细笔画丢失。
+    /// </summary>
+    private static void BlitRawRegion(
+        byte[] rawBgra, int srcFullWidth, int cx, int cy, int cw, int ch,
+        byte[] dstBmp, int dstFullWidth, int dstX, int dstY)
+    {
+        int srcStride = srcFullWidth * 4;
+        int dstStride = dstFullWidth * 4;
+        int rowBytes = cw * 4;
+        for (int row = 0; row < ch; row++)
+        {
+            int srcOffset = (cy + row) * srcStride + cx * 4;
+            int dstOffset = BmpHeaderSize + (dstY + row) * dstStride + dstX * 4;
+            Buffer.BlockCopy(rawBgra, srcOffset, dstBmp, dstOffset, rowBytes);
+            for (int a = dstOffset + 3; a < dstOffset + rowBytes; a += 4)
+                dstBmp[a] = 0xFF;
+        }
+    }
+
+    /// <summary>游戏昵称为纯白字，min(B,G,R) ≥ 该阈值判为白字像素。</summary>
+    /// <remarks>
+    /// 200 是甜点值：低于 200 会把 AA 边缘 + 血条/装饰的浅色噪声吸进白字集合（引入幻影 `1ILA` 等）；
+    /// 高于 220 会把 `耍` 这类细笔画像素判为背景导致 rec 认错（`耍→要`）。
+    /// </remarks>
+    private const int WhiteTextThreshold = 200;
+
+    /// <summary>
+    /// 白字二值化：源 [cx,cy,cw,ch] 内 min(B,G,R) ≥ <see cref="WhiteTextThreshold"/> 判为白字 → 输出黑 (0x00)；
+    /// 其余像素判为背景/干扰 → 输出白 (0xFF)。等价于"只保留白字 + 反色"一步搞定。
+    /// <para>
+    /// 相比原始 BGR 全通道反色：非白色的血条/图标/装饰在 min-channel 阈值下未通过，
+    /// 直接抹平为纯白背景，det 阶段不会把它们识别成幻影文字。
+    /// alpha 通道强制 0xFF。
+    /// </para>
+    /// </summary>
+    private static void BlitBinarizedWhiteRegion(
         byte[] rawBgra, int srcFullWidth, int cx, int cy, int cw, int ch,
         byte[] dstBmp, int dstFullWidth, int dstX, int dstY)
     {
@@ -345,9 +402,13 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             {
                 int s = srcOffset + x * 4;
                 int d = dstOffset + x * 4;
-                dstBmp[d]     = (byte)(255 - rawBgra[s]);
-                dstBmp[d + 1] = (byte)(255 - rawBgra[s + 1]);
-                dstBmp[d + 2] = (byte)(255 - rawBgra[s + 2]);
+                byte b = rawBgra[s];
+                byte g = rawBgra[s + 1];
+                byte r = rawBgra[s + 2];
+                byte v = Math.Min(b, Math.Min(g, r)) >= WhiteTextThreshold ? (byte)0x00 : (byte)0xFF;
+                dstBmp[d]     = v;
+                dstBmp[d + 1] = v;
+                dstBmp[d + 2] = v;
                 dstBmp[d + 3] = 0xFF;
             }
         }
@@ -369,22 +430,18 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     }
 
     /// <summary>
-    /// 裁剪指定区域、反色并编码为 32bpp BMP 字节流，供 OCR 使用。
+    /// 裁剪指定区域、白字二值化并编码为 32bpp BMP 字节流，供 OCR 使用。
     /// <para>
-    /// 旧实现走 System.Drawing.Bitmap + PNG (DEFLATE 压缩)，每帧三次 PNG 编码占用十几 ms × 3；
-    /// PaddleOCR-json 内部用 OpenCV imdecode 通吃 BMP/JPG/PNG，BMP 仅 54 字节头 + 原始像素 dump，
-    /// 编码开销近乎为零，故在热路径上换成 BMP。
+    /// 白字二值化替代了原先的 BGR 全通道反色：昵称是纯白字，血条/图标/装饰是彩色，
+    /// 通过 min-channel 阈值把非白像素抹为纯白背景，避免 det 阶段把彩色 UI 误识为幻影文字
+    /// （如 `13`、`不`、`ILA` 等）。参见 <see cref="BlitBinarizedWhiteRegion"/>。
     /// </para>
     /// <para>
-    /// 同时合并裁剪/反色为一次扫描：旧实现裁剪 → 临时 byte[] 反色 → LockBits/Marshal.Copy → Bitmap.Save 共三次大块拷贝，
-    /// 新实现单次循环直接把反色后的像素写入 BMP 像素区。
-    /// </para>
-    /// <para>
-    /// 旧实现额外存在 alpha 反色 bug：0xFF → 0x00 把不透明像素反成全透明，仅靠 OpenCV 默认按 BGR 解码丢弃 alpha 才"碰巧能工作"。
-    /// 新实现仅反色 BGR 三个通道，alpha 强制 0xFF。
+    /// 保留 BMP 编码：PaddleOCR / RapidOcr 内部走 OpenCV imdecode 通吃 BMP，54 字节头 + 原始像素 dump，
+    /// 编码开销近乎为零。BITMAPINFOHEADER.biHeight 写负值表示 top-down，与源 rawBgra 顺序一致无需翻行。
     /// </para>
     /// </summary>
-    public static (byte[]? imageBytes, int cropW, int cropH) CropAndInvert(
+    public static (byte[]? imageBytes, int cropW, int cropH) CropAndBinarizeWhite(
         byte[] rawBgra, int fullWidth, int fullHeight, OcrRegion region)
     {
         var cropX = (int)(region.X * fullWidth);
@@ -399,23 +456,21 @@ public class TeamInfoOcrService : ITeamInfoOcrService
 
         if (cropW <= 0 || cropH <= 0) return (null, 0, 0);
 
-        return (EncodeInvertedBmp(rawBgra, fullWidth, cropX, cropY, cropW, cropH), cropW, cropH);
+        return (EncodeBinarizedWhiteBmp(rawBgra, fullWidth, cropX, cropY, cropW, cropH), cropW, cropH);
     }
 
     // 32bpp BGRA BMP：BITMAPFILEHEADER (14B) + BITMAPINFOHEADER (40B) + 像素数据。
     private const int BmpHeaderSize = 54;
 
     /// <summary>
-    /// 直接拼装 32bpp top-down BMP 字节流。BITMAPINFOHEADER.biHeight 写负值 = 像素自上而下存储，
-    /// 与源 rawBgra 顺序一致，无需翻转行。
-    /// 反色仅作用于 BGR 三通道,alpha 强制 0xFF (旧实现把 alpha 也反色会全透明)。
+    /// 拼装 32bpp top-down BMP 字节流，像素区通过白字二值化生成。
     /// </summary>
-    private static byte[] EncodeInvertedBmp(
+    private static byte[] EncodeBinarizedWhiteBmp(
         byte[] rawBgra, int fullWidth, int cropX, int cropY, int cropW, int cropH)
     {
         var bmp = new byte[BmpHeaderSize + cropW * cropH * 4];
         WriteBmpHeader(bmp, cropW, cropH);
-        BlitInvertedRegion(rawBgra, fullWidth, cropX, cropY, cropW, cropH, bmp, cropW, 0, 0);
+        BlitBinarizedWhiteRegion(rawBgra, fullWidth, cropX, cropY, cropW, cropH, bmp, cropW, 0, 0);
         return bmp;
     }
 }

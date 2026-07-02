@@ -94,7 +94,7 @@
                             Width="14"
                             Height="14"
                             Data="M4,1 L11,1 L11,3 L13,3 L13,15 L5,15 L5,13 L3,13 L3,3 L4,3 Z M5,3 L5,11 L11,11 L11,3 Z M7,5 L13,5 L13,13 L7,13 Z"
-                            Fill="#5F6368"
+                            Fill="{DynamicResource TextSecondaryBrush}"
                             Stretch="Uniform" />
                     </Button>
                 </Grid>
@@ -129,15 +129,15 @@
                     <Border
                         Margin="0,6,0,0"
                         Padding="10,8"
-                        Background="#FAFBFC"
-                        BorderBrush="#E1E4E8"
+                        Background="{DynamicResource SurfaceTertiaryBrush}"
+                        BorderBrush="{DynamicResource BorderLightBrush}"
                         BorderThickness="1"
-                        CornerRadius="4">
+                        CornerRadius="6">
                         <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto">
                             <TextBlock
                                 FontFamily="Consolas, Microsoft YaHei UI"
                                 FontSize="12"
-                                Foreground="#24292E"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
                                 Text="{Binding ReleaseNotes}"
                                 TextWrapping="Wrap" />
                         </ScrollViewer>

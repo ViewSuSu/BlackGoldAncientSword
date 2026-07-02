@@ -1,44 +1,58 @@
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http;
 using System.Reflection;
-using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
 {
+    /// <summary>
+    /// 版本检查 + 更新资产解析。
+    ///
+    /// 设计要点：完全不调 Gitee REST API（/api/v5/...），避免未鉴权 IP 命中
+    /// "403 Forbidden (Rate Limit Exceeded)"，与 Downloader 保持一致的"零 API 依赖"策略。
+    /// 版本发现：GET `releases/latest` 网页（不 follow redirect），Gitee 会 302 到
+    ///   `releases/tag/v{version}`，直接从 Location 头提取 tag，走网页域名不走 API。
+    /// 资产 URL：按 CI workflow (dotnet-desktop.yml) 的命名规则拼死，分卷 zip 通过 HEAD
+    ///   探测 .001/.002/... 到 404 停，全程走 CDN foruda.gitee.com，不受 API 限流约束。
+    /// LatestReleaseNotes：网页正文抓取代价高、DOM 易变，故本实现留空；UI 侧
+    ///   HasReleaseNotes 为 false 时会自动隐藏更新说明区域，用户仍可通过 ReleasePageUrl
+    ///   点入查看完整 release notes。
+    /// </summary>
     [Component(ComponentLifetime.Singleton)]
     public class UpdateService : IUpdateService
     {
-        private const string GitHubOwner = "ViewSuSu";
-        private const string GitHubRepo = "BlackGoldAncientSword";
-        private const string GitHubLatestReleaseApi =
-            "https://api.github.com/repos/" + GitHubOwner + "/" + GitHubRepo + "/releases/latest";
-        private const string GitHubLatestReleasePage =
-            "https://github.com/" + GitHubOwner + "/" + GitHubRepo + "/releases/latest";
-
         private const string GiteeOwner = "SususuChang";
         private const string GiteeRepo = "BlackGoldAncientSword";
-        private const string GiteeReleasePage =
+        private const string GiteeReleaseLatestUrl =
             "https://gitee.com/" + GiteeOwner + "/" + GiteeRepo + "/releases/latest";
         private const string GiteeDownloadBase =
             "https://gitee.com/" + GiteeOwner + "/" + GiteeRepo + "/releases/download";
-        private const string GiteeLatestReleaseApi =
-            "https://gitee.com/api/v5/repos/" + GiteeOwner + "/" + GiteeRepo + "/releases/latest";
-        private const string SplitZipFormat = GiteeRepo + "-v{0}-split.zip.001";
 
-        /// <summary>
-        /// 安装包命名约定（setup.iss 生成）：BlackGoldAncientSword-{version}-win-x64-Setup.exe
-        /// ResolveAssetUrl 按 .exe 后缀匹配，无需关心完整文件名。
-        /// release zip 命名约定：BlackGoldAncientSword-v{version}.zip
-        /// CI workflow (.github/workflows/dotnet-desktop.yml) 生成此名。
-        /// </summary>
-        private const string ZipNameFormat = GitHubRepo + "-v{0}.zip";
+        // 与 setup.iss OutputBaseFilename 完全对齐；{0} = 版本号（不含 v 前缀）
+        private const string InstallerNameFormat = GiteeRepo + "-{0}-win-x64-Setup-Split.exe";
+
+        // 与 workflow "Create full zip" 步骤对齐；{0} = 版本号
+        private const string ZipNameFormat = GiteeRepo + "-v{0}.zip";
+
+        // 与 workflow "Create split zip volumes" 步骤对齐；{0} = 版本号, {1} = 分卷编号（001..N）
+        private const string SplitZipNameFormat = GiteeRepo + "-v{0}-split.zip.{1:D3}";
+
+        // 分卷 zip 探测上限：完整安装包 ~500MB / 每卷 99MB → 5-6 卷，上限 50 兜底
+        private const int MaxSplitProbe = 50;
+
+        // 匹配 Location 头里的 4 段版本号 tag（例：/releases/tag/v1.0.0.2）
+        private static readonly Regex TagPattern =
+            new(@"/releases/tag/v(\d+\.\d+\.\d+\.\d+)", RegexOptions.Compiled);
 
         private readonly IUIDispatcher _uiDispatcher;
-        private readonly HttpClient _httpClient;
+        private readonly HttpClient _redirectHttpClient;
+        private readonly HttpClient _headHttpClient;
         private bool _autoPopupEnabled;
 
         public string CurrentVersion { get; }
@@ -57,7 +71,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public string? LatestReleaseNotes { get; private set; }
 
-        public string ReleasePageUrl => GiteeReleasePage;
+        public string ReleasePageUrl => GiteeReleaseLatestUrl;
 
         public event EventHandler<bool>? UpdateAvailabilityChanged;
 
@@ -66,9 +80,14 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             _uiDispatcher = uiDispatcher;
             CurrentVersion = GetCurrentVersion(appAssemblyMarker);
 
-            _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword");
-            _httpClient.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+            // 独立句柄：一个禁 auto-redirect 用来抓 302 Location 拿最新 tag，
+            // 一个允许 auto-redirect 用来 HEAD 探测 CDN 资产存在性（asset 直链会经过 foruda.gitee.com 二级跳）
+            var redirectHandler = new HttpClientHandler { AllowAutoRedirect = false };
+            _redirectHttpClient = new HttpClient(redirectHandler) { Timeout = TimeSpan.FromSeconds(15) };
+            _redirectHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword");
+
+            _headHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            _headHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword");
 
             Debug.WriteLine($"[{nameof(UpdateService)}] 构造完成，当前版本: {CurrentVersion}");
         }
@@ -79,64 +98,66 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
             try
             {
-                var json = await _httpClient.GetStringAsync(GitHubLatestReleaseApi).ConfigureAwait(false);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                var tagName = root.TryGetProperty("tag_name", out var tagEl)
-                    ? (tagEl.GetString() ?? string.Empty)
-                    : string.Empty;
-                var latest = NormalizeVersion(tagName);
-                var installerUrl = ResolveAssetUrl(root, ".exe");
-                var zipUrl = ResolveZipUrl(root, latest);
-                var splitUrl = ResolveSplitZipUrl(root);
-                var notes = root.TryGetProperty("body", out var bodyEl)
-                    ? (bodyEl.GetString() ?? string.Empty)
-                    : string.Empty;
+                var latest = await FetchLatestTagAsync().ConfigureAwait(false);
+                if (string.IsNullOrEmpty(latest))
+                {
+                    Debug.WriteLine($"[{nameof(UpdateService)}] 未从 302 Location 解析到 latest tag");
+                    ClearAvailability();
+                    return;
+                }
 
                 bool available = TryCompare(latest, CurrentVersion) > 0;
+                Debug.WriteLine($"[{nameof(UpdateService)}] latest={latest}, current={CurrentVersion}, available={available}");
 
-                // 从 Gitee API 获取所有分卷 zip 的下载URL和精确大小
-                List<string>? splitUrls = null;
-                if (available)
+                if (!available)
                 {
-                    splitUrls = await FetchSplitAssetsFromGiteeAsync().ConfigureAwait(false);
+                    ClearAvailability();
+                    return;
                 }
-                Debug.WriteLine($"[{nameof(UpdateService)}] tag={tagName}, current={CurrentVersion}, available={available}");
+
+                var installerUrl = string.Format(
+                    GiteeDownloadBase + "/v{0}/" + InstallerNameFormat, latest, latest);
+                var zipUrl = string.Format(
+                    GiteeDownloadBase + "/v{0}/" + ZipNameFormat, latest, latest);
+                var splitUrls = await ProbeSplitUrlsAsync(latest).ConfigureAwait(false);
+                string? splitZipUrlFirst =
+                    (splitUrls is { Count: > 0 }) ? splitUrls[0] : null;
 
                 SafeInvoke(() =>
                 {
-                    IsUpdateAvailable = available;
-                    LatestVersion = available ? latest : null;
-                    DownloadUrl = available ? installerUrl : null;
-                    ZipDownloadUrl = available ? zipUrl : null;
-                    SplitZipDownloadUrl = available && splitUrl != null
-                        ? string.Format(GiteeDownloadBase + "/v{0}/" + SplitZipFormat, latest, latest)
-                        : null;
-                    SplitDownloadUrls = available ? splitUrls : null;
-                    LatestReleaseNotes = available ? notes : null;
-                    UpdateAvailabilityChanged?.Invoke(this, available);
+                    IsUpdateAvailable = true;
+                    LatestVersion = latest;
+                    DownloadUrl = installerUrl;
+                    ZipDownloadUrl = zipUrl;
+                    SplitZipDownloadUrl = splitZipUrlFirst;
+                    SplitDownloadUrls = splitUrls;
+                    LatestReleaseNotes = null;
+                    UpdateAvailabilityChanged?.Invoke(this, true);
                 });
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
-                Debug.WriteLine($"[{nameof(UpdateService)}] GitHub API 检查失败（静默）: {ex.Message}");
-
-                SafeInvoke(() =>
-                {
-                    IsUpdateAvailable = false;
-                    LatestVersion = null;
-                    DownloadUrl = null;
-                    ZipDownloadUrl = null;
-                    SplitZipDownloadUrl = null;
-                    SplitDownloadUrls = null;
-                    LatestReleaseNotes = null;
-                    UpdateAvailabilityChanged?.Invoke(this, false);
-                });
+                Debug.WriteLine($"[{nameof(UpdateService)}] 检查失败（静默）: {ex.Message}");
+                ClearAvailability();
             }
         }
 
         public void SetAutoPopupEnabled(bool enabled) => _autoPopupEnabled = enabled;
+
+        private void ClearAvailability()
+        {
+            SafeInvoke(() =>
+            {
+                IsUpdateAvailable = false;
+                LatestVersion = null;
+                DownloadUrl = null;
+                ZipDownloadUrl = null;
+                SplitZipDownloadUrl = null;
+                SplitDownloadUrls = null;
+                LatestReleaseNotes = null;
+                UpdateAvailabilityChanged?.Invoke(this, false);
+            });
+        }
 
         private void SafeInvoke(Action action)
         {
@@ -144,6 +165,60 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 action();
             else
                 _uiDispatcher.BeginInvoke(action);
+        }
+
+        /// <summary>
+        /// 抓 `releases/latest` 的 302 Location 头拿最新 tag。
+        /// Gitee 稳定行为：`releases/latest` → 302 → `releases/tag/v{version}`。
+        /// 不走 auto-redirect：只读 Location 头，避免继续跳转把无关内容拖回来。
+        /// </summary>
+        private async Task<string?> FetchLatestTagAsync()
+        {
+            using var resp = await _redirectHttpClient.GetAsync(GiteeReleaseLatestUrl).ConfigureAwait(false);
+            if (resp.StatusCode != HttpStatusCode.Redirect && resp.StatusCode != HttpStatusCode.Found &&
+                resp.StatusCode != HttpStatusCode.MovedPermanently && resp.StatusCode != HttpStatusCode.SeeOther)
+            {
+                Debug.WriteLine($"[{nameof(UpdateService)}] releases/latest 未 302，实际 {(int)resp.StatusCode}");
+                return null;
+            }
+
+            var location = resp.Headers.Location?.ToString();
+            if (string.IsNullOrEmpty(location)) return null;
+
+            var m = TagPattern.Match(location);
+            return m.Success ? m.Groups[1].Value : null;
+        }
+
+        /// <summary>
+        /// HEAD 探测 001/002/... 直到 404 停。走 CDN foruda.gitee.com，不受 API rate limit 约束。
+        /// </summary>
+        private async Task<List<string>?> ProbeSplitUrlsAsync(string version)
+        {
+            var urls = new List<string>();
+            for (int i = 1; i <= MaxSplitProbe; i++)
+            {
+                var name = string.Format(SplitZipNameFormat, version, i);
+                var url = $"{GiteeDownloadBase}/v{version}/{name}";
+                if (!await AssetExistsAsync(url).ConfigureAwait(false))
+                    break;
+                urls.Add(url);
+            }
+            return urls.Count > 0 ? urls : null;
+        }
+
+        private async Task<bool> AssetExistsAsync(string url)
+        {
+            try
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Head, url);
+                using var resp = await _headHttpClient.SendAsync(req).ConfigureAwait(false);
+                return resp.StatusCode == HttpStatusCode.OK;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+                Debug.WriteLine($"[{nameof(UpdateService)}] HEAD {url} 异常: {ex.Message}");
+                return false;
+            }
         }
 
         /// <summary>
@@ -161,133 +236,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             return "0.0.0";
         }
-
-        /// <summary>去掉 git tag 常见的 "v" 前缀。</summary>
-        private static string NormalizeVersion(string version)
-        {
-            if (version.Length > 0 && (version[0] == 'v' || version[0] == 'V'))
-                return version[1..];
-            return version;
-        }
-
-        private static string? ResolveAssetUrl(JsonElement root, string extension)
-        {
-            if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
-                return null;
-
-            foreach (var asset in assets.EnumerateArray())
-            {
-                if (!asset.TryGetProperty("name", out var nameEl)) continue;
-                var name = nameEl.GetString();
-                if (name != null && name.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (asset.TryGetProperty("browser_download_url", out var urlEl))
-                        return urlEl.GetString();
-                }
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 找版本对应的 zip 资产：优先精确匹配 BlackGoldAncientSword-v{version}.zip，
-        /// 找不到再退到任意 .zip。version 已去掉 "v" 前缀。
-        /// </summary>
-        private static string? ResolveZipUrl(JsonElement root, string version)
-        {
-            if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
-                return null;
-
-            var expected = string.Format(ZipNameFormat, version);
-            string? fallback = null;
-
-            foreach (var asset in assets.EnumerateArray())
-            {
-                if (!asset.TryGetProperty("name", out var nameEl)) continue;
-                var name = nameEl.GetString();
-                if (name == null) continue;
-                if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
-                if (!asset.TryGetProperty("browser_download_url", out var urlEl)) continue;
-
-                var url = urlEl.GetString();
-                if (string.Equals(name, expected, StringComparison.OrdinalIgnoreCase))
-                {
-                    Debug.WriteLine($"[{nameof(UpdateService)}] 命中版本 zip: {name}");
-                    return url;
-                }
-                fallback ??= url;
-            }
-
-            if (fallback != null)
-                Debug.WriteLine($"[{nameof(UpdateService)}] 未找到 {expected}，退回首个 .zip");
-            return fallback;
-        }
-
-
-        /// <summary>
-        /// 找第一个 .zip.001 分卷资产的下载 URL。
-        /// 新版 Updater 拿到此 URL 后自动枚举 .001/.002/... 下载全部分卷、合并后解压。
-        /// 旧版 Updater 仍需保持单 .zip 兼容（ZipDownloadUrl），两者互不干扰。
-        /// </summary>
-        private static string? ResolveSplitZipUrl(JsonElement root)
-        {
-            if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
-                return null;
-
-            foreach (var asset in assets.EnumerateArray())
-            {
-                if (!asset.TryGetProperty("name", out var nameEl)) continue;
-                var name = nameEl.GetString();
-                if (name == null) continue;
-                if (!name.EndsWith(".zip.001", StringComparison.OrdinalIgnoreCase)) continue;
-                if (!asset.TryGetProperty("browser_download_url", out var urlEl)) continue;
-
-                return urlEl.GetString();
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 从 Gitee release API 获取所有 .zip.XXX 分卷的下载 URL 列表和精确总大小。
-        /// 用独立 HttpClient 避免 _httpClient 的 GitHub 专用 Accept 头污染。
-        /// </summary>
-        /// <summary>
-        /// 从 Gitee release API 获取所有 .zip.XXX 分卷的下载 URL 列表。
-        /// Gitee API 不返回 asset size，总大小由 Updater 通过 HEAD 请求获取。
-        /// 用独立 HttpClient 避免 _httpClient 的 GitHub 专用 Accept 头污染。
-        /// </summary>
-        private async Task<List<string>?> FetchSplitAssetsFromGiteeAsync()
-        {
-            try
-            {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                http.DefaultRequestHeaders.UserAgent.ParseAdd("BlackGoldAncientSword");
-                http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
-                var json = await http.GetStringAsync(GiteeLatestReleaseApi).ConfigureAwait(false);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
-                    return null;
-
-                var urls = new List<string>();
-                foreach (var asset in assets.EnumerateArray())
-                {
-                    if (!asset.TryGetProperty("name", out var nameEl)) continue;
-                    var name = nameEl.GetString();
-                    if (string.IsNullOrEmpty(name)) continue;
-                    if (!name.Contains(".zip.")) continue;
-                    if (!asset.TryGetProperty("browser_download_url", out var urlEl)) continue;
-                    urls.Add(urlEl.GetString()!);
-                }
-                return urls.Count > 0 ? urls : null;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[{nameof(UpdateService)}] Gitee API 获取分卷列表失败: {ex.Message}");
-                return null;
-            }
-        }
-
 
         private static int TryCompare(string a, string b)
         {

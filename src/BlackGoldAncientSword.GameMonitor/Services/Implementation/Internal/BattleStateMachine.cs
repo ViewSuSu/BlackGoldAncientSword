@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
 {
@@ -53,6 +54,16 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
             get { lock (_stateLock) return _isInBattle; }
         }
 
+        public bool IsJoined
+        {
+            get { lock (_stateLock) return _joinedBattle; }
+        }
+
+        /// <summary>
+        /// 抓当前 battle/map/room 快照，供 GameLogMonitor 在启动期回放结束后补发一次事件反映现网状态。
+        /// </summary>
+        public BattleEventArgs CurrentSnapshot => CreateCurrentBattleArgs();
+
         /// <summary>
         /// 当前已消费日志的字节偏移。FSW/Poll 在读取增量前后须同步此字段。
         /// </summary>
@@ -69,25 +80,18 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
             lock (_stateLock) { _suppressEvents = true; }
         }
 
-       /// <summary>
-       /// 启动期回放结束：解除抑制并重置状态机（清空 battleId/inBattle 等），
-       /// 让真正的现网增量从干净状态开始。两步必须在同一锁内原子完成，
-       /// 否则在 _suppressEvents=false 与 ResetLocked() 之间到达的 ProcessLine 可能
-       /// 在脏状态下触发事件。
-        /// 注意：必须保留 _lastPosition 不被清 0，否则 FSW/Poll 循环会从头重读旧日志，
-        /// 触发陈年 BattleJoined 事件导致 OCR 在程序启动后不应触发的时候启动。
-       /// </summary>
-       public void EndSuppressedReplay()
-       {
-           lock (_stateLock)
-           {
-                // 保存文件读取位置，避免 ResetLocked() 将其清 0。
-                var savedPosition = _lastPosition;
-               _suppressEvents = false;
-               ResetLocked();
-                _lastPosition = savedPosition;
-           }
-       }
+        /// <summary>
+        /// 启动期回放结束：解除事件抑制，保留 replay 结束时的战斗状态（in-battle / joined / battleId 等），
+        /// 让上层 GameLogMonitor 能据此补发一次"现网快照"事件，令 UI 反映当前对局阶段。
+        /// 若在这里清 state，冷启动进入正在进行的对局时 UI 将永远是空/Unknown。
+        /// </summary>
+        public void EndSuppressedReplay()
+        {
+            lock (_stateLock)
+            {
+                _suppressEvents = false;
+            }
+        }
 
         /// <summary>
         /// 启动期一次性读取后，把回放完毕的字节长度写入 LastPosition。
@@ -149,11 +153,50 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
         /// </summary>
         public (BattleEventKind kind, BattleEventArgs args) ProcessLine(string line)
         {
-            // —— 1) ID 提取（无事件副作用）——
+            // —— 1) ID 提取 ——
+            // battle_tid 变化处理：若旧 id 非空且与新 id 不同，且 _isInBattle/_joinedBattle 仍为 true，
+            // 说明上一局没有触发正常 Ended（游戏 crash / 玩家杀进程 / 非常规退出对局，无 TeamBattle Destroy
+            // / GridMapManager Destroy 日志），残留状态会让"开始连接战斗服务器"分支中的
+            // alreadyInBattle 保护把新一局的 Joined 事件全部吞掉 → OCR 循环永远不启动。
+            // 因此在检测到新 battle_tid 时强制视为老局隐式 Ended，reset in-battle/joined，
+            // 并 emit 一个 Ended 事件让上层可以正确清理 UI。
+            // 真正的 mid-battle 掉线重连场景 battle_tid 保持不变，走 else 分支不受影响。
             var battleTidMatch = BattleTidRegex.Match(line);
+            BattleEventArgs? implicitEndedArgs = null;
             if (battleTidMatch.Success)
             {
-                lock (_stateLock) { _currentBattleId = battleTidMatch.Groups[1].Value; }
+                var newBattleId = battleTidMatch.Groups[1].Value;
+                lock (_stateLock)
+                {
+                    var oldBattleId = _currentBattleId;
+                    _currentBattleId = newBattleId;
+
+                    if (!string.IsNullOrEmpty(oldBattleId)
+                        && !string.Equals(oldBattleId, newBattleId, StringComparison.Ordinal)
+                        && (_isInBattle || _joinedBattle))
+                    {
+                        if (!_suppressEvents)
+                        {
+                            implicitEndedArgs = new BattleEventArgs
+                            {
+                                BattleId = oldBattleId,
+                                MapId = _currentMapId ?? string.Empty,
+                                RoomId = _currentRoomId ?? string.Empty,
+                                RoomType = _currentRoomType ?? string.Empty,
+                                Timestamp = DateTimeOffset.Now
+                            };
+                        }
+                        _isInBattle = false;
+                        _joinedBattle = false;
+                        _currentMapId = null;
+                    }
+                }
+            }
+            if (implicitEndedArgs != null)
+            {
+                // 老局隐式结束事件先行返回，本行剩余的 Joined/Started/Ended 判断留给状态机的下一行处理
+                // （battle_tid 通常独占一行输出，不会与 "开始连接战斗服务器" 等关键 marker 同行）。
+                return (BattleEventKind.Ended, implicitEndedArgs);
             }
 
             var mapIdMatch = MapIdRegex.Match(line);
@@ -175,15 +218,23 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
             }
 
             // —— 2) Joined：开始连接战斗服务器 ——
+            // 若 _isInBattle=true，说明是 mid-battle 掉线重连（game 会再次写这一行，battle_tid 通常不变），
+            // 此时对局仍在进行，不应触发 Joined 事件把 UI 打回 HeroSelection。
             if (line.Contains("开始连接战斗服务器"))
             {
                 bool suppressed;
+                bool alreadyInBattle;
                 lock (_stateLock)
                 {
-                    _joinedBattle = true;
+                    alreadyInBattle = _isInBattle;
+                    if (!alreadyInBattle)
+                    {
+                        _joinedBattle = true;
+                    }
                     suppressed = _suppressEvents;
                 }
-                if (!suppressed)
+                DiagLog.Write("BSM", $"命中 '开始连接战斗服务器', alreadyInBattle={alreadyInBattle}, suppressed={suppressed}, battleId={_currentBattleId}");
+                if (!alreadyInBattle && !suppressed)
                 {
                     return (BattleEventKind.Joined, CreateCurrentBattleArgs());
                 }
@@ -300,6 +351,25 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
             _currentRoomId = null;
             _currentRoomType = null;
             _lastPosition = 0;
+        }
+
+        /// <summary>
+        /// 仅复位战斗相关状态（in-battle / joined / 各类 id），保留 <see cref="LastPosition"/>。
+        /// 用于启动期回放结束后、发现游戏进程未运行时清理残留：历史日志最后一场对局若因玩家杀进程 /
+        /// 关游戏而缺失 Destroy marker，会让状态机残留 InBattle=true → PublishSnapshot 误触发
+        /// BattleStarted。此处清 battle 状态但保留读取偏移，避免 FSW 增量重扫全文。
+        /// </summary>
+        public void ResetBattleState()
+        {
+            lock (_stateLock)
+            {
+                _isInBattle = false;
+                _joinedBattle = false;
+                _currentBattleId = null;
+                _currentMapId = null;
+                _currentRoomId = null;
+                _currentRoomType = null;
+            }
         }
     }
 }

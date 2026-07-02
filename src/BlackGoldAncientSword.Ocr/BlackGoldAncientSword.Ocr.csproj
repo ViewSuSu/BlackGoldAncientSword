@@ -9,18 +9,22 @@
     <LangVersion>latest</LangVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
   </ItemGroup>
 
-  <!-- Copy ocr_engine (PaddleOCR-json.exe + models) to output directory -->
   <ItemGroup>
-    <Content Include="..\ocr_engine\**\*"
-             Link="ocr_engine\%(RecursiveDir)%(Filename)%(Extension)"
+    <!-- RapidOcrNet: PP-OCRv5 ONNX 推理 (进程内,无子进程) -->
+    <PackageReference Include="RapidOcrNet" Version="2.0.0" />
+  </ItemGroup>
+
+  <!-- 复制 PP-OCRv5 ONNX 模型 + 字典到输出目录 -->
+  <ItemGroup>
+    <Content Include="..\ocr_engine\models\v5\**\*"
+             Link="ocr_engine\models\v5\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest"
-             Condition="Exists('..\ocr_engine')" />
+             Condition="Exists('..\ocr_engine\models\v5')" />
   </ItemGroup>
 
 </Project>
-
-

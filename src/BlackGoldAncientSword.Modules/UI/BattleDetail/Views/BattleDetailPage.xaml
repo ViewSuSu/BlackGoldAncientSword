@@ -1,0 +1,548 @@
+<bases:UserControlBase
+    x:Class="BlackGoldAncientSword.Modules.UI.BattleDetail.Views.BattleDetailPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
+    xmlns:consts="clr-namespace:BlackGoldAncientSword.Framework.Core.Consts;assembly=BlackGoldAncientSword.Framework"
+    xmlns:ctrls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
+    xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions;assembly=BlackGoldAncientSword.Framework"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    mc:Ignorable="d">
+    <bases:UserControlBase.Resources>
+        <ext:MultiplyConverter x:Key="MultiplyConverter" />
+    </bases:UserControlBase.Resources>
+    <ctrls:OverlayHost
+        CardMaxHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource MultiplyConverter}, ConverterParameter=0.88}"
+        CardMaxWidth="760"
+        CardMinWidth="620"
+        CardPadding="24,20,24,20"
+        RegionName="{x:Static consts:GlobalConstant.BattleDetailRegion}"
+        Title="对局详情">
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="0,4,4,0">
+                <StackPanel>
+                    <!-- ============ battle-info 顶部信息栏（带渐变底 + 金色装饰线） ============ -->
+                    <Border Margin="0,0,0,16" Padding="16,12"
+                            Background="{DynamicResource SurfaceGradientBrush}"
+                            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                            CornerRadius="10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="1" />
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <!-- info-left: 模式 + 队伍规模 + 时间 -->
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal">
+                                    <Border Padding="8,3"
+                                            Background="{DynamicResource AccentLightBrush}"
+                                            CornerRadius="4">
+                                        <TextBlock FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AccentPressedBrush}"
+                                                   Text="{Binding ModeType}" />
+                                    </Border>
+                                    <TextBlock Margin="10,0,0,0" VerticalAlignment="Center"
+                                               FontSize="13" FontWeight="Medium"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               Text="{Binding TeamSizeGlyph}" />
+                                    <Border Width="1" Height="14" Margin="12,0"
+                                            Background="{DynamicResource BorderLightBrush}" />
+                                    <TextBlock VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               Text="{Binding BattleTime}" />
+                                </StackPanel>
+                                <!-- info-right: 排名 + 段位 -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
+                                    <TextBlock VerticalAlignment="Center"
+                                               FontFamily="Segoe UI, Consolas"
+                                               FontSize="20" FontWeight="Bold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                               Text="{Binding RankText}" />
+                                    <Border Width="1" Height="26" Margin="14,0"
+                                            Background="{DynamicResource BorderLightBrush}"
+                                            Visibility="{Binding IsRankMode, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <StackPanel VerticalAlignment="Center"
+                                                Visibility="{Binding IsRankMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                                            <TextBlock VerticalAlignment="Center"
+                                                       FontSize="13" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       Text="{Binding RankDisplayText}" />
+                                            <Image Width="14" Height="14" Margin="6,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/star_icon.png"
+                                                   Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Margin="2,0,0,0" VerticalAlignment="Center"
+                                                       FontFamily="Segoe UI, Consolas"
+                                                       FontSize="13" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       Text="{Binding StarCount}"
+                                                       Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        </StackPanel>
+                                        <StackPanel Margin="0,3,0,0"
+                                                    HorizontalAlignment="Right" Orientation="Horizontal">
+                                            <TextBlock VerticalAlignment="Center"
+                                                       FontFamily="Segoe UI, Consolas"
+                                                       FontSize="11" FontWeight="Light"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       Text="{Binding ScoreNumber}"
+                                                       Visibility="{Binding ShowScoreNumber, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Margin="6,0,0,0" VerticalAlignment="Center"
+                                                       FontFamily="Segoe UI, Consolas"
+                                                       FontSize="12" FontWeight="SemiBold"
+                                                       Foreground="{Binding ScoreDiff, Converter={StaticResource ScoreDiffToColorConverter}}"
+                                                       Text="{Binding ScoreDiffDisplay}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                            <!-- 底部金色装饰线 -->
+                            <Border Grid.Row="1" Margin="0,10,0,0" Height="1"
+                                    Background="{DynamicResource GoldTraceGradientBrush}" Opacity="0.7" />
+                        </Grid>
+                    </Border>
+
+                    <!-- ============ tab-header 3 tabs ============ -->
+                    <Border Margin="0,0,0,16" Padding="4"
+                            Background="{DynamicResource SurfaceTertiaryBrush}"
+                            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                            CornerRadius="10">
+                        <UniformGrid Rows="1" Columns="3">
+                            <RadioButton GroupName="BattleDetailTab" Content="个人表现"
+                                         IsChecked="{Binding IsPersonalTab, Mode=OneWay}"
+                                         Command="{Binding SwitchTabCommand}" CommandParameter="Personal"
+                                         Style="{DynamicResource DetailTabStyle}" />
+                            <RadioButton GroupName="BattleDetailTab" Content="队伍表现"
+                                         IsChecked="{Binding IsTeamTab, Mode=OneWay}"
+                                         Command="{Binding SwitchTabCommand}" CommandParameter="Team"
+                                         Style="{DynamicResource DetailTabStyle}" />
+                            <RadioButton GroupName="BattleDetailTab" Content="本局前五"
+                                         IsChecked="{Binding IsTop5Tab, Mode=OneWay}"
+                                         Command="{Binding SwitchTabCommand}" CommandParameter="Top5"
+                                         Style="{DynamicResource DetailTabStyle}" />
+                        </UniformGrid>
+                    </Border>
+
+                    <!-- ============ Personal Tab ============ -->
+                    <StackPanel Visibility="{Binding IsPersonalTab, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <!-- player-header 卡片 -->
+                        <Border Padding="16,14"
+                                Background="{DynamicResource CardGradientBrush}"
+                                BorderBrush="{DynamicResource BorderMediumBrush}" BorderThickness="1"
+                                CornerRadius="10"
+                                Effect="{DynamicResource ShadowCardEffect}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <!-- 头像双环：外环金色渐变 + 内圆头像（放大 1.4 倍 + Clip 圆形裁切填满圆框） -->
+                                <Border Grid.Column="0" Width="64" Height="64"
+                                        Background="{DynamicResource GoldRingGradientBrush}"
+                                        CornerRadius="32" Padding="2">
+                                    <Border Background="{DynamicResource SurfaceTertiaryBrush}"
+                                            CornerRadius="30" ClipToBounds="True">
+                                        <Border.Clip>
+                                            <EllipseGeometry Center="30,30" RadiusX="30" RadiusY="30" />
+                                        </Border.Clip>
+                                        <Image Width="60" Height="60"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Stretch="UniformToFill"
+                                               Source="{Binding PlayerAvatar, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                    </Border>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontSize="18" FontWeight="Bold"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   Text="{Binding PlayerName}" />
+                                        <Border Margin="10,0,0,0" Padding="6,2"
+                                                VerticalAlignment="Center"
+                                                Background="{DynamicResource AccentSubtleBrush}"
+                                                BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                                CornerRadius="4">
+                                            <TextBlock FontSize="11" FontWeight="Medium"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Text="{Binding HeroName}" />
+                                        </Border>
+                                    </StackPanel>
+                                    <ItemsControl Margin="0,10,0,0" ItemsSource="{Binding HonorTitles}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,0,12,4" HorizontalAlignment="Center">
+                                                    <Image Width="34" Height="34"
+                                                           HorizontalAlignment="Center"
+                                                           Source="{Binding Icon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
+                                                           Stretch="Uniform">
+                                                        <Image.ToolTip>
+                                                            <ToolTip>
+                                                                <StackPanel>
+                                                                    <TextBlock FontWeight="Bold" Text="{Binding Name}" />
+                                                                    <TextBlock Text="{Binding Desc}" />
+                                                                </StackPanel>
+                                                            </ToolTip>
+                                                        </Image.ToolTip>
+                                                    </Image>
+                                                    <TextBlock Margin="0,3,0,0"
+                                                               HorizontalAlignment="Center"
+                                                               FontSize="11" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                                               TextAlignment="Center"
+                                                               Text="{Binding Name}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- core-data: 4 大方卡（视觉冲击力：大号 tabular 数字 + 顶部 accent 细条） -->
+                        <ItemsControl Margin="0,16,0,0" ItemsSource="{Binding CoreData}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Rows="1" Columns="4" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="5,0">
+                                        <Border Background="{DynamicResource CardGradientBrush}"
+                                                BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                                CornerRadius="10"
+                                                Effect="{DynamicResource ShadowCardEffect}" />
+                                        <!-- 顶部金色 accent 细条 -->
+                                        <Border VerticalAlignment="Top"
+                                                Height="3" Margin="1,1,1,0"
+                                                Background="{DynamicResource AccentGradientBrush}"
+                                                CornerRadius="10,10,0,0" Opacity="0.85" />
+                                        <StackPanel Margin="0,16,0,14" HorizontalAlignment="Center">
+                                            <TextBlock HorizontalAlignment="Center"
+                                                       FontFamily="Segoe UI, Consolas"
+                                                       FontSize="24" FontWeight="Bold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       Text="{Binding Value}" />
+                                            <TextBlock Margin="0,4,0,0" HorizontalAlignment="Center"
+                                                       FontSize="11" FontWeight="Medium"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       Text="{Binding Label}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- MoreStats（chip 风格 4 列，与上方大卡形成主/次层级） -->
+                        <ItemsControl Margin="0,10,0,0" ItemsSource="{Binding MoreStats}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="5,5" Padding="10,8"
+                                            Background="{DynamicResource SurfaceSecondaryBrush}"
+                                            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                            CornerRadius="8">
+                                        <StackPanel>
+                                            <TextBlock FontSize="10" FontWeight="Medium"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       Text="{Binding Name}" />
+                                            <TextBlock Margin="0,3,0,0"
+                                                       FontFamily="Segoe UI, Consolas"
+                                                       FontSize="15" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       Text="{Binding Value}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Section: 本局兵器 -->
+                        <Grid Margin="0,20,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="4" VerticalAlignment="Stretch"
+                                    Background="{DynamicResource AccentGradientBrush}" CornerRadius="2" />
+                            <TextBlock Grid.Column="1" Margin="10,0,0,0"
+                                       VerticalAlignment="Center"
+                                       FontSize="15" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       Text="本局兵器" />
+                            <Border Grid.Column="2" Margin="12,0,0,0" Height="1"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource BorderLightBrush}" Opacity="0.7" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Weapons}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,8" Padding="12,10"
+                                            Background="{DynamicResource CardGradientBrush}"
+                                            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                            CornerRadius="10"
+                                            Effect="{DynamicResource ShadowCardEffect}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <!-- 图标外框：金色渐变环 -->
+                                            <Border Grid.Column="0" Width="46" Height="46"
+                                                    Background="{DynamicResource GoldRingGradientBrush}"
+                                                    CornerRadius="8" Padding="1.5">
+                                                <Border Background="{DynamicResource SurfaceTertiaryBrush}"
+                                                        CornerRadius="7">
+                                                    <Image Margin="3" Stretch="Uniform"
+                                                           Source="{Binding Icon, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                                </Border>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock FontSize="14" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           Text="{Binding Name}" />
+                                                <TextBlock Margin="0,2,0,0" FontSize="10" FontWeight="Medium"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           Text="{Binding Level, StringFormat='Lv. {0}'}" />
+                                            </StackPanel>
+                                            <!-- 击杀/伤害并列指标 -->
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
+                                                <StackPanel Margin="0,0,20,0" HorizontalAlignment="Center">
+                                                    <TextBlock HorizontalAlignment="Center"
+                                                               FontFamily="Segoe UI, Consolas"
+                                                               FontSize="16" FontWeight="Bold"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                                               Text="{Binding Kill}" />
+                                                    <TextBlock HorizontalAlignment="Center"
+                                                               FontSize="10" Foreground="{DynamicResource TextMutedBrush}"
+                                                               Text="击杀" />
+                                                </StackPanel>
+                                                <StackPanel HorizontalAlignment="Center">
+                                                    <TextBlock HorizontalAlignment="Center"
+                                                               FontFamily="Segoe UI, Consolas"
+                                                               FontSize="16" FontWeight="Bold"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                                               Text="{Binding Damage}" />
+                                                    <TextBlock HorizontalAlignment="Center"
+                                                               FontSize="10" Foreground="{DynamicResource TextMutedBrush}"
+                                                               Text="伤害" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Section: 本局魂玉 -->
+                        <Grid Margin="0,16,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="4" VerticalAlignment="Stretch"
+                                    Background="{DynamicResource AccentGradientBrush}" CornerRadius="2" />
+                            <TextBlock Grid.Column="1" Margin="10,0,0,0"
+                                       VerticalAlignment="Center"
+                                       FontSize="15" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       Text="本局魂玉" />
+                            <Border Grid.Column="2" Margin="12,0,0,0" Height="1"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource BorderLightBrush}" Opacity="0.7" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding SoulItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,12,12" Width="72" HorizontalAlignment="Center">
+                                        <Border Width="52" Height="52"
+                                                Background="{DynamicResource GoldRingGradientBrush}"
+                                                CornerRadius="9" Padding="1.5">
+                                            <Border Background="{DynamicResource SurfaceSecondaryBrush}"
+                                                    CornerRadius="8">
+                                                <Image Margin="4" Stretch="Uniform"
+                                                       Source="{Binding Icon, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                            </Border>
+                                        </Border>
+                                        <TextBlock Margin="0,5,0,0" MaxWidth="72"
+                                                   HorizontalAlignment="Center"
+                                                   FontSize="11" FontWeight="Medium"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   Text="{Binding Name}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- ============ Team Tab ============ -->
+                    <StackPanel Visibility="{Binding IsTeamTab, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl ItemsSource="{Binding Teammates}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,10" Padding="14,12"
+                                            Background="{DynamicResource CardGradientBrush}"
+                                            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                            CornerRadius="10"
+                                            Effect="{DynamicResource ShadowCardEffect}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="48" Height="48"
+                                                    Background="{DynamicResource GoldRingGradientBrush}"
+                                                    CornerRadius="24" Padding="1.5">
+                                                <Border Background="{DynamicResource SurfaceTertiaryBrush}"
+                                                        CornerRadius="22" ClipToBounds="True">
+                                                    <Image Stretch="UniformToFill"
+                                                           Source="{Binding HeroIcon, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                                </Border>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock FontSize="14" FontWeight="Bold"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                                               Text="{Binding RoleName}" />
+                                                    <TextBlock Margin="10,0,0,0" FontSize="12"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource TextMutedBrush}"
+                                                               Text="{Binding HeroName}" />
+                                                    <Border Margin="10,0,0,0" Padding="5,2"
+                                                            Background="{DynamicResource AccentGradientBrush}"
+                                                            CornerRadius="3"
+                                                            Visibility="{Binding IsMe, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <TextBlock FontSize="10" FontWeight="Bold"
+                                                                   Foreground="{DynamicResource TextOnAccentBrush}"
+                                                                   Text="本人" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Weapons}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Width="32" Height="32" Margin="0,0,6,0"
+                                                                    Background="{DynamicResource GoldRingGradientBrush}"
+                                                                    CornerRadius="6" Padding="1"
+                                                                    ToolTip="{Binding Name}">
+                                                                <Border Background="{DynamicResource SurfaceTertiaryBrush}"
+                                                                        CornerRadius="5">
+                                                                    <Image Margin="2" Stretch="Uniform"
+                                                                           Source="{Binding Icon, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                                                </Border>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- ============ Top5 Tab ============ -->
+                    <StackPanel Visibility="{Binding IsTop5Tab, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl ItemsSource="{Binding Top5Entries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,10" Padding="14,12"
+                                            Background="{DynamicResource CardGradientBrush}"
+                                            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                            CornerRadius="10"
+                                            Effect="{DynamicResource ShadowCardEffect}">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="36" Height="24"
+                                                        Background="{DynamicResource AccentGradientBrush}"
+                                                        CornerRadius="4">
+                                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               FontFamily="Segoe UI, Consolas"
+                                                               FontSize="13" FontWeight="Bold"
+                                                               Foreground="{DynamicResource TextOnAccentBrush}"
+                                                               Text="{Binding Rank}" />
+                                                </Border>
+                                            </StackPanel>
+                                            <ItemsControl Margin="0,10,0,0" ItemsSource="{Binding Members}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Margin="0,0,14,8" Orientation="Horizontal">
+                                                            <Border Width="34" Height="34"
+                                                                    Background="{DynamicResource GoldRingGradientBrush}"
+                                                                    CornerRadius="17" Padding="1">
+                                                                <Border Background="{DynamicResource SurfaceTertiaryBrush}"
+                                                                        CornerRadius="16" ClipToBounds="True">
+                                                                    <Image Stretch="UniformToFill"
+                                                                           Source="{Binding HeroIcon, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                                                </Border>
+                                                            </Border>
+                                                            <StackPanel Margin="8,0,0,0" VerticalAlignment="Center">
+                                                                <TextBlock FontSize="12" FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                           Text="{Binding RoleName}" />
+                                                                <TextBlock FontSize="10"
+                                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                                           Text="{Binding HeroName}" />
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Loading overlay -->
+            <Border Grid.Row="0" Grid.RowSpan="2"
+                    Background="{DynamicResource SurfaceSecondaryBrush}"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="14"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           Text="加载中…" />
+            </Border>
+
+            <StackPanel Grid.Row="1" Margin="0,16,0,0"
+                        HorizontalAlignment="Right" Orientation="Horizontal">
+                <Button MinWidth="96" Height="34"
+                        Command="{Binding DismissCommand}"
+                        Content="关闭"
+                        Style="{DynamicResource PrimaryButtonStyle}" />
+            </StackPanel>
+        </Grid>
+    </ctrls:OverlayHost>
+</bases:UserControlBase>
