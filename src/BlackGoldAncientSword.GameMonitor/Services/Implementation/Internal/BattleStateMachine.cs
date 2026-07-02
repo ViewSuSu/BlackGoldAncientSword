@@ -352,5 +352,24 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
             _currentRoomType = null;
             _lastPosition = 0;
         }
+
+        /// <summary>
+        /// 仅复位战斗相关状态（in-battle / joined / 各类 id），保留 <see cref="LastPosition"/>。
+        /// 用于启动期回放结束后、发现游戏进程未运行时清理残留：历史日志最后一场对局若因玩家杀进程 /
+        /// 关游戏而缺失 Destroy marker，会让状态机残留 InBattle=true → PublishSnapshot 误触发
+        /// BattleStarted。此处清 battle 状态但保留读取偏移，避免 FSW 增量重扫全文。
+        /// </summary>
+        public void ResetBattleState()
+        {
+            lock (_stateLock)
+            {
+                _isInBattle = false;
+                _joinedBattle = false;
+                _currentBattleId = null;
+                _currentMapId = null;
+                _currentRoomId = null;
+                _currentRoomType = null;
+            }
+        }
     }
 }

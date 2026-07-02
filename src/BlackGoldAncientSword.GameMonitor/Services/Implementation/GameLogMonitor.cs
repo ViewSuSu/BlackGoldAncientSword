@@ -13,6 +13,10 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
     [Component(ComponentLifetime.Singleton)]
     public class GameLogMonitor : IGameLogMonitor
     {
+        // 与 HomePageViewModel / ScreenCaptureServiceTests 等处硬编码保持一致。
+        // 该字符串是永劫无间进程名（不含 .exe 扩展名），Process.GetProcessesByName 所需的格式。
+        private const string GameProcessName = "NarakaBladepoint";
+
         private readonly LogReader _reader = new();
         private readonly LogPoller _poller = new();
         private readonly BattleStateMachine _stateMachine = new();
@@ -48,9 +52,20 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             await ReplayExistingContentAsync(fullPath).ConfigureAwait(false);
             DiagLog.Write("GLM", $"Replay 结束, isInBattle={_stateMachine.IsInBattle}, isJoined={_stateMachine.IsJoined}, battleId={_stateMachine.CurrentBattleId}, lastPos={_stateMachine.LastPosition}");
 
-            // Replay 完毕后按当前状态机内容补发一次事件，让已订阅的 UI 反映现网对局阶段
-            // （冷启动进入正在进行的对局时不再显示空）。
-            PublishSnapshot();
+            // 只有在游戏进程真的还在跑时才补发快照。历史日志里最后一场对局若因玩家杀进程 /
+            // 正常关游戏而缺失 Destroy marker，状态机会残留 _isInBattle=true → PublishSnapshot
+            // 误触发 BattleStarted → UI 显示"游戏中"。游戏未运行时显式清战斗状态（保留 LastPosition）。
+            if (IsGameProcessRunning())
+            {
+                // Replay 完毕后按当前状态机内容补发一次事件，让已订阅的 UI 反映现网对局阶段
+                // （冷启动进入正在进行的对局时不再显示空）。
+                PublishSnapshot();
+            }
+            else
+            {
+                DiagLog.Write("GLM", "游戏进程未运行, 清残留战斗状态并跳过 PublishSnapshot");
+                _stateMachine.ResetBattleState();
+            }
 
             var logDir = Path.GetDirectoryName(fullPath) ?? ".";
             var logFile = Path.GetFileName(fullPath);
@@ -155,6 +170,31 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             // Dispose 在 Stop 之后，但 OnLogChanged 已被解绑、IsRunning=false 早退；
             // 即便残余 in-flight 仍能命中 ObjectDisposedException catch 而非崩溃 ThreadPool。
             _reader.Dispose();
+        }
+
+        /// <summary>
+        /// 检查游戏进程是否在运行。用于启动期区分"日志里的残留对局"与"真正的现网对局"。
+        /// 失败一律视为未运行——错杀不发 snapshot 的成本远低于误发 BattleStarted。
+        /// </summary>
+        private static bool IsGameProcessRunning()
+        {
+            try
+            {
+                var processes = Process.GetProcessesByName(GameProcessName);
+                try
+                {
+                    return processes.Length > 0;
+                }
+                finally
+                {
+                    foreach (var p in processes) p.Dispose();
+                }
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+                Debug.WriteLine($"[{nameof(GameLogMonitor)}.{nameof(IsGameProcessRunning)}] {ex}");
+                return false;
+            }
         }
 
         /// <summary>
