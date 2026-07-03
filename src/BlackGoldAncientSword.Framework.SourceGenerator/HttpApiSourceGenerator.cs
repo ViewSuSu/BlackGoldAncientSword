@@ -224,7 +224,9 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("                throw new HttpRequestException(apiMsg ?? $\"HTTP {(int)r.StatusCode}: {body}\");");
             sb.AppendLine("            }");
             sb.AppendLine("            var result = JsonSerializer.Deserialize<T>(body, JsonOptions)!;");
-            sb.AppendLine("            if (result is IApiResponse apiResp && apiResp.Code != 200)");
+            sb.AppendLine("            // 后端历史契约：code=200 表示成功；升级后契约：code=0 表示成功。");
+            sb.AppendLine("            // 两套并存期为兼容旧数据/旧网关（如仍返回 200）都放行。");
+            sb.AppendLine("            if (result is IApiResponse apiResp && apiResp.Code != 200 && apiResp.Code != 0)");
             sb.AppendLine("                throw new InvalidOperationException(apiResp.Msg ?? $\"API returned code {apiResp.Code}\");");
             sb.AppendLine("            return result;");
             sb.AppendLine("        }");

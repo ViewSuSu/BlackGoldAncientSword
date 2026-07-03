@@ -145,6 +145,23 @@
     }
   ],
   "helperMethods": {
+    "DataSource": [
+      {
+        "name": "FromApiString",
+        "isStatic": true,
+        "returnType": "DataSource",
+        "parameters": [
+          {
+            "name": "apiValue",
+            "type": "string?",
+            "description": "API 返回的 dataSource 字符串，如 \"miniProgram\" / \"heyBox\""
+          }
+        ],
+        "description": "把 API 返回的 dataSource 字符串映射为 DataSource 枚举值，未识别时回退到 MiniProgram",
+        "returns": "对应的 DataSource 枚举值",
+        "body": "return apiValue switch { \"heyBox\" => DataSource.HeyBox, \"heybox\" => DataSource.HeyBox, \"HeyBox\" => DataSource.HeyBox, _ => DataSource.MiniProgram };"
+      }
+    ],
     "GameMode": [
       {
         "name": "GetCategory",

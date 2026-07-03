@@ -7,8 +7,9 @@ using BlackGoldAncientSword.Ocr;
 namespace BlackGoldAncientSword.Tests.Ocr;
 
 /// <summary>
-/// 生产 Stitch 管线（现已切裸色）对已知 GT 的强断言。
+/// 生产 Stitch 管线（白字二值化）对已知 GT 的强断言。
 /// 直接调用 <see cref="TeamInfoOcrService.StitchRegionsForOcr"/> + BucketAndExtractNames 一致的分桶逻辑。
+/// 白字二值化对末尾 `.` `丶` 装饰点会丢失，靠 <see cref="TeamMemberNameCorrector"/> 兜回。GT 按二值化后输出对齐。
 /// </summary>
 public class ProductionRawPipelineGtTests
 {
@@ -16,16 +17,16 @@ public class ProductionRawPipelineGtTests
 
     public static IEnumerable<object[]> Cases()
     {
-        // team_full_1 R 已知问题：stitch 上下文下裸色 OCR 把 `耍` 识成 `要`。
-        // 孤立 crop 上裸色能正确识别 `耍废` (conf 0.927)。留 null 表示暂不做强断言。
+        // team_full_1 R 已知问题：stitch 上下文下 OCR 把 `耍` 识成 `要`。留 null 表示暂不做强断言。
         yield return new object[] { new Case(
             "team_full_1.png",
             TeamInfoOcrService.TeamRegions,
             new string?[] { "野排牢张", "九丁汉华", null }) };
+        // game_screenshot_3 中间格真名为 `.小小椰子.`，白字二值化丢首尾装饰点 → `小小椰子`。
         yield return new object[] { new Case(
             "game_screenshot_3.png",
             TeamInfoOcrService.TeamRegions,
-            new string?[] { null, ".小小椰子.", "酉红市炒蛋" }) };
+            new string?[] { null, "小小椰子", "酉红市炒蛋" }) };
         yield return new object[] { new Case(
             "hero_selection_team.png",
             TeamInfoOcrService.TeamRegions,

@@ -1,17 +1,18 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http;
-using BlackGoldAncientSword.Framework.Http.Generated;
+using BlackGoldAncientSword.Framework.Http.Unified;
 
 namespace BlackGoldAncientSword.Modules.UI.Stats.Services
 {
     /// <summary>
-    /// Stats 页专用：拉取近期对局列表，并为列表项串行拉取 HonorTitles。
-    /// 业务从 StatsPageViewModel 剥离，VM 仅负责将结果映射到 UI 绑定属性。
+    /// Stats 页专用：拉取近期对局列表（归一化到 <see cref="UnifiedRecentBattleItem"/>），
+    /// 并为列表项串行拉取 HonorTitles。业务从 StatsPageViewModel 剥离，
+    /// VM 仅负责将结果映射到 UI 绑定属性。
     /// </summary>
     [Component(ComponentLifetime.Singleton)]
     public sealed class BattleListLoader
@@ -23,17 +24,25 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             _playerStatsLoader = playerStatsLoader;
         }
 
-        /// <summary>拉取玩家最近对局列表（API 默认最多 10 条）。</summary>
-        public async Task<GetRecentBattlesResponse?> FetchBattleListAsync(string roleId, CancellationToken ct)
+        /// <summary>拉取玩家最近对局列表。miniProgram 默认最多 10 条，heyBox 支持 pageSize。</summary>
+        public async Task<List<UnifiedRecentBattleItem>?> FetchBattleListAsync(PlayerSourceContext ctx, CancellationToken ct)
         {
             try
             {
-                return await NarakaApiClient.GetRecentBattlesAsync(roleId, ct: ct).ConfigureAwait(false);
+                if (ctx.Source == DataSource.HeyBox)
+                {
+                    var resp = await NarakaApiClient.HeyBoxRecentBattlesAsync(
+                        ctx.RoleIdSimple, pageIndex: 1, pageSize: 20, ct: ct).ConfigureAwait(false);
+                    return UnifiedMapper.MapHeyBoxRecent(resp);
+                }
+                else
+                {
+                    var resp = await NarakaApiClient.GetRecentBattlesAsync(
+                        ctx.RoleIdSimple, gameMode: null, ct: ct).ConfigureAwait(false);
+                    return UnifiedMapper.MapMiniProgramRecent(resp);
+                }
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[{nameof(BattleListLoader)}] FetchBattleListAsync failed: {ex.Message}");
@@ -42,35 +51,29 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
         }
 
         /// <summary>
-        /// 串行为对局列表中的每一项拉取 HonorTitles，每拉完一项调用 <paramref name="onItemReady"/>。
+        /// 串行为对局列表中的每一项拉取 HonorTitles（miniProgram），或从 heyBox 详情的 tags 抽取。
         /// 串行而非并行：服务端对单玩家高频接口有节流，并行经验上会触发 429。
+        /// 每拉完一项调用 <paramref name="onItemReady"/>。
         /// </summary>
-        /// <param name="roleId">玩家 roleIdSimple。</param>
-        /// <param name="battleItems">对局列表（顺序即 UI 显示顺序）。</param>
-        /// <param name="onItemReady">
-        /// 每条对局加载完成后的回调：(index, honorTitles)。
-        /// honorTitles 为空数组表示该对局无荣誉称号或拉取失败。
-        /// </param>
-        /// <param name="ct">取消令牌；取消时方法立即返回，已发出的回调结果不撤销。</param>
         public async Task FetchHonorTitlesForListAsync(
-            string roleId,
-            List<RecentBattleItem> battleItems,
-            Action<int, HonorTitleInfo[]> onItemReady,
+            PlayerSourceContext ctx,
+            List<UnifiedRecentBattleItem> battleItems,
+            Action<int, IReadOnlyList<UnifiedHonorTitle>> onItemReady,
             CancellationToken ct)
         {
             for (int i = 0; i < battleItems.Count; i++)
             {
                 if (ct.IsCancellationRequested) return;
 
-                var battleId = battleItems[i].BattleId?.ToString() ?? string.Empty;
+                var battleId = battleItems[i].BattleId;
                 if (string.IsNullOrEmpty(battleId))
                 {
-                    onItemReady(i, Array.Empty<HonorTitleInfo>());
+                    onItemReady(i, Array.Empty<UnifiedHonorTitle>());
                     continue;
                 }
 
-                var detail = await _playerStatsLoader.FetchHonorTitlesAsync(roleId, battleId, ct).ConfigureAwait(false);
-                var titles = detail?.Data?.HonorTitles?.ToArray() ?? Array.Empty<HonorTitleInfo>();
+                var detail = await _playerStatsLoader.FetchBattleDetailAsync(ctx, battleId, ct).ConfigureAwait(false);
+                var titles = detail?.Personal?.HonorTitles ?? Array.Empty<UnifiedHonorTitle>();
                 onItemReady(i, titles);
             }
         }
