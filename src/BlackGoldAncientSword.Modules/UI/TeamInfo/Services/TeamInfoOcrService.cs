@@ -9,9 +9,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services;
 /// <summary>
 /// 队伍信息 OCR 识别服务实现。
 /// 截取游戏窗口的队友名字区域，通过 PaddleOCR 识别玩家名称。
-/// 生产管线：裸色 (Raw) 直送 OCR。裸色保留完整字符纹理，识别率优于白字二值化：
-/// 前后 `.` 装饰点、`耍`vs`要` 等细笔画字符均能保住。
-/// 白字二值化实现 (<see cref="CropAndBinarizeWhite"/>) 保留供离线对比测试，未接入生产。
+/// 生产管线：白字二值化 (<see cref="BlitBinarizedWhiteRegion"/>)。游戏昵称字体为纯白，
+/// min(B,G,R) 阈值过滤掉血条/图标/装饰等彩色像素，OCR 只面对干净黑底白字，繁简
+/// 抗性优于裸色管线；对末尾 `.` `丶` 装饰点丢失依赖 <see cref="TeamMemberNameCorrector"/> 校正。
+/// 裸色实现 (<see cref="BlitRawRegion"/>) 保留供离线对比测试。
 /// </summary>
 [Component(ComponentLifetime.Singleton)]
 public class TeamInfoOcrService : ITeamInfoOcrService
@@ -288,8 +289,8 @@ public class TeamInfoOcrService : ITeamInfoOcrService
     }
 
     /// <summary>
-    /// 把多个 region 横向裸色拼接成一张大 BMP，region 之间夹 <see cref="StitchSpacerPx"/> 像素
-    /// 纯黑 spacer（匹配名条深色底、与白字文本形成对比）让 detector 自动切成独立 box。
+    /// 把多个 region 横向白字二值化后拼接成一张大 BMP，region 之间夹 <see cref="StitchSpacerPx"/> 像素
+    /// 纯白 spacer（与二值化后白底一致）让 detector 自动切成独立 box。
     /// 返回 BMP 字节 + 每个 region 在拼图中的 X 范围。
     /// </summary>
     private const int StitchSpacerPx = 80;
@@ -324,13 +325,12 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         var bmp = new byte[BmpHeaderSize + pixelBytes];
         WriteBmpHeader(bmp, totalW, maxH);
 
-        // 3. 裸色管线：spacer 用纯黑 (0x00, 0x00, 0x00, 0xFF)，匹配名条深色底、与白字文本形成对比让 detector 切 box。
-        //    整张先填 0，然后行末统一把 alpha 补 0xFF。
+        // 3. 白字二值化管线：spacer 用纯白 (0xFF, 0xFF, 0xFF, 0xFF)，与二值化后的白底一致；
+        //    整张先填 0xFF。
         var pxSpan = bmp.AsSpan(BmpHeaderSize);
-        pxSpan.Clear();
-        for (int i = 3; i < pxSpan.Length; i += 4) pxSpan[i] = 0xFF;
+        pxSpan.Fill(0xFF);
 
-        // 4. 依次把每个 region 裸色像素拷到大图对应 X 偏移处 (垂直顶对齐)。
+        // 4. 依次把每个 region 白字二值化后拷到大图对应 X 偏移处 (垂直顶对齐)。
         var ranges = new (int xStart, int xEnd)[regions.Length];
         int dstX = 0;
         for (int i = 0; i < regions.Length; i++)
@@ -341,7 +341,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
                 ranges[i] = (-1, -1);
                 continue;
             }
-            BlitRawRegion(rawBgra, fullWidth, cx, cy, cw, ch,
+            BlitBinarizedWhiteRegion(rawBgra, fullWidth, cx, cy, cw, ch,
                 bmp, totalW, dstX, 0);
             ranges[i] = (dstX, dstX + cw);
             dstX += cw + StitchSpacerPx;
