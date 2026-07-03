@@ -16,7 +16,7 @@
       "id": "SearchRecord",
       "description": "搜索玩家记录，支持昵称或角色ID",
       "method": "GET",
-      "path": "/api/record/search",
+      "path": "/app-api/record/search",
       "queryParameters": {
         "name": "string"
       },
@@ -76,9 +76,9 @@
       "id": "GetUserInfo",
       "description": "查询玩家基础信息（昵称、头像、等级、各模式段位、当前赛季）",
       "method": "GET",
-      "path": "/api/record/mini-program/user/{roleId}",
-      "pathParameters": {
-        "roleId": "string"
+      "path": "/app-api/record/mini-program/user",
+      "queryParameters": {
+        "roleIdSimple": "string"
       },
       "responseBody": {
         "type": "GetUserInfoResponse",
@@ -155,7 +155,7 @@
       "id": "GetPlayerStats",
       "description": "查询玩家指定赛季指定模式的战绩（段位+16项数据）",
       "method": "GET",
-      "path": "/api/record/mini-program/stats",
+      "path": "/app-api/record/mini-program/stats",
       "queryParameters": {
         "roleIdSimple": "string",
         "seasonId": "int",
@@ -232,7 +232,7 @@
       "id": "QuerySeasons",
       "description": "查询赛季列表",
       "method": "GET",
-      "path": "/api/record/seasons",
+      "path": "/app-api/record/seasons",
       "responseBody": {
         "type": "QuerySeasonsResponse",
         "properties": {
@@ -268,7 +268,7 @@
       "id": "GetGameModes",
       "description": "查询游戏模式列表（天选/匹配/天人 单双三排 + 娱乐模式）",
       "method": "GET",
-      "path": "/api/record/game-modes",
+      "path": "/app-api/record/game-modes",
       "responseBody": {
         "type": "GetGameModesResponse",
         "properties": {
@@ -313,10 +313,12 @@
       "id": "GetRecentBattles",
       "description": "查询玩家最近对局列表（最多10条）",
       "method": "GET",
-      "path": "/api/record/mini-program/battle/recent",
+      "path": "/app-api/record/mini-program/battle/recent",
       "queryParameters": {
         "roleIdSimple": "string",
-        "gameMode": "GameMode"
+        "gameMode": "GameMode",
+        "pageIndex": "int",
+        "pageSize": "int"
       },
       "responseBody": {
         "type": "GetRecentBattlesResponse",
@@ -435,7 +437,7 @@
       "id": "GetTop5BattleDetail",
       "description": "查看对局前五名详情",
       "method": "GET",
-      "path": "/api/record/mini-program/battle/detail/top5",
+      "path": "/app-api/record/mini-program/battle/detail/top5",
       "queryParameters": {
         "roleIdSimple": "string",
         "battleId": "string"
@@ -652,7 +654,7 @@
       "id": "GetBattleDetail",
       "description": "查看对局详情（个人数据）",
       "method": "GET",
-      "path": "/api/record/mini-program/battle/detail/person",
+      "path": "/app-api/record/mini-program/battle/detail/person",
       "queryParameters": {
         "roleIdSimple": "string",
         "battleId": "string"
@@ -852,7 +854,7 @@
       "id": "GetTeamBattleDetail",
       "description": "查看对局详情（队伍表现）",
       "method": "GET",
-      "path": "/api/record/mini-program/battle/detail/team",
+      "path": "/app-api/record/mini-program/battle/detail/team",
       "queryParameters": {
         "roleIdSimple": "string",
         "battleId": "string"
@@ -1053,6 +1055,456 @@
                         "type": "int"
                       }
                     }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "HeyBoxUserInfo",
+      "description": "小黑盒数据源：查询玩家基础信息+overview统计+heroes+weapons汇总。heyBox 无独立 stats endpoint，stats 从此接口的 overview[] 抽取。",
+      "method": "GET",
+      "path": "/app-api/record/heybox/user/info",
+      "queryParameters": {
+        "roleIdSimple": "string"
+      },
+      "responseBody": {
+        "type": "HeyBoxUserInfoResponse",
+        "properties": {
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "HeyBoxUserInfoData"
+          }
+        },
+        "nestedTypes": {
+          "HeyBoxUserInfoData": {
+            "type": "HeyBoxUserInfoData",
+            "properties": {
+              "playerInfo": {
+                "type": "HeyBoxPlayerInfo"
+              },
+              "overview": {
+                "type": "List<HeyBoxOverviewItem>"
+              },
+              "heroes": {
+                "type": "List<HeyBoxHeroSummary>"
+              },
+              "weapons": {
+                "type": "List<HeyBoxWeaponSummary>"
+              }
+            },
+            "nestedTypes": {
+              "HeyBoxPlayerInfo": {
+                "type": "HeyBoxPlayerInfo",
+                "properties": {
+                  "rating": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "level": {
+                    "type": "string"
+                  },
+                  "levelImg": {
+                    "type": "string"
+                  },
+                  "lv": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "type": "string"
+                  }
+                }
+              },
+              "HeyBoxOverviewItem": {
+                "type": "HeyBoxOverviewItem",
+                "properties": {
+                  "grade": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "desc": {
+                    "type": "string"
+                  }
+                }
+              },
+              "HeyBoxHeroSummary": {
+                "type": "HeyBoxHeroSummary",
+                "properties": {
+                  "heroId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "img": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "HeyBoxHeroSummaryData"
+                  }
+                },
+                "nestedTypes": {
+                  "HeyBoxHeroSummaryData": {
+                    "type": "HeyBoxHeroSummaryData",
+                    "properties": {
+                      "rank1Rate": {
+                        "type": "string"
+                      },
+                      "gameCount": {
+                        "type": "int"
+                      },
+                      "usePercent": {
+                        "type": "string"
+                      },
+                      "kd": {
+                        "type": "string"
+                      },
+                      "percent": {
+                        "type": "string"
+                      },
+                      "avgDamage": {
+                        "type": "int"
+                      }
+                    }
+                  }
+                }
+              },
+              "HeyBoxWeaponSummary": {
+                "type": "HeyBoxWeaponSummary",
+                "properties": {
+                  "weaponIdId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "img": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "HeyBoxWeaponSummaryData"
+                  }
+                },
+                "nestedTypes": {
+                  "HeyBoxWeaponSummaryData": {
+                    "type": "HeyBoxWeaponSummaryData",
+                    "properties": {
+                      "gameCount": {
+                        "type": "string"
+                      },
+                      "weaponHeadShotCount": {
+                        "type": "string"
+                      },
+                      "weaponAvgKillDamage": {
+                        "type": "string"
+                      },
+                      "weaponDamage": {
+                        "type": "string"
+                      },
+                      "avgKill": {
+                        "type": "string"
+                      },
+                      "percent": {
+                        "type": "string"
+                      },
+                      "dead": {
+                        "type": "string"
+                      },
+                      "killTimes": {
+                        "type": "string"
+                      },
+                      "maxWeaponDamage": {
+                        "type": "string"
+                      },
+                      "maxKill": {
+                        "type": "string"
+                      },
+                      "avgDamage": {
+                        "type": "string"
+                      },
+                      "round": {
+                        "type": "int"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "HeyBoxRecentBattles",
+      "description": "小黑盒数据源：查询玩家最近对局列表",
+      "method": "GET",
+      "path": "/app-api/record/heybox/battle/recent",
+      "queryParameters": {
+        "roleIdSimple": "string",
+        "pageIndex": "int",
+        "pageSize": "int"
+      },
+      "responseBody": {
+        "type": "HeyBoxRecentBattlesResponse",
+        "properties": {
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "HeyBoxRecentBattlesData"
+          }
+        },
+        "nestedTypes": {
+          "HeyBoxRecentBattlesData": {
+            "type": "HeyBoxRecentBattlesData",
+            "properties": {
+              "matchList": {
+                "type": "List<HeyBoxMatchItem>"
+              },
+              "playerInfo": {
+                "type": "HeyBoxMatchListPlayerInfo"
+              }
+            },
+            "nestedTypes": {
+              "HeyBoxMatchItem": {
+                "type": "HeyBoxMatchItem",
+                "properties": {
+                  "rating": {
+                    "type": "string"
+                  },
+                  "scene": {
+                    "type": "string"
+                  },
+                  "matchId": {
+                    "type": "string"
+                  },
+                  "battleTid": {
+                    "type": "string"
+                  },
+                  "grade": {
+                    "type": "string"
+                  },
+                  "playMode": {
+                    "type": "int"
+                  },
+                  "damage": {
+                    "type": "int"
+                  },
+                  "rank": {
+                    "type": "int"
+                  },
+                  "playNum": {
+                    "type": "int"
+                  },
+                  "ratingDelta": {
+                    "type": "int"
+                  },
+                  "killTimes": {
+                    "type": "int"
+                  },
+                  "time": {
+                    "type": "long"
+                  },
+                  "mapName": {
+                    "type": "string"
+                  },
+                  "heroAvatar": {
+                    "type": "string"
+                  },
+                  "heroId": {
+                    "type": "string"
+                  },
+                  "heroName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "HeyBoxMatchListPlayerInfo": {
+                "type": "HeyBoxMatchListPlayerInfo",
+                "properties": {
+                  "rating": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "level": {
+                    "type": "string"
+                  },
+                  "levelImg": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "HeyBoxBattleDetail",
+      "description": "小黑盒数据源：查询单场对局详情（扁平结构，含个人数据+武器+魂玉+成就tags；无队友/top5 数据）",
+      "method": "GET",
+      "path": "/app-api/record/heybox/battle/detail",
+      "queryParameters": {
+        "matchId": "string"
+      },
+      "responseBody": {
+        "type": "HeyBoxBattleDetailResponse",
+        "properties": {
+          "code": {
+            "type": "int"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "HeyBoxBattleDetailData"
+          }
+        },
+        "nestedTypes": {
+          "HeyBoxBattleDetailData": {
+            "type": "HeyBoxBattleDetailData",
+            "properties": {
+              "matchId": {
+                "type": "string"
+              },
+              "battleTid": {
+                "type": "string"
+              },
+              "rating": {
+                "type": "string"
+              },
+              "weaponList": {
+                "type": "List<HeyBoxDetailWeapon>"
+              },
+              "name": {
+                "type": "string"
+              },
+              "level": {
+                "type": "string"
+              },
+              "levelImg": {
+                "type": "string"
+              },
+              "ratingDelta": {
+                "type": "string"
+              },
+              "avatar": {
+                "type": "string"
+              },
+              "time": {
+                "type": "long"
+              },
+              "mapName": {
+                "type": "string"
+              },
+              "soulItemList": {
+                "type": "List<HeyBoxDetailSoulItem>"
+              },
+              "playNum": {
+                "type": "int"
+              },
+              "data": {
+                "type": "List<HeyBoxDetailStatItem>"
+              },
+              "tags": {
+                "type": "List<HeyBoxDetailTag>"
+              },
+              "playMode": {
+                "type": "int"
+              },
+              "scene": {
+                "type": "string"
+              },
+              "rank": {
+                "type": "int"
+              },
+              "heroId": {
+                "type": "string"
+              },
+              "grade": {
+                "type": "string"
+              }
+            },
+            "nestedTypes": {
+              "HeyBoxDetailWeapon": {
+                "type": "HeyBoxDetailWeapon",
+                "properties": {
+                  "killTimes": {
+                    "type": "int"
+                  },
+                  "per": {
+                    "type": "string"
+                  },
+                  "damage": {
+                    "type": "int"
+                  },
+                  "img": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              },
+              "HeyBoxDetailSoulItem": {
+                "type": "HeyBoxDetailSoulItem",
+                "properties": {
+                  "bg": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "img": {
+                    "type": "string"
+                  }
+                }
+              },
+              "HeyBoxDetailStatItem": {
+                "type": "HeyBoxDetailStatItem",
+                "properties": {
+                  "grade": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "desc": {
+                    "type": "string"
+                  }
+                }
+              },
+              "HeyBoxDetailTag": {
+                "type": "HeyBoxDetailTag",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "img": {
+                    "type": "string"
+                  },
+                  "desc": {
+                    "type": "string"
                   }
                 }
               }

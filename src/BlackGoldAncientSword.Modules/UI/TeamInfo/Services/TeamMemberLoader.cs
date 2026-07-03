@@ -3,14 +3,14 @@ using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http;
-using BlackGoldAncientSword.Framework.Http.Generated;
+using BlackGoldAncientSword.Framework.Http.Unified;
 
 namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
 {
     /// <summary>
-    /// 拉取队伍内单个玩家的完整资料：先 SearchRecord 拿 roleId，再 GetUserInfo 拿基础信息，
-    /// 最后通过 <see cref="PlayerStatsLoader"/> 拿 stats。把结果聚合为 <see cref="MemberLoadResult"/>。
-    /// 全程无 UI 线程依赖，由 VM 自行把 DTO 字段填回 TeamMemberInfo。
+    /// 拉取队伍内单个玩家的完整资料：先 SearchRecord 拿 roleId + dataSource，
+    /// 再按数据源分派 mini-program/heybox user 接口，最后通过 <see cref="PlayerStatsLoader"/> 拿 stats。
+    /// 结果聚合为 <see cref="MemberLoadResult"/>。全程无 UI 线程依赖，由 VM 自行把 DTO 字段填回 TeamMemberInfo。
     /// </summary>
     [Component(ComponentLifetime.Singleton)]
     public class TeamMemberLoader
@@ -35,34 +35,45 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         {
             var result = new MemberLoadResult();
 
-            var search = await NarakaApiClient.SearchRecordAsync(userName, ct).ConfigureAwait(false);
-            if (search?.Data == null || string.IsNullOrEmpty(search.Data.RoleIdSimple))
+            var searchResp = await NarakaApiClient.SearchRecordAsync(userName, ct).ConfigureAwait(false);
+            var search = UnifiedMapper.MapSearch(searchResp);
+            if (search == null)
             {
                 result.Failed = true;
                 return result;
             }
 
-            var roleId = search.Data.RoleIdSimple;
-            var userInfo = await NarakaApiClient.GetUserInfoAsync(roleId, ct).ConfigureAwait(false);
-            if (userInfo?.Code != 200 || userInfo.Data == null)
+            var ctx = new PlayerSourceContext(search.RoleIdSimple, search.DataSource);
+            UnifiedUserInfo? userInfo;
+            if (ctx.Source == DataSource.HeyBox)
+            {
+                var resp = await NarakaApiClient.HeyBoxUserInfoAsync(ctx.RoleIdSimple, ct).ConfigureAwait(false);
+                userInfo = UnifiedMapper.MapHeyBoxUser(resp, ctx.RoleIdSimple);
+            }
+            else
+            {
+                var resp = await NarakaApiClient.GetUserInfoAsync(ctx.RoleIdSimple, ct).ConfigureAwait(false);
+                userInfo = UnifiedMapper.MapMiniProgramUser(resp);
+            }
+
+            if (userInfo == null)
             {
                 result.Failed = true;
                 return result;
             }
 
-            var d = userInfo.Data;
-            result.UserName = d.Role?.RoleName ?? d.NickName ?? userName;
-            result.Level = "Lv." + (d.Role?.RoleLevel ?? 0).ToString();
-            result.UID = d.Role?.Uid ?? string.Empty;
-            result.AvatarUrl = d.Role?.HeadIcon ?? string.Empty;
-            result.SoloRankScore = d.SurviveSingleGrade ?? 0;
-            result.DuoRankScore = d.SurviveDoubleGrade ?? 0;
-            result.TrioRankScore = d.SurviveTriplexGrade ?? 0;
+            result.UserName = string.IsNullOrEmpty(userInfo.RoleName) ? userName : userInfo.RoleName;
+            result.Level = "Lv." + userInfo.RoleLevel.ToString();
+            result.UID = userInfo.Uid;
+            result.AvatarUrl = userInfo.HeadIcon;
+            result.SoloRankScore = userInfo.SoloRankScore ?? 0;
+            result.DuoRankScore = userInfo.DuoRankScore ?? 0;
+            result.TrioRankScore = userInfo.TrioRankScore ?? 0;
 
-            // 表达式与原 VM 完全一致：generated client 的 seasonId 签名（int 或 int?）通过隐式转换匹配。
-            var seasonId = selectedSeasonCode ?? d.CurrentSeasonId;
+            // heyBox 分支 CurrentSeasonId 为 null，seasonId 无实际用途；透传 selectedSeasonCode 即可。
+            var seasonId = selectedSeasonCode ?? userInfo.CurrentSeasonId;
             var gameMode = GameModeExtensions.FromCategoryAndTeamSize(category, teamSize);
-            result.Stats = await _statsLoader.LoadAsync(roleId, seasonId, gameMode, ct).ConfigureAwait(false);
+            result.Stats = await _statsLoader.LoadAsync(ctx, seasonId, gameMode, ct).ConfigureAwait(false);
             return result;
         }
     }

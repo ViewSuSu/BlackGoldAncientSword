@@ -3,7 +3,7 @@ using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Http;
-using BlackGoldAncientSword.Framework.Http.Generated;
+using BlackGoldAncientSword.Framework.Http.Unified;
 using BlackGoldAncientSword.GameMonitor.Models;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
 using BlackGoldAncientSword.Modules.UI.TeamInfo.Services;
@@ -72,7 +72,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _localizedText = localizedText;
 
             TeamMembers = new ObservableCollection<TeamMemberInfo>();
-            Seasons = new ObservableCollection<SeasonInfo>();
+            Seasons = new ObservableCollection<UnifiedSeason>();
             DiffLeft = new ObservableCollection<MemberDiffItem>();
             DiffRight = new ObservableCollection<MemberDiffItem>();
             _selectedTeamSize = TeamSize.Trio;
@@ -86,10 +86,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         }
 
         // === Filters ===
-        public ObservableCollection<SeasonInfo> Seasons { get; }
+        public ObservableCollection<UnifiedSeason> Seasons { get; }
 
-        private SeasonInfo? _selectedSeason;
-        public SeasonInfo? SelectedSeason
+        private UnifiedSeason? _selectedSeason;
+        public UnifiedSeason? SelectedSeason
         {
             get => _selectedSeason;
             set
@@ -389,6 +389,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
                 if (names.Length == 0) return;
 
+                // 用本地已知昵称 (player_prefs.txt) 校正 OCR 结果中"最像自己"的那一格。
+                // 只改自己那一格，队友格永不动。命中率提升让下游 ReorderMembersForLocalUser
+                // 能稳定把自己放到中间卡片。
+                names = TeamMemberNameCorrector.Apply(names, _playerPrefsService.Current.OriginalPlayerName);
+
                 // 在 UI 线程上更新成员列表
                 await _uiDispatcher.InvokeAsync(() =>
                 {
@@ -552,6 +557,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private async Task UpdateTeamMembersAsync(string[] names, CancellationToken ct)
         {
+            // 用本地已知昵称 (player_prefs.txt) 校正 OCR 结果中"最像自己"的那一格。
+            // 只改自己那一格，队友格永不动。校正后再做 identical-skip 判断，避免
+            // 上次已校正的 TeamMembers 与本轮未校正的 names 比较时出现假差异。
+            names = TeamMemberNameCorrector.Apply(names, _playerPrefsService.Current.OriginalPlayerName);
+
             // Skip if recognized names are identical to current members
             if (names.Length == TeamMembers.Count &&
                 names.All(n => TeamMembers.Any(m =>
@@ -1061,13 +1071,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 var seasonsResp = await NarakaApiClient.QuerySeasonsAsync().ConfigureAwait(false);
                 if (ct.IsCancellationRequested) return;
 
-                if (seasonsResp?.Data != null)
+                var seasons = UnifiedMapper.MapSeasons(seasonsResp);
+                if (seasons.Count > 0)
                 {
                     await _uiDispatcher.InvokeAsync(() =>
                     {
                         if (ct.IsCancellationRequested) return;
                         Seasons.Clear();
-                        foreach (var s in seasonsResp.Data)
+                        foreach (var s in seasons)
                             Seasons.Add(s);
                         if (Seasons.Count > 0 && _selectedSeason == null)
                             _selectedSeason = Seasons[0];
