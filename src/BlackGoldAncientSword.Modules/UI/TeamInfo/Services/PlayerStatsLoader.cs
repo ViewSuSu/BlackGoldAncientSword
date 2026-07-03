@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http;
-using BlackGoldAncientSword.Framework.Http.Generated;
+using BlackGoldAncientSword.Framework.Http.Unified;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
@@ -12,6 +12,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
     /// <summary>
     /// 拉取单个玩家在指定赛季/游戏模式下的 stats，并把响应解析成 ViewModel 友好的 DTO。
     /// 与 Stats 模块的同名 Loader 完全独立：此 Loader 仅服务于 TeamInfo 页面的成员对比。
+    /// SearchRecord 后由 VM 构造 <see cref="PlayerSourceContext"/> 分派 miniProgram / heyBox。
     /// </summary>
     [Component(ComponentLifetime.Singleton)]
     public class PlayerStatsLoader
@@ -27,38 +28,50 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         /// 拉取 stats。任何异常向上抛出由调用方处理；返回 null 表示 API 未返回有效数据。
         /// </summary>
         public async Task<PlayerStatsLoadResult?> LoadAsync(
-            string roleId,
+            PlayerSourceContext ctx,
             double? seasonId,
             GameMode gameMode,
             CancellationToken ct)
         {
-            // 透传 seasonId 给 generated NarakaApiClient：与原 VM 的 `_selectedSeason?.Code ?? d.CurrentSeasonId`
-            // 表达式语义等价。generated 签名当前接受可空整型/双精度。
-            var stats = await NarakaApiClient.GetPlayerStatsAsync(roleId, seasonId, gameMode, ct)
-                .ConfigureAwait(false);
+            UnifiedPlayerStats? stats;
+            if (ctx.Source == DataSource.HeyBox)
+            {
+                var resp = await NarakaApiClient.HeyBoxUserInfoAsync(ctx.RoleIdSimple, ct).ConfigureAwait(false);
+                stats = UnifiedMapper.MapHeyBoxStats(resp);
+            }
+            else
+            {
+                var resp = await NarakaApiClient.GetPlayerStatsAsync(ctx.RoleIdSimple, seasonId, gameMode, ct).ConfigureAwait(false);
+                stats = UnifiedMapper.MapMiniProgramStats(resp);
+            }
 
-            if (stats?.Code != 200 || stats.Data?.Stats == null) return null;
+            if (stats?.Stats == null) return null;
 
             var result = new PlayerStatsLoadResult();
-            foreach (var stat in stats.Data.Stats)
+            foreach (var stat in stats.Stats)
             {
-                if (stat.Key == null) continue;
-                var val = stat.Value ?? "-";
+                if (string.IsNullOrEmpty(stat.Key)) continue;
+                var val = string.IsNullOrEmpty(stat.Value) ? "-" : stat.Value;
                 result.Stats[stat.Key] = val;
+                // miniProgram 分支用英文 key 命中；heyBox 分支用中文 desc（作为 Key 存入）命中中文分支
                 switch (stat.Key)
                 {
-                    case "avg_kill": result.AvgKill = val; break;
-                    case "top5_rate": result.Top5Rate = val; break;
-                    case "avg_damage": result.AvgDamage = val; break;
-                    case "avg_total_live_time": result.SurviveTime = FormatSurvivalTime(val); break;
+                    case "avg_kill":
+                    case "场均击杀": result.AvgKill = val; break;
+                    case "top5_rate":
+                    case "前五率": result.Top5Rate = val; break;
+                    case "avg_damage":
+                    case "场均伤害": result.AvgDamage = val; break;
+                    case "avg_total_live_time":
+                    case "场均存活时间": result.SurviveTime = FormatSurvivalTime(val); break;
                 }
             }
 
-            if (stats.Data.Grade != null)
+            if (stats.Grade != null)
             {
-                result.RankName = stats.Data.Grade.GradeName ?? string.Empty;
-                result.RankIcon = stats.Data.Grade.GradeIcon ?? string.Empty;
-                result.RankScore = stats.Data.Grade.GradeScore ?? 0;
+                result.RankName = stats.Grade.GradeName;
+                result.RankIcon = stats.Grade.GradeIcon;
+                result.RankScore = stats.Grade.GradeScore;
                 var gm = (int)gameMode;
                 result.PageRankName = GetRankNameForScore(result.RankScore, gm) + GetSubTierName(result.RankScore, gm);
                 result.PageStarCount = GetStarCount(result.RankScore, gm);

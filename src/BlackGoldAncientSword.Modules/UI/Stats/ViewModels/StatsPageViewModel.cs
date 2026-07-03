@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http;
-using BlackGoldAncientSword.Framework.Http.Generated;
+using BlackGoldAncientSword.Framework.Http.Unified;
 using System.ComponentModel;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.Framework.Core.Events;
@@ -46,7 +46,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             _localizedText = localizedText;
             _onLanguageChangedHandler = OnLanguageChanged;
             _localizationService.PropertyChanged += _onLanguageChangedHandler;
-            Seasons = new ObservableCollection<SeasonInfo>();
+            Seasons = new ObservableCollection<UnifiedSeason>();
             DetailStats = new ObservableCollection<StatEntryItem>();
             RecentBattles = new ObservableCollection<RecentBattleDisplayItem>();
         }
@@ -385,8 +385,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
               ["max_move_distance"] = "Stats.MaxMoveDistance",
         };
 
-        private SeasonInfo? _selectedSeason;
-        public SeasonInfo? SelectedSeason
+        private UnifiedSeason? _selectedSeason;
+        public UnifiedSeason? SelectedSeason
         {
             get => _selectedSeason;
             set
@@ -399,7 +399,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
         // === Collections ===
-        public ObservableCollection<SeasonInfo> Seasons { get; }
+        public ObservableCollection<UnifiedSeason> Seasons { get; }
         public ObservableCollection<StatEntryItem> DetailStats { get; }
         public ObservableCollection<RecentBattleDisplayItem> RecentBattles { get; }
 
@@ -425,6 +425,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 {
                     { nameof(PageNames.BattleDetailPage), row.BattleId },
                     { "RoleId", _roleId },
+                    { "DataSource", (int)(_sourceContext?.Source ?? DataSource.MiniProgram) },
                     { "GameMode", row.GameMode },
                     { "ModeCategoryText", row.GameModeCategoryText },
                     { "ModeTeamSizeText", row.GameModeTeamSizeText },
@@ -526,6 +527,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
         private string _roleId = string.Empty;
+        private PlayerSourceContext? _sourceContext;
 
         private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -664,14 +666,20 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             try
             {
                 var search = await _playerStatsLoader.SearchRoleByNameAsync(localName, ct);
-                if (search?.Data == null) { ShowNotFound = true; ClearAllData(); _tipMessage.ShowError(search?.Msg ?? L("Stats.LoadError", "加载战绩失败，请检查网络后重试。")); return false; }
-                _roleId = search.Data.RoleIdSimple ?? string.Empty;
-                if (string.IsNullOrEmpty(_roleId)) { ShowNotFound = true; ClearAllData(); _tipMessage.ShowError(L("Stats.PlayerNotFound", "未找到该玩家，请检查名称是否正确")); return false; }
+                if (search == null || string.IsNullOrEmpty(search.RoleIdSimple))
+                {
+                    ShowNotFound = true;
+                    ClearAllData();
+                    _tipMessage.ShowError(L("Stats.PlayerNotFound", "未找到该玩家，请检查名称是否正确"));
+                    return false;
+                }
+                _roleId = search.RoleIdSimple;
+                _sourceContext = new PlayerSourceContext(_roleId, search.DataSource);
 
                 // Fire all three requests in parallel
-                var userInfoTask = _playerStatsLoader.FetchUserInfoAsync(_roleId, ct);
+                var userInfoTask = _playerStatsLoader.FetchUserInfoAsync(_sourceContext, ct);
                 var seasonsTask = _playerStatsLoader.FetchSeasonsAsync(ct);
-                var battlesTask = _battleListLoader.FetchBattleListAsync(_roleId, ct);
+                var battlesTask = _battleListLoader.FetchBattleListAsync(_sourceContext, ct);
 
                 await System.Threading.Tasks.Task.WhenAll(userInfoTask, seasonsTask, battlesTask);
                 ct.ThrowIfCancellationRequested();
@@ -684,58 +692,65 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 var battlesResult = await battlesTask;
                 // Process userInfo and seasons first (fast responses)
                 var userInfo = await userInfoTask;
-                if (userInfo?.Code == 200 && userInfo.Data != null)
+                if (userInfo != null)
                 {
-                    var d = userInfo.Data;
-                    UserName = d.Role?.RoleName ?? d.NickName ?? localName;
-                    Level = $"Lv.{d.Role?.RoleLevel ?? 0}";
-                    UID = d.Role?.Uid ?? string.Empty;
-                    AvatarUrl = d.Role?.HeadIcon ?? string.Empty;
+                    UserName = string.IsNullOrEmpty(userInfo.RoleName) ? localName : userInfo.RoleName;
+                    Level = $"Lv.{(int)userInfo.RoleLevel}";
+                    UID = userInfo.Uid;
+                    AvatarUrl = userInfo.HeadIcon;
                 }
                 PlayerInfoProgress = 100;
                 IsPlayerInfoLoading = false;
 
                 var seasonsResult = await seasonsTask;
-                if (seasonsResult?.Code == 200 && seasonsResult.Data != null)
+                if (seasonsResult != null)
                 {
                     Seasons.Clear();
-                    foreach (var s in seasonsResult.Data)
-                        if (s.Code > 0) Seasons.Add(s);
+                    foreach (var s in seasonsResult) Seasons.Add(s);
                     if (Seasons.Count > 0) SelectedSeason = Seasons[0];
                 }
 
                 // Populate recent battles basic info, then serially fetch team performance
-                if (battlesResult?.Code == 200 && battlesResult.Data?.List != null)
+                if (battlesResult != null)
                 {
-                    var battleItems = battlesResult.Data.List.Take(10).ToList();
+                    var battleItems = battlesResult.Take(10).ToList();
 
                     RecentBattles.Clear();
                     for (int i = 0; i < battleItems.Count; i++)
                     {
                         var b = battleItems[i];
-                        var modeCode = (int)(b.Subtype ?? b.GameMode ?? 0);
+                        var modeCode = b.GameMode;
                         RecentBattles.Add(new RecentBattleDisplayItem
                         {
-                            BattleId = ((long)(b.BattleId ?? 0)).ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            Rank = b.Rank ?? 0,
-                            HonorTitles = new ObservableCollection<HonorTitleDisplayItem>(),
-                            HeroIcon = b.Hero?.HeroIcon ?? string.Empty,
-                            HeroName = b.Hero?.HeroName ?? "Unknown",
+                            BattleId = b.BattleId,
+                            Rank = b.Rank,
+                            HonorTitles = new ObservableCollection<HonorTitleDisplayItem>(
+                                b.HonorTitles.Select(h => new HonorTitleDisplayItem
+                                {
+                                    Icon = h.Icon,
+                                    Name = h.Name,
+                                    HonorName = h.Name,
+                                    HonorDesc = h.Desc,
+                                })),
+                            HeroIcon = b.HeroIcon,
+                            HeroName = string.IsNullOrEmpty(b.HeroName) ? "Unknown" : b.HeroName,
                             GameModeText = FormatGameMode(modeCode),
                             GameModeCategoryText = FormatGameModeCategory(modeCode),
                             GameModeTeamSizeText = FormatGameModeTeamSize(modeCode),
                             GameMode = modeCode,
                             IsRankMode = IsTianxuanMode(modeCode),
-                            Kill = (int)(b.Kill ?? 0),
-                            Damage = (int)(b.Damage ?? 0),
-                            ScoreNumber = GetRankTierScore((b.RoundRankScore ?? 0), modeCode),
-                            ScoreDiff = (b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0),
-                            RankDisplayText = GetRankNameForScore((b.RoundRankScore ?? 0), modeCode) + GetSubTierName((b.RoundRankScore ?? 0), IsTianxuanMode(modeCode)),
-                            ShowScoreNumber = ShouldShowTierScore((b.RoundRankScore ?? 0), modeCode),
-                            StarCount = GetStarCount((b.RoundRankScore ?? 0), modeCode),
-                            HasStars = IsTianxuanMode(modeCode) && (b.RoundRankScore ?? 0) >= 4500,
-                            ScoreDiffDisplay = FormatScoreDiff((b.RoundRankScore ?? 0) - (b.BeginRankScore ?? 0)),
-                            BattleTime = FormatUnixTime(b.BattleEndTime ?? 0)
+                            Kill = b.Kill,
+                            Damage = b.Damage,
+                            ScoreNumber = GetRankTierScore(b.RoundRankScore, modeCode),
+                            ScoreDiff = b.RoundRankScore - (b.BeginRankScore ?? b.RoundRankScore),
+                            RankDisplayText = GetRankNameForScore(b.RoundRankScore, modeCode) + GetSubTierName(b.RoundRankScore, IsTianxuanMode(modeCode)),
+                            ShowScoreNumber = ShouldShowTierScore(b.RoundRankScore, modeCode),
+                            StarCount = GetStarCount(b.RoundRankScore, modeCode),
+                            HasStars = IsTianxuanMode(modeCode) && b.RoundRankScore >= 4500,
+                            ScoreDiffDisplay = b.BeginRankScore == null
+                                ? string.Empty
+                                : FormatScoreDiff(b.RoundRankScore - b.BeginRankScore.Value),
+                            BattleTime = FormatUnixTime(b.BattleEndTimeMs)
                         });
                     }
 
@@ -767,12 +782,13 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
         private async System.Threading.Tasks.Task FetchHonorTitlesSeriallyAsync(
-            System.Collections.Generic.List<RecentBattleItem> battleItems, CancellationToken ct)
+            System.Collections.Generic.List<UnifiedRecentBattleItem> battleItems, CancellationToken ct)
         {
+            if (_sourceContext == null) return;
             try
             {
                 await _battleListLoader.FetchHonorTitlesForListAsync(
-                    _roleId,
+                    _sourceContext,
                     battleItems,
                     (index, titles) => { _ = _uiDispatcher.InvokeAsync(() => ApplyHonorTitlesToBattle(index, titles)); },
                     ct);
@@ -788,23 +804,26 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         /// 把单条对局拉回的 HonorTitles 映射到对应 UI Item。
         /// 映射逻辑保留在 VM：这是从 DTO 到 UI Item 的转换，属于显示层职责。
         /// </summary>
-        private void ApplyHonorTitlesToBattle(int index, HonorTitleInfo[] titles)
+        private void ApplyHonorTitlesToBattle(int index, IReadOnlyList<UnifiedHonorTitle> titles)
         {
             if (index < 0 || index >= RecentBattles.Count) return;
 
             var existing = RecentBattles[index].HonorTitles;
             existing.Clear();
-            if (titles.Length > 0)
-            {
-                foreach (var t in titles.Adapt<List<HonorTitleDisplayItem>>())
-                    existing.Add(t);
-            }
+            foreach (var t in titles)
+                existing.Add(new HonorTitleDisplayItem
+                {
+                    Icon = t.Icon,
+                    Name = t.Name,
+                    HonorName = t.Name,
+                    HonorDesc = t.Desc,
+                });
             RecentBattlesProgress = Math.Min(100, RecentBattlesProgress + 10);
         }
 
         private async System.Threading.Tasks.Task LoadStatsAsync(CancellationToken ct)
         {
-            if (string.IsNullOrEmpty(_roleId) || SelectedSeason == null)
+            if (_sourceContext == null || string.IsNullOrEmpty(_roleId) || SelectedSeason == null)
                 return;
 
             IsStatsLoading = true;
@@ -814,35 +833,37 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 var gameMode = GameModeExtensions.FromCategoryAndTeamSize(_selectedCategory, _selectedTeamSize);
 
                 var stats = await _playerStatsLoader.FetchPlayerStatsAsync(
-                    _roleId, SelectedSeason.Code, gameMode, ct);
+                    _sourceContext, SelectedSeason.Code, gameMode, ct);
 
-                if (stats?.Data == null) { _tipMessage.ShowError(stats?.Msg ?? L("Stats.LoadError", "加载战绩失败，请检查网络后重试。")); return; }
-
-                var data = stats.Data;
-
-                if (data.Grade != null)
+                if (stats == null)
                 {
-                    RankName = data.Grade.GradeName ?? string.Empty;
-                    RankIcon = data.Grade.GradeIcon ?? string.Empty;
-                    RankScore = data.Grade.GradeScore ?? 0;
-                    RankLevel = data.Grade.GradeLevel ?? string.Empty;
-                    PageRankName = GetRankNameForScore(data.Grade.GradeScore ?? 0, (int)gameMode) + GetSubTierName(data.Grade.GradeScore ?? 0, IsTianxuanMode((int)gameMode));
-                    PageStarCount = GetStarCount(data.Grade.GradeScore ?? 0, (int)gameMode);
-                    PageHasStars = IsTianxuanMode((int)gameMode) && (data.Grade.GradeScore ?? 0) >= 4500;
-                    RankDisplayWithStars = FormatPageRankDisplay(data.Grade.GradeScore ?? 0, (int)gameMode);
-                    RankTierScore = GetRankTierScore(data.Grade.GradeScore ?? 0, (int)gameMode);
+                    _tipMessage.ShowError(L("Stats.LoadError", "加载战绩失败，请检查网络后重试。"));
+                    return;
+                }
+
+                if (stats.Grade != null)
+                {
+                    RankName = stats.Grade.GradeName;
+                    RankIcon = stats.Grade.GradeIcon;
+                    RankScore = stats.Grade.GradeScore;
+                    RankLevel = stats.Grade.GradeLevel;
+                    PageRankName = GetRankNameForScore(stats.Grade.GradeScore, (int)gameMode) + GetSubTierName(stats.Grade.GradeScore, IsTianxuanMode((int)gameMode));
+                    PageStarCount = GetStarCount(stats.Grade.GradeScore, (int)gameMode);
+                    PageHasStars = IsTianxuanMode((int)gameMode) && stats.Grade.GradeScore >= 4500;
+                    RankDisplayWithStars = FormatPageRankDisplay(stats.Grade.GradeScore, (int)gameMode);
+                    RankTierScore = GetRankTierScore(stats.Grade.GradeScore, (int)gameMode);
                 }
 
                 DetailStats.Clear();
-                if (data.Stats != null)
+                if (stats.Stats != null && stats.Stats.Count > 0)
                 {
-                    foreach (var s in data.Stats)
+                    foreach (var s in stats.Stats)
                     {
                         var label = FormatStatLabel(s.Key, s.Name);
-                        var value = s.Value ?? "0";
+                        var value = string.IsNullOrEmpty(s.Value) ? "0" : s.Value;
 
                         // Convert survival time from seconds to mm:ss format
-                        if ((s.Key ?? "").Contains("live_time", StringComparison.OrdinalIgnoreCase) || (s.Name ?? "").Contains("生存"))
+                        if (s.Key.Contains("live_time", StringComparison.OrdinalIgnoreCase) || s.Name.Contains("生存") || s.Key.Contains("存活时间"))
                         {
                             value = FormatSurvivalTime(value);
                         }
@@ -854,10 +875,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         });
                     }
                     // Parse specific rank stats from the dynamic list
-                    TotalGames = FindStatValue(data.Stats, "对局", "场次", "game", "battle", "round");
-                    TopOneCount = FindStatValue(data.Stats, "第一", "冠军", "吃鸡", "champion", "top1", "win");
-                    TopFiveCount = FindStatValue(data.Stats, "前五", "top5");
-                    AvgDamage = FindStatValue(data.Stats, "场均", "场均伤害", "伤害", "damage", "avgDamage");
+                    TotalGames = FindStatValue(stats.Stats, "对局", "场次", "game", "battle", "round");
+                    TopOneCount = FindStatValue(stats.Stats, "第一", "冠军", "吃鸡", "champion", "top1", "win", "夺冠");
+                    TopFiveCount = FindStatValue(stats.Stats, "前五", "top5");
+                    AvgDamage = FindStatValue(stats.Stats, "场均伤害", "场均", "伤害", "damage", "avgDamage");
                 }
                 else
                 {
@@ -887,18 +908,20 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             {
                 return _localizedText.Get(resourceKey, fallbackName ?? key);
             }
-            return fallbackName ?? key ?? string.Empty;
+            // heyBox 分支 key 直接是中文 desc，作为 label 显示即可
+            return !string.IsNullOrEmpty(fallbackName) ? fallbackName : (key ?? string.Empty);
         }
 
-        private static string FindStatValue(List<StatEntry> stats, params string[] keyPatterns)
+        private static string FindStatValue(List<UnifiedStatEntry> stats, params string[] keyPatterns)
         {
             foreach (var s in stats)
             {
-                var label = (s.Name ?? s.Key ?? string.Empty).ToLowerInvariant();
+                var label = string.IsNullOrEmpty(s.Name) ? s.Key : s.Name;
+                label = label.ToLowerInvariant();
                 foreach (var pattern in keyPatterns)
                 {
                     if (label.Contains(pattern.ToLowerInvariant()))
-                        return s.Value ?? "0";
+                        return string.IsNullOrEmpty(s.Value) ? "0" : s.Value;
                 }
             }
             return "0";
