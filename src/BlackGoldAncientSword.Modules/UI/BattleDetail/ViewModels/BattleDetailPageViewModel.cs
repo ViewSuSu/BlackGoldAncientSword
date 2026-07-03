@@ -5,15 +5,16 @@ using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Extensions;
-using BlackGoldAncientSword.Framework.Http;
-using BlackGoldAncientSword.Framework.Http.Generated;
+using BlackGoldAncientSword.Framework.Http.Unified;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.Modules.UI.Stats.Services;
 
 namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
 {
     /// <summary>
-    /// 对局详情浮层：并行拉 personal / team / top5 三份数据。Tab 切换在 UI 侧完成。
+    /// 对局详情浮层：拉取归一化后的 <see cref="UnifiedBattleDetail"/>，
+    /// miniProgram 分支包含 personal/team/top5 三份数据；heyBox 分支仅包含 personal，
+    /// team/top5 集合置空，UI 侧对应 Tab 显示空状态。
     /// </summary>
     public class BattleDetailPageViewModel : ViewModelBase
     {
@@ -125,6 +126,8 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             var p = ctx.Parameters;
             var battleId = p.GetValue<string?>(PageNames.BattleDetailPage);
             var roleId = p.GetValue<string?>("RoleId");
+            var dataSourceCode = p.GetValue<int?>("DataSource") ?? (int)DataSource.MiniProgram;
+            var dataSource = (DataSource)dataSourceCode;
 
             // 直接消费 StatsPage 已算好的段位/分数/模式文本，避免详情侧二次计算。
             ModeType = p.GetValue<string?>("ModeCategoryText") ?? string.Empty;
@@ -152,7 +155,9 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
 
             SelectedTab = "Personal";
             ShowMoreStats = false;
-            LoadAsync(roleId!, battleId!, _cts.Token).SafeFireAndForget("BattleDetail.Load");
+
+            var sourceContext = new PlayerSourceContext(roleId!, dataSource);
+            LoadAsync(sourceContext, battleId!, _cts.Token).SafeFireAndForget("BattleDetail.Load");
         }
 
         protected override void OnNavigatedFromExecute(NavigationContext ctx)
@@ -189,24 +194,15 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             base.Dispose(disposing);
         }
 
-        private async Task LoadAsync(string roleId, string battleId, CancellationToken ct)
+        private async Task LoadAsync(PlayerSourceContext ctx, string battleId, CancellationToken ct)
         {
             IsLoading = true;
             try
             {
-                var detailTask = _loader.FetchBattleDetailAsync(roleId, battleId, ct);
-                var teamTask = _loader.FetchTeamBattleDetailAsync(roleId, battleId, ct);
-                var top5Task = InvokeAsync(() => NarakaApiClient.GetTop5BattleDetailAsync(roleId, battleId, ct));
-                await Task.WhenAll(detailTask, teamTask, top5Task).ConfigureAwait(false);
-
-                var detail = detailTask.Result?.Data;
-                var team = teamTask.Result?.Data;
-                var top5 = top5Task.Result?.Data;
+                var detail = await _loader.FetchBattleDetailAsync(ctx, battleId, ct).ConfigureAwait(false);
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     ApplyDetail(detail);
-                    ApplyTeam(team);
-                    ApplyTop5(top5);
                     IsLoading = false;
                 });
             }
@@ -218,167 +214,146 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             }
         }
 
-        private static async Task<T?> InvokeAsync<T>(Func<Task<T>> call) where T : class
+        private void ApplyDetail(UnifiedBattleDetail? d)
         {
-            try { return await call().ConfigureAwait(false); }
-            catch (OperationCanceledException) { throw; }
-            catch { return null; }
+            ApplyPersonal(d?.Personal);
+            ApplyTeam(d?.Team);
+            ApplyTop5(d?.Top5);
         }
 
-        private void ApplyDetail(BattleDetailData? d)
+        private void ApplyPersonal(UnifiedPersonalDetail? p)
         {
-            if (d == null) return;
+            if (p == null) return;
 
-            // 顶部信息栏（ModeType / TeamSizeGlyph / RankDisplayText 已由 NavigationParameters 填好，
-            // 这里只补 API 才有的 BattleTime + Rank #）
-            BattleTime = FormatShortTime(d.BattleEndTime);
-            RankText = FormatRank(d.Rank);
+            BattleTime = FormatShortTime(p.BattleEndTimeMs);
+            RankText = FormatRank(p.Rank);
 
-            // Personal header
-            PlayerAvatar = d.Hero?.HeroIcon ?? string.Empty;
-            PlayerName = d.Role?.RoleName ?? string.Empty;
-            HeroName = d.Hero?.HeroName ?? string.Empty;
+            PlayerAvatar = p.HeroIcon;
+            PlayerName = p.RoleName;
+            HeroName = p.HeroName;
 
             HonorTitles.Clear();
-            if (d.HonorTitles != null)
-                foreach (var h in d.HonorTitles)
-                    HonorTitles.Add(new HonorTitleDisplay
-                    {
-                        Icon = h.HonorIcon ?? string.Empty,
-                        Name = h.HonorName ?? string.Empty,
-                        Desc = h.HonorDesc ?? string.Empty,
-                    });
+            foreach (var h in p.HonorTitles)
+                HonorTitles.Add(new HonorTitleDisplay
+                {
+                    Icon = h.Icon,
+                    Name = h.Name,
+                    Desc = h.Desc,
+                });
 
             // 4 大 core-data + 剩余 MoreStats (从 DataList 中分离前 4 个作 core，其余作展开)
             CoreData.Clear();
             MoreStats.Clear();
-            if (d.DataList != null)
+            var i = 0;
+            foreach (var s in p.DataList)
             {
-                var i = 0;
-                foreach (var s in d.DataList)
-                {
-                    var entry = new StatEntryDisplay { Name = s.Name ?? string.Empty, Value = s.Value ?? string.Empty };
-                    if (i < 4)
-                        CoreData.Add(new CoreDataItem { Label = entry.Name, Value = entry.Value });
-                    else
-                        MoreStats.Add(entry);
-                    i++;
-                }
+                var entry = new StatEntryDisplay { Name = s.Name, Value = s.Value };
+                if (i < 4)
+                    CoreData.Add(new CoreDataItem { Label = entry.Name, Value = entry.Value });
+                else
+                    MoreStats.Add(entry);
+                i++;
             }
 
             Weapons.Clear();
-            if (d.Weapons != null)
-                foreach (var w in d.Weapons)
-                    Weapons.Add(new WeaponDisplay
-                    {
-                        Icon = w.WeaponIcon ?? string.Empty,
-                        Name = w.WeaponName ?? string.Empty,
-                        Level = w.WeaponLevel ?? 0,
-                        Kill = (int)(w.Kill ?? 0),
-                        Damage = (int)(w.Damage ?? 0),
-                        Percent = (double)(w.Percent ?? 0),
-                    });
+            foreach (var w in p.Weapons)
+                Weapons.Add(new WeaponDisplay
+                {
+                    Icon = w.Icon,
+                    Name = w.Name,
+                    Level = w.Level,
+                    Kill = w.Kill,
+                    Damage = w.Damage,
+                    Percent = w.Percent,
+                });
 
             SoulItems.Clear();
-            if (d.SoulItems != null)
-                foreach (var s in d.SoulItems)
-                    SoulItems.Add(new SoulItemDisplay
-                    {
-                        Icon = s.SoulItemIcon ?? string.Empty,
-                        Name = s.SoulItemName ?? string.Empty,
-                        Level = s.SoulItemLevel ?? 0,
-                    });
+            foreach (var s in p.SoulItems)
+                SoulItems.Add(new SoulItemDisplay
+                {
+                    Icon = s.Icon,
+                    Name = s.Name,
+                    Level = s.Level,
+                });
         }
 
-        private void ApplyTeam(TeamBattleDetailData? t)
+        private void ApplyTeam(System.Collections.Generic.IReadOnlyList<UnifiedTeammate>? teammates)
         {
             Teammates.Clear();
-            if (t?.Teammates == null) return;
-            foreach (var m in t.Teammates)
+            if (teammates == null) return;
+            foreach (var m in teammates)
             {
+                var weapons = new ObservableCollection<WeaponDisplay>();
+                foreach (var w in m.Weapons)
+                    weapons.Add(new WeaponDisplay
+                    {
+                        Icon = w.Icon,
+                        Name = w.Name,
+                        Level = w.Level,
+                        Kill = w.Kill,
+                        Damage = w.Damage,
+                        Percent = w.Percent,
+                    });
+                var souls = new ObservableCollection<SoulItemDisplay>();
+                foreach (var s in m.SoulItems)
+                    souls.Add(new SoulItemDisplay
+                    {
+                        Icon = s.Icon,
+                        Name = s.Name,
+                        Level = s.Level,
+                    });
+                var dataList = new ObservableCollection<StatEntryDisplay>();
+                foreach (var s in m.DataList)
+                    dataList.Add(new StatEntryDisplay { Name = s.Name, Value = s.Value });
+
                 Teammates.Add(new TeammateDisplay
                 {
-                    HeroIcon = m.Hero?.HeroIcon ?? string.Empty,
-                    HeroName = m.Hero?.HeroName ?? string.Empty,
-                    RoleName = m.Role?.RoleName ?? string.Empty,
-                    IsMe = m.IsMe ?? false,
-                    ArmorIcon = m.Armor?.ArmorIcon ?? string.Empty,
-                    ArmorLevel = m.Armor?.ArmorLevel ?? 0,
-                    Weapons = new ObservableCollection<WeaponDisplay>(BuildWeapons(m.Weapons)),
-                    SoulItems = new ObservableCollection<SoulItemDisplay>(BuildSouls(m.SoulItems)),
-                    DataList = new ObservableCollection<StatEntryDisplay>(BuildStats(m.DataList)),
+                    HeroIcon = m.HeroIcon,
+                    HeroName = m.HeroName,
+                    RoleName = m.RoleName,
+                    IsMe = m.IsMe,
+                    ArmorIcon = m.Armor?.Icon ?? string.Empty,
+                    ArmorLevel = m.Armor?.Level ?? 0,
+                    Weapons = weapons,
+                    SoulItems = souls,
+                    DataList = dataList,
                 });
             }
         }
 
-        private void ApplyTop5(Top5BattleDetailData? t)
+        private void ApplyTop5(System.Collections.Generic.IReadOnlyList<UnifiedTop5Entry>? top5)
         {
             Top5Entries.Clear();
-            if (t?.Top5 == null) return;
-            foreach (var e in t.Top5)
+            if (top5 == null) return;
+            foreach (var e in top5)
             {
                 var entry = new Top5EntryDisplay { Rank = FormatRank(e.Rank) };
-                if (e.Members != null)
-                    foreach (var m in e.Members)
-                        entry.Members.Add(new Top5MemberDisplay
-                        {
-                            HeroIcon = m.Hero?.HeroIcon ?? string.Empty,
-                            HeroName = m.Hero?.HeroName ?? string.Empty,
-                            RoleName = m.Role?.RoleName ?? string.Empty,
-                            IsMe = m.IsMe ?? false,
-                        });
+                foreach (var m in e.Members)
+                    entry.Members.Add(new Top5MemberDisplay
+                    {
+                        HeroIcon = m.HeroIcon,
+                        HeroName = m.HeroName,
+                        RoleName = m.RoleName,
+                        IsMe = m.IsMe,
+                    });
                 Top5Entries.Add(entry);
             }
         }
 
-        // === 帮助方法 ===
-        private static System.Collections.Generic.IEnumerable<WeaponDisplay> BuildWeapons(System.Collections.Generic.List<WeaponInfo>? list)
+        private static string FormatRank(int rank)
         {
-            if (list == null) yield break;
-            foreach (var w in list)
-                yield return new WeaponDisplay
-                {
-                    Icon = w.WeaponIcon ?? string.Empty,
-                    Name = w.WeaponName ?? string.Empty,
-                    Level = w.WeaponLevel ?? 0,
-                    Kill = (int)(w.Kill ?? 0),
-                    Damage = (int)(w.Damage ?? 0),
-                    Percent = (double)(w.Percent ?? 0),
-                };
+            if (rank <= 0) return string.Empty;
+            return "#" + rank.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
-        private static System.Collections.Generic.IEnumerable<SoulItemDisplay> BuildSouls(System.Collections.Generic.List<SoulItemInfo>? list)
+        private static string FormatShortTime(long unixMs)
         {
-            if (list == null) yield break;
-            foreach (var s in list)
-                yield return new SoulItemDisplay
-                {
-                    Icon = s.SoulItemIcon ?? string.Empty,
-                    Name = s.SoulItemName ?? string.Empty,
-                    Level = s.SoulItemLevel ?? 0,
-                };
-        }
-
-        private static System.Collections.Generic.IEnumerable<StatEntryDisplay> BuildStats(System.Collections.Generic.List<StatItem>? list)
-        {
-            if (list == null) yield break;
-            foreach (var s in list)
-                yield return new StatEntryDisplay { Name = s.Name ?? string.Empty, Value = s.Value ?? string.Empty };
-        }
-
-        private static string FormatRank(double? rank)
-        {
-            if (rank == null || rank <= 0) return string.Empty;
-            return "#" + ((int)rank.Value).ToString(System.Globalization.CultureInfo.InvariantCulture);
-        }
-
-        private static string FormatShortTime(long? unixMs)
-        {
-            if (unixMs == null || unixMs <= 0) return string.Empty;
+            if (unixMs <= 0) return string.Empty;
             try
             {
-                // 后端 battleEndTime 单位为毫秒（如 1782490539000）。
-                var dt = DateTimeOffset.FromUnixTimeMilliseconds(unixMs.Value).ToLocalTime().DateTime;
+                // 后端 battleEndTime 单位为毫秒（miniProgram 原生就是毫秒；heyBox time 是秒，
+                // 已在 UnifiedMapper.MapHeyBoxRecent / MapHeyBoxBattleDetail 处 * 1000 归一化）。
+                var dt = DateTimeOffset.FromUnixTimeMilliseconds(unixMs).ToLocalTime().DateTime;
                 return dt.ToString("MM/dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
             }
             catch { return string.Empty; }
