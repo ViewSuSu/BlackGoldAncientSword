@@ -12,7 +12,7 @@ namespace BlackGoldAncientSword.Tests.Http.Auth
     {
         private sealed class StubTicketProvider : ISignatureTicketProvider
         {
-            public SignatureTicket Ticket = new("naraka-h5", "S", 9_999_999_999_999);
+            public SignatureTicket Ticket = new("naraka-desktop", "S", 9_999_999_999_999);
             public int Calls;
             public Task<SignatureTicket> GetAsync(CancellationToken ct = default)
             {

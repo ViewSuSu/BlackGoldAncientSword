@@ -50,32 +50,5 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             }
         }
 
-        /// <summary>
-        /// 串行为对局列表中的每一项拉取 HonorTitles（miniProgram），或从 heyBox 详情的 tags 抽取。
-        /// 串行而非并行：服务端对单玩家高频接口有节流，并行经验上会触发 429。
-        /// 每拉完一项调用 <paramref name="onItemReady"/>。
-        /// </summary>
-        public async Task FetchHonorTitlesForListAsync(
-            PlayerSourceContext ctx,
-            List<UnifiedRecentBattleItem> battleItems,
-            Action<int, IReadOnlyList<UnifiedHonorTitle>> onItemReady,
-            CancellationToken ct)
-        {
-            for (int i = 0; i < battleItems.Count; i++)
-            {
-                if (ct.IsCancellationRequested) return;
-
-                var battleId = battleItems[i].BattleId;
-                if (string.IsNullOrEmpty(battleId))
-                {
-                    onItemReady(i, Array.Empty<UnifiedHonorTitle>());
-                    continue;
-                }
-
-                var detail = await _playerStatsLoader.FetchBattleDetailAsync(ctx, battleId, ct).ConfigureAwait(false);
-                var titles = detail?.Personal?.HonorTitles ?? Array.Empty<UnifiedHonorTitle>();
-                onItemReady(i, titles);
-            }
-        }
-    }
+   }
 }
