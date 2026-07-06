@@ -18,7 +18,7 @@ namespace BlackGoldAncientSword.Tests.Http.Auth
                 new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(
-                        """{"code":200,"data":{"appId":"naraka-h5","appSecret":"S","expireTime":9999999999999}}""",
+                        """{"code":200,"data":{"appId":"naraka-desktop","appSecret":"S","expireTime":9999999999999}}""",
                         Encoding.UTF8,
                         "application/json"),
                 };
@@ -56,7 +56,7 @@ namespace BlackGoldAncientSword.Tests.Http.Auth
             handler.Responder = _ => new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(
-                    "{\"code\":200,\"data\":{\"appId\":\"naraka-h5\",\"appSecret\":\"S\",\"expireTime\":" + expire + "}}",
+                    "{\"code\":200,\"data\":{\"appId\":\"naraka-desktop\",\"appSecret\":\"S\",\"expireTime\":" + expire + "}}",
                     Encoding.UTF8,
                     "application/json"),
             };
