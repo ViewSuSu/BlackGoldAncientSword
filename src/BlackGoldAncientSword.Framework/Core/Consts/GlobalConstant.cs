@@ -13,6 +13,7 @@
         public const string FeedbackRegion = nameof(FeedbackRegion);
         public const string UpdateNotificationRegion = nameof(UpdateNotificationRegion);
         public const string BattleDetailRegion = nameof(BattleDetailRegion);
+        public const string AuthChallengeRegion = nameof(AuthChallengeRegion);
     }
 }
 
