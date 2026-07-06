@@ -106,13 +106,95 @@
                         Command="{Binding DismissCommand}"
                         Content="{DynamicResource UpdateNotification.Later}"
                         ToolTip="{DynamicResource UpdateNotification.Later}" />
+                    <!--  在线更新：主 CTA。DropShadowEffect + Storyboard 让阴影发光 + 轻微缩放循环呼吸，抓用户视觉。  -->
                     <Button
-                        Height="32"
-                        MinWidth="100"
+                        Height="34"
+                        MinWidth="120"
+                        Padding="14,0"
                         Command="{Binding OnlineUpdateCommand}"
                         Content="{DynamicResource UpdateNotification.OnlineUpdate}"
+                        Cursor="Hand"
+                        FontSize="13"
+                        FontWeight="Bold"
+                        Foreground="White"
                         IsEnabled="{Binding CanOnlineUpdate}"
-                        ToolTip="{DynamicResource UpdateNotification.OnlineUpdate.ToolTip}" />
+                        RenderTransformOrigin="0.5,0.5"
+                        ToolTip="{DynamicResource UpdateNotification.OnlineUpdate.ToolTip}">
+                        <Button.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Offset="0" Color="#FF4A90E2" />
+                                <GradientStop Offset="1" Color="#FF7B4FE0" />
+                            </LinearGradientBrush>
+                        </Button.Background>
+                        <Button.Effect>
+                            <DropShadowEffect
+                                x:Name="OnlineUpdateGlow"
+                                BlurRadius="14"
+                                Direction="0"
+                                Opacity="0.6"
+                                ShadowDepth="0"
+                                Color="#7B4FE0" />
+                        </Button.Effect>
+                        <Button.RenderTransform>
+                            <ScaleTransform x:Name="OnlineUpdateScale" ScaleX="1" ScaleY="1" />
+                        </Button.RenderTransform>
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border
+                                    x:Name="Bd"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="6">
+                                    <ContentPresenter
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        RecognizesAccessKey="True" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.9" />
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.75" />
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Button.Triggers>
+                            <EventTrigger RoutedEvent="Button.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="OnlineUpdateGlow"
+                                            Storyboard.TargetProperty="BlurRadius"
+                                            From="10"
+                                            To="26"
+                                            Duration="0:0:1.2" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="OnlineUpdateGlow"
+                                            Storyboard.TargetProperty="Opacity"
+                                            From="0.45"
+                                            To="0.95"
+                                            Duration="0:0:1.2" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="OnlineUpdateScale"
+                                            Storyboard.TargetProperty="ScaleX"
+                                            From="1"
+                                            To="1.05"
+                                            Duration="0:0:1.2" />
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="OnlineUpdateScale"
+                                            Storyboard.TargetProperty="ScaleY"
+                                            From="1"
+                                            To="1.05"
+                                            Duration="0:0:1.2" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Button.Triggers>
+                    </Button>
                 </StackPanel>
 
             </StackPanel>

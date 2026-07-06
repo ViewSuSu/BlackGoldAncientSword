@@ -1,0 +1,197 @@
+<bases:UserControlBase
+    x:Class="BlackGoldAncientSword.Modules.UI.AuthChallenge.Views.AuthChallengePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
+    xmlns:consts="clr-namespace:BlackGoldAncientSword.Framework.Core.Consts;assembly=BlackGoldAncientSword.Framework"
+    xmlns:ctrls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    mc:Ignorable="d">
+    <ctrls:OverlayHost
+        CardMaxHeight="720"
+        CardMaxWidth="440"
+        CardMinWidth="380"
+        EscapeDismisses="False"
+        RegionName="{x:Static consts:GlobalConstant.AuthChallengeRegion}"
+        Title="登录 / 验证">
+
+        <StackPanel>
+
+            <!--  提示  -->
+            <TextBlock
+                Margin="0,0,0,12"
+                FontSize="13"
+                Foreground="{DynamicResource TextPrimaryBrush}"
+                Text="{Binding StepTitle}"
+                TextWrapping="Wrap" />
+
+            <!--  Step 1: 滑块验证  -->
+            <Grid Margin="0,0,0,12" Visibility="{Binding IsCaptchaStage, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <!--  拼图图片区  -->
+                    <Border
+                        x:Name="CaptchaImageBox"
+                        Width="310"
+                        Height="155"
+                        HorizontalAlignment="Center"
+                        Background="#22000000"
+                        BorderBrush="{DynamicResource BorderLightBrush}"
+                        BorderThickness="1"
+                        ClipToBounds="True"
+                        CornerRadius="4">
+                        <Grid>
+                            <Image
+                                x:Name="BackgroundImage"
+                                Source="{Binding BackgroundImage}"
+                                Stretch="Fill" />
+                            <Image
+                                x:Name="JigsawImage"
+                                Width="47"
+                                Height="155"
+                                HorizontalAlignment="Left"
+                                Source="{Binding JigsawImage}"
+                                Stretch="None">
+                                <Image.RenderTransform>
+                                    <TranslateTransform x:Name="JigsawTranslate" X="0" Y="0" />
+                                </Image.RenderTransform>
+                            </Image>
+                            <!--  加载中提示  -->
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Foreground="White"
+                                Text="加载验证码中…"
+                                Visibility="{Binding IsCaptchaLoading, Converter={StaticResource BoolToVisibilityConverter}}" />
+                        </Grid>
+                    </Border>
+
+                    <!--  滑动条 + 手柄  -->
+                    <Border
+                        Width="310"
+                        Height="40"
+                        Margin="0,10,0,0"
+                        HorizontalAlignment="Center"
+                        Background="{DynamicResource SurfaceTertiaryBrush}"
+                        BorderBrush="{DynamicResource BorderLightBrush}"
+                        BorderThickness="1"
+                        CornerRadius="20">
+                        <Grid x:Name="SliderTrack" ClipToBounds="True">
+                            <!--  轨道背景+进度  -->
+                            <Border
+                                x:Name="SliderProgress"
+                                Width="0"
+                                HorizontalAlignment="Left"
+                                Background="{DynamicResource AccentLightBrush}"
+                                CornerRadius="20" />
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="12"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                Text="{Binding SliderHintText}" />
+                            <!--  手柄  -->
+                            <Border
+                                x:Name="SliderThumb"
+                                Width="44"
+                                Height="40"
+                                HorizontalAlignment="Left"
+                                Background="White"
+                                BorderBrush="{DynamicResource AccentPrimaryBrush}"
+                                BorderThickness="1"
+                                CornerRadius="20"
+                                Cursor="Hand"
+                                MouseLeftButtonDown="OnSliderThumbMouseDown">
+                                <Border.RenderTransform>
+                                    <TranslateTransform x:Name="ThumbTranslate" X="0" Y="0" />
+                                </Border.RenderTransform>
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="18"
+                                    Foreground="{DynamicResource AccentPrimaryBrush}"
+                                    Text="›" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Center"
+                        FontSize="11"
+                        Foreground="Red"
+                        Text="{Binding CaptchaError}"
+                        Visibility="{Binding HasCaptchaError, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                    <Button
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Right"
+                        Command="{Binding RefreshCaptchaCommand}"
+                        Content="换一张"
+                        FontSize="11" />
+                </StackPanel>
+            </Grid>
+
+            <!--  Step 2: 微信扫码  -->
+            <StackPanel HorizontalAlignment="Center" Visibility="{Binding IsQrStage, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock
+                    Margin="0,0,0,8"
+                    HorizontalAlignment="Center"
+                    FontSize="12"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
+                    Text="使用微信扫码关注公众号，然后发送下方验证码" />
+                <Border
+                    Width="200"
+                    Height="200"
+                    HorizontalAlignment="Center"
+                    Background="White"
+                    BorderBrush="{DynamicResource BorderLightBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                    <Image
+                        Margin="6"
+                        Source="{Binding QrImage}"
+                        Stretch="Uniform" />
+                </Border>
+                <Border
+                    Margin="0,10,0,0"
+                    Padding="16,6"
+                    HorizontalAlignment="Center"
+                    Background="{DynamicResource AccentLightBrush}"
+                    CornerRadius="4">
+                    <TextBlock
+                        FontFamily="Consolas"
+                        FontSize="18"
+                        FontWeight="Bold"
+                        Foreground="{DynamicResource AccentPrimaryBrush}"
+                        Text="{Binding VerificationCode}" />
+                </Border>
+                <TextBlock
+                    Margin="0,8,0,0"
+                    HorizontalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
+                    Text="{Binding QrStatusText}" />
+            </StackPanel>
+
+            <!--  底部状态 + 退出按钮  -->
+            <StackPanel Margin="0,16,0,0" Orientation="Horizontal">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
+                    Text="{Binding StatusText}"
+                    TextWrapping="Wrap" />
+                <Button
+                    Height="28"
+                    MinWidth="72"
+                    Margin="12,0,0,0"
+                    HorizontalAlignment="Right"
+                    Command="{Binding CancelCommand}"
+                    Content="取消并退出"
+                    FontSize="11" />
+            </StackPanel>
+        </StackPanel>
+    </ctrls:OverlayHost>
+</bases:UserControlBase>
