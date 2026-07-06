@@ -721,18 +721,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         var b = battleItems[i];
                         var modeCode = b.GameMode;
                         RecentBattles.Add(new RecentBattleDisplayItem
-                        {
-                            BattleId = b.BattleId,
-                            Rank = b.Rank,
-                            HonorTitles = new ObservableCollection<HonorTitleDisplayItem>(
-                                b.HonorTitles.Select(h => new HonorTitleDisplayItem
-                                {
-                                    Icon = h.Icon,
-                                    Name = h.Name,
-                                    HonorName = h.Name,
-                                    HonorDesc = h.Desc,
-                                })),
-                            HeroIcon = b.HeroIcon,
+                       {
+                           BattleId = b.BattleId,
+                           Rank = b.Rank,
+                           HeroIcon = b.HeroIcon,
                             HeroName = string.IsNullOrEmpty(b.HeroName) ? "Unknown" : b.HeroName,
                             GameModeText = FormatGameMode(modeCode),
                             GameModeCategoryText = FormatGameModeCategory(modeCode),
@@ -754,13 +746,11 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         });
                     }
 
-                    // Loading spinner done — launch team performance fetch in background
-                    RecentBattlesProgress = 100;
-                    IsRecentBattlesLoading = false;
-                    _ = FetchHonorTitlesSeriallyAsync(battleItems, ct);
-                }
+                   RecentBattlesProgress = 100;
+                   IsRecentBattlesLoading = false;
+               }
 
-                return true;
+               return true;
             }
             catch (OperationCanceledException)
             {
@@ -781,47 +771,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
         }
 
-        private async System.Threading.Tasks.Task FetchHonorTitlesSeriallyAsync(
-            System.Collections.Generic.List<UnifiedRecentBattleItem> battleItems, CancellationToken ct)
-        {
-            if (_sourceContext == null) return;
-            try
-            {
-                await _battleListLoader.FetchHonorTitlesForListAsync(
-                    _sourceContext,
-                    battleItems,
-                    (index, titles) => { _ = _uiDispatcher.InvokeAsync(() => ApplyHonorTitlesToBattle(index, titles)); },
-                    ct);
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[{nameof(StatsPageViewModel)}] FetchHonorTitlesSeriallyAsync failed: {ex}");
-            }
-        }
 
-        /// <summary>
-        /// 把单条对局拉回的 HonorTitles 映射到对应 UI Item。
-        /// 映射逻辑保留在 VM：这是从 DTO 到 UI Item 的转换，属于显示层职责。
-        /// </summary>
-        private void ApplyHonorTitlesToBattle(int index, IReadOnlyList<UnifiedHonorTitle> titles)
-        {
-            if (index < 0 || index >= RecentBattles.Count) return;
-
-            var existing = RecentBattles[index].HonorTitles;
-            existing.Clear();
-            foreach (var t in titles)
-                existing.Add(new HonorTitleDisplayItem
-                {
-                    Icon = t.Icon,
-                    Name = t.Name,
-                    HonorName = t.Name,
-                    HonorDesc = t.Desc,
-                });
-            RecentBattlesProgress = Math.Min(100, RecentBattlesProgress + 10);
-        }
-
-        private async System.Threading.Tasks.Task LoadStatsAsync(CancellationToken ct)
+       private async System.Threading.Tasks.Task LoadStatsAsync(CancellationToken ct)
         {
             if (_sourceContext == null || string.IsNullOrEmpty(_roleId) || SelectedSeason == null)
                 return;
@@ -1179,10 +1130,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
     public class RecentBattleDisplayItem
     {
-        public string BattleId { get; set; } = string.Empty;
-        public double Rank { get; set; }
-        public ObservableCollection<HonorTitleDisplayItem> HonorTitles { get; set; } = new();
-        public string HeroIcon { get; set; } = string.Empty;
+       public string BattleId { get; set; } = string.Empty;
+       public double Rank { get; set; }
+       public string HeroIcon { get; set; } = string.Empty;
         public string HeroName { get; set; } = string.Empty;
         public string GameModeText { get; set; } = string.Empty;
         public int GameMode { get; set; }
@@ -1199,17 +1149,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string ScoreDiffDisplay { get; set; } = string.Empty;
         public string BattleTime { get; set; } = string.Empty;
         public bool IsRankMode { get; set; }
-    }
+   }
 
-    public class HonorTitleDisplayItem
-    {
-        public string Icon { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string HonorName { get; set; } = string.Empty;
-        public string HonorDesc { get; set; } = string.Empty;
-    }
-
-    public class TeamSizeOption
+   public class TeamSizeOption
     {
         public TeamSize Value { get; }
         public TeamSizeOption(TeamSize value) => Value = value;
