@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Windows.Threading;
 using System.Diagnostics;
 using BlackGoldAncientSword.App.Shell;
@@ -5,7 +6,11 @@ using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Extensions;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
+using BlackGoldAncientSword.Framework.Http;
+using BlackGoldAncientSword.Framework.Http.Auth.ApiSignature;
+using BlackGoldAncientSword.Framework.Http.Auth.Token;
 using BlackGoldAncientSword.Framework.Services;
+using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.GameMonitor;
 using BlackGoldAncientSword.Modules;
 using BlackGoldAncientSword.Ocr;
@@ -16,6 +21,8 @@ namespace BlackGoldAncientSword.App
 {
     public partial class App : Framework.Core.Bases.PrismApplicationBase
     {
+        private AuthTokenExpiryMonitor? _authTokenExpiryMonitor;
+
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
         {
             containerRegistry.Register<MainWindow>();
@@ -57,6 +64,68 @@ namespace BlackGoldAncientSword.App
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException += OnTaskSchedulerUnobservedTaskException;
 
             base.OnStartup(e);
+
+            // 装配 NarakaApiClient 的 HttpMessageHandler 链：SignatureHandler → AuthTokenHandler → HttpClientHandler
+            // 恢复本地 token（未过期即静默登录）。任何构造失败都不能中断 App 启动，只是让客户端保持无签名/无 Bearer。
+            IAuthChallengeService? challengeService = null;
+            IAuthTokenState? tokenStateForGate = null;
+            try
+            {
+                var ticketProvider = Container.Resolve<ISignatureTicketProvider>();
+                var tokenState = Container.Resolve<IAuthTokenState>();
+                var tokenStore = Container.Resolve<IAuthTokenStore>();
+                var refresher = Container.Resolve<IAuthTokenRefresher>();
+                var challenge = Container.Resolve<IAuthChallengeService>();
+                challengeService = challenge;
+                tokenStateForGate = tokenState;
+
+                var handlerChain = new SignatureHandler(ticketProvider)
+                {
+                    InnerHandler = new AuthTokenHandler(tokenState, tokenStore, refresher, challenge)
+                    {
+                        InnerHandler = new HttpClientHandler()
+                    }
+                };
+                NarakaApiClient.Configure(handlerChain);
+
+                var restored = tokenStore.Load();
+                if (restored != null && restored.ExpiresAtUnixMs > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    tokenState.Set(restored);
+                }
+                else if (restored != null)
+                {
+                    tokenStore.Clear();
+                }
+
+                // 主动过期监视：token 到期前 30s 提前 refresh；失败自动弹登录。
+                _authTokenExpiryMonitor = new AuthTokenExpiryMonitor(tokenState, tokenStore, refresher, challenge);
+                _authTokenExpiryMonitor.Start();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(App)}] Auth pipeline init failed: {ex}");
+            }
+
+            // 登录 gate：本地无有效 token 时先阻塞弹登录 Overlay，扫码成功后再放行所有后续 UI/UX（导航、更新弹窗、OCR 预热）。
+            // 登录失败 / 用户取消 → Shutdown（用户强制要求）。
+            if (challengeService != null && tokenStateForGate?.Current is null)
+            {
+                bool loggedIn = false;
+                try
+                {
+                    loggedIn = await challengeService.ShowAsync();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[{nameof(App)}] Startup login gate failed: {ex}");
+                }
+                if (!loggedIn)
+                {
+                    Shutdown();
+                    return;
+                }
+            }
 
             // Eagerly create TeamInfo ViewModel so it can always listen for game status
             var navigation = Container.Resolve<IMainContentNavigationService>();
@@ -117,6 +186,9 @@ namespace BlackGoldAncientSword.App
             DispatcherUnhandledException -= OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException -= OnAppDomainUnhandledException;
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException -= OnTaskSchedulerUnobservedTaskException;
+
+            _authTokenExpiryMonitor?.Dispose();
+            _authTokenExpiryMonitor = null;
 
             base.OnExit(e);
         }
