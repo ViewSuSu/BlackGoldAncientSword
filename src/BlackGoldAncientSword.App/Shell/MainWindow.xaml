@@ -632,6 +632,17 @@
                     x:Name="UpdateNotificationOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.UpdateNotificationRegion}" />
 
+                <!--  Auth challenge overlay (login gate, highest of overlays)  -->
+                <ContentControl
+                    Grid.RowSpan="3"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    Panel.ZIndex="10070"
+                    x:Name="AuthChallengeOverlay"
+                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.AuthChallengeRegion}" />
+
                 <!--  Battle detail overlay (below close prompt, above announcement)  -->
                 <ContentControl
                     Grid.RowSpan="3"
