@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http.Auth.Captcha;
+using BlackGoldAncientSword.Framework.Http.Auth.MemberProfile;
 using BlackGoldAncientSword.Framework.Http.Auth.Token;
 using BlackGoldAncientSword.Framework.Http.Auth.WechatQr;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
@@ -26,24 +27,30 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
         private readonly IAuthTokenStore _tokenStore;
         private readonly IAuthTokenState _tokenState;
         private readonly IAuthChallengeService _challenge;
+        private readonly IMemberProfileService _memberProfile;
 
         private CaptchaChallenge? _currentCaptcha;
         private QrChallenge? _currentQr;
         private CancellationTokenSource? _pollCts;
         private bool _completed;
 
+        /// <summary>验证码开始重新加载时触发，View 侧订阅以重置滑块视觉位置。</summary>
+        public event Action? CaptchaReloadStarted;
+
         public AuthChallengePageViewModel(
             IAjCaptchaService captcha,
             IWechatQrLoginService qr,
             IAuthTokenStore tokenStore,
             IAuthTokenState tokenState,
-            IAuthChallengeService challenge)
+            IAuthChallengeService challenge,
+            IMemberProfileService memberProfile)
         {
             _captcha = captcha;
             _qr = qr;
             _tokenStore = tokenStore;
             _tokenState = tokenState;
             _challenge = challenge;
+            _memberProfile = memberProfile;
             _ = LoadCaptchaAsync();
         }
 
@@ -114,6 +121,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
 
         private async Task LoadCaptchaAsync()
         {
+            CaptchaReloadStarted?.Invoke();
             IsCaptchaLoading = true;
             CaptchaError = null;
             SliderHintText = "验证码加载中…";
@@ -253,12 +261,24 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             }
         }
 
-        private void OnLoginSucceeded(AuthToken token)
+        private async void OnLoginSucceeded(AuthToken token)
         {
             try
             {
+                // Step 1: 先把 token 注入 state，让 HTTP 链路立即可用 Bearer。
                 _tokenState.Set(token);
-                _tokenStore.Save(token);
+
+                // Step 2: 与网页 auth.fetchUserInfo() 对齐——QR 登录响应不含 profile，需要单独拉一次。
+                //         成功 → 用带 nickname/avatar 的 UserJson 替换 token；失败 → 保留旧 UserJson，不阻塞登录成功。
+                var profileJson = await _memberProfile.GetProfileJsonAsync(token.AccessToken).ConfigureAwait(true);
+                var finalToken = string.IsNullOrEmpty(profileJson)
+                    ? token
+                    : token with { UserJson = profileJson };
+                if (!ReferenceEquals(finalToken, token))
+                    _tokenState.Set(finalToken);
+
+                // Step 3: 持久化最终形态的 token（含 profile）到 auth.dat，避免下次启动又是空 nickname。
+                _tokenStore.Save(finalToken);
                 _completed = true;
                 _challenge.Complete(true);
                 StatusText = "登录成功，正在返回…";
