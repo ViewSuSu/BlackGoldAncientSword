@@ -190,6 +190,8 @@ namespace BlackGoldAncientSword.App.Shell
                 }
             });
 
+        public UserProfileViewModel UserProfile { get; }
+
         public MainWindowViewModel(
             IPlayerPrefsService playerPrefsService,
             IMainContentNavigationService navigation,
@@ -201,8 +203,10 @@ namespace BlackGoldAncientSword.App.Shell
             IGameStatusMonitor gameStatusMonitor,
             IGameLogMonitor gameLogMonitor,
             IUIDispatcher uiDispatcher,
-            ToastQueueManager toastQueueManager)
+            ToastQueueManager toastQueueManager,
+            UserProfileViewModel userProfile)
         {
+            UserProfile = userProfile;
             _playerPrefsService = playerPrefsService;
             _navigation = navigation;
             _regionManager = regionManager;

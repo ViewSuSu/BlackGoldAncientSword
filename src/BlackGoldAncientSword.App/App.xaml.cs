@@ -65,8 +65,16 @@ namespace BlackGoldAncientSword.App
 
             base.OnStartup(e);
 
-            // 装配 NarakaApiClient 的 HttpMessageHandler 链：SignatureHandler → AuthTokenHandler → HttpClientHandler
-            // 恢复本地 token（未过期即静默登录）。任何构造失败都不能中断 App 启动，只是让客户端保持无签名/无 Bearer。
+            // 启动流程契约（顺序不能乱）：
+            //   1) Auth pipeline INIT（静默）：只搭 handler + 恢复本地 token + 启动过期监视，不弹任何 UI
+            //   2) Settings 加载：后续 ImageCache / Update 可能读 settings.Current
+            //   3) ImageCache init：CachePath 依赖 Settings
+            //   4) 新版本检测 + 更新 gate：await CheckForUpdatesAsync，如有新版则阻塞在 IUpdateGateService.WaitAsync，
+            //      直到用户点在线更新 / 打开浏览器 / 稍后再说，DismissOverlay 里 Complete()
+            //   5) 登录 gate：本地无有效 token 才弹扫码；用户取消 → Shutdown
+            //   6) 主页导航 + OCR 预热
+
+            // [1] Auth pipeline INIT。任何构造失败都不能中断 App 启动，只是让客户端保持无签名/无 Bearer。
             IAuthChallengeService? challengeService = null;
             IAuthTokenState? tokenStateForGate = null;
             try
@@ -107,8 +115,54 @@ namespace BlackGoldAncientSword.App
                 Debug.WriteLine($"[{nameof(App)}] Auth pipeline init failed: {ex}");
             }
 
-            // 登录 gate：本地无有效 token 时先阻塞弹登录 Overlay，扫码成功后再放行所有后续 UI/UX（导航、更新弹窗、OCR 预热）。
-            // 登录失败 / 用户取消 → Shutdown（用户强制要求）。
+            // [2] Settings 加载。失败留默认值 + 日志。
+            try
+            {
+                var settings = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService>();
+                await settings.LoadAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(App)}] Settings load failed: {ex}");
+            }
+
+            // [3] ImageCache init。依赖 Settings。
+            try
+            {
+                var cacheService = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IImageCacheService>();
+                var settingsService = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService>();
+                var cachePath = settingsService.Current.CachePath;
+                if (string.IsNullOrEmpty(cachePath))
+                    cachePath = BlackGoldAncientSword.Framework.Services.AppSettings.GetDefaultCachePath();
+                cacheService.CachePath = cachePath;
+                BlackGoldAncientSword.Framework.Core.Extensions.UrlToImageSourceConverter.SetCacheService(cacheService);
+            }
+            catch (Exception ex)
+            {
+                // 启动期 ImageCache/Settings 初始化失败：后续所有依赖图片缓存的视图都会异常，必须留诊断线索。
+                Debug.WriteLine($"[{nameof(App)}] ImageCache init failed: {ex}");
+            }
+
+            // [4] 新版本检测 + 更新 gate。await 检测完成，命中新版就阻塞等用户处理完弹窗。
+            //     MainWindowViewModel 订阅 UpdateAvailabilityChanged → 自动弹 UpdateNotificationRegion 卡片；
+            //     用户三选一（在线更新 / 打开浏览器 / 稍后）→ DismissOverlay → IUpdateGateService.Complete()。
+            //     检测失败或无新版 → 直接跳过 WaitAsync，进入登录 gate。
+            try
+            {
+                var updater = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>();
+                await updater.CheckForUpdatesAsync(showNoUpdateMessage: false);
+                if (updater.IsUpdateAvailable)
+                {
+                    var updateGate = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateGateService>();
+                    await updateGate.WaitAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[{nameof(App)}] Update check / gate failed: {ex}");
+            }
+
+            // [5] 登录 gate：本地无有效 token 才弹扫码。登录失败 / 用户取消 → Shutdown。
             if (challengeService != null && tokenStateForGate?.Current is null)
             {
                 bool loggedIn = false;
@@ -127,42 +181,10 @@ namespace BlackGoldAncientSword.App
                 }
             }
 
-            // Eagerly create TeamInfo ViewModel so it can always listen for game status
+            // [6] 主页导航。Eagerly create TeamInfo ViewModel so it can always listen for game status.
             var navigation = Container.Resolve<IMainContentNavigationService>();
             navigation.NavigateTo(PageNames.TeamInfoPage);
             navigation.NavigateTo(PageNames.HomePage);
-
-            try
-            {
-                var cacheService = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IImageCacheService>();
-                var settingsService = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService>();
-                var cachePath = settingsService.Current.CachePath;
-                if (string.IsNullOrEmpty(cachePath))
-                    cachePath = BlackGoldAncientSword.Framework.Services.AppSettings.GetDefaultCachePath();
-                cacheService.CachePath = cachePath;
-                BlackGoldAncientSword.Framework.Core.Extensions.UrlToImageSourceConverter.SetCacheService(cacheService);
-            }
-            catch (Exception ex)
-            {
-                // 启动期 ImageCache/Settings 初始化失败：后续所有依赖图片缓存的视图都会异常，必须留诊断线索。
-                Debug.WriteLine($"[{nameof(App)}] ImageCache init failed: {ex}");
-            }
-
-            try
-            {
-                var settings = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService>();
-                // 等待异步加载完成，不阻塞 UI 线程
-                await settings.LoadAsync();
-                var updater = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>();
-
-                updater.CheckForUpdatesAsync(showNoUpdateMessage: false).SafeFireAndForget("App.CheckForUpdates");
-
-            }
-            catch (Exception ex)
-            {
-                // 设置加载失败：所有依赖 settings.Current 的模块都会用默认值；至少留日志方便诊断"为什么我的设置没生效"。
-                Debug.WriteLine($"[{nameof(App)}] Settings load / update check init failed: {ex}");
-            }
 
             try
             {

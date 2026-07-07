@@ -143,6 +143,10 @@
     <system:String x:Key="Nav.Personal">Personal</system:String>
     <system:String x:Key="Nav.Announcement">Announcement</system:String>
     <system:String x:Key="Nav.Feedback">Feedback</system:String>
+    <system:String x:Key="Auth.User.Login">Sign in</system:String>
+    <system:String x:Key="Auth.User.Logout">Sign out</system:String>
+    <system:String x:Key="Auth.User.RoleNormal">User</system:String>
+    <system:String x:Key="Auth.User.Anonymous">Not signed in</system:String>
     <system:String x:Key="Home.NoLocalData">No local player data found. Launch NarakaBladepoint first.</system:String>
     <system:String x:Key="Home.PlayerNotFound">Player not found on server.</system:String>
     <system:String x:Key="Home.RoleIdNotAvailable">Player role ID not available.</system:String>

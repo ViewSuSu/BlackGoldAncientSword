@@ -143,6 +143,10 @@
     <system:String x:Key="Nav.Personal">个人</system:String>
     <system:String x:Key="Nav.Announcement">公告</system:String>
     <system:String x:Key="Nav.Feedback">反馈</system:String>
+    <system:String x:Key="Auth.User.Login">登录</system:String>
+    <system:String x:Key="Auth.User.Logout">退出登录</system:String>
+    <system:String x:Key="Auth.User.RoleNormal">普通用户</system:String>
+    <system:String x:Key="Auth.User.Anonymous">未登录</system:String>
     <system:String x:Key="Home.NoLocalData">未找到本地玩家数据，请先启动永劫无间</system:String>
     <system:String x:Key="Home.PlayerNotFound">服务器上未找到该玩家</system:String>
     <system:String x:Key="Home.RoleIdNotAvailable">玩家角色ID不可用</system:String>
