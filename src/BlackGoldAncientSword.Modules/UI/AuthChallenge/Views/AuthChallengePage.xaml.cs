@@ -19,11 +19,32 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.Views
         public AuthChallengePage()
         {
             InitializeComponent();
+            Loaded += OnPageLoaded;
             Unloaded += OnPageUnloaded;
+            DataContextChanged += OnDataContextChanged;
+        }
+
+        private AuthChallengePageViewModel? _subscribedVm;
+
+        private void OnPageLoaded(object sender, RoutedEventArgs e) => SubscribeVm(DataContext as AuthChallengePageViewModel);
+
+        private void OnDataContextChanged(object sender, System.Windows.DependencyPropertyChangedEventArgs e) => SubscribeVm(e.NewValue as AuthChallengePageViewModel);
+
+        private void SubscribeVm(AuthChallengePageViewModel? vm)
+        {
+            if (ReferenceEquals(_subscribedVm, vm)) return;
+            if (_subscribedVm is not null) _subscribedVm.CaptchaReloadStarted -= ResetSliderVisual;
+            _subscribedVm = vm;
+            if (_subscribedVm is not null) _subscribedVm.CaptchaReloadStarted += ResetSliderVisual;
         }
 
         private void OnPageUnloaded(object sender, RoutedEventArgs e)
         {
+            if (_subscribedVm is not null)
+            {
+                _subscribedVm.CaptchaReloadStarted -= ResetSliderVisual;
+                _subscribedVm = null;
+            }
             if (DataContext is AuthChallengePageViewModel vm) vm.NotifyDismissedWithoutLogin();
         }
 

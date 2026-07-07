@@ -91,6 +91,9 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.Token
                     var next = await _refresher.RefreshAsync(token.RefreshToken, ct).ConfigureAwait(false);
                     if (next != null)
                     {
+                        // /refresh-token 响应不含 profile；合并当前 UserJson，避免每 20s 静默刷新丢头像/昵称。
+                        if (string.IsNullOrEmpty(next.UserJson) && !string.IsNullOrEmpty(token.UserJson))
+                            next = next with { UserJson = token.UserJson };
                         _state.Set(next);
                         _store.Save(next);
                         return;

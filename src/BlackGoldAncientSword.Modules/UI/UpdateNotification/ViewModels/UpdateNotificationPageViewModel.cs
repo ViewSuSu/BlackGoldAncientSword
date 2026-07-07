@@ -13,6 +13,7 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
         private const string MainAppExeName = "BlackGoldAncientSword.App.exe";
 
         private readonly IUpdateService _updateService;
+        private readonly IUpdateGateService _updateGate;
 
         public string LatestVersion => _updateService.LatestVersion ?? string.Empty;
 
@@ -27,9 +28,10 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
         public bool CanOnlineUpdate =>
             (!string.IsNullOrEmpty(_updateService.ZipDownloadUrl) || (_updateService.SplitDownloadUrls is { Count: > 0 })) && File.Exists(UpdaterExePath);
 
-        public UpdateNotificationPageViewModel(IUpdateService updateService)
+        public UpdateNotificationPageViewModel(IUpdateService updateService, IUpdateGateService updateGate)
         {
             _updateService = updateService;
+            _updateGate = updateGate;
             RaisePropertyChanged(nameof(LatestVersion));
             RaisePropertyChanged(nameof(DownloadUrl));
             RaisePropertyChanged(nameof(HasDownloadUrl));
@@ -119,6 +121,9 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
         {
             var region = regionManager.Regions[GlobalConstant.UpdateNotificationRegion];
             region.RemoveAll();
+            // 唤醒 App.OnStartup 里 await 的 UpdateGate；用户手动"检查更新"复用同一 VM，此时 gate 已 Complete
+            // 过（TCS 为 null），Complete() 是幂等 no-op，不会误触发第二次登录 gate。
+            _updateGate.Complete();
         }
 
         private static string UpdaterExePath =>
