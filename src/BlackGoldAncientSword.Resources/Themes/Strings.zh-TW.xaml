@@ -141,6 +141,10 @@
     <ns1:String ns2:Key="Nav.Personal">個人</ns1:String>
     <ns1:String ns2:Key="Nav.Announcement">公告</ns1:String>
     <ns1:String ns2:Key="Nav.Feedback">反饋</ns1:String>
+    <ns1:String ns2:Key="Auth.User.Login">登入</ns1:String>
+    <ns1:String ns2:Key="Auth.User.Logout">登出</ns1:String>
+    <ns1:String ns2:Key="Auth.User.RoleNormal">一般用戶</ns1:String>
+    <ns1:String ns2:Key="Auth.User.Anonymous">未登入</ns1:String>
     <ns1:String ns2:Key="Home.NoLocalData">找不到本機玩家資料，請先啟動永劫無間</ns1:String>
     <ns1:String ns2:Key="Home.PlayerNotFound">伺服器上找不到該玩家</ns1:String>
     <ns1:String ns2:Key="Home.RoleIdNotAvailable">玩家角色ID無法使用</ns1:String>

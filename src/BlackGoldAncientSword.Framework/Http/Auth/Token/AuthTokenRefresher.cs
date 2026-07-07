@@ -54,8 +54,11 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.Token
             if (string.IsNullOrEmpty(access)) return null;
 
             var newRefresh = data.RefreshToken ?? refreshToken;
-            var userJson = data.User is null ? null : JsonSerializer.Serialize(data.User);
-            return new AuthToken(access, newRefresh, userJson, JwtExpiryReader.ReadExpiresAtUnixMs(access));
+            // yudao /auth/refresh-token 响应**不含 profile 字段**（nickname/avatar 只在 /member/user/get 里）。
+            // UserJson 留空，由调用方（AuthTokenHandler / AuthTokenExpiryMonitor）用 previous.UserJson 合并保留。
+            // 与 QR 登录响应对齐：yudao 返回 expiresTime (Long Unix ms)，opaque token 无法从 JWT 解析。
+            var expiresAt = data.ExpiresTime > 0 ? data.ExpiresTime : JwtExpiryReader.ReadExpiresAtUnixMs(access);
+            return new AuthToken(access, newRefresh, UserJson: null, expiresAt);
         }
 
         private sealed class RefreshEnvelope
@@ -70,7 +73,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.Token
             [JsonPropertyName("token")] public string? Token { get; set; }
             [JsonPropertyName("accessToken")] public string? AccessToken { get; set; }
             [JsonPropertyName("refreshToken")] public string? RefreshToken { get; set; }
-            [JsonPropertyName("user")] public JsonElement? User { get; set; }
+            [JsonPropertyName("expiresTime")] public long ExpiresTime { get; set; }
         }
     }
 }

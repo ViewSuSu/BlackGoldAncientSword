@@ -70,8 +70,14 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.WechatQr
                     var access = login?.AccessToken ?? login?.Token;
                     if (string.IsNullOrEmpty(access)) return new QrPollResult(QrPollOutcome.Failed, null);
                     var refresh = login?.RefreshToken ?? string.Empty;
-                    var userJson = login?.User is null ? null : JsonSerializer.Serialize(login.User);
-                    var token = new AuthToken(access, refresh, userJson, JwtExpiryReader.ReadExpiresAtUnixMs(access));
+                    // yudao 微信 QR 登录：nickname / avatar / userId 平铺在 login 顶层（Vue 端 auth.userInfo = data.login）。
+                    // 只挑客户端 UI 关心的字段序列化成小 JSON，避免把敏感 token 也塞进 UserJson。
+                    var userJson = BuildUserJson(login);
+                    // yudao AuthLoginRespVO 里 expiresTime 是 LocalDateTime，TimestampLocalDateTimeSerializer
+                    // 默认输出 Long Unix ms。opaque token 无 JWT payload，必须优先取服务器字段；
+                    // 服务器缺失时才回退 JwtExpiryReader，避免解析失败导致 0 让本地过期检查恒真。
+                    var expiresAt = login?.ExpiresTime > 0 ? login.ExpiresTime : JwtExpiryReader.ReadExpiresAtUnixMs(access);
+                    var token = new AuthToken(access, refresh, userJson, expiresAt);
                     return new QrPollResult(QrPollOutcome.Success, token);
                 }
                 case "SCANNED":
@@ -82,6 +88,23 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.WechatQr
                 default:
                     return new QrPollResult(QrPollOutcome.WaitingScan, null);
             }
+        }
+
+        /// <summary>
+        /// 从 yudao <c>login</c> 顶层字段挑 userId/username/nickname/avatar 序列化。
+        /// UserJson 供 <c>UserProfileViewModel</c> 显示头像/昵称；不放 token/refreshToken 避免误暴露。
+        /// </summary>
+        private static string? BuildUserJson(LoginPayload? login)
+        {
+            if (login is null) return null;
+            var obj = new
+            {
+                userId = login.UserId,
+                username = login.Username,
+                nickname = login.Nickname,
+                avatar = login.Avatar,
+            };
+            return JsonSerializer.Serialize(obj);
         }
 
         public async Task CancelAsync(string scene, CancellationToken ct)
@@ -114,7 +137,12 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.WechatQr
             [JsonPropertyName("token")] public string? Token { get; set; }
             [JsonPropertyName("accessToken")] public string? AccessToken { get; set; }
             [JsonPropertyName("refreshToken")] public string? RefreshToken { get; set; }
-            [JsonPropertyName("user")] public JsonElement? User { get; set; }
+            [JsonPropertyName("expiresTime")] public long ExpiresTime { get; set; }
+            // yudao AuthLoginRespVO + Member 扩展：nickname / avatar / username / userId 均在顶层，不是 user 子对象
+            [JsonPropertyName("userId")] public long UserId { get; set; }
+            [JsonPropertyName("username")] public string? Username { get; set; }
+            [JsonPropertyName("nickname")] public string? Nickname { get; set; }
+            [JsonPropertyName("avatar")] public string? Avatar { get; set; }
         }
     }
 }

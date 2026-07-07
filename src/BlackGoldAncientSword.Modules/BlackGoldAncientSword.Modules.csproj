@@ -21,8 +21,4 @@
     <ProjectReference Include="..\BlackGoldAncientSword.ScreenCapture\BlackGoldAncientSword.ScreenCapture.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
-  </ItemGroup>
-
 </Project>
