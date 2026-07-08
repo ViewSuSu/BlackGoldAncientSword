@@ -116,6 +116,11 @@
     <system:String x:Key="Search.Copy">Copy</system:String>
     <system:String x:Key="Search.Delete">Delete</system:String>
     <system:String x:Key="Search.CopySuccess">Copied!</system:String>
+    <system:String x:Key="Search.TooFast">Clicking too fast, please try again later</system:String>
+
+    <system:String x:Key="Startup.CheckingUpdates">Checking for updates…</system:String>
+    <system:String x:Key="Startup.PleaseWait">Please wait until the check completes</system:String>
+    <system:String x:Key="Startup.OnlineUpdating">Online update in progress…</system:String>
 
 
     <system:String x:Key="Settings.Title">Settings</system:String>

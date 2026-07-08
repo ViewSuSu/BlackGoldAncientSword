@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Unified;
 using System.ComponentModel;
@@ -122,11 +123,18 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
         }
 
+        private readonly SearchDebounceGate _searchDebounce = new();
+
         private DelegateCommand? _searchCommand;
         public DelegateCommand SearchCommand =>
             _searchCommand ??= new DelegateCommand(async () =>
             {
                 if (string.IsNullOrWhiteSpace(SearchText)) return;
+                if (!_searchDebounce.TryEnter())
+                {
+                    _tipMessage.ShowError(L("Search.TooFast", "点击过快请稍后重试"));
+                    return;
+                }
                 _playerPrefsService.Current.PlayerName = SearchText.Trim();
                 await RefreshAllAsync();
             });

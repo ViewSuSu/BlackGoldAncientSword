@@ -147,19 +147,40 @@ namespace BlackGoldAncientSword.App
             //     MainWindowViewModel 订阅 UpdateAvailabilityChanged → 自动弹 UpdateNotificationRegion 卡片；
             //     用户三选一（在线更新 / 打开浏览器 / 稍后）→ DismissOverlay → IUpdateGateService.Complete()。
             //     检测失败或无新版 → 直接跳过 WaitAsync，进入登录 gate。
+            //
+            //     StartupGate：整个 [4] 期间 MainWindow 顶层遮罩阻拦一切 UI 操作，await 结束后 finally 释放遮罩，
+            //     由后续的 update overlay / auth challenge overlay 接管遮挡。放 finally 是为了检测抛异常也能放行，
+            //     否则用户会永远看到"正在检查更新…"卡在屏幕上。
+            var startupGate = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IStartupGateService>();
+            var updateGate = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateGateService>();
             try
             {
                 var updater = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>();
+                // UpdateService.CheckForUpdatesAsync 内部 await SafeInvokeAsync，保证返回时 IsUpdateAvailable 属性已同步到最新值。
+                // 若改回 fire-and-forget 会导致这里读到过期 false，误判为"无新版" → finally 提前释放 updateGate
+                // → 后续 [5] challenge.ShowAsync 里 await updateGate.WaitAsync 立即返回 → challenge overlay 抢在
+                // update overlay 之前显示，两个 overlay 会同时冒出来。
                 await updater.CheckForUpdatesAsync(showNoUpdateMessage: false);
                 if (updater.IsUpdateAvailable)
                 {
-                    var updateGate = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateGateService>();
+                    // 检测出新版：先释放启动遮罩让 UpdateNotification overlay 能被用户看清并操作。
+                    // updateGate 由 UpdateNotificationPageViewModel.DismissOverlay → Complete() 释放，
+                    // 期间 AuthChallengeService.ShowAsync 会 await 它，保证登录弹窗不会挤在更新弹窗之上。
+                    startupGate.Complete();
                     await updateGate.WaitAsync();
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[{nameof(App)}] Update check / gate failed: {ex}");
+            }
+            finally
+            {
+                // startupGate.Complete 幂等；这里兜底保证遮罩一定放行。
+                startupGate.Complete();
+                // updateGate 也一定放行：无新版 / 异常时用户完全没看到弹窗，也要放行 challenge，否则
+                // 未登录用户永远看不到扫码 overlay（AuthChallengeService 里 await 会永挂）。
+                updateGate.Complete();
             }
 
             // [5] 登录 gate：本地无有效 token 才弹扫码。登录失败 / 用户取消 → Shutdown。

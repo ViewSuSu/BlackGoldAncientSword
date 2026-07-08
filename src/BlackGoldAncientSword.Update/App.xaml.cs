@@ -26,7 +26,7 @@ namespace BlackGoldAncientSword.Update
             }
 
             var vm = new UpdateViewModel();
-            var window = new UpdateWindow { DataContext = vm };
+            var window = new UpdateWindow { DataContext = vm, MainPid = options.MainPid };
             MainWindow = window;
             window.Show();
 

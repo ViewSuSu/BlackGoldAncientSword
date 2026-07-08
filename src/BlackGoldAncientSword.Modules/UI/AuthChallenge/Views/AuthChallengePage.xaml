@@ -10,6 +10,7 @@
     Background="Transparent"
     mc:Ignorable="d">
     <ctrls:OverlayHost
+        x:Name="ChallengeOverlay"
         CardMaxHeight="720"
         CardMaxWidth="440"
         CardMinWidth="380"
@@ -175,23 +176,13 @@
                     Text="{Binding QrStatusText}" />
             </StackPanel>
 
-            <!--  底部状态 + 退出按钮  -->
-            <StackPanel Margin="0,16,0,0" Orientation="Horizontal">
-                <TextBlock
-                    VerticalAlignment="Center"
-                    FontSize="11"
-                    Foreground="{DynamicResource TextSecondaryBrush}"
-                    Text="{Binding StatusText}"
-                    TextWrapping="Wrap" />
-                <Button
-                    Height="28"
-                    MinWidth="72"
-                    Margin="12,0,0,0"
-                    HorizontalAlignment="Right"
-                    Command="{Binding CancelCommand}"
-                    Content="取消并退出"
-                    FontSize="11" />
-            </StackPanel>
+            <!--  底部状态（右上角 X 已提供关闭入口，此处只留状态提示）  -->
+            <TextBlock
+                Margin="0,16,0,0"
+                FontSize="11"
+                Foreground="{DynamicResource TextSecondaryBrush}"
+                Text="{Binding StatusText}"
+                TextWrapping="Wrap" />
         </StackPanel>
     </ctrls:OverlayHost>
 </bases:UserControlBase>

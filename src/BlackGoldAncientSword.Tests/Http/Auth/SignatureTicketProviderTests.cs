@@ -31,7 +31,7 @@ namespace BlackGoldAncientSword.Tests.Http.Auth
         }
 
         private static HttpClient CreateClient(StubHandler h) =>
-            new(h) { BaseAddress = new Uri("https://naraka.drivod.top") };
+            new(h) { BaseAddress = new Uri("https://desktop.naraka.drivod.top") };
 
         [Fact]
         public async Task GetAsync_CachesUntilExpiryLead()
