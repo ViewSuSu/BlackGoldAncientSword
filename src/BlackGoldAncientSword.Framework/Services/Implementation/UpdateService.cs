@@ -114,7 +114,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 if (string.IsNullOrEmpty(latest))
                 {
                     Debug.WriteLine($"[{nameof(UpdateService)}] 未从 302 Location 解析到 latest tag");
-                    ClearAvailability();
+                    await ClearAvailabilityAsync().ConfigureAwait(false);
                     return;
                 }
 
@@ -123,7 +123,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
                 if (!available)
                 {
-                    ClearAvailability();
+                    await ClearAvailabilityAsync().ConfigureAwait(false);
                     return;
                 }
 
@@ -137,7 +137,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     (splitUrls is { Count: > 0 }) ? splitUrls[0] : null;
                 var releaseNotes = await _releaseNotesFetcher.FetchAsync(latest).ConfigureAwait(false);
 
-                SafeInvoke(() =>
+                // 必须 await：调用方 (App.OnStartup) 依赖"CheckForUpdatesAsync 返回时 IsUpdateAvailable 已经是最新值"
+                // 来决定是否 await updateGate。fire-and-forget 会让 caller 拿到过期的 false，进而误判"无新版"。
+                await SafeInvokeAsync(() =>
                 {
                     IsUpdateAvailable = true;
                     LatestVersion = latest;
@@ -147,20 +149,20 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     SplitDownloadUrls = splitUrls;
                     LatestReleaseNotes = releaseNotes;
                     UpdateAvailabilityChanged?.Invoke(this, true);
-                });
+                }).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
                 Debug.WriteLine($"[{nameof(UpdateService)}] 检查失败（静默）: {ex.Message}");
-                ClearAvailability();
+                await ClearAvailabilityAsync().ConfigureAwait(false);
             }
         }
 
         public void SetAutoPopupEnabled(bool enabled) => _autoPopupEnabled = enabled;
 
-        private void ClearAvailability()
+        private async Task ClearAvailabilityAsync()
         {
-            SafeInvoke(() =>
+            await SafeInvokeAsync(() =>
             {
                 IsUpdateAvailable = false;
                 LatestVersion = null;
@@ -170,15 +172,17 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 SplitDownloadUrls = null;
                 LatestReleaseNotes = null;
                 UpdateAvailabilityChanged?.Invoke(this, false);
-            });
+            }).ConfigureAwait(false);
         }
 
-        private void SafeInvoke(Action action)
+        private Task SafeInvokeAsync(Action action)
         {
             if (_uiDispatcher.CheckAccess())
+            {
                 action();
-            else
-                _uiDispatcher.BeginInvoke(action);
+                return Task.CompletedTask;
+            }
+            return _uiDispatcher.InvokeAsync(action);
         }
 
         /// <summary>

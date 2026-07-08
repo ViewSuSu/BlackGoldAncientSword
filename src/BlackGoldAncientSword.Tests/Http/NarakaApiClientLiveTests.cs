@@ -10,7 +10,7 @@ namespace BlackGoldAncientSword.Tests.Http
     /// <summary>
     /// 打真实后端的联通性测试。用于验证 api-definitions.json 中的 baseUrl / path / query 参数
     /// 与线上 /app-api/ 前缀一致。任何一条 fail 说明客户端与线上契约漂移。
-    /// 依赖 https://naraka.drivod.top 可访问，网络不通时会失败。
+    /// 依赖 https://desktop.naraka.drivod.top 可访问，网络不通时会失败。
     /// </summary>
     [Trait("Category", "Live")]
     public class NarakaApiClientLiveTests

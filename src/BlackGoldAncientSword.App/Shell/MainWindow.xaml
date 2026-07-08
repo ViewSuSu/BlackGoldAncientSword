@@ -5,6 +5,7 @@
     xmlns:chrome="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
     xmlns:consts="clr-namespace:BlackGoldAncientSword.Framework.Core.Consts;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:hc="clr-namespace:HandyControl.Controls;assembly=HandyControl"
     xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions;assembly=BlackGoldAncientSword.Framework"
     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -853,6 +854,108 @@
                     Panel.ZIndex="10070"
                     x:Name="AuthChallengeOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.AuthChallengeRegion}" />
+
+                <!--  Startup gate overlay (Grid.Row=1 RowSpan=2 只挡内容+底栏，titlebar 露出保持最小化/关闭可用) -->
+                <Border
+                    Grid.Row="1"
+                    Grid.RowSpan="2"
+                    Panel.ZIndex="10090"
+                    Background="#B0000000"
+                    Focusable="True"
+                    IsHitTestVisible="True"
+                    Visibility="{Binding IsStartupBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Border.Resources>
+                        <Storyboard x:Key="StartupPulseStoryboard" RepeatBehavior="Forever">
+                            <DoubleAnimation Storyboard.TargetName="StartupCard"
+                                             Storyboard.TargetProperty="Opacity"
+                                             From="0.85" To="1.0" Duration="0:0:0.9" AutoReverse="True">
+                                <DoubleAnimation.EasingFunction>
+                                    <SineEase EasingMode="EaseInOut" />
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </Border.Resources>
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="Border.Loaded">
+                            <BeginStoryboard Storyboard="{StaticResource StartupPulseStoryboard}" />
+                        </EventTrigger>
+                    </Border.Triggers>
+                    <Border x:Name="StartupCard"
+                            Width="320" MinHeight="160"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Padding="24,22"
+                            Background="{DynamicResource SurfaceGradientBrush}"
+                            BorderBrush="{DynamicResource AccentPrimaryBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Effect="{DynamicResource ShadowElevatedEffect}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <hc:CircleProgressBar Width="52" Height="52"
+                                                  ArcThickness="4"
+                                                  Foreground="{DynamicResource AccentPrimaryBrush}"
+                                                  IsIndeterminate="True" />
+                            <TextBlock Margin="0,14,0,4"
+                                       HorizontalAlignment="Center"
+                                       FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       Text="{DynamicResource Startup.CheckingUpdates}" />
+                            <TextBlock HorizontalAlignment="Center"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Text="{DynamicResource Startup.PleaseWait}"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </Border>
+
+                <!--  Online updating overlay (Updater 独立进程正在下载+解压+覆盖，主 App 全域锁死等被 kill 后重启) -->
+                <Border
+                    Grid.Row="1"
+                    Grid.RowSpan="2"
+                    Panel.ZIndex="10100"
+                    Background="#B0000000"
+                    Focusable="True"
+                    IsHitTestVisible="True"
+                    Visibility="{Binding IsOnlineUpdating, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Border.Resources>
+                        <Storyboard x:Key="OnlineUpdatingPulseStoryboard" RepeatBehavior="Forever">
+                            <DoubleAnimation Storyboard.TargetName="OnlineUpdatingCard"
+                                             Storyboard.TargetProperty="Opacity"
+                                             From="0.85" To="1.0" Duration="0:0:0.9" AutoReverse="True">
+                                <DoubleAnimation.EasingFunction>
+                                    <SineEase EasingMode="EaseInOut" />
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </Border.Resources>
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="Border.Loaded">
+                            <BeginStoryboard Storyboard="{StaticResource OnlineUpdatingPulseStoryboard}" />
+                        </EventTrigger>
+                    </Border.Triggers>
+                    <Border x:Name="OnlineUpdatingCard"
+                            Width="360" MinHeight="180"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Padding="26,24"
+                            Background="{DynamicResource SurfaceGradientBrush}"
+                            BorderBrush="{DynamicResource AccentPrimaryBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Effect="{DynamicResource ShadowElevatedEffect}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <hc:CircleProgressBar Width="60" Height="60"
+                                                  ArcThickness="5"
+                                                  Foreground="{DynamicResource AccentPrimaryBrush}"
+                                                  IsIndeterminate="True" />
+                            <TextBlock Margin="0,16,0,0"
+                                       HorizontalAlignment="Center"
+                                       FontSize="15" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       Text="{DynamicResource Startup.OnlineUpdating}" />
+                        </StackPanel>
+                    </Border>
+                </Border>
 
                 <!--  Battle detail overlay (below close prompt, above announcement)  -->
                 <ContentControl

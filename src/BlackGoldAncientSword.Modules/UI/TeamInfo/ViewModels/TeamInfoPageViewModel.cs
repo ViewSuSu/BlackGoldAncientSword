@@ -27,6 +27,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private readonly TeamOcrCoordinator _ocrCoordinator;
         private readonly TeamMemberLoader _memberLoader;
         private readonly ILocalizedTextProvider _localizedText;
+        private readonly ITipMessageService _tipMessage;
         private CancellationTokenSource? _ocrLoopCts;
         private bool _isOcrRunning;
         private readonly object _ocrLock = new();
@@ -59,7 +60,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             IClipboardService clipboard,
             TeamOcrCoordinator ocrCoordinator,
             TeamMemberLoader memberLoader,
-            ILocalizedTextProvider localizedText)
+            ILocalizedTextProvider localizedText,
+            ITipMessageService tipMessage)
         {
             _gameStatusMonitor = gameStatusMonitor;
             _teamOverlayService = teamOverlayService;
@@ -70,6 +72,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _ocrCoordinator = ocrCoordinator;
             _memberLoader = memberLoader;
             _localizedText = localizedText;
+            _tipMessage = tipMessage;
 
             TeamMembers = new ObservableCollection<TeamMemberInfo>();
             Seasons = new ObservableCollection<UnifiedSeason>();
@@ -409,7 +412,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     {
                         if (existingNames.Contains(name)) continue;
 
-                        var member = new TeamMemberInfo(_clipboard, _localizedText)
+                        var member = new TeamMemberInfo(_clipboard, _localizedText, _tipMessage)
                         {
                             UserName = name,
                             IsLoading = true,
@@ -594,7 +597,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             foreach (var name in newNames)
             {
                 ct.ThrowIfCancellationRequested();
-                var member = new TeamMemberInfo(_clipboard, _localizedText)
+                var member = new TeamMemberInfo(_clipboard, _localizedText, _tipMessage)
                 {
                     UserName = name,
                     IsLoading = true,
@@ -1141,16 +1144,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
     {
         private readonly IClipboardService? _clipboard;
         private readonly ILocalizedTextProvider? _localizedText;
+        private readonly ITipMessageService? _tipMessage;
+        private readonly SearchDebounceGate _searchDebounce = new();
 
         /// <summary>
-        /// 默认 ctor 仅供 d:DesignInstance 等设计时反射用；运行时所有 TeamMemberInfo 必须走 ctor(IClipboardService, ILocalizedTextProvider)。
+        /// 默认 ctor 仅供 d:DesignInstance 等设计时反射用；运行时所有 TeamMemberInfo 必须走 ctor(IClipboardService, ILocalizedTextProvider, ITipMessageService)。
         /// </summary>
         public TeamMemberInfo() { }
 
-        public TeamMemberInfo(IClipboardService clipboard, ILocalizedTextProvider localizedText)
+        public TeamMemberInfo(IClipboardService clipboard, ILocalizedTextProvider localizedText, ITipMessageService tipMessage)
         {
             _clipboard = clipboard;
             _localizedText = localizedText;
+            _tipMessage = tipMessage;
         }
 
         private string _userName = string.Empty;
@@ -1405,6 +1411,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public DelegateCommand SearchMemberCommand =>
             _searchMemberCommand ??= new DelegateCommand(() =>
             {
+                if (!_searchDebounce.TryEnter())
+                {
+                    var tip = _localizedText?.Get("Search.TooFast", "点击过快请稍后重试") ?? "点击过快请稍后重试";
+                    _tipMessage?.ShowError(tip);
+                    return;
+                }
                 RefreshAction?.Invoke(this);
             });
 

@@ -25,7 +25,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth
             var handler = new SignatureHandler(ticketProvider) { InnerHandler = new HttpClientHandler() };
             Client = new HttpClient(handler)
             {
-                BaseAddress = new Uri("https://naraka.drivod.top"),
+                BaseAddress = new Uri("https://desktop.naraka.drivod.top"),
                 Timeout = TimeSpan.FromSeconds(30),
             };
             Client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json");

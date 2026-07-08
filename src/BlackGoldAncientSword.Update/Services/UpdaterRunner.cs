@@ -415,26 +415,14 @@ namespace BlackGoldAncientSword.Update.Services
                 var running = GetMainProcesses();
                 if (running.Count == 0) return;
 
-                var tcs = new TaskCompletionSource<bool>();
+                // 主 App 已经通过顶层遮罩把自己锁死等待被 kill，Updater 直接强制 kill，不再弹"是否关闭主程序"确认。
+                // kill 失败的错误反馈仍保留（下方 stillAlive 分支），因为 kill 失败通常需要用户介入排查权限/守护进程。
                 _ui.Invoke(() =>
                 {
-                    _vm.StatusText = $"检测到主程序 {_options.MainExeName} 正在运行，需要关闭后继续。";
-                    // 注意：MessageBoxButton.OKCancel 在 WPF 中按钮文字固定为系统的"确定/取消"，
-                    // 不能自定义为"强制关闭/取消"，因此正文中明确点"确定"=立即结束主程序、
-                    // "取消"=退出更新，避免按钮与正文措辞不一致让用户误点。
-                    var result = HCMessageBox.Show(
-                        $"检测到 {_options.MainExeName} 正在运行，必须先关闭才能完成更新。\n\n点击 \"确定\" 立即结束主程序，点击 \"取消\" 退出更新。",
-                        "需要关闭主程序",
-                        MessageBoxButton.OKCancel,
-                        MessageBoxImage.Warning);
-                    tcs.SetResult(result == MessageBoxResult.OK);
+                    _vm.StatusText = $"正在结束主程序 {_options.MainExeName}…";
                 });
 
-                bool forceClose = await tcs.Task.ConfigureAwait(false);
-                if (!forceClose) throw new OperationCanceledException();
-
-                // 记录 kill 失败/未生效的进程，用于循环结束时一次性反馈给用户，
-                // 避免按"确定"后悄无声息又反复弹同一个对话框。
+                // 记录 kill 失败/未生效的进程，用于循环结束时一次性反馈给用户。
                 var killFailures = new List<string>();
                 foreach (var p in running)
                 {

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Modules.UI.Search.ViewModels
@@ -10,6 +11,8 @@ namespace BlackGoldAncientSword.Modules.UI.Search.ViewModels
         private readonly ISearchHistoryService _searchHistory;
         private readonly IClipboardService _clipboard;
         private readonly ILocalizedTextProvider _localizedText;
+        private readonly ITipMessageService _tipMessage;
+        private readonly SearchDebounceGate _searchDebounce = new();
 
         private string _searchText = string.Empty;
         public string SearchText
@@ -29,22 +32,27 @@ namespace BlackGoldAncientSword.Modules.UI.Search.ViewModels
         public SearchPageViewModel(
             ISearchHistoryService searchHistory,
             IClipboardService clipboard,
-            ILocalizedTextProvider localizedText)
+            ILocalizedTextProvider localizedText,
+            ITipMessageService tipMessage)
         {
             _searchHistory = searchHistory;
             _clipboard = clipboard;
             _localizedText = localizedText;
+            _tipMessage = tipMessage;
         }
 
         private DelegateCommand? _searchCommand;
         public DelegateCommand SearchCommand =>
             _searchCommand ??= new DelegateCommand(() =>
             {
-                if (!string.IsNullOrWhiteSpace(SearchText))
+                if (string.IsNullOrWhiteSpace(SearchText)) return;
+                if (!_searchDebounce.TryEnter())
                 {
-                    _searchHistory.Add(SearchText);
-                    SearchText = string.Empty;
+                    _tipMessage.ShowError(_localizedText.Get("Search.TooFast", "点击过快请稍后重试"));
+                    return;
                 }
+                _searchHistory.Add(SearchText);
+                SearchText = string.Empty;
             });
 
         private DelegateCommand<SearchHistoryItem>? _copyCommand;
