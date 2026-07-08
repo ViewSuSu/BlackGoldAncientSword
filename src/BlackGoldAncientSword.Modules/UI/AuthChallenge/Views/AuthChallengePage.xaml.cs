@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels;
+using HCMessageBox = HandyControl.Controls.MessageBox;
 
 namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.Views
 {
@@ -22,6 +23,24 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.Views
             Loaded += OnPageLoaded;
             Unloaded += OnPageUnloaded;
             DataContextChanged += OnDataContextChanged;
+            ChallengeOverlay.Closing += OnOverlayClosing;
+        }
+
+        /// <summary>
+        /// 右上角 X 点击：登录界面属于强门槛（未完成 = App 不可用），关闭 = 退出程序。
+        /// 弹二次确认，避免误触。用户确认后走原始 Dismiss 流程：
+        /// OverlayHost.Dismiss → region.RemoveAll → OnPageUnloaded → NotifyDismissedWithoutLogin
+        /// → Complete(false) → App.OnStartup [5] 拿到 loggedIn=false → Shutdown。
+        /// </summary>
+        private void OnOverlayClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var result = HCMessageBox.Show(
+                "取消登录将关闭程序，是否要退出程序？",
+                "确认退出",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes)
+                e.Cancel = true;
         }
 
         private AuthChallengePageViewModel? _subscribedVm;

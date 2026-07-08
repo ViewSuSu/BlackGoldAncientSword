@@ -1,6 +1,6 @@
 {
   "$schema": "./api-definitions.schema.json",
-  "baseUrl": "https://naraka.drivod.top",
+  "baseUrl": "https://desktop.naraka.drivod.top",
   "defaultHeaders": {
     "Accept": "application/json",
     "X-Requested-With": "XMLHttpRequest"
