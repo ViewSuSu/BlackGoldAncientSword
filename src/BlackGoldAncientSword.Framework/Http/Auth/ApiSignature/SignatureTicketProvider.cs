@@ -93,7 +93,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.ApiSignature
             var handler = new HttpClientHandler();
             var client = new HttpClient(handler)
             {
-                BaseAddress = new Uri("https://naraka.drivod.top"),
+                BaseAddress = new Uri("https://desktop.naraka.drivod.top"),
                 Timeout = TimeSpan.FromSeconds(30),
             };
             client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json");

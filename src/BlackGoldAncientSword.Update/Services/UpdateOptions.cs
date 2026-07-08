@@ -34,6 +34,13 @@ namespace BlackGoldAncientSword.Update.Services
         /// </summary>
         public int? MainPid { get; private set; }
 
+        /// <summary>
+        /// 主程序主窗口的 HWND。来自 --main-hwnd。用于把 UpdateWindow 初始位置精确对齐到主 App 窗口中心，
+        /// 比 GetProcessById(pid).MainWindowHandle 更稳（后者对 AllowsTransparency+WindowStyle=None 窗口有时返 0）。
+        /// null 则退回 pid → MainWindowHandle → 屏幕中心 三级 fallback。
+        /// </summary>
+        public IntPtr MainHwnd { get; private set; } = IntPtr.Zero;
+
         public bool RestartAfterInstall { get; private set; } = true;
 
         public string MainExeFullPath => Path.Combine(TargetDirectory, MainExeName);
@@ -65,6 +72,10 @@ namespace BlackGoldAncientSword.Update.Services
                         // 解析失败（非数字 / 负数）静默忽略，退回 name 匹配，保证流程不被错误参数中断
                         if (int.TryParse(args[++i], out var pid) && pid > 0)
                             opts.MainPid = pid;
+                        break;
+                    case "--main-hwnd" when i + 1 < args.Length:
+                        if (long.TryParse(args[++i], out var hwnd) && hwnd != 0)
+                            opts.MainHwnd = new IntPtr(hwnd);
                         break;
                     case "--no-restart":
                         opts.RestartAfterInstall = false;

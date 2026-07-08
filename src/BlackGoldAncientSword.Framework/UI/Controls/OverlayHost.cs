@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
@@ -154,8 +155,17 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             }
         }
 
+        /// <summary>
+        /// 关闭按钮 / Esc 触发关闭前的可拦截钩子。宿主页面订阅后可通过
+        /// <see cref="CancelEventArgs.Cancel"/>=true 阻止关闭（例如弹确认对话框）。
+        /// </summary>
+        public event EventHandler<CancelEventArgs>? Closing;
+
         private void OnCloseButtonClick(object sender, RoutedEventArgs e)
         {
+            var args = new CancelEventArgs();
+            Closing?.Invoke(this, args);
+            if (args.Cancel) return;
             Dismiss();
         }
 

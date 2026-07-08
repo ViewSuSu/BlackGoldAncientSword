@@ -20,18 +20,29 @@ namespace BlackGoldAncientSword.App.Services
     {
         private readonly IRegionManager _regionManager;
         private readonly IModuleManager _moduleManager;
+        private readonly IUpdateGateService _updateGate;
 
         private readonly object _sync = new();
         private TaskCompletionSource<bool>? _current;
 
-        public AuthChallengeService(IRegionManager regionManager, IModuleManager moduleManager)
+        public AuthChallengeService(
+            IRegionManager regionManager,
+            IModuleManager moduleManager,
+            IUpdateGateService updateGate)
         {
             _regionManager = regionManager;
             _moduleManager = moduleManager;
+            _updateGate = updateGate;
         }
 
-        public Task<bool> ShowAsync(CancellationToken ct = default)
+        public async Task<bool> ShowAsync(CancellationToken ct = default)
         {
+            // 启动期约束：若正巧检测到新版本，"发现新版本"弹窗必须先让用户处理完，
+            // 登录 challenge 才能弹。App.OnStartup 保证无新版 / 异常 / 用户 Dismiss 三条路径
+            // 都会调 updateGate.Complete()，所以正常路径不会永挂。
+            try { await _updateGate.WaitAsync(ct).ConfigureAwait(false); }
+            catch (OperationCanceledException) { return false; }
+
             TaskCompletionSource<bool> tcs;
             bool shouldNavigate;
             lock (_sync)
@@ -54,7 +65,7 @@ namespace BlackGoldAncientSword.App.Services
             if (shouldNavigate)
                 NavigateToOverlay();
 
-            return tcs.Task;
+            return await tcs.Task.ConfigureAwait(false);
         }
 
         public void Complete(bool success)

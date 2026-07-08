@@ -24,7 +24,41 @@ namespace BlackGoldAncientSword.App.Shell
         private readonly IGameLogMonitor _gameLogMonitor;
         private readonly IUIDispatcher _uiDispatcher;
         private readonly ToastQueueManager _toastQueueManager;
+        private readonly IStartupGateService _startupGate;
         private readonly DateTime _startupTime = DateTime.UtcNow;
+
+        /// <summary>
+        /// true = 启动流程（含更新检测）未完成，MainWindow 顶层遮罩显示，拦截一切 UI 操作。
+        /// 由 <see cref="IStartupGateService"/> 的 <see cref="IStartupGateService.BusyChanged"/> 驱动，
+        /// 只会从 true 翻到 false。
+        /// </summary>
+        private bool _isStartupBusy;
+        public bool IsStartupBusy
+        {
+            get => _isStartupBusy;
+            set
+            {
+                if (_isStartupBusy == value) return;
+                _isStartupBusy = value;
+                RaisePropertyChanged(nameof(IsStartupBusy));
+            }
+        }
+
+        /// <summary>
+        /// true = 用户已点击"在线更新"，Updater 独立进程正在下载/解压/覆盖，主 App 应完全锁死等待被 kill 后重启。
+        /// 由 <see cref="OnlineUpdatingStartedEvent"/> 触发，无退出路径——直到 Updater 结束本进程为止。
+        /// </summary>
+        private bool _isOnlineUpdating;
+        public bool IsOnlineUpdating
+        {
+            get => _isOnlineUpdating;
+            set
+            {
+                if (_isOnlineUpdating == value) return;
+                _isOnlineUpdating = value;
+                RaisePropertyChanged(nameof(IsOnlineUpdating));
+            }
+        }
         private bool _isContactPopupOpen;
         public bool IsContactPopupOpen
         {
@@ -204,7 +238,8 @@ namespace BlackGoldAncientSword.App.Shell
             IGameLogMonitor gameLogMonitor,
             IUIDispatcher uiDispatcher,
             ToastQueueManager toastQueueManager,
-            UserProfileViewModel userProfile)
+            UserProfileViewModel userProfile,
+            IStartupGateService startupGate)
         {
             UserProfile = userProfile;
             _playerPrefsService = playerPrefsService;
@@ -219,6 +254,25 @@ namespace BlackGoldAncientSword.App.Shell
             _gameLogMonitor = gameLogMonitor;
             _uiDispatcher = uiDispatcher;
             _toastQueueManager = toastQueueManager;
+            _startupGate = startupGate;
+
+            // 启动闸门：初值从 gate 读；后续 Complete 事件在 UI 线程翻转 IsStartupBusy（gate 可能在后台线程调 Complete）。
+            _isStartupBusy = _startupGate.IsBusy;
+            _startupGate.BusyChanged += OnStartupGateBusyChanged;
+
+            // 在线更新启动事件：把主窗口切到"更新中锁死"模式。EventAggregator 默认 UI 线程订阅，安全。
+            eventAggregator.GetEvent<OnlineUpdatingStartedEvent>()
+                .Subscribe(() => IsOnlineUpdating = true, ThreadOption.UIThread);
+
+            // Updater 中途退出（用户取消 / 下载失败）：把主 App 从"锁死"状态恢复到正常，让 App.OnStartup [4]
+            // 继续走完 → 后续 [5] 登录 gate / [6] 主页导航。
+            eventAggregator.GetEvent<OnlineUpdatingCancelledEvent>()
+                .Subscribe(() =>
+                {
+                    IsOnlineUpdating = false;
+                    // 释放 updateGate 让 [4] 里 await updateGate.WaitAsync() resume——它一直挂着等 Dismiss 或取消。
+                    containerProvider.Resolve<IUpdateGateService>().Complete();
+                }, ThreadOption.UIThread);
 
             _localization.PropertyChanged += OnLocalizationChanged;
             _navigation.Navigated += OnNavigated;
@@ -310,6 +364,13 @@ namespace BlackGoldAncientSword.App.Shell
             _gameLogMonitor.BattleStarted -= OnBattleStarted;
             _gameLogMonitor.BattleEnded -= OnBattleEnded;
             _updateService.UpdateAvailabilityChanged -= OnUpdateAvailabilityChanged;
+            _startupGate.BusyChanged -= OnStartupGateBusyChanged;
+        }
+
+        private void OnStartupGateBusyChanged(object? sender, EventArgs e)
+        {
+            // gate.Complete 可能在后台线程调；PropertyChanged 得到 UI 线程派发。
+            _ = _uiDispatcher.InvokeAsync(() => IsStartupBusy = _startupGate.IsBusy);
         }
 
         /// <summary>

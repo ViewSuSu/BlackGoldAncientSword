@@ -114,6 +114,11 @@
     <ns1:String ns2:Key="Search.Copy">複製</ns1:String>
     <ns1:String ns2:Key="Search.Delete">刪除</ns1:String>
     <ns1:String ns2:Key="Search.CopySuccess">複製成功</ns1:String>
+    <ns1:String ns2:Key="Search.TooFast">點擊過快請稍後重試</ns1:String>
+
+    <ns1:String ns2:Key="Startup.CheckingUpdates">正在檢查更新…</ns1:String>
+    <ns1:String ns2:Key="Startup.PleaseWait">請稍候，檢測完成後即可操作</ns1:String>
+    <ns1:String ns2:Key="Startup.OnlineUpdating">正在在線更新，請稍候…</ns1:String>
 
 
     <ns1:String ns2:Key="Settings.Title">設定</ns1:String>

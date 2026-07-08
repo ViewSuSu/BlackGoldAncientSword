@@ -116,6 +116,11 @@
     <system:String x:Key="Search.Copy">复制</system:String>
     <system:String x:Key="Search.Delete">删除</system:String>
     <system:String x:Key="Search.CopySuccess">复制成功</system:String>
+    <system:String x:Key="Search.TooFast">点击过快请稍后重试</system:String>
+
+    <system:String x:Key="Startup.CheckingUpdates">正在检查更新…</system:String>
+    <system:String x:Key="Startup.PleaseWait">请稍候，检测完成后即可操作</system:String>
+    <system:String x:Key="Startup.OnlineUpdating">正在在线更新，请稍候…</system:String>
 
 
     <system:String x:Key="Settings.Title">设置</system:String>

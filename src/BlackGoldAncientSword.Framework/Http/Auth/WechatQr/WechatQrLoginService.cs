@@ -46,7 +46,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.WechatQr
                 && !qrUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
                 var sep = qrUrl.StartsWith("/") ? string.Empty : "/";
-                qrUrl = "https://naraka.drivod.top" + sep + qrUrl;
+                qrUrl = "https://desktop.naraka.drivod.top" + sep + qrUrl;
             }
             return new QrChallenge(d.Scene, d.VerificationCode ?? string.Empty, qrUrl, d.PollIntervalMillis > 0 ? d.PollIntervalMillis : 1500);
         }

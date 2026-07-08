@@ -17,8 +17,10 @@
     TextOptions.TextRenderingMode="ClearType"
     Topmost="True"
     UseLayoutRounding="True"
-    WindowStartupLocation="CenterScreen"
-    WindowStyle="None">
+    WindowStartupLocation="Manual"
+    WindowStyle="None"
+    Left="-10000"
+    Top="-10000">
 
     <!--  设计语义 token：集中维护浅色主题下的色彩、字号与节奏，避免硬编码散落各处  -->
     <Window.Resources>
@@ -146,22 +148,44 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!--  右上关闭按钮（沿用主程序 close.png，悬停红色玻璃高亮）  -->
-                <Button
-                    x:Name="CloseButton"
+                <!--  右上按钮组：最小化 + 关闭  -->
+                <StackPanel
                     Grid.Column="2"
-                    Width="28"
-                    Height="28"
                     VerticalAlignment="Center"
-                    Click="CloseButton_Click"
-                    Style="{StaticResource CloseButtonStyle}"
-                    ToolTip="取消更新">
-                    <Image
-                        Width="18"
-                        Height="18"
-                        Source="/Images/close.png"
-                        Stretch="Uniform" />
-                </Button>
+                    Orientation="Horizontal">
+                    <!--  最小化按钮  -->
+                    <Button
+                        x:Name="MinimizeButton"
+                        Width="28"
+                        Height="28"
+                        Margin="0,0,4,0"
+                        VerticalAlignment="Center"
+                        Click="MinimizeButton_Click"
+                        Style="{StaticResource CloseButtonStyle}"
+                        ToolTip="最小化">
+                        <Path
+                            Width="10"
+                            Height="10"
+                            Data="M0,5 H10"
+                            Stroke="{StaticResource TextSecondaryBrush}"
+                            StrokeThickness="1.4" />
+                    </Button>
+                    <!--  关闭按钮  -->
+                    <Button
+                        x:Name="CloseButton"
+                        Width="28"
+                        Height="28"
+                        VerticalAlignment="Center"
+                        Click="CloseButton_Click"
+                        Style="{StaticResource CloseButtonStyle}"
+                        ToolTip="取消更新">
+                        <Image
+                            Width="18"
+                            Height="18"
+                            Source="/Images/close.png"
+                            Stretch="Uniform" />
+                    </Button>
+                </StackPanel>
             </Grid>
 
             <!--  状态行  -->
