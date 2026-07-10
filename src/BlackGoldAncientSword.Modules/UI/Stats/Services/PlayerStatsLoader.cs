@@ -25,6 +25,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
                 return UnifiedMapper.MapSearch(resp);
             }
             catch (OperationCanceledException) { throw; }
+            catch (NarakaApiException) { throw; }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[{nameof(PlayerStatsLoader)}] SearchRoleByNameAsync failed: {ex.Message}");
@@ -52,6 +53,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
                 return UnifiedMapper.MapSeasons(resp);
             }
             catch (OperationCanceledException) { throw; }
+            catch (NarakaApiException) { throw; }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[{nameof(PlayerStatsLoader)}] FetchSeasonsAsync failed: {ex.Message}");
@@ -98,6 +100,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
                 return UnifiedMapper.MapMiniProgramBattleDetail(personalTask.Result, teamTask.Result, top5Task.Result);
             }
             catch (OperationCanceledException) { throw; }
+            catch (NarakaApiException) { throw; }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[{nameof(PlayerStatsLoader)}] FetchMiniProgramBattleDetailAsync failed: {ex.Message}");
@@ -113,9 +116,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
         }
 
         /// <summary>
-        /// 统一包装：把 API 抛出的非取消异常吞掉并返回 null，
+        /// 统一包装：把 API 抛出的"未知底层异常"（网络异常/反序列化异常等，无 msg 可展示）吞掉并返回 null，
         /// 这样 VM 端只需做 null 判断，不必散落 try/catch。
-        /// <see cref="OperationCanceledException"/> 仍然向上抛出以保证 ct 语义。
+        /// <see cref="OperationCanceledException"/> 与 <see cref="NarakaApiException"/> 仍向上抛出——
+        /// 前者保证 ct 语义，后者携带响应体 msg，由 VM 统一展示。
         /// </summary>
         private static async Task<T?> InvokeAsync<T>(Func<Task<T?>> call) where T : class
         {
@@ -124,6 +128,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
                 return await call().ConfigureAwait(false);
             }
             catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (NarakaApiException)
             {
                 throw;
             }
