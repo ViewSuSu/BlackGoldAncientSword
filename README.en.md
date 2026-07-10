@@ -31,6 +31,10 @@ Click the button above to directly download the latest .exe installer.
 
 **BlackGoldAncientSword** is a Windows desktop application that automatically detects game status, recognizes teammates, and fetches real-time player stats. No need to alt-tab to a browser — stats are displayed directly on your desktop. Supports **Solo / Duo / Trio** team sizes and **Ranked / Casual / Immortal** match types.
 
+## Sign-in 🔐
+
+On startup, the app guides you through a one-time sign-in (slider CAPTCHA → WeChat QR scan). The resulting token is encrypted with **Windows DPAPI** and stored locally, then silently refreshed — no repeated scans needed. When any background request returns 401, a **concurrent single-flight** overlay pops up: a single scan resumes every pending request. All API calls go through the **in-house P7 signature protocol** with a Bearer token, targeting `desktop.naraka.drivod.top`.
+
 ## Player Stats
 
 Enter a player nickname in the search box to fetch full stats:
@@ -82,6 +86,7 @@ When entering hero selection, the app captures the screen and recognizes teammat
 - **Language**: 简体中文 / English / 繁體中文
 - **Close behavior**: Default action when clicking the close button — *Ask every time / Minimize to taskbar / Minimize to system tray / Exit directly*, with a "remember choice" option
 - **Team overlay during hero selection**: Toggle the bottom-right teammate popup
+- **Account avatar**: Click the top-right avatar to open a popup showing nickname / membership info, with a one-click sign-out button
 - **Check for updates**: Manually check and download new releases (delegates to the standalone Updater process, see below)
 - **Current version**
 
@@ -94,9 +99,9 @@ When entering hero selection, the app captures the screen and recognizes teammat
 
 ## Online Update
 
-The app compares the latest GitHub Release version both at startup and via "Settings → Check for updates". When a new version is detected, an update notification page is shown. Click "Update Online" to:
+At launch the app raises a **StartupGate overlay**: until the update check finishes, the entire UI (sign-in button / sidebar / close prompt) is blocked so user actions cannot race the update flow. If a new version is detected, the notification page pops up and **locks the rest of startup (UpdateGate)** — the user must respond first (Update Online / Open Browser / Later / Close) before the sign-in gate and the rest of navigation resume. Clicking "Update Online" then:
 
-1. The main app launches the standalone **BlackGoldAncientSword.Update.exe** (the updater) with the download URL, install directory, and main-app file name as arguments;
+1. Launches the standalone **BlackGoldAncientSword.Update.exe** (the updater) with the download URL, install directory, and main-app file name as arguments;
 2. The updater downloads the new zip → extracts → overlays the install directory → relaunches the main app → exits itself.
 
 > The updater is fully decoupled from the main app (no references to App / Framework / Modules), so no DLL is locked during the overlay step.
@@ -203,7 +208,7 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 ## Solution Overview
 
-`src/BlackGoldAncientSword.slnx` contains **11 projects**: 8 class libraries + 3 executables (main App, standalone Updater, offline Downloader).
+`src/BlackGoldAncientSword.slnx` contains **11 projects**: 7 class libraries + 3 executables (main App, standalone Updater, offline Downloader) + 1 Roslyn analyzer + 1 test project.
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -252,11 +257,11 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 | Layer | Project | Output | Responsibility |
 |---|---|---|---|
-| **Main App** | `BlackGoldAncientSword.App` | WinExe | App entry, main window, sidebar nav, tray, launches Updater, background OCR prewarm at startup |
+| **Main App** | `BlackGoldAncientSword.App` | WinExe | App entry, main window, sidebar nav, tray, launches Updater, background OCR prewarm at startup, concrete implementations of the three sign-in / startup / update gates (AuthChallenge / StartupGate / UpdateGate) |
 | **Updater** | `BlackGoldAncientSword.Update` | WinExe | Standalone online-update process, zero business deps (HandyControl only) |
 | **Offline Downloader** | `BlackGoldAncientSword.Downloader` | WinExe | Standalone single-file exe. Streams split installer from Gitee release → launches Setup.exe → self-exits. Zero API deps (uses 302 + CDN) |
-| **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 10 Prism `IModule` pages, on-demand loading |
-| **Core Framework** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM base, Prism infra, service abstractions/implementations, HTTP API |
+| **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 11 Prism `IModule` pages (including the sign-in overlay), on-demand loading |
+| **Core Framework** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM base, Prism infra, service abstractions/implementations, HTTP API (with P7 signature / Auth Token / slider CAPTCHA / WeChat QR / unified DTO mapping) |
 | **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | ClassLib | Process detection, Player.log parsing, battle state machine |
 | **Screen Capture** | `BlackGoldAncientSword.ScreenCapture` | ClassLib | Windows Graphics Capture API + SharpDX + native `wgc_capture.dll` |
 | **OCR Engine** | `BlackGoldAncientSword.Ocr` | ClassLib | RapidOcrNet (PP-OCRv5 ONNX) in-process inference wrapper |
@@ -274,7 +279,8 @@ Before using this program, please ensure you have read, understood, and agreed t
 | **UI** | WPF + HandyControl 3.5 | Desktop UI and control library |
 | **Theme** | Custom ModernTheme (celadon / bamboo-green eye-friendly palette) | Soft pale-green surface + deep-green accent + ink text, comfortable for long reading sessions |
 | **MVVM** | Prism 8.1 (`Prism.DryIoc`) | DI container, region navigation, modularization |
-| **HTTP** | Compile-time source generator | Generate strongly-typed API clients from `api-definitions.json` |
+| **HTTP** | Compile-time source generator + `HttpClient` + `DelegatingHandler` | Generate strongly-typed API clients from `api-definitions.json`; request pipeline chains `SignatureHandler` (P7 protocol signing) and `AuthTokenHandler` (Bearer + 401 single-flight refresh) |
+| **Auth** | In-house slider CAPTCHA + WeChat QR sign-in + JWT + Windows DPAPI | Sign-in token encrypted at rest, refreshed before expiry, 401 triggers a single-flight sign-in overlay |
 | **Mapping** | Mapster 7.4 | DTO ↔ ViewModel |
 | **JSON** | `System.Text.Json` (with source-generated context) | Serialization / deserialization (fully replaced Newtonsoft.Json) |
 | **Screen Capture** | SharpDX.Direct3D11 + native WGC DLL (C++/WinRT) | Game window capture |
@@ -292,10 +298,15 @@ Before using this program, please ensure you have read, understood, and agreed t
 ```
 src/
 ├── BlackGoldAncientSword.App/              # WPF main entry (WinExe)
-│   ├── App.xaml / App.xaml.cs              # App entry, Prism bootstrap
+│   ├── App.xaml / App.xaml.cs              # App entry, Prism bootstrap, startup flow orchestration (StartupGate → update check → UpdateGate → AuthChallenge → navigate to Home)
+│   ├── AppAssemblyMarker.cs                # Assembly locator (for XAML resource resolution)
+│   ├── Services/                           # App-layer implementations of the three gates (depend on IRegionManager / UI Dispatcher, cannot live in Framework)
+│   │   ├── StartupGateService.cs           # Startup overlay latch (one-way true → false)
+│   │   ├── UpdateGateService.cs            # Update prompt gate (TCS single-flight + completed latch to cover the race where Complete arrives before WaitAsync)
+│   │   └── AuthChallengeService.cs         # 401 single-flight: any number of concurrent 401s only pop the sign-in overlay once
 │   └── Shell/
-│       ├── MainWindow.xaml(.cs)            # Shell (sidebar + nav + tray)
-│       └── MainWindowViewModel.cs          # Nav commands, game status, update detection
+│       ├── MainWindow.xaml(.cs)            # Shell (sidebar + nav + tray + avatar popup + startup overlay layer)
+│       └── MainWindowViewModel.cs          # Nav commands, game status, update detection, user info
 │
 ├── BlackGoldAncientSword.Update/           # Standalone online updater (WinExe, zero business deps)
 │   ├── App.xaml(.cs)                       # Entry: parses --url / --target / --main-exe
@@ -326,10 +337,18 @@ src/
 │   │   ├── Definitions/
 │   │   │   ├── api-definitions.json        # API endpoints / requests / responses (→ source gen)
 │   │   │   └── enums.json                  # Enum definitions
+│   │   ├── Auth/                           # Authentication subsystem (in-house P7 signature + slider CAPTCHA + WeChat QR + JWT + DPAPI)
+│   │   │   ├── ApiSignature/               # P7 request signing: SignatureHandler / RequestSigner / ISignatureTicketProvider
+│   │   │   ├── Captcha/                    # AJ slider CAPTCHA: AjCaptchaService + AesEcbCipher
+│   │   │   ├── WechatQr/                   # WeChat QR sign-in polling: WechatQrLoginService
+│   │   │   ├── Token/                      # Bearer token lifecycle: AuthTokenHandler (DelegatingHandler + 401 single-flight refresh) + AuthTokenState + AuthTokenRefresher + JwtExpiryReader + AuthTokenExpiryMonitor + DpapiAuthTokenStore (Windows DPAPI CurrentUser encrypted at rest)
+│   │   │   ├── MemberProfile/              # Membership info lookup (used by the avatar popup)
+│   │   │   └── SignedOnlyHttpClient.cs     # HttpClient that only mounts the signature handler, not Bearer — for sign-in-time APIs (avoids AuthTokenHandler's recursive 401 interception)
+│   │   ├── Unified/                        # DTO normalization layer: maps different APIs' PlayerStats / Season / RecentBattle / BattleDetail into UnifiedXxx so the UI layer consumes them uniformly
 │   │   └── JsonFlexibleStringConverter.cs  # Fault-tolerant System.Text.Json converter
 │   ├── Services/
-│   │   ├── Abstractions/                   # 13 service interfaces (see table below)
-│   │   └── Implementation/                 # Service implementations
+│   │   ├── Abstractions/                   # 17 service interfaces (see table below)
+│   │   └── Implementation/                 # Service implementations (some interfaces are implemented in the App layer)
 │   ├── Themes/Generic.xaml                 # HandyControl theme
 │   └── UI/Controls/                        # Custom WPF controls (DataGridWrapPanel, etc.)
 │
@@ -339,24 +358,26 @@ src/
 │   ├── HttpApiSourceGenerator.cs           # Generates NarakaApiClient + DTOs (Client mode)
 │   └── HttpApiTestSourceGenerator.cs       # Generates HTTP API test code (Tests mode)
 │
-├── BlackGoldAncientSword.Modules/          # UI page modules (10 Prism IModule)
+├── BlackGoldAncientSword.Modules/          # UI page modules (11 Prism IModule)
 │   ├── Mappings/BattleMappingRegister.cs   # Mapster mapping registration
-│   ├── Module/                             # 10 IModule registrations
+│   ├── Module/                             # 11 IModule registrations
 │   │   ├── AnnouncementModule.cs           # Announcements
+│   │   ├── AuthChallengeModule.cs          # Sign-in overlay (slider → WeChat QR state machine)
 │   │   ├── BattleDetailModule.cs           # Battle detail overlay (personal / team / top5 tabs)
 │   │   ├── ClosePromptModule.cs            # Close confirmation dialog
 │   │   ├── FeedbackModule.cs               # Feedback
 │   │   ├── HomeModule.cs                   # Home (game status monitor)
 │   │   ├── SearchModule.cs                 # Search history
 │   │   ├── SettingsModule.cs               # Settings
-│   │   ├── StatsModule.cs                  # Player stats
+│   │   ├── StatsModule.cs                  # Player stats (with 350ms search debounce)
 │   │   ├── TeamInfoModule.cs               # Team info (OCR + comparison)
-│   │   └── UpdateNotificationModule.cs     # New version prompt / launch Updater
+│   │   └── UpdateNotificationModule.cs     # New version prompt / launch Updater / release notes fetch
 │   └── UI/                                 # ViewModels + Views per module
+│       ├── AuthChallenge/                  # Sign-in page: Loading→CaptchaPending→CaptchaVerifying→QrLoading→QrPolling→Success/Failed
 │       ├── BattleDetail/                   # Battle detail: parallel fetch personal / team / top5
-│       ├── Stats/Services/                 # Stats aggregation services
+│       ├── Stats/Services/                 # Stats aggregation services (consume UnifiedXxx DTOs)
 │       ├── TeamInfo/Services/              # TeamInfoOcrService, TeamOcrCoordinator
-│       └── UpdateNotification/ViewModels/  # Launches BlackGoldAncientSword.Update.exe
+│       └── UpdateNotification/ViewModels/  # Launches BlackGoldAncientSword.Update.exe / shows release notes via IReleaseNotesFetcher
 │
 ├── BlackGoldAncientSword.GameMonitor/      # Game monitoring
 │   ├── Models/                             # BattleEventArgs, PlayerPrefsData
@@ -413,25 +434,33 @@ ocr_engine/                                 # PP-OCRv5 ONNX models + dict (copie
 
 ## Framework Service Interfaces
 
-`BlackGoldAncientSword.Framework/Services/Abstractions/` exposes 13 public interfaces:
+`BlackGoldAncientSword.Framework/Services/Abstractions/` exposes 17 public interfaces:
 
-| Interface | Main Implementation | Purpose |
-|---|---|---|
-| `IAppAssemblyMarker` | `AppAssemblyMarker` | Assembly locator marker (for XAML resource resolution) |
-| `IApplicationLifetime` | `WpfApplicationLifetime` | Exit / restart application |
-| `IClipboardService` | `WpfClipboardService` | Clipboard read/write |
-| `IGiteeReleaseService` | `GiteeReleaseService` | Fetch Gitee releases list and assets (uses 302 tag probe + CDN HEAD probing, zero API deps) |
-| `IImageCacheService` | `ImageCacheService` | On-disk image cache |
-| `ILocalizationService` | `LocalizationService` | Switch language at runtime (reload XAML resource dictionaries) |
-| `ILocalizedTextProvider` | `WpfLocalizedTextProvider` | Read localized strings from code |
-| `ISearchHistoryService` | `SearchHistoryService` | Persist search history |
-| `ISettingsService` | `SettingsService` | App configuration read/write |
-| `ITeamOverlayService` | `TeamOverlayService` | Bottom-right team overlay during hero selection |
-| `ITipMessageService` | `TipMessageService` | Global toast / tip messages |
-| `IUIDispatcher` | `WpfUIDispatcher` | Cross-thread UI dispatch wrapper |
-| `IUpdateService` | `UpdateService` | Compare versions, resolve latest Gitee release Setup / zip / split-volume URLs (via 302 + CDN, avoids API rate limits) |
+| Interface | Main Implementation | Location | Purpose |
+|---|---|---|---|
+| `IAppAssemblyMarker` | `AppAssemblyMarker` | App | Assembly locator marker (for XAML resource resolution) |
+| `IApplicationLifetime` | `WpfApplicationLifetime` | Framework | Exit / restart application |
+| `IAuthChallengeService` | `AuthChallengeService` | App | Concurrent single-flight sign-in overlay on 401; all awaiters resume together (depends on `IRegionManager` / `IModuleManager` / `IUpdateGateService`) |
+| `IClipboardService` | `WpfClipboardService` | Framework | Clipboard read/write |
+| `IGiteeReleaseService` | `GiteeReleaseService` | Framework | Fetch Gitee releases list and assets (uses 302 tag probe + CDN HEAD probing, zero API deps) |
+| `IImageCacheService` | `ImageCacheService` | Framework | On-disk image cache |
+| `ILocalizationService` | `LocalizationService` | Framework | Switch language at runtime (reload XAML resource dictionaries) |
+| `ILocalizedTextProvider` | `WpfLocalizedTextProvider` | Framework | Read localized strings from code |
+| `IReleaseNotesFetcher` | `GiteeReleaseNotesFetcher` | Framework | Fetch a Gitee release description (tag body) via the web-page 302 rather than `/api/v5`, to avoid unauthenticated IPs hitting the 60 req/min rate limit |
+| `ISearchHistoryService` | `SearchHistoryService` | Framework | Persist search history |
+| `ISettingsService` | `SettingsService` | Framework | App configuration read/write |
+| `IStartupGateService` | `StartupGateService` | App | Startup latch that blocks all UI interaction until the update check returns (mask the whole UI between Shell display and `CheckForUpdatesAsync` completion; `Complete` may only fire once) |
+| `ITeamOverlayService` | `TeamOverlayService` | Framework | Bottom-right team overlay during hero selection |
+| `ITipMessageService` | `TipMessageService` | Framework | Global toast / tip messages |
+| `IUIDispatcher` | `WpfUIDispatcher` | Framework | Cross-thread UI dispatch wrapper |
+| `IUpdateGateService` | `UpdateGateService` | App | Startup "new version" gate: `AuthChallengeService.ShowAsync` awaits `WaitAsync` first; flow only resumes once the user makes a choice in the update prompt and `Complete` is called |
+| `IUpdateService` | `UpdateService` | Framework | Compare versions, resolve latest Gitee release Setup / zip / split-volume URLs (via 302 + CDN, avoids API rate limits) |
+
+The three `*Gate*` / `AuthChallenge` interfaces are implemented under `App/Services/` (not `Framework/Services/Implementation/`) because they need `IRegionManager` / UI Dispatcher — runtime dependencies that only live in the main app.
 
 `GameMonitor`, `Ocr`, `ScreenCapture` each expose their own interfaces (`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService`, `IOcrService`, `IScreenCaptureService`), registered into the DI container via their `*AutoRegister.cs`.
+
+`Framework/Http/Auth/` and `Framework/Http/Unified/` also expose a family of authentication and DTO interfaces such as `ISignatureTicketProvider`, `ISignedOnlyHttpClient`, `IAjCaptchaService`, `IWechatQrLoginService`, `IAuthTokenStore`, `IAuthTokenState`, `IAuthTokenRefresher`, `IMemberProfileService`, all wired into the DI container via `[Component]` attributes.
 
 ---
 
@@ -447,7 +476,7 @@ ocr_engine/                                 # PP-OCRv5 ONNX models + dict (copie
 
 ### 2. On-Demand Module Loading
 
-Each of the 9 UI pages is a Prism `IModule` registered as `OnDemand` in `ModuleCatalogConfigManager`. Modules are only loaded on first navigation, reducing startup time.
+Each of the 11 UI pages is a Prism `IModule` registered as `OnDemand` in `ModuleCatalogConfigManager`. Modules are only loaded on first navigation, reducing startup time.
 
 ```csharp
 // PageNames.cs
@@ -463,6 +492,7 @@ public static class PageNames
     public const string FeedbackPage           = nameof(FeedbackPage);
     public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
     public const string BattleDetailPage       = nameof(BattleDetailPage);
+    public const string AuthChallengePage      = nameof(AuthChallengePage);
 }
 ```
 
@@ -511,12 +541,75 @@ Updates are a two-process collaboration:
 
 - **Main app side** (`Modules/UI/UpdateNotification/ViewModels/UpdateNotificationPageViewModel.cs`)
   - Detects new versions via `IUpdateService` (Gitee release page 302 tag probe + CDN HEAD probing for split volumes)
+  - Fetches the release body via `IReleaseNotesFetcher` from the tag page (also 302-based, avoiding `/api/v5` rate limits) and renders it in the prompt
   - On "Update Online" click, launches `BlackGoldAncientSword.Update.exe` in the install directory with `--url <zip URL>`, `--target <install dir>`, `--main-exe BlackGoldAncientSword.App.exe`
   - For users with no network or GitHub blocked, `BlackGoldAncientSword-win-x64-Downloader.exe` on the Gitee release page streams the split installer and launches Setup automatically
 - **Updater side** (`BlackGoldAncientSword.Update`)
   - Standalone process. Does not reference any business project (HandyControl only) — avoids DLL locking so the whole install directory can be safely overlaid
   - `UpdaterRunner` orchestrates: download zip (0–90%) → extract (90–98%) → prompt to close main app → full overlay → relaunch main app → exit
   - Published as self-contained + `PublishSingleFile` + `EnableCompressionInSingleFile`
+
+### 8. Authentication & Startup Flow (Three Gates)
+
+The startup flow is serialized through three latches/gates to avoid races:
+
+```text
+Shell shown
+   │
+   ▼
+StartupGate (IsBusy=true, full-UI overlay blocks all interaction)
+   │
+   ▼
+CheckForUpdatesAsync (fetch Gitee latest release + release notes)
+   │
+   ▼
+StartupGate.Complete()   ← must fire exactly once — success, failure, or exception — otherwise the overlay never lifts
+   │
+   ▼
+if a new version exists → navigate to UpdateNotificationPage prompt
+                          user acts → UpdateGate.Complete()
+                          │
+                          ▼
+AuthChallengeService.ShowAsync (await UpdateGate.WaitAsync first)
+   │
+   ▼
+if no valid local token → show AuthChallengePage
+     ├── Loading → fetch slider CAPTCHA
+     ├── CaptchaPending / CaptchaVerifying → AjCaptchaService.SolveAsync (AES-ECB-encrypted trajectory)
+     ├── QrLoading → fetch WeChat QR code
+     ├── QrPolling → poll scan status every 2s
+     └── Success → AuthTokenStore persists (DPAPI CurrentUser encrypted)
+   │
+   ▼
+Navigate to HomePage / StatsPage / …
+```
+
+**Runtime 401 single-flight**: when any API returns 401, `AuthTokenHandler` first tries `AuthTokenRefresher.RefreshAsync` (exchange refresh_token for a new access_token); on failure it invokes `AuthChallengeService.ShowAsync`. **Any number of concurrent 401s only pop the overlay once** — after the user signs in, every awaiter resumes and the original requests are replayed.
+
+**Token storage**: `DpapiAuthTokenStore` calls `ProtectedData.Protect(scope=CurrentUser)` and writes the ciphertext under the user profile directory; only the same Windows account can decrypt it. `AuthTokenExpiryMonitor` reads `exp` via `JwtExpiryReader` and proactively refreshes 60s before expiry, so real requests don't have to hit 401 first.
+
+### 9. HTTP Request Pipeline (P7 Signing + 401 Single-Flight)
+
+Aside from the sign-in-only `SignedOnlyHttpClient` (signature but no Bearer), the business `HttpClient` chains:
+
+```text
+Business request
+   │
+   ▼
+SignatureHandler        ← pulls a ticket from ISignatureTicketProvider, signs URL/body/timestamp per the P7 protocol, writes custom headers
+   │
+   ▼
+AuthTokenHandler        ← attaches the Bearer token; on 401 refreshes first, and if refresh fails calls AuthChallengeService.ShowAsync and replays the request after the user signs in
+   │
+   ▼
+HttpClientHandler       ← actually sends to https://desktop.naraka.drivod.top
+```
+
+The API base address has migrated from `naraka.drivod.top` to `desktop.naraka.drivod.top` (the dedicated P7 desktop-client domain).
+
+### 10. Stats Search Debounce
+
+`StatsPageViewModel` debounces the search box by 350ms — while the user is typing, only the last input is honored, cutting wasted API calls (especially valuable when the user isn't signed in yet and every request would otherwise trigger a CAPTCHA + QR round-trip).
 
 ---
 

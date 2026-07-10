@@ -35,6 +35,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private CancellationTokenSource? _refreshMembersCts;
         private CancellationTokenSource? _refreshOcrCts;
         private CancellationTokenSource? _loadSeasonsCts;
+        private readonly SearchDebounceGate _refreshOcrDebounce = new();
         // 已成功加载赛季后不再重复请求；后续切换页面也复用既有数据。
         private bool _seasonsLoaded;
         private bool _hasEverHadData;
@@ -148,6 +149,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public DelegateCommand RefreshOcrCommand =>
             _refreshOcrCommand ??= new DelegateCommand(async () =>
             {
+                if (!_refreshOcrDebounce.TryEnter())
+                {
+                    _tipMessage.ShowError(L("Search.TooFast", "点击过快请稍后重试"));
+                    return;
+                }
                 await RefreshOcrOnceAsync();
             });
 

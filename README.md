@@ -31,6 +31,10 @@
 
 **黑金古刀-永劫助手**是一款运行在 Windows 上的桌面应用。它可以在游戏过程中自动检测游戏状态、识别队友信息，并实时查询玩家战绩数据。无需切出游戏打开网页，助手将战绩数据直接呈现在桌面端，支持**三排 / 双排 / 单排**及**排位 / 匹配 / 天人**模式的完整数据统计。
 
+## 登录 🔐
+
+助手启动时会引导用户完成一次登录（滑块验证 → 微信扫码），登录 token 通过 **Windows DPAPI** 加密保存到本地，之后自动续期，无需重复扫码。任意后台请求返回 401 时会**并发单飞**地弹出登录 Overlay，一次扫码所有等待中的请求同时恢复。所有 API 请求走**自研 P7 签名协议**并带 Bearer token 访问 `desktop.naraka.drivod.top`。
+
 ## 战绩查询
 
 战绩页面是助手的核心功能。在搜索框中输入玩家昵称，即可查询该玩家的完整战绩数据：
@@ -84,6 +88,7 @@
 - **语言**：支持 简体中文 / English / 繁體中文
 - **关闭行为**：点击关闭按钮时的默认行为，可选"每次询问 / 最小化到任务栏 / 最小化到系统托盘 / 直接退出"，并支持记住选项
 - **英雄选择时的右下角队伍提示弹窗**：开关控制
+- **账号头像**：顶部头像点击弹出 Popup，展示昵称 / 会员信息，支持一键退出登录
 - **检查更新**：手动检查与下载新版本（调用独立的 Update 程序在线更新，详见下文）
 - **当前版本**：显示版本号
 
@@ -96,7 +101,7 @@
 
 ## 在线更新
 
-助手在启动时和"设置 → 检查更新"中均会自动比对 GitHub Releases 的最新版本。检测到新版本时会弹出更新提示页面，点击"在线更新"即可：
+助手启动时会先打上**启动遮罩（StartupGate）**：在检测更新完成前，整个 UI（登录按钮 / 侧边栏 / 关闭确认）都被拦截，避免用户操作与更新流程打架。检测到新版本时会弹出更新提示页面并**锁死后续流程（UpdateGate）**——用户必须先处理弹窗（在线更新 / 打开浏览器 / 稍后再说 / 关闭），登录 gate 与后续导航才会继续。点击"在线更新"即可：
 
 1. 主程序拉起独立的 **BlackGoldAncientSword.Update.exe**（更新器）并传入下载地址、安装目录、主程序文件名等参数；
 2. 更新器下载新版 zip → 解压 → 全量覆盖安装目录 → 重新拉起主程序 → 自身退出。
@@ -205,7 +210,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 
 ## 解决方案概览
 
-`src/BlackGoldAncientSword.slnx` 共包含 **11 个项目**：8 个类库 + 3 个可执行程序（主程序 App、独立更新器 Update、离线下载器 Downloader）。
+`src/BlackGoldAncientSword.slnx` 共包含 **11 个项目**：7 个类库 + 3 个可执行程序（主程序 App、独立更新器 Update、离线下载器 Downloader）+ 1 个 Roslyn 分析器 + 1 个测试项目。
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -254,11 +259,11 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 
 | 层 | 项目 | 输出类型 | 职责 |
 |---|---|---|---|
-| **主程序** | `BlackGoldAncientSword.App` | WinExe | WPF 应用入口、主窗口、侧边栏导航、托盘、启动更新器、启动期后台预热 OCR |
+| **主程序** | `BlackGoldAncientSword.App` | WinExe | WPF 应用入口、主窗口、侧边栏导航、托盘、启动更新器、启动期后台预热 OCR、登录 / 启动 / 更新三闸门（AuthChallenge / StartupGate / UpdateGate）具体实现 |
 | **更新器** | `BlackGoldAncientSword.Update` | WinExe | 独立在线更新进程，零业务依赖（仅 HandyControl） |
 | **离线下载器** | `BlackGoldAncientSword.Downloader` | WinExe | 独立单文件 exe，从 Gitee release 顺序流式下载分卷安装包 → 拉起 Setup.exe → 自身退出。零 API 依赖（走 302 + CDN） |
-| **UI 模块** | `BlackGoldAncientSword.Modules` | ClassLib | 10 个 Prism `IModule` 页面，按需加载 |
-| **核心框架** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM 基类、Prism 基础设施、服务抽象与实现、HTTP API |
+| **UI 模块** | `BlackGoldAncientSword.Modules` | ClassLib | 11 个 Prism `IModule` 页面（含登录 Overlay），按需加载 |
+| **核心框架** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM 基类、Prism 基础设施、服务抽象与实现、HTTP API（含 P7 签名 / Auth Token / 滑块 / 微信扫码 / DTO 统一映射） |
 | **游戏监控** | `BlackGoldAncientSword.GameMonitor` | ClassLib | 进程检测、Player.log 解析、战局状态机 |
 | **屏幕捕获** | `BlackGoldAncientSword.ScreenCapture` | ClassLib | Windows Graphics Capture API + SharpDX，含原生 wgc_capture.dll |
 | **OCR 引擎** | `BlackGoldAncientSword.Ocr` | ClassLib | RapidOcrNet（PP-OCRv5 ONNX）进程内推理封装 |
@@ -276,7 +281,8 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | **UI** | WPF + HandyControl 3.5 | 桌面界面与控件库 |
 | **主题** | 自定义 ModernTheme（青瓷竹青护眼配色） | 淡雅护眼浅绿底 + 竹青深绿点缀 + 深墨字，长时间阅读舒适 |
 | **MVVM 框架** | Prism 8.1 (`Prism.DryIoc`) | DI 容器、区域导航、模块化 |
-| **HTTP** | 编译期源码生成器 | 从 `api-definitions.json` 自动生成强类型 API 客户端 |
+| **HTTP** | 编译期源码生成器 + `HttpClient` + `DelegatingHandler` | 从 `api-definitions.json` 自动生成强类型 API 客户端；请求链上挂 `SignatureHandler`（P7 协议签名）与 `AuthTokenHandler`（Bearer + 401 单飞刷新） |
+| **认证** | 自研滑块验证 + 微信扫码登录 + JWT + Windows DPAPI | 登录 token 加密落盘，过期前自动刷新，401 时并发单飞弹出登录 Overlay |
 | **对象映射** | Mapster 7.4 | DTO ↔ ViewModel |
 | **JSON** | `System.Text.Json`（含源码生成上下文） | 序列化 / 反序列化（已全量替换 Newtonsoft.Json） |
 | **屏幕捕获** | SharpDX.Direct3D11 + 原生 WGC DLL (C++/WinRT) | 游戏窗口截图 |
@@ -294,10 +300,15 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 ```
 src/
 ├── BlackGoldAncientSword.App/              # WPF 主程序入口（WinExe）
-│   ├── App.xaml / App.xaml.cs              # 应用入口、Prism 启动配置
+│   ├── App.xaml / App.xaml.cs              # 应用入口、Prism 启动配置、启动流程编排（StartupGate → 更新检测 → UpdateGate → AuthChallenge → 导航到 Home）
+│   ├── AppAssemblyMarker.cs                # 程序集定位（供 XAML 资源解析）
+│   ├── Services/                           # App 层三闸门服务实现（依赖 IRegionManager / UI Dispatcher，无法放在 Framework）
+│   │   ├── StartupGateService.cs           # 启动遮罩 latch（true → false 单向）
+│   │   ├── UpdateGateService.cs            # 更新弹窗门槛（TCS 单飞 + completed latch 兜住 Complete 先于 WaitAsync 到达的竞态）
+│   │   └── AuthChallengeService.cs         # 401 并发单飞：任意个后台请求撞 401 只弹一次登录 Overlay
 │   └── Shell/
-│       ├── MainWindow.xaml(.cs)            # 主窗口（侧边栏 + 导航 + 托盘）
-│       └── MainWindowViewModel.cs          # 导航命令、游戏状态、更新检测
+│       ├── MainWindow.xaml(.cs)            # 主窗口（侧边栏 + 导航 + 托盘 + 头像 Popup + 启动遮罩层）
+│       └── MainWindowViewModel.cs          # 导航命令、游戏状态、更新检测、用户信息
 │
 ├── BlackGoldAncientSword.Update/           # 独立在线更新器（WinExe，零业务依赖）
 │   ├── App.xaml(.cs)                       # 入口：解析 --url / --target / --main-exe
@@ -328,10 +339,18 @@ src/
 │   │   ├── Definitions/
 │   │   │   ├── api-definitions.json        # API 端点 / 请求 / 响应定义（→ 源码生成）
 │   │   │   └── enums.json                  # 枚举定义
+│   │   ├── Auth/                           # 认证子系统（自研 P7 签名 + 滑块 + 微信扫码 + JWT + DPAPI）
+│   │   │   ├── ApiSignature/               # P7 请求签名：SignatureHandler / RequestSigner / ISignatureTicketProvider
+│   │   │   ├── Captcha/                    # AJ 滑块验证：AjCaptchaService + AesEcbCipher
+│   │   │   ├── WechatQr/                   # 微信扫码登录轮询：WechatQrLoginService
+│   │   │   ├── Token/                      # Bearer token 生命周期：AuthTokenHandler（DelegatingHandler + 401 单飞刷新）+ AuthTokenState + AuthTokenRefresher + JwtExpiryReader + AuthTokenExpiryMonitor + DpapiAuthTokenStore（Windows DPAPI CurrentUser 加密落盘）
+│   │   │   ├── MemberProfile/              # 会员信息查询（头像 Popup 用）
+│   │   │   └── SignedOnlyHttpClient.cs     # 只挂签名不挂 Bearer 的 HttpClient，专供登录期 API（避免 AuthTokenHandler 递归 401 拦截）
+│   │   ├── Unified/                        # DTO 统一映射层：把不同 API 的 PlayerStats / Season / RecentBattle / BattleDetail 归一化为 UnifiedXxx，供 UI 层无差别消费
 │   │   └── JsonFlexibleStringConverter.cs  # System.Text.Json 容错转换器
 │   ├── Services/
-│   │   ├── Abstractions/                   # 13 个服务接口（见下表）
-│   │   └── Implementation/                 # 服务实现
+│   │   ├── Abstractions/                   # 17 个服务接口（见下表）
+│   │   └── Implementation/                 # 服务实现（部分接口在 App 层实现）
 │   ├── Themes/Generic.xaml                 # HandyControl 主题
 │   └── UI/Controls/                        # 自定义 WPF 控件（DataGridWrapPanel 等）
 │
@@ -341,24 +360,26 @@ src/
 │   ├── HttpApiSourceGenerator.cs           # 生成 NarakaApiClient + DTO（Client 模式）
 │   └── HttpApiTestSourceGenerator.cs       # 生成 HTTP API 测试代码（Tests 模式）
 │
-├── BlackGoldAncientSword.Modules/          # UI 页面模块（10 个 Prism IModule）
+├── BlackGoldAncientSword.Modules/          # UI 页面模块（11 个 Prism IModule）
 │   ├── Mappings/BattleMappingRegister.cs   # Mapster 映射注册
-│   ├── Module/                             # 10 个 IModule 注册
+│   ├── Module/                             # 11 个 IModule 注册
 │   │   ├── AnnouncementModule.cs           # 公告
+│   │   ├── AuthChallengeModule.cs          # 登录 Overlay（滑块 → 微信扫码状态机）
 │   │   ├── BattleDetailModule.cs           # 对局详情浮层（personal/team/top5 三 Tab）
 │   │   ├── ClosePromptModule.cs            # 关闭确认弹窗
 │   │   ├── FeedbackModule.cs               # 意见反馈
 │   │   ├── HomeModule.cs                   # 首页（游戏状态监控）
 │   │   ├── SearchModule.cs                 # 搜索历史
 │   │   ├── SettingsModule.cs               # 设置
-│   │   ├── StatsModule.cs                  # 战绩查询
+│   │   ├── StatsModule.cs                  # 战绩查询（含 350ms 搜索防抖）
 │   │   ├── TeamInfoModule.cs               # 队伍信息（OCR + 对比）
-│   │   └── UpdateNotificationModule.cs     # 新版本提示 / 启动更新器
+│   │   └── UpdateNotificationModule.cs     # 新版本提示 / 启动更新器 / 拉取 release notes
 │   └── UI/                                 # 各模块的 ViewModels + Views
+│       ├── AuthChallenge/                  # 登录页：状态机 Loading→CaptchaPending→CaptchaVerifying→QrLoading→QrPolling→Success/Failed
 │       ├── BattleDetail/                   # 对局详情：并行拉 personal/team/top5
-│       ├── Stats/Services/                 # 战绩聚合服务
+│       ├── Stats/Services/                 # 战绩聚合服务（消费 UnifiedXxx DTO）
 │       ├── TeamInfo/Services/              # TeamInfoOcrService、TeamOcrCoordinator
-│       └── UpdateNotification/ViewModels/  # 拉起 BlackGoldAncientSword.Update.exe
+│       └── UpdateNotification/ViewModels/  # 拉起 BlackGoldAncientSword.Update.exe / 通过 IReleaseNotesFetcher 展示 release notes
 │
 ├── BlackGoldAncientSword.GameMonitor/      # 游戏监控
 │   ├── Models/                             # BattleEventArgs、PlayerPrefsData
@@ -415,25 +436,33 @@ ocr_engine/                                 # PP-OCRv5 ONNX 模型与字典（�
 
 ## Framework 服务接口一览
 
-`BlackGoldAncientSword.Framework/Services/Abstractions/` 下共 13 个公开接口：
+`BlackGoldAncientSword.Framework/Services/Abstractions/` 下共 17 个公开接口：
 
-| 接口 | 主要实现 | 用途 |
-|---|---|---|
-| `IAppAssemblyMarker` | `AppAssemblyMarker` | 程序集定位标记（XAML 资源解析） |
-| `IApplicationLifetime` | `WpfApplicationLifetime` | 退出 / 重启应用 |
-| `IClipboardService` | `WpfClipboardService` | 剪贴板读写 |
-| `IGiteeReleaseService` | `GiteeReleaseService` | 拉取 Gitee Releases 列表与资产（含 302 tag 探测 + CDN 分卷 HEAD 探测，零 API 依赖） |
-| `IImageCacheService` | `ImageCacheService` | 图片磁盘缓存 |
-| `ILocalizationService` | `LocalizationService` | 动态切换语言（重载 XAML 资源字典） |
-| `ILocalizedTextProvider` | `WpfLocalizedTextProvider` | 代码侧读取本地化字符串 |
-| `ISearchHistoryService` | `SearchHistoryService` | 搜索历史持久化 |
-| `ISettingsService` | `SettingsService` | 应用配置读写 |
-| `ITeamOverlayService` | `TeamOverlayService` | 英雄选择时的右下角队伍弹窗 |
-| `ITipMessageService` | `TipMessageService` | 全局 Toast / 提示消息 |
-| `IUIDispatcher` | `WpfUIDispatcher` | 跨线程 UI 调度封装 |
-| `IUpdateService` | `UpdateService` | 比对版本、解析最新 Gitee release 的 Setup / zip / 分卷 URL（走 302 + CDN，避 API rate limit） |
+| 接口 | 主要实现 | 位置 | 用途 |
+|---|---|---|---|
+| `IAppAssemblyMarker` | `AppAssemblyMarker` | App | 程序集定位标记（XAML 资源解析） |
+| `IApplicationLifetime` | `WpfApplicationLifetime` | Framework | 退出 / 重启应用 |
+| `IAuthChallengeService` | `AuthChallengeService` | App | 401 时并发单飞弹出登录 Overlay，等所有 await 者一同 resume（依赖 `IRegionManager` / `IModuleManager` / `IUpdateGateService`） |
+| `IClipboardService` | `WpfClipboardService` | Framework | 剪贴板读写 |
+| `IGiteeReleaseService` | `GiteeReleaseService` | Framework | 拉取 Gitee Releases 列表与资产（含 302 tag 探测 + CDN 分卷 HEAD 探测，零 API 依赖） |
+| `IImageCacheService` | `ImageCacheService` | Framework | 图片磁盘缓存 |
+| `ILocalizationService` | `LocalizationService` | Framework | 动态切换语言（重载 XAML 资源字典） |
+| `ILocalizedTextProvider` | `WpfLocalizedTextProvider` | Framework | 代码侧读取本地化字符串 |
+| `IReleaseNotesFetcher` | `GiteeReleaseNotesFetcher` | Framework | 拉取 Gitee release 描述（tag body），走网页 302 而非 `/api/v5`，避免未鉴权 IP 命中 60 req/min 限流 |
+| `ISearchHistoryService` | `SearchHistoryService` | Framework | 搜索历史持久化 |
+| `ISettingsService` | `SettingsService` | Framework | 应用配置读写 |
+| `IStartupGateService` | `StartupGateService` | App | 启动期"检测更新未完成前禁止一切 UI 操作"的 latch（Shell 显示 → `CheckForUpdatesAsync` 返回之间遮罩整个 UI，`Complete` 只允许调用一次） |
+| `ITeamOverlayService` | `TeamOverlayService` | Framework | 英雄选择时的右下角队伍弹窗 |
+| `ITipMessageService` | `TipMessageService` | Framework | 全局 Toast / 提示消息 |
+| `IUIDispatcher` | `WpfUIDispatcher` | Framework | 跨线程 UI 调度封装 |
+| `IUpdateGateService` | `UpdateGateService` | App | 启动期"发现新版本"门槛：`AuthChallengeService.ShowAsync` 前先 `WaitAsync`，用户在更新弹窗做出任意选择后 `Complete` 才继续流程 |
+| `IUpdateService` | `UpdateService` | Framework | 比对版本、解析最新 Gitee release 的 Setup / zip / 分卷 URL（走 302 + CDN，避 API rate limit） |
+
+三个 `*Gate*` / `AuthChallenge` 接口的实现放在 `App/Services/` 而非 `Framework/Services/Implementation/`，因为它们需要 `IRegionManager` / UI Dispatcher 等只有主程序才有的运行时依赖。
 
 `GameMonitor`、`Ocr`、`ScreenCapture` 各自暴露自身的接口（`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService`、`IOcrService`、`IScreenCaptureService`），通过各模块的 `*AutoRegister.cs` 注册到 DI 容器。
+
+`Framework/Http/Auth/` 与 `Framework/Http/Unified/` 另外暴露一批认证与 DTO 接口，例如 `ISignatureTicketProvider`、`ISignedOnlyHttpClient`、`IAjCaptchaService`、`IWechatQrLoginService`、`IAuthTokenStore`、`IAuthTokenState`、`IAuthTokenRefresher`、`IMemberProfileService` 等，通过 `[Component]` 特性自动注册到 DI 容器。
 
 ---
 
@@ -449,7 +478,7 @@ ocr_engine/                                 # PP-OCRv5 ONNX 模型与字典（�
 
 ### 2. 模块化按需加载
 
-9 个 UI 页面分别是一个 Prism `IModule`，在 `ModuleCatalogConfigManager` 中配置为 `OnDemand`：首次导航到某页面时才加载对应模块，减少启动时间。
+11 个 UI 页面分别是一个 Prism `IModule`，在 `ModuleCatalogConfigManager` 中配置为 `OnDemand`：首次导航到某页面时才加载对应模块，减少启动时间。
 
 ```csharp
 // PageNames.cs
@@ -465,6 +494,7 @@ public static class PageNames
     public const string FeedbackPage           = nameof(FeedbackPage);
     public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
     public const string BattleDetailPage       = nameof(BattleDetailPage);
+    public const string AuthChallengePage      = nameof(AuthChallengePage);
 }
 ```
 
@@ -515,12 +545,75 @@ API 客户端**不手写**，而是通过 `BlackGoldAncientSword.Framework.Sourc
 
 - **主程序侧**（`Modules/UI/UpdateNotification/ViewModels/UpdateNotificationPageViewModel.cs`）
   - 通过 `IUpdateService`（走 Gitee release 网页 302 提取 tag + CDN HEAD 探测分卷）检测新版本
+  - 通过 `IReleaseNotesFetcher` 从 tag 页面抓 body（同样走 302，避 `/api/v5` 限流），在弹窗中展示 release notes
   - 用户点击"在线更新"后，启动同目录下的 `BlackGoldAncientSword.Update.exe`，传入 `--url <zip 下载地址>`、`--target <安装目录>`、`--main-exe BlackGoldAncientSword.App.exe`
   - 无网 / GitHub 被墙用户可从 Gitee Release 页面下载 `BlackGoldAncientSword-win-x64-Downloader.exe`（离线下载器），双击后自动流式拉取分卷安装包并调起 Setup
 - **更新器侧**（`BlackGoldAncientSword.Update`）
   - 独立进程，不引用任何业务项目（仅依赖 HandyControl），避免 DLL 被锁定影响整目录覆盖
   - `UpdaterRunner` 编排：下载 zip（0–90%）→ 解压（90–98%）→ 提示关闭主程序 → 全量覆盖 → 重新拉起主程序 → 自身退出
   - 以 self-contained + `PublishSingleFile` + `EnableCompressionInSingleFile` 发布
+
+### 8. 认证与启动流程三闸门
+
+启动流程被三个 latch/gate 串行编排，避免竞态：
+
+```text
+Shell 显示
+   │
+   ▼
+StartupGate (IsBusy=true, 整个 UI 遮罩不可交互)
+   │
+   ▼
+CheckForUpdatesAsync (拉 Gitee latest release + 拉 release notes)
+   │
+   ▼
+StartupGate.Complete()   ← 无论成功 / 失败 / 异常，都要打一次，遮罩才会消失
+   │
+   ▼
+if 有新版本 → 导航到 UpdateNotificationPage 弹窗
+              用户操作后 UpdateGate.Complete()
+              │
+              ▼
+AuthChallengeService.ShowAsync (await UpdateGate.WaitAsync 先)
+   │
+   ▼
+若本地无有效 token → 弹 AuthChallengePage
+     ├── Loading → 拉滑块题
+     ├── CaptchaPending / CaptchaVerifying → AjCaptchaService.SolveAsync（AES-ECB 加密提交轨迹）
+     ├── QrLoading → 拉取微信二维码
+     ├── QrPolling → 每 2s 轮询扫码状态
+     └── Success → AuthTokenStore 落盘（DPAPI CurrentUser 加密）
+   │
+   ▼
+导航到 HomePage / StatsPage 等业务页面
+```
+
+**运行期 401 单飞**：任意 API 请求返回 401，`AuthTokenHandler` 会先尝试 `AuthTokenRefresher.RefreshAsync`（用 refresh_token 换新 access_token），失败则触发 `AuthChallengeService.ShowAsync`——**多个并发 401 只弹一次 Overlay**，用户完成登录后所有 await 者一同 resume 并重放原请求。
+
+**Token 存储**：`DpapiAuthTokenStore` 用 `ProtectedData.Protect(scope=CurrentUser)` 加密后落盘到用户目录，只有同一 Windows 账户能解开；`AuthTokenExpiryMonitor` 通过 `JwtExpiryReader` 提前读到 `exp` 并在过期前 60s 主动刷新，避免请求打出去才 401。
+
+### 9. HTTP 请求管线（P7 签名 + 401 单飞）
+
+除了登录期专用的 `SignedOnlyHttpClient`（只挂签名不挂 Bearer），业务 HttpClient 依次经过：
+
+```text
+业务 Request
+   │
+   ▼
+SignatureHandler        ← 从 ISignatureTicketProvider 取 ticket，按 P7 协议对 URL/Body/时间戳做签名，写入自定义 Header
+   │
+   ▼
+AuthTokenHandler        ← 挂 Bearer token；收到 401 时先 refresh，失败则调 AuthChallengeService.ShowAsync 并等用户登录后重放请求
+   │
+   ▼
+HttpClientHandler       ← 实际发出请求到 https://desktop.naraka.drivod.top
+```
+
+API 基地址已从 `naraka.drivod.top` 迁移到 `desktop.naraka.drivod.top`（P7 桌面端专属域名）。
+
+### 10. Stats 搜索防抖
+
+`StatsPageViewModel` 对搜索框输入做 350ms 防抖：用户连续敲字期间只保留最后一次触发，减少无效 API 调用（尤其是当前用户尚未登录、每次请求都要跑滑块 + 扫码时）。
 
 ---
 

@@ -636,13 +636,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
             var success = await LoadAllAsync(ct);
 
-            if (!ct.IsCancellationRequested)
+            if (!ct.IsCancellationRequested && success)
             {
-                if (success)
-                    _tipMessage.ShowInfo(L("Stats.SearchSuccess", "搜索成功"));
-                else if (!string.IsNullOrEmpty(_playerPrefsService.Current.PlayerName))
-                    _tipMessage.ShowError(L("Stats.SearchError", "搜索失败，请检查网络后重试"));
+                _tipMessage.ShowInfo(L("Stats.SearchSuccess", "搜索成功"));
             }
+            // 失败路径：LoadAllAsync 内部已按响应体 msg 弹窗（NarakaApiException.Msg），
+            // 这里不再补一次前端兜底文案，避免"网络问题"这种猜测性文案覆盖真实的后端错误。
         }
 
         private string L(string key, string fallback) => _localizedText.Get(key, fallback);
@@ -765,10 +764,22 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 // 导航离开或过滤条件已变更——不是错误
                 return false;
             }
+            catch (NarakaApiException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadAllAsync api error: code={ex.Code}, msg={ex.Msg}");
+                // 搜索被后端拒绝（429/401/500 等）——渲染态与"没查到"分支保持一致：清空显示，
+                // 这样 IsLocalUser 会随 UserName 一并变 false，"回到我"按钮才不会误判为"你正在自己页面"。
+                ClearAllData();
+                // 只在后端返回了 msg 时才弹；msg 为空按约定静默，不拼前端兜底文案。
+                if (!string.IsNullOrEmpty(ex.Msg))
+                    _tipMessage.ShowError(ex.Msg!);
+                return false;
+            }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadRecentBattlesAsync failed: {ex}");
-                _tipMessage.ShowError(ex.Message);
+                // 未知底层异常（网络中断/反序列化失败等），无 msg 可展示，仅记日志。
+                System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadAllAsync failed: {ex}");
+                ClearAllData();
                 return false;
             }
             finally
@@ -796,7 +807,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
                 if (stats == null)
                 {
-                    _tipMessage.ShowError(L("Stats.LoadError", "加载战绩失败，请检查网络后重试。"));
+                    // stats 为 null 意味着 Loader 层已按静默契约吞掉未知底层异常（无 msg 可展示）；
+                    // 若是后端业务错误，NarakaApiException 会冒泡到下面的 catch，那里才是弹 msg 的入口。
                     return;
                 }
 
@@ -848,10 +860,15 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 }
             }
             catch (OperationCanceledException) { }
+            catch (NarakaApiException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadStatsAsync api error: code={ex.Code}, msg={ex.Msg}");
+                if (!string.IsNullOrEmpty(ex.Msg))
+                    _tipMessage.ShowError(ex.Msg!);
+            }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadStatsAsync failed: {ex}");
-                _tipMessage.ShowError(ex.Message);
             }
             finally
             {
