@@ -243,14 +243,14 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("            var body = await r.Content.ReadAsStringAsync(ct).ConfigureAwait(false);");
             sb.AppendLine("            if (!r.IsSuccessStatusCode)");
             sb.AppendLine("            {");
-            sb.AppendLine("                var apiMsg = TryExtractApiError(body);");
-            sb.AppendLine("                throw new HttpRequestException(apiMsg ?? $\"HTTP {(int)r.StatusCode}: {body}\");");
+            sb.AppendLine("                // 上层约定：只展示后端 msg，前端不拼任何兜底文案；msg 为 null 时上层静默。");
+            sb.AppendLine("                throw new NarakaApiException(-(int)r.StatusCode, TryExtractApiError(body));");
             sb.AppendLine("            }");
             sb.AppendLine("            var result = JsonSerializer.Deserialize<T>(body, JsonOptions)!;");
             sb.AppendLine("            // 后端历史契约：code=200 表示成功；升级后契约：code=0 表示成功。");
             sb.AppendLine("            // 两套并存期为兼容旧数据/旧网关（如仍返回 200）都放行。");
             sb.AppendLine("            if (result is IApiResponse apiResp && apiResp.Code != 200 && apiResp.Code != 0)");
-            sb.AppendLine("                throw new InvalidOperationException(apiResp.Msg ?? $\"API returned code {apiResp.Code}\");");
+            sb.AppendLine("                throw new NarakaApiException((int)(apiResp.Code ?? 0), apiResp.Msg);");
             sb.AppendLine("            return result;");
             sb.AppendLine("        }");
             sb.AppendLine();
