@@ -549,10 +549,31 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         protected override void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
+            // 基类签名为 void，无法 await——把"重读 player_prefs + 刷新 UI + 拉战绩"整块塞进
+            // fire-and-forget async。RefreshAllAsync 内部已有 try/catch 兜底。
+            _ = ReloadLocalUserAndRefreshAsync();
+        }
+
+        /// <summary>
+        /// 进入战绩页时实时重读本地登录用户：Steam ↔ 网易 客户端共用同一份 player_prefs.txt，
+        /// 用户在游戏内切了客户端后，构造时缓存的 <c>Current</c> 会陈旧。这里主动 reload 一次，
+        /// 避免搜索框/战绩查询用错账号。
+        /// </summary>
+        private async System.Threading.Tasks.Task ReloadLocalUserAndRefreshAsync()
+        {
+            try
+            {
+                await _playerPrefsService.LoadAsync();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[{nameof(StatsPageViewModel)}.{nameof(ReloadLocalUserAndRefreshAsync)}] reload prefs failed: {ex.Message}");
+            }
+
             RaisePropertyChanged(nameof(IsLocalUser));
             SearchText = _playerPrefsService.Current.PlayerName;
-            // 基类签名为 void，无法 await。fire-and-forget；RefreshAllAsync 内部已有 try/catch 兜底。
-            _ = RefreshAllAsync();
+            await RefreshAllAsync();
         }
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
