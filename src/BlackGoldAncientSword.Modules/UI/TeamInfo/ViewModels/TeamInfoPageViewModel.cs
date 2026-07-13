@@ -403,7 +403,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 // 能稳定把自己放到中间卡片。
                 names = TeamMemberNameCorrector.Apply(names, _playerPrefsService.Current.OriginalPlayerName);
 
-                // 在 UI 线程上更新成员列表
+                // 智能去重：本轮 OCR 名字与当前 TeamMembers 比对——
+                // - 新增名字：加入 TeamMembers，加入请求列表
+                // - 已存在且已成功加载（有 UID + stats + 无错误）：跳过，不重发 HTTP（省后端压力）
+                // - 已存在但上次失败/未加载：重置状态并加入请求列表（允许用户通过刷新按钮重试）
+                // - 本轮未识别到的旧成员：从 TeamMembers 移除
+                var toLoad = new List<TeamMemberInfo>();
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     _hasEverHadData = true;
@@ -430,31 +435,42 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                             }
                         };
                         TeamMembers.Add(member);
+                        toLoad.Add(member);
                     }
 
-                    // 强制所有成员进入加载状态（无论之前是否正在加载）
+                    // 对已存在的成员判断是否需要重新请求
                     foreach (var member in TeamMembers)
                     {
+                        if (toLoad.Contains(member)) continue; // 上面新增的已经登记
+
+                        var alreadyLoaded = !string.IsNullOrEmpty(member.UID)
+                                            && member.Stats.Count > 0
+                                            && !member.HasStatusError;
+                        if (alreadyLoaded) continue; // 已成功加载 → 跳过 HTTP
+
+                        // 上次失败或未加载完：重置状态并加入本轮请求列表
                         member.IsLoading = true;
                         member.StatusText = string.Empty;
+                        toLoad.Add(member);
                     }
 
                     ReorderMembersForLocalUser();
                     RaiseMemberProperties();
                 });
 
-                // 从 UI 线程启动所有 LoadWithIndependentToken，确保 SynchronizationContext 正确
-                // 每个成员使用独立 linked CTS，互不干扰
-                var tasks = new List<Task>();
-                await _uiDispatcher.InvokeAsync(() =>
+                // 只对需要请求的成员启动 LoadWithIndependentToken
+                if (toLoad.Count > 0)
                 {
-                    foreach (var member in TeamMembers)
+                    var tasks = new List<Task>();
+                    await _uiDispatcher.InvokeAsync(() =>
                     {
-                        tasks.Add(LoadWithIndependentToken(member, ct));
-                    }
-                });
-
-                await Task.WhenAll(tasks);
+                        foreach (var member in toLoad)
+                        {
+                            tasks.Add(LoadWithIndependentToken(member, ct));
+                        }
+                    });
+                    await Task.WhenAll(tasks);
+                }
                 _ocrDataLoadedSuccessfully = true;
             }
             catch (OperationCanceledException)
@@ -808,9 +824,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
                 if (loaded.Failed)
                 {
+                    // 优先展示后端 msg 原文（如"未找到玩家"），msg 为空/null 时才回退到本地化的"查询失败"。
+                    // 卡片中心的错误文案由 XAML 绑定 member.StatusText 直接渲染。
+                    var failText = !string.IsNullOrWhiteSpace(loaded.FailMsg)
+                        ? loaded.FailMsg!
+                        : L("TeamInfo.QueryFailed", "查询失败");
                     await _uiDispatcher.InvokeAsync(() =>
                     {
-                        member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
+                        member.StatusText = failText;
                     });
                     // 不 return：让 final cleanup 块执行，确保 IsLoading 被重置
                 }
