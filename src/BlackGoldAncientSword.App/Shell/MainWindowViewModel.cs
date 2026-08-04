@@ -220,7 +220,7 @@ namespace BlackGoldAncientSword.App.Shell
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
-                    Debug.WriteLine($"[{nameof(MainWindowViewModel)}.{nameof(CheckForUpdatesCommand)}] 弹出更新通知失败: {ex}");
+                    AppLog.Error(ex, $"{nameof(MainWindowViewModel)}.{nameof(CheckForUpdatesCommand)}", "弹出更新通知失败");
                 }
             });
 
@@ -327,7 +327,7 @@ namespace BlackGoldAncientSword.App.Shell
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(MainWindowViewModel)}.{nameof(TryShowUpdateNotification)}] 弹出失败: {ex}");
+                AppLog.Error(ex, $"{nameof(MainWindowViewModel)}.{nameof(TryShowUpdateNotification)}", "弹出失败");
             }
         }
 

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Extensions;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http.Unified;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.Modules.UI.Stats.Services;
@@ -209,7 +210,7 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[BattleDetail] Load failed: {ex.Message}");
+                AppLog.Error(ex, "BattleDetail", "Load failed");
                 await _uiDispatcher.InvokeAsync(() => { IsLoading = false; });
             }
         }

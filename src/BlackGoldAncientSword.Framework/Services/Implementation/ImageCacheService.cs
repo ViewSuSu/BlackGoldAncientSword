@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
@@ -55,7 +56,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             catch (Exception ex)
             {
                 // 缓存写入失败不影响主流程，但记录便于诊断
-                Debug.WriteLine($"[{nameof(ImageCacheService)}] WriteCacheAsync failed: {ex.Message}");
+                AppLog.Error(ex, nameof(ImageCacheService), "WriteCacheAsync failed");
             }
         }
 
@@ -76,7 +77,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(ImageCacheService)}] GetCacheSizeBytesAsync failed: {ex.Message}");
+                    AppLog.Error(ex, nameof(ImageCacheService), "GetCacheSizeBytesAsync failed");
                     return 0L;
                 }
             });
@@ -102,7 +103,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 catch (Exception ex)
                 {
                     // 清空失败不影响主流程，但记录便于诊断
-                    Debug.WriteLine($"[{nameof(ImageCacheService)}] ClearCacheAsync failed: {ex.Message}");
+                    AppLog.Error(ex, nameof(ImageCacheService), "ClearCacheAsync failed");
                 }
             });
         }

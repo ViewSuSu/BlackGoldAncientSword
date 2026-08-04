@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Events;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
@@ -55,7 +56,7 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
-                    Debug.WriteLine($"[{nameof(UpdateNotificationPageViewModel)}.{nameof(OpenDownloadCommand)}] 浏览器打开失败: {ex}");
+                    AppLog.Error(ex, $"{nameof(UpdateNotificationPageViewModel)}.{nameof(OpenDownloadCommand)}", "浏览器打开失败");
                 }
             });
 
@@ -140,7 +141,7 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
-                    Debug.WriteLine($"[{nameof(UpdateNotificationPageViewModel)}.{nameof(OnlineUpdateCommand)}] 启动在线更新失败: {ex}");
+                    AppLog.Error(ex, $"{nameof(UpdateNotificationPageViewModel)}.{nameof(OnlineUpdateCommand)}", "启动在线更新失败");
                 }
             });
 

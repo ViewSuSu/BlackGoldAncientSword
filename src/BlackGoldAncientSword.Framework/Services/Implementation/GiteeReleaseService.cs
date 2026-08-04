@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
@@ -64,7 +65,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(GiteeReleaseService)}] 获取 Gitee releases 失败: {ex.Message}");
+                AppLog.Error(ex, nameof(GiteeReleaseService), "获取 Gitee releases 失败");
                 return new List<GiteeReleaseInfo>();
             }
         }

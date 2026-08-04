@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Unified;
 
@@ -45,7 +46,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[{nameof(BattleListLoader)}] FetchBattleListAsync failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(BattleListLoader)}.{nameof(FetchBattleListAsync)}");
                 return null;
             }
         }

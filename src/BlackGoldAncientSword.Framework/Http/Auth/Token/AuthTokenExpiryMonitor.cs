@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Framework.Http.Auth.Token
@@ -107,7 +108,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.Token
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(AuthTokenExpiryMonitor)}] tick failed: {ex.Message}");
+                AppLog.Error(ex, nameof(AuthTokenExpiryMonitor), "tick failed");
             }
         }
 

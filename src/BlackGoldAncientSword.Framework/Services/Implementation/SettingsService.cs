@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Extensions;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
@@ -93,6 +94,9 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     var json = await File.ReadAllTextAsync(FilePath);
                     Current = JsonSerializer.Deserialize<AppSettings>(json, _readOptions) ?? new AppSettings();
                     _lastKnownJson = json;
+                    // 老配置文件不含 LogPath 字段，反序列化后为空，回填默认值避免日志无处可写。
+                    if (string.IsNullOrWhiteSpace(Current.LogPath))
+                        Current.LogPath = AppSettings.GetDefaultLogPath();
                 }
                 else
                 {
@@ -100,6 +104,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     {
                         DataSavePath = AppSettings.GetDefaultPath(),
                         CachePath = AppSettings.GetDefaultCachePath(),
+                        LogPath = AppSettings.GetDefaultLogPath(),
                         Language = "zh-CN"
                     };
                     _lastKnownJson = null;
@@ -107,7 +112,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(SettingsService)}] {nameof(LoadAsync)} failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(SettingsService)}.{nameof(LoadAsync)}", "failed");
                 Current = new AppSettings();
             }
         }
@@ -137,7 +142,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(SettingsService)}] {nameof(SaveAsync)} failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(SettingsService)}.{nameof(SaveAsync)}", "failed");
             }
         }
 
@@ -171,7 +176,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(SettingsService)}] {nameof(InitWatcher)} failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(SettingsService)}.{nameof(InitWatcher)}", "failed");
             }
         }
 
@@ -191,7 +196,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(SettingsService)}] Watcher rebuild failed: {ex.Message}");
+                AppLog.Error(ex, nameof(SettingsService), "Watcher rebuild failed");
             }
         }
 
@@ -244,7 +249,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(SettingsService)}] {nameof(ReloadFromWatcher)} failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(SettingsService)}.{nameof(ReloadFromWatcher)}", "failed");
             }
         }
 
@@ -272,7 +277,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(SettingsService)}] {nameof(Dispose)} failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(SettingsService)}.{nameof(Dispose)}", "failed");
             }
             GC.SuppressFinalize(this);
         }

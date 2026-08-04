@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.Framework.Http.Auth.Token
 {
@@ -38,7 +39,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.Token
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(DpapiAuthTokenStore)}.{nameof(Load)}] failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(DpapiAuthTokenStore)}.{nameof(Load)}", "failed");
                 return null;
             }
         }
@@ -61,7 +62,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.Token
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(DpapiAuthTokenStore)}.{nameof(Save)}] failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(DpapiAuthTokenStore)}.{nameof(Save)}", "failed");
             }
         }
 
@@ -70,7 +71,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.Token
             try { if (File.Exists(_filePath)) File.Delete(_filePath); }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(DpapiAuthTokenStore)}.{nameof(Clear)}] failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(DpapiAuthTokenStore)}.{nameof(Clear)}", "failed");
             }
         }
 

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net.Cache;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Framework.Core.Extensions
@@ -93,7 +94,7 @@ namespace BlackGoldAncientSword.Framework.Core.Extensions
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[{nameof(UrlToImageSourceConverter)}] Convert failed for '{url}': {ex.Message}");
+                AppLog.Error(ex, nameof(UrlToImageSourceConverter), $"Convert failed for '{url}'");
                 return null;
             }
         }

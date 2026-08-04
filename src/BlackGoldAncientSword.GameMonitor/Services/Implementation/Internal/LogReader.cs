@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
 {
@@ -63,7 +64,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
             catch (Exception ex)
             {
                 // FileInfo.Length 失败：罕见的并发删除/重命名场景，下次 poll 会重新拉取。
-                Debug.WriteLine($"[{nameof(LogReader)}] FileInfo.Length read failed: {ex.Message}");
+                AppLog.Error(ex, nameof(LogReader), "FileInfo.Length read failed");
             }
             return (content, length);
         }
@@ -135,7 +136,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
             try { return new FileInfo(fullPath).Length; }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(LogReader)}] TryGetFileLength failed: {ex.Message}");
+                AppLog.Error(ex, nameof(LogReader), "TryGetFileLength failed");
                 return null;
             }
         }

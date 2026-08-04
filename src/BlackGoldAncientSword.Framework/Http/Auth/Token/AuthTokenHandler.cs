@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Framework.Http.Auth.Token
@@ -141,7 +142,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.Token
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(AuthTokenHandler)}.{nameof(RunRefreshAsync)}] failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(AuthTokenHandler)}.{nameof(RunRefreshAsync)}", "failed");
                 return null;
             }
             finally

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Core.Extensions;
@@ -95,7 +96,7 @@ namespace BlackGoldAncientSword.Modules.UI.ClosePrompt.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(ClosePromptPageViewModel)}] {nameof(MinimizeToTaskbarCommand)} failed: {ex}");
+                    AppLog.Error(ex, $"{nameof(ClosePromptPageViewModel)}.{nameof(MinimizeToTaskbarCommand)}");
                 }
             });
 
@@ -125,7 +126,7 @@ namespace BlackGoldAncientSword.Modules.UI.ClosePrompt.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(ClosePromptPageViewModel)}] {nameof(ExitDirectlyCommand)} failed: {ex}");
+                    AppLog.Error(ex, $"{nameof(ClosePromptPageViewModel)}.{nameof(ExitDirectlyCommand)}");
                 }
             });
 

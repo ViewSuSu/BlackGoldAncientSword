@@ -1,4 +1,5 @@
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using System;
 using System.Collections.Generic;
@@ -153,7 +154,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
-                Debug.WriteLine($"[{nameof(UpdateService)}] 检查失败（静默）: {ex.Message}");
+                AppLog.Error(ex, nameof(UpdateService), "检查失败（静默）");
                 await ClearAvailabilityAsync().ConfigureAwait(false);
             }
         }
@@ -234,7 +235,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
-                Debug.WriteLine($"[{nameof(UpdateService)}] HEAD {url} 异常: {ex.Message}");
+                AppLog.Error(ex, nameof(UpdateService), $"HEAD {url} 异常");
                 return false;
             }
         }

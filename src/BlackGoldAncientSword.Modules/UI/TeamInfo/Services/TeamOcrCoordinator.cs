@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
 {
@@ -62,7 +63,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(TeamOcrCoordinator)}] recognize error: {ex.Message}");
+                    AppLog.Error(ex, nameof(TeamOcrCoordinator), "recognize error");
                 }
 
                 if (ct.IsCancellationRequested) break;
@@ -95,7 +96,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(TeamOcrCoordinator)}] auto recognize error: {ex.Message}");
+                    AppLog.Error(ex, nameof(TeamOcrCoordinator), "auto recognize error");
                 }
 
                 if (ct.IsCancellationRequested) break;

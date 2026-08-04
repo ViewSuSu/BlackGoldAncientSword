@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using RapidOcrNet;
 using SkiaSharp;
 
@@ -105,7 +106,7 @@ public class OcrEngine : IOcrService, IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[{nameof(OcrEngine)}] 预热失败 ({totalSw.ElapsedMilliseconds} ms): {ex}");
+            AppLog.Error(ex, nameof(OcrEngine), "预热失败");
         }
         finally
         {
@@ -218,10 +219,16 @@ public class OcrEngine : IOcrService, IDisposable
         _disposed = true;
 
         try { _ocr.Dispose(); }
-        catch (Exception ex) { Debug.WriteLine($"[{nameof(OcrEngine)}] dispose RapidOcr failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            AppLog.Error(ex, nameof(OcrEngine), "dispose RapidOcr failed");
+        }
 
         try { _gate.Dispose(); }
-        catch (Exception ex) { Debug.WriteLine($"[{nameof(OcrEngine)}] dispose gate failed: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            AppLog.Error(ex, nameof(OcrEngine), "dispose gate failed");
+        }
     }
 }
 

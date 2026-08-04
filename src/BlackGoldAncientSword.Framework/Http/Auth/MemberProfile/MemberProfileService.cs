@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.Framework.Http.Auth.MemberProfile
 {
@@ -33,11 +34,21 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.MemberProfile
                 using var req = new HttpRequestMessage(HttpMethod.Get, "/app-api/member/user/get");
                 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
                 using var res = await _signedClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
-                if (!res.IsSuccessStatusCode) return null;
+                if (!res.IsSuccessStatusCode)
+                {
+                    // profile 拉取 HTTP 失败会导致"登录成功但没昵称/头像"。记状态码区分是网络/网关还是鉴权问题。
+                    AppLog.Warning($"{nameof(MemberProfileService)}.{nameof(GetProfileJsonAsync)}", $"user/get HTTP {(int)res.StatusCode} {res.StatusCode}");
+                    return null;
+                }
 
                 var envelope = await res.Content.ReadFromJsonAsync<Envelope>(cancellationToken: ct).ConfigureAwait(false);
                 if (envelope is null) return null;
-                if (envelope.Code != 0 && envelope.Code != 200) return null;
+                if (envelope.Code != 0 && envelope.Code != 200)
+                {
+                    // 网络通了但后端拒绝（如 token 失效/权限不足）。带 code/msg 是区分"网络问题"与"鉴权问题"的关键。
+                    AppLog.Warning($"{nameof(MemberProfileService)}.{nameof(GetProfileJsonAsync)}", $"user/get backend code={envelope.Code} msg={envelope.Msg}");
+                    return null;
+                }
                 var d = envelope.Data;
                 if (d is null) return null;
 
@@ -53,7 +64,7 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.MemberProfile
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(MemberProfileService)}.{nameof(GetProfileJsonAsync)}] {ex.Message}");
+                AppLog.Error(ex, $"{nameof(MemberProfileService)}.{nameof(GetProfileJsonAsync)}");
                 return null;
             }
         }

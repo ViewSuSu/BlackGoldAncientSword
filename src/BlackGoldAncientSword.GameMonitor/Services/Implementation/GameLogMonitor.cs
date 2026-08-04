@@ -103,7 +103,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                 catch (Exception ex)
                 {
                     // 极端情况下 _pollCts 已被另一路径 Dispose；吞掉以保证 Stop 不抛，但留诊断。
-                    Debug.WriteLine($"[{nameof(GameLogMonitor)}] _pollCts.Cancel failed: {ex.Message}");
+                    AppLog.Error(ex, nameof(GameLogMonitor), "_pollCts.Cancel failed");
                 }
             }
 
@@ -125,7 +125,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                     try { exited = _pollTask.Wait(TimeSpan.FromMilliseconds(500)); }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[{nameof(GameLogMonitor)}] _pollTask wait failed: {ex.Message}");
+                        AppLog.Error(ex, nameof(GameLogMonitor), "_pollTask wait failed");
                     }
 
                     if (!exited)
@@ -192,7 +192,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
-                Debug.WriteLine($"[{nameof(GameLogMonitor)}.{nameof(IsGameProcessRunning)}] {ex}");
+                AppLog.Error(ex, $"{nameof(GameLogMonitor)}.{nameof(IsGameProcessRunning)}");
                 return false;
             }
         }
@@ -213,7 +213,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(GameLogMonitor)}] ReplayExistingContent failed: {ex.Message}");
+                AppLog.Error(ex, nameof(GameLogMonitor), "ReplayExistingContent failed");
             }
             finally
             {
@@ -241,7 +241,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                 {
                     // 其它异常吞掉以免崩溃 ThreadPool；监控失效本身不应让进程挂掉。
                     // 排除 OOM / SOF 这两个进程级致命异常——它们必须传播出去。
-                    Debug.WriteLine($"[{nameof(GameLogMonitor)}.{nameof(OnLogChanged)}] {ex}");
+                    AppLog.Error(ex, $"{nameof(GameLogMonitor)}.{nameof(OnLogChanged)}");
                 }
             });
         }

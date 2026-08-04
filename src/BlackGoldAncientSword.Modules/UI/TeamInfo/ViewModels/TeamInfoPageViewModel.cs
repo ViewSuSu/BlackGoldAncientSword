@@ -428,11 +428,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                             UserName = name,
                             IsLoading = true,
                             RefreshAction = RefreshSingleMember,
-                            NavigateToStatsAction = username =>
-                            {
-                                _playerPrefsService.Current.PlayerName = username;
-                                _navigation.NavigateTo(PageNames.StatsPage);
-                            }
+                            NavigateToStatsAction = NavigateToMemberStats
                         };
                         TeamMembers.Add(member);
                         toLoad.Add(member);
@@ -479,7 +475,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TeamInfo] Refresh OCR error: {ex.Message}");
+                AppLog.Error(ex, "TeamInfo", "Refresh OCR error");
             }
         }
 
@@ -504,7 +500,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}.{nameof(RefreshFromOverlay)}] {ex}");
+                AppLog.Error(ex, $"{nameof(TeamInfoPageViewModel)}.{nameof(RefreshFromOverlay)}");
             }
         }
 
@@ -517,7 +513,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 // 每秒会反复触发 3 次 PaddleOCR 推理 + 全屏抓取，把 CPU 与磁盘打满。
                 // 800 ms 在人类感知上等同立刻，但 CPU 占用立刻降一个数量级。
                 var names = await _ocrCoordinator.WaitForAutoRecognitionAsync(
-                    initialDelay: TimeSpan.FromSeconds(2),
+                    initialDelay: TimeSpan.Zero,
                     retryInterval: TimeSpan.FromMilliseconds(800),
                     ct);
 
@@ -552,7 +548,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[TeamInfo] OCR loop error: {ex.Message}");
+                AppLog.Error(ex, "TeamInfo", "OCR loop error");
             }
             finally
             {
@@ -576,7 +572,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}.{nameof(SafeUpdateTeamMembers)}] {ex}");
+                AppLog.Error(ex, $"{nameof(TeamInfoPageViewModel)}.{nameof(SafeUpdateTeamMembers)}");
             }
         }
 
@@ -624,11 +620,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     UserName = name,
                     IsLoading = true,
                     RefreshAction = RefreshSingleMember,
-                    NavigateToStatsAction = username =>
-                    {
-                        _playerPrefsService.Current.PlayerName = username;
-                        _navigation.NavigateTo(PageNames.StatsPage);
-                    }
+                    NavigateToStatsAction = NavigateToMemberStats
                 };
                 TeamMembers.Add(member);
                 _ = LoadWithIndependentToken(member, loadCt);
@@ -638,6 +630,15 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             UpdateDiffs();
             IsLoading = TeamMembers.Any(m => m.IsLoading);
             RaiseMemberProperties();
+        }
+
+        private void NavigateToMemberStats(string userName)
+        {
+            var parameters = new NavigationParameters
+            {
+                { NavigationParameterKeys.TargetPlayerName, userName }
+            };
+            _navigation.NavigateTo(PageNames.StatsPage, parameters);
         }
 
         private void ReorderMembersForLocalUser()
@@ -879,7 +880,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("[TeamInfo] Load member error: " + ex.Message);
+                AppLog.Error(ex, "TeamInfo", "Load member error");
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.StatusText = L("TeamInfo.QueryFailed", "查询失败");
@@ -919,7 +920,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("[TeamInfo] Final cleanup error: " + ex.Message);
+                AppLog.Error(ex, "TeamInfo", "Final cleanup error");
                 try
                 {
                     await _uiDispatcher.InvokeAsync(() =>
@@ -1038,7 +1039,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         {
             if (cts == null) return;
             try { cts.Cancel(); }
-            catch (Exception ex) { Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}] CancelAndDispose Cancel failed: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, $"{nameof(TeamInfoPageViewModel)}.CancelAndDispose", "Cancel failed");
+            }
             cts.Dispose();
             cts = null;
         }
@@ -1123,7 +1127,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}.{nameof(LoadSeasonsAsync)}] Load seasons error: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(TeamInfoPageViewModel)}.{nameof(LoadSeasonsAsync)}", "Load seasons error");
             }
         }
 
