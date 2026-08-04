@@ -231,6 +231,18 @@ namespace BlackGoldAncientSword.App
                 // 预热调度失败：业务首次 OCR 仍会自动加载模型，只是用户首次队伍识别会感受到冷启动延迟。
                 AppLog.Error(ex, nameof(App), "OCR prewarm schedule failed");
             }
+
+            // [7] 后台版本轮询：启动期若未发现新版，则每 30s 静默复查一次，发现新版即自动停表，
+            // 由 MainWindowViewModel 订阅的 UpdateAvailabilityChanged 弹出提示卡片 + 点亮左下角"发现新版本"。
+            try
+            {
+                Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>()
+                    .StartBackgroundPolling();
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, nameof(App), "start background update polling failed");
+            }
         }
 
         protected override void OnExit(System.Windows.ExitEventArgs e)
