@@ -130,9 +130,13 @@
     <system:String x:Key="Settings.DefaultPathHint">默认: 用户文件夹下</system:String>
     <system:String x:Key="Settings.Category.General">数据存储路径</system:String>
     <system:String x:Key="Settings.Category.Cache">缓存文件路径</system:String>
+    <system:String x:Key="Settings.Category.Log">日志文件路径</system:String>
     <system:String x:Key="Settings.Category.Language">语言</system:String>
     <system:String x:Key="Settings.BrowseDataPath">选择数据保存路径</system:String>
     <system:String x:Key="Settings.BrowseCachePath">选择缓存路径</system:String>
+    <system:String x:Key="Settings.BrowseLogPath">选择日志路径</system:String>
+    <system:String x:Key="Settings.ClearLogs">清空日志</system:String>
+    <system:String x:Key="Settings.LogsCleared">日志已清空</system:String>
     <system:String x:Key="Settings.CacheCleared">缓存已清除</system:String>
     <system:String x:Key="Settings.InvalidDataPath">数据保存路径无效或不存在，请检查后重试</system:String>
     <system:String x:Key="Settings.InvalidCachePath">缓存路径无效或不存在，请检查后重试</system:String>
@@ -174,6 +178,7 @@
 
     <system:String x:Key="Settings.CachePath">缓存路径</system:String>
     <system:String x:Key="Settings.CacheSize">缓存大小：</system:String>
+    <system:String x:Key="Settings.LogSize">日志大小：</system:String>
     <system:String x:Key="Settings.ClearCache">清除缓存</system:String>
     <system:String x:Key="TitleBar.Back">返回</system:String>
 

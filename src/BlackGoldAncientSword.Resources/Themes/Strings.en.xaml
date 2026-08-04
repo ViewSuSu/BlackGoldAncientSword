@@ -130,9 +130,13 @@
     <system:String x:Key="Settings.DefaultPathHint">Default: user folder</system:String>
     <system:String x:Key="Settings.Category.General">Data Storage Path</system:String>
     <system:String x:Key="Settings.Category.Cache">Cache File Path</system:String>
+    <system:String x:Key="Settings.Category.Log">Log File Path</system:String>
     <system:String x:Key="Settings.Category.Language">Language</system:String>
     <system:String x:Key="Settings.BrowseDataPath">Select data save path</system:String>
     <system:String x:Key="Settings.BrowseCachePath">Select cache path</system:String>
+    <system:String x:Key="Settings.BrowseLogPath">Select log path</system:String>
+    <system:String x:Key="Settings.ClearLogs">Clear logs</system:String>
+    <system:String x:Key="Settings.LogsCleared">Logs cleared</system:String>
     <system:String x:Key="Settings.CacheCleared">Cache cleared</system:String>
     <system:String x:Key="Settings.InvalidDataPath">Invalid data path, please check and retry</system:String>
     <system:String x:Key="Settings.InvalidCachePath">Invalid cache path, please check and retry</system:String>
@@ -174,6 +178,7 @@
 
     <system:String x:Key="Settings.CachePath">Cache Path</system:String>
     <system:String x:Key="Settings.CacheSize">Cache Size:</system:String>
+    <system:String x:Key="Settings.LogSize">Log Size:</system:String>
     <system:String x:Key="Settings.ClearCache">Clear Cache</system:String>
     <system:String x:Key="TitleBar.Back">Go Back</system:String>
 
