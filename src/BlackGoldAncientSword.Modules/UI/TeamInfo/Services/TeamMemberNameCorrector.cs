@@ -43,6 +43,48 @@ public static class TeamMemberNameCorrector
                 return names;
         }
 
+        var (bestIdx, bestSim) = BestSelfMatch(names, localName);
+        if (bestIdx < 0 || bestSim < SelfMatchThreshold) return names;
+
+        // 只克隆并改一格，其他槽位对象引用保持一致。
+        var corrected = (string[])names.Clone();
+        corrected[bestIdx] = localName!;
+        return corrected;
+    }
+
+    /// <summary>
+    /// 定位 OCR 结果中"最像本地玩家"的槽位下标，<b>不设相似度阈值</b>。
+    /// <para>
+    /// 与 <see cref="Apply"/> 的差异：<see cref="Apply"/> 只在相似度过
+    /// <see cref="SelfMatchThreshold"/> 时才改名（保守，避免误改队友名）；
+    /// 本方法用于"本地用户必然在队伍中、名字本地可知、必须强制居中"的场景——
+    /// 本地用户根本不需要 OCR 识别，只需在 OCR 槽位里挑出最像自己的那一格即可。
+    /// 因此只要队伍非空就返回 argmax 下标，让调用方无条件把该格移到中间卡片，
+    /// 杜绝阈值不过时本地用户漏到最右侧卡片的 bug。
+    /// </para>
+    /// </summary>
+    /// <param name="names">OCR 识别出的队员名字数组，顺序对应槽位。</param>
+    /// <param name="localName">本地玩家昵称，通常取 <c>PlayerPrefsData.OriginalPlayerName</c>。</param>
+    /// <returns>最像本地名的槽位下标；<paramref name="names"/> 为空或 <paramref name="localName"/> 为空时返回 -1。</returns>
+    public static int FindSelfIndex(string[] names, string? localName)
+    {
+        if (names == null || names.Length == 0) return -1;
+        if (string.IsNullOrWhiteSpace(localName)) return -1;
+
+        // 精确相等优先（OCR 完全正确或已被 Apply 校正过）。
+        for (int i = 0; i < names.Length; i++)
+        {
+            if (string.Equals(names[i], localName, System.StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+
+        var (bestIdx, _) = BestSelfMatch(names, localName);
+        return bestIdx;
+    }
+
+    /// <summary>相似度 argmax：返回最像 <paramref name="localName"/> 的下标与其相似度。</summary>
+    private static (int idx, double sim) BestSelfMatch(string[] names, string localName)
+    {
         int bestIdx = -1;
         double bestSim = 0.0;
         for (int i = 0; i < names.Length; i++)
@@ -54,13 +96,7 @@ public static class TeamMemberNameCorrector
                 bestIdx = i;
             }
         }
-
-        if (bestIdx < 0 || bestSim < SelfMatchThreshold) return names;
-
-        // 只克隆并改一格，其他槽位对象引用保持一致。
-        var corrected = (string[])names.Clone();
-        corrected[bestIdx] = localName!;
-        return corrected;
+        return (bestIdx, bestSim);
     }
 
     /// <summary>
