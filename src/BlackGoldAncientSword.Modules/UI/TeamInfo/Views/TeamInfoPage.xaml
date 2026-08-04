@@ -308,7 +308,7 @@
                             hc:TitleElement.TitlePlacement="Left"
                             Command="{Binding Member0.SearchMemberCommand}"
                             Style="{StaticResource SearchBarExtend}"
-                            Text="{Binding Member0.UserName, Mode=OneWay}" />
+                            Text="{Binding Member0.UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <Button
                             Grid.Column="1"
                             Width="Auto"
@@ -345,7 +345,7 @@
                             hc:TitleElement.TitlePlacement="Left"
                             Command="{Binding Member1.SearchMemberCommand}"
                             Style="{StaticResource SearchBarExtend}"
-                            Text="{Binding Member1.UserName, Mode=OneWay}" />
+                            Text="{Binding Member1.UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <Button
                             Grid.Column="1"
                             Width="Auto"
@@ -382,7 +382,7 @@
                             hc:TitleElement.TitlePlacement="Left"
                             Command="{Binding Member2.SearchMemberCommand}"
                             Style="{StaticResource SearchBarExtend}"
-                            Text="{Binding Member2.UserName, Mode=OneWay}" />
+                            Text="{Binding Member2.UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <Button
                             Grid.Column="1"
                             Width="Auto"
@@ -436,11 +436,10 @@
                                 Foreground="{DynamicResource TextMutedBrush}"
                                 Text="{Binding Member0.Level}"
                                 TextTrimming="CharacterEllipsis" />
-                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="8,0,8,0">
+                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                                 <TextBlock
                                     FontSize="11"
-                                    Foreground="{DynamicResource TextMutedBrush}"
-                                    TextTrimming="CharacterEllipsis"><Run Text="UID:" /><Run Text="{Binding Member0.UID}" /></TextBlock>
+                                    Foreground="{DynamicResource TextMutedBrush}"><Run Text="UID:" /><Run Text="{Binding Member0.UID}" /></TextBlock>
                                 <Button
                                     Width="16"
                                     Height="16"
@@ -549,11 +548,10 @@
                                 Foreground="{DynamicResource TextMutedBrush}"
                                 Text="{Binding Member1.Level}"
                                 TextTrimming="CharacterEllipsis" />
-                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="8,0,8,0">
+                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                                 <TextBlock
                                     FontSize="11"
-                                    Foreground="{DynamicResource TextMutedBrush}"
-                                    TextTrimming="CharacterEllipsis"><Run Text="UID:" /><Run Text="{Binding Member1.UID}" /></TextBlock>
+                                    Foreground="{DynamicResource TextMutedBrush}"><Run Text="UID:" /><Run Text="{Binding Member1.UID}" /></TextBlock>
                                 <Button
                                     Width="16"
                                     Height="16"
@@ -662,11 +660,10 @@
                                 Foreground="{DynamicResource TextMutedBrush}"
                                 Text="{Binding Member2.Level}"
                                 TextTrimming="CharacterEllipsis" />
-                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="8,0,8,0">
+                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                                 <TextBlock
                                     FontSize="11"
-                                    Foreground="{DynamicResource TextMutedBrush}"
-                                    TextTrimming="CharacterEllipsis"><Run Text="UID:" /><Run Text="{Binding Member2.UID}" /></TextBlock>
+                                    Foreground="{DynamicResource TextMutedBrush}"><Run Text="UID:" /><Run Text="{Binding Member2.UID}" /></TextBlock>
                                 <Button
                                     Width="16"
                                     Height="16"

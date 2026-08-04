@@ -840,7 +840,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     // Step 6: 合并所有属性更新为单一批，降低 UI 线程队列压力
                     await _uiDispatcher.InvokeAsync(() =>
                     {
-                        member.UserName = loaded.UserName;
                         member.Level = loaded.Level;
                         member.UID = loaded.UID;
                         member.AvatarUrl = loaded.AvatarUrl;
