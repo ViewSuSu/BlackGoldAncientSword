@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Windows;
+using BlackGoldAncientSword.Update.Infrastructure;
 using BlackGoldAncientSword.Update.Services;
 using BlackGoldAncientSword.Update.Shell;
 using BlackGoldAncientSword.Update.ViewModels;
@@ -12,10 +13,13 @@ namespace BlackGoldAncientSword.Update
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            ProcLog.Initialize();
+            ProcLog.Info(nameof(App), $"updater started, args=[{string.Join(' ', e.Args)}]");
 
             var options = UpdateOptions.Parse(e.Args);
             if (string.IsNullOrWhiteSpace(options.ZipUrl))
             {
+                ProcLog.Warning(nameof(App), "missing required arg --url, aborting");
                 MessageBox.Show(
                     "缺少必需参数 --url <zipUrl>",
                     "BlackGoldAncientSword 更新程序",
