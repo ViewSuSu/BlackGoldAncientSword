@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
@@ -63,6 +64,14 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         private readonly HttpClient _redirectHttpClient;
         private readonly HttpClient _headHttpClient;
         private bool _autoPopupEnabled;
+
+        // 后台轮询间隔：每 1 分钟检查一次是否有新版本。
+        private static readonly TimeSpan PollingInterval = TimeSpan.FromMinutes(1);
+        private Timer? _pollingTimer;
+        // 启动幂等守卫：0 = 未启动，1 = 已启动。CompareExchange 保证 StartBackgroundPolling 只建一个 Timer。
+        private int _pollingStarted;
+        // 单轮防重入守卫：0 = 空闲，1 = 本轮检查进行中。避免上一轮网络慢时定时器再次触发导致并发检查。
+        private int _pollingTickBusy;
 
         public string CurrentVersion { get; }
 
@@ -161,6 +170,56 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public void SetAutoPopupEnabled(bool enabled) => _autoPopupEnabled = enabled;
 
+        public void StartBackgroundPolling()
+        {
+            // 幂等：多次调用只建一个 Timer。
+            if (System.Threading.Interlocked.CompareExchange(ref _pollingStarted, 1, 0) != 0)
+                return;
+
+            // 启动时已检测过一轮，故 dueTime 用整段间隔，避免立即重复检查。
+            _pollingTimer = new Timer(OnPollingTick, null, PollingInterval, PollingInterval);
+        }
+
+        private void OnPollingTick(object? state)
+        {
+            // 已发现新版：现有 UI 逻辑已接管提示，无需继续轮询，停表退出。
+            if (IsUpdateAvailable)
+            {
+                StopPolling();
+                return;
+            }
+
+            // 单轮防重入：上一轮还没跑完（网络慢）时本次直接跳过。
+            if (System.Threading.Interlocked.CompareExchange(ref _pollingTickBusy, 1, 0) != 0)
+                return;
+
+            _ = PollOnceAsync();
+        }
+
+        private async Task PollOnceAsync()
+        {
+            try
+            {
+                await CheckForUpdatesAsync(showNoUpdateMessage: false).ConfigureAwait(false);
+                if (IsUpdateAvailable)
+                    StopPolling();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+                AppLog.Error(ex, nameof(UpdateService), "后台轮询检查失败（静默）");
+            }
+            finally
+            {
+                System.Threading.Interlocked.Exchange(ref _pollingTickBusy, 0);
+            }
+        }
+
+        private void StopPolling()
+        {
+            _pollingTimer?.Dispose();
+            _pollingTimer = null;
+        }
+
         private async Task ClearAvailabilityAsync()
         {
             await SafeInvokeAsync(() =>
@@ -190,10 +249,23 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         /// 抓 `releases/latest` 的 302 Location 头拿最新 tag。
         /// Gitee 稳定行为：`releases/latest` → 302 → `releases/tag/v{version}`。
         /// 不走 auto-redirect：只读 Location 头，避免继续跳转把无关内容拖回来。
+        ///
+        /// 防缓存：后台每 30s 轮询都必须拿到 Gitee 当前真实 tag，不能命中 HttpClient / CDN / 代理的
+        /// 任何缓存副本。故逐请求带 no-cache/no-store 头 + 唯一时间戳查询参数（cache-buster），
+        /// 保证每次都是全新回源请求，避免"发布了新版但轮询仍读到旧 302 Location"。
         /// </summary>
         private async Task<string?> FetchLatestTagAsync()
         {
-            using var resp = await _redirectHttpClient.GetAsync(GiteeReleaseLatestUrl).ConfigureAwait(false);
+            var url = $"{GiteeReleaseLatestUrl}?_={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
+            {
+                NoCache = true,
+                NoStore = true,
+            };
+            req.Headers.Pragma.ParseAdd("no-cache");
+
+            using var resp = await _redirectHttpClient.SendAsync(req).ConfigureAwait(false);
             if (resp.StatusCode != HttpStatusCode.Redirect && resp.StatusCode != HttpStatusCode.Found &&
                 resp.StatusCode != HttpStatusCode.MovedPermanently && resp.StatusCode != HttpStatusCode.SeeOther)
             {

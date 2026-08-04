@@ -6,6 +6,14 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
 
         void SetAutoPopupEnabled(bool enabled);
 
+        /// <summary>
+        /// 启动后台周期性检查：每隔固定间隔调用 <see cref="CheckForUpdatesAsync"/>，
+        /// 一旦发现新版本（<see cref="IsUpdateAvailable"/> 变 true）便自动停止轮询，
+        /// 由 <see cref="UpdateAvailabilityChanged"/> 订阅方接管后续的 UI 提示。
+        /// 幂等：重复调用只启动一次。
+        /// </summary>
+        void StartBackgroundPolling();
+
         string CurrentVersion { get; }
 
         bool IsUpdateAvailable { get; }

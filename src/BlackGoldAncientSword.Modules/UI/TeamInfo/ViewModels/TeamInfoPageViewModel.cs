@@ -639,31 +639,22 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private void ReorderMembersForLocalUser()
         {
+            // 2 人或 3 人队里必然有一格是本地用户，本地用户名本地可知（OriginalPlayerName），
+            // 无需依赖 OCR 精确识别——只要挑出最像本地名的那一格强制移到中间即可。
+            // 用 FindSelfIndex（argmax、无阈值）而非精确匹配：OCR 把本地名识别错、
+            // 或 TeamMemberNameCorrector 阈值不过没改名时，精确匹配会失败导致本地用户
+            // 漏到最右侧卡片。argmax 保证总能定位到"最像自己"的那一格。
             if (TeamMembers.Count < 2) return;
+
+            // FindSelfIndex 返回 -1 仅当本地名为空（无法定位），此时不重排；
+            // 否则返回 argmax 下标（含 0），无条件把本地用户移到中间 index 1。
             var localName = _playerPrefsService.Current.OriginalPlayerName;
-            if (string.IsNullOrEmpty(localName)) return;
+            var names = TeamMembers.Select(m => m.UserName).ToArray();
+            var localIdx = TeamMemberNameCorrector.FindSelfIndex(names, localName);
+            if (localIdx < 0 || localIdx == 1) return;
 
-            var list = TeamMembers.ToList();
-            var localIdx = list.FindIndex(m =>
-                string.Equals(m.UserName, localName, StringComparison.OrdinalIgnoreCase));
-            if (localIdx < 0) return;
-
-            // For 3 members: local user goes to center (index 1)
-            if (TeamMembers.Count == 3)
-            {
-                if (localIdx != 1)
-                {
-                    TeamMembers.Move(localIdx, 1);
-                }
-            }
-            // For 2 members: local user goes to center (index 1) — matching the blue border on Member1
-            else if (TeamMembers.Count == 2)
-            {
-                if (localIdx != 1)
-                {
-                    TeamMembers.Move(localIdx, 1);
-                }
-            }
+            // 中间卡片固定为 index 1（3 人队 = 正中，2 人队 = 带蓝色高亮边框的 Member1）。
+            TeamMembers.Move(localIdx, 1);
         }
 
         private int LocalUserIndex
@@ -671,9 +662,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             get
             {
                 var localName = _playerPrefsService.Current.OriginalPlayerName;
-                if (string.IsNullOrEmpty(localName)) return 0;
-                return TeamMembers.ToList().FindIndex(m =>
-                    string.Equals(m.UserName, localName, StringComparison.OrdinalIgnoreCase));
+                var names = TeamMembers.Select(m => m.UserName).ToArray();
+                var idx = TeamMemberNameCorrector.FindSelfIndex(names, localName);
+                return idx < 0 ? 0 : idx;
             }
         }
 
