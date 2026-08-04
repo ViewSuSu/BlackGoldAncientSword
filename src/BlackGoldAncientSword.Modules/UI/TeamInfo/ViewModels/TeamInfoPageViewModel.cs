@@ -244,22 +244,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 StopOcrLoop();
             }
 
-            // 英雄选择状态下已有有效数据时，不启动 OCR 循环
-            if (args.Status == GameStatus.HeroSelection && _ocrDataLoadedSuccessfully)
-            {
-                if (!_uiDispatcher.CheckAccess())
-                {
-                    _ = _uiDispatcher.InvokeAsync(() =>
-                    {
-                        IsHeroSelectionPhase = true;
-                        StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
-                    });
-                    return;
-                }
-                IsHeroSelectionPhase = true;
-                StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
-                return;
-            }
+            // 注意：不能在这里因 _ocrDataLoadedSuccessfully=True 就早退。
+            // BattleStateMachine 只在 !alreadyInBattle 时才 emit Joined（同一局的掉线重连不会重复
+            // emit），所以每次收到 HeroSelection 事件都代表"新一局英雄选择开始"，必须重置
+            // _ocrDataLoadedSuccessfully 并重启 OCR。
+            // 若上一局异常退出（玩家杀进程 / crash，无 TeamBattle Destroy 等 Ended marker），
+            // _ocrDataLoadedSuccessfully 会残留 True；此处若早退就永远跳过 HandleGameStatusOnUiThread
+            // 里的重置，导致新一局英雄选择阶段 OCR 循环永不启动（实测复现的 bug）。
+            // 统一交给下方 HandleGameStatusOnUiThread 的 HeroSelection 分支处理（重置 + StartOcrLoop）。
 
             // HandleGameStatusOnUiThread 中 InGame/BattleEnded/Unknown 分支仍会调用
             // StopOcrLoop()，但 _isOcrRunning 已为 false 时会通过 lock 内早期 return 快速退出。
@@ -501,38 +493,73 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
+        /// <summary>
+        /// 判定 OCR 结果是否已"识别完整、可停止重试"的最少人数阈值。
+        /// 队伍至少 2 人（含本地用户），识别到 &lt; 2 个名字说明队友卡片尚未全部渲染，
+        /// 属于英雄选择阶段刚进入的过渡态，必须继续重试而非自锁。
+        /// </summary>
+        private const int MinRecognizedMembers = 2;
+
         private async Task OcrLoopAsync(CancellationToken ct)
         {
             try
             {
-                // retryInterval=Zero 时会变成"识别失败立刻重试"的零休眠死循环：
-                // 一旦英雄选择阶段 OCR 拿不到队友名（例如分辨率不匹配、UI 还没绘出），
-                // 每秒会反复触发 3 次 PaddleOCR 推理 + 全屏抓取，把 CPU 与磁盘打满。
-                // 1500 ms 在人类感知上仍近乎立刻，但 CPU 占用相比零休眠降一个数量级。
-                var names = await _ocrCoordinator.WaitForAutoRecognitionAsync(
-                    initialDelay: TimeSpan.Zero,
-                    retryInterval: TimeSpan.FromMilliseconds(1500),
-                    ct);
+                // 自行驱动重试循环，而非依赖 coordinator 的"抓到 ≥1 个就返回"——
+                // 英雄选择刚进入时队友卡片逐个渲染（通常本地用户先出现），
+                // 首帧往往只 OCR 到 1 个残缺名单。若此时置 _ocrDataLoadedSuccessfully=true
+                // 并退出循环，StartOcrLoop 会因该标志永久早退，OCR 就"突然停止"在残缺态。
+                // 只有识别到 >= MinRecognizedMembers 个名字才算完整、可停止。
+                //
+                // retryInterval=1500ms：零休眠会让识别不全时每秒反复触发全屏抓取 + PaddleOCR，
+                // 打满 CPU/磁盘；1500ms 在人类感知上仍近乎立刻，但 CPU 占用降一个数量级。
+                string[] names;
+                int attempt = 0;
+                while (true)
+                {
+                    ct.ThrowIfCancellationRequested();
 
-                if (ct.IsCancellationRequested || names.Length == 0) return;
+                    attempt++;
+                    try
+                    {
+                        names = await _ocrCoordinator.RecognizeAutoAsync(ct);
+                        DiagLog.Write("OCR",
+                            $"attempt#{attempt} 识别到 {names.Length} 名: [{string.Join(" | ", names)}], 阈值={MinRecognizedMembers}, status={_gameStatusMonitor.CurrentStatus}");
+                        if (names.Length >= MinRecognizedMembers) break;
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception ex)
+                    {
+                        // 单次截图 / 推理失败（GPU/WGC 抖动等）不应中断循环，记录后按节奏重试。
+                        DiagLog.Write("OCR", $"attempt#{attempt} 识别异常: {ex.GetType().Name}: {ex.Message}");
+                        AppLog.Error(ex, "TeamInfo", "OCR recognize attempt error");
+                    }
 
-                // ★ 一旦 OCR 识别到有效队友名，立即停止后续 OCR 截图。
+                    await Task.Delay(TimeSpan.FromMilliseconds(1500), ct);
+                }
+
+                if (ct.IsCancellationRequested) return;
+
+                DiagLog.Write("OCR", $"识别完整({names.Length}名), 停止重试, 置 dataLoaded=true, 进入数据加载");
+
+                // ★ 识别到完整队友名单后，立即停止后续 OCR 截图。
                 // 即使 HTTP 数据加载失败，也不应重复截图识别。
                 _ocrDataLoadedSuccessfully = true;
 
-                // ★ 如果游戏状态已非英雄选择阶段，跳过本次识别结果处理。
-                // 避免 HeroSelection→InGame 转换延迟窗口中最后一次截图结果被错误处理。
-                if (_gameStatusMonitor.CurrentStatus != GameStatus.HeroSelection)
-                    return;
+                // 注意：此处刻意不再因 CurrentStatus != HeroSelection 就 early-return。
+                // 既然已经识别到有效队友名单，就应无条件写入队伍信息页——即使识别返回时
+                // 游戏已切到 InGame（英雄选择末尾才识别成功的局）。这与 OnNavigatedToExecute
+                // 中 InGame 且有成员时保留展示的逻辑一致：对局中同样需要看队友战绩。
+                // 早退会导致"英雄选择末尾识别成功却因状态切换被整批丢弃"的空白页 bug。
 
                 // 确保赛季数据已加载后再加载成员数据，避免 _selectedSeason?.Code 为 null
                 await LoadSeasonsAsync();
+                DiagLog.Write("OCR", $"LoadSeasonsAsync 完成, seasonsLoaded={_seasonsLoaded}, selectedSeason={_selectedSeason?.Code}");
 
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     // InvokeAsync 委托签名是 Action，无法 await。fire-and-forget 但通过 SafeUpdateTeamMembers
                     // 包一层 try/catch，避免 OperationCanceledException / 其他异常变成 UnobservedTaskException。
-                    _ = SafeUpdateTeamMembers(names, ct);
+                    _ = SafeUpdateTeamMembers(names);
                 });
 
                 // Wait for all member data to load, then navigate to TeamInfo
@@ -557,18 +584,20 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         /// fire-and-forget 包装：捕获 <see cref="UpdateTeamMembersAsync"/> 异常以避免
         /// UnobservedTaskException（OperationCanceledException 视为正常取消）。
         /// </summary>
-        private async Task SafeUpdateTeamMembers(string[] names, CancellationToken ct)
+        private async Task SafeUpdateTeamMembers(string[] names)
         {
+            DiagLog.Write("OCR", $"SafeUpdateTeamMembers 入口: {names.Length}名");
             try
             {
-                await UpdateTeamMembersAsync(names, ct);
+                await UpdateTeamMembersAsync(names);
             }
             catch (OperationCanceledException)
             {
-                // 正常取消，无需上报
+                DiagLog.Write("OCR", "SafeUpdateTeamMembers 被取消(OperationCanceledException)");
             }
             catch (Exception ex)
             {
+                DiagLog.Write("OCR", $"SafeUpdateTeamMembers 异常: {ex.GetType().Name}: {ex.Message}");
                 AppLog.Error(ex, $"{nameof(TeamInfoPageViewModel)}.{nameof(SafeUpdateTeamMembers)}");
             }
         }
@@ -594,19 +623,32 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        private async Task UpdateTeamMembersAsync(string[] names, CancellationToken ct)
+        // 注意：本方法刻意不接收 OCR 循环的 CancellationToken。
+        // OCR 已识别到有效名字（_ocrDataLoadedSuccessfully 已置 true），把结果写入 UI 这一步
+        // 必须无条件完成——绝不能因 OCR 循环 token 在 await(ReloadLocalUser/LoadSeasons) 让出线程
+        // 期间被 StopOcrLoop 取消，就把已识别的成员整批丢弃（实测 bug：识别到 3 人却因 ct 取消
+        // 抛 OperationCanceledException，TeamMembers 一个都没加，页面空白）。
+        // 成员 HTTP 加载有独立的 _refreshMembersCts（loadCt），其取消语义与此无关。
+        private async Task UpdateTeamMembersAsync(string[] names)
         {
             // 用本地已知昵称 (player_prefs.txt) 校正 OCR 结果中"最像自己"的那一格。
             // 只改自己那一格，队友格永不动。校正后再做 identical-skip 判断，避免
             // 上次已校正的 TeamMembers 与本轮未校正的 names 比较时出现假差异。
             await ReloadLocalUserAsync();
-            names = TeamMemberNameCorrector.Apply(names, _playerPrefsService.Current.OriginalPlayerName);
+            var localName = _playerPrefsService.Current.OriginalPlayerName;
+            var beforeCorrect = string.Join(" | ", names);
+            names = TeamMemberNameCorrector.Apply(names, localName);
+            DiagLog.Write("OCR",
+                $"UpdateTeamMembers 校正: localName='{localName}', 校正前=[{beforeCorrect}], 校正后=[{string.Join(" | ", names)}], 当前TeamMembers={TeamMembers.Count}");
 
             // Skip if recognized names are identical to current members
             if (names.Length == TeamMembers.Count &&
                 names.All(n => TeamMembers.Any(m =>
                     string.Equals(m.UserName, n, StringComparison.OrdinalIgnoreCase))))
+            {
+                DiagLog.Write("OCR", "UpdateTeamMembers 名字与当前成员完全一致，跳过写入(identical-skip)");
                 return;
+            }
 
             // Mark that we have loaded data at least once
             _hasEverHadData = true;
@@ -633,7 +675,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             foreach (var name in newNames)
             {
-                ct.ThrowIfCancellationRequested();
                 var member = new TeamMemberInfo(_clipboard, _localizedText, _tipMessage)
                 {
                     UserName = name,
@@ -649,6 +690,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             UpdateDiffs();
             IsLoading = TeamMembers.Any(m => m.IsLoading);
             RaiseMemberProperties();
+            DiagLog.Write("OCR",
+                $"UpdateTeamMembers 完成: 新增{newNames.Length}名, 移除{removed.Count}名, TeamMembers={TeamMembers.Count}, 开始HTTP加载");
         }
 
         private void NavigateToMemberStats(string userName)
