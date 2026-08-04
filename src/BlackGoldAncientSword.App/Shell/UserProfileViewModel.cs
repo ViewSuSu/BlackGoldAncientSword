@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http.Auth.Token;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
@@ -103,7 +104,7 @@ namespace BlackGoldAncientSword.App.Shell
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(UserProfileViewModel)}.{nameof(OpenLoginCommand)}] {ex}");
+                    AppLog.Error(ex, $"{nameof(UserProfileViewModel)}.{nameof(OpenLoginCommand)}");
                 }
             });
 
@@ -129,7 +130,7 @@ namespace BlackGoldAncientSword.App.Shell
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(UserProfileViewModel)}.{nameof(LogoutCommand)}] {ex}");
+                    AppLog.Error(ex, $"{nameof(UserProfileViewModel)}.{nameof(LogoutCommand)}");
                 }
             });
 
@@ -174,7 +175,7 @@ namespace BlackGoldAncientSword.App.Shell
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(UserProfileViewModel)}.{nameof(ParseUser)}] {ex.Message}");
+                AppLog.Error(ex, $"{nameof(UserProfileViewModel)}.{nameof(ParseUser)}");
                 return (string.Empty, string.Empty);
             }
         }

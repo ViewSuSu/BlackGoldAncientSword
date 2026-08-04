@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.ScreenCapture;
 
@@ -105,8 +106,15 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
                 var capResult = NativeWgc.Capture(hwnd, winW, winH, crop);
                 if (capResult != null) { var (data, cw, ch) = capResult.Value; Debug.WriteLine("[SC] Native WGC OK"); return BgraToPng(data, cw, ch); }
             }
-            catch (DllNotFoundException) { Debug.WriteLine("[SC] wgc_capture.dll not found"); _nativeWgcAvailable = false; }
-            catch (Exception ex) { Debug.WriteLine($"[SC] Native WGC: {ex.Message}"); }
+            catch (DllNotFoundException)
+            {
+                AppLog.Error("SC", "wgc_capture.dll not found");
+                _nativeWgcAvailable = false;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "SC", "Native WGC");
+            }
         }
 
         // 2. COM vtable WGC (occlusion-free, if interop available)
@@ -116,7 +124,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
         {
-            Debug.WriteLine($"[SC] COM WGC failed ({ex.GetType().Name}: {ex.Message}), GDI fallback...");
+            AppLog.Error(ex, "SC", "COM WGC failed, GDI fallback");
         }
 
         // 3. GDI fallback
@@ -168,7 +176,7 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
             // 故 surf 必须无条件 Release，否则每帧泄漏一个 D3D 表面/纹理 COM 引用与显存。
             if (surf != IntPtr.Zero) Marshal.Release(surf);
             if (frame != IntPtr.Zero) Marshal.Release(frame);
-            if (sess != IntPtr.Zero) { try { WgcInterop.StopCapture(sess); } catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException) { Debug.WriteLine($"[{nameof(ScreenCaptureService)}] StopCapture failed: {ex.Message}"); } Marshal.Release(sess); }
+            if (sess != IntPtr.Zero) { try { WgcInterop.StopCapture(sess); } catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException) { AppLog.Error(ex, nameof(ScreenCaptureService), "StopCapture failed"); } Marshal.Release(sess); }
             if (pool != IntPtr.Zero) Marshal.Release(pool);
             if (item != IntPtr.Zero) Marshal.Release(item);
         }
@@ -458,8 +466,15 @@ public class ScreenCaptureService : IScreenCaptureService, IDisposable
                     }
                 }
             }
-            catch (DllNotFoundException) { Debug.WriteLine("[SC] wgc_capture.dll not found"); _nativeWgcAvailable = false; }
-            catch (Exception ex) { Debug.WriteLine($"[SC] Native WGC: {ex.Message}"); }
+            catch (DllNotFoundException)
+            {
+                AppLog.Error("SC", "wgc_capture.dll not found");
+                _nativeWgcAvailable = false;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "SC", "Native WGC");
+            }
         }
 
         // 2. Fallback: CaptureWindow 已通过 CaptureFrameInternal 排除标题栏和黑边

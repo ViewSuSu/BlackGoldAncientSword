@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http.Auth.Captcha;
 using BlackGoldAncientSword.Framework.Http.Auth.MemberProfile;
 using BlackGoldAncientSword.Framework.Http.Auth.Token;
@@ -130,6 +131,8 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
                 var c = await _captcha.GetAsync(CancellationToken.None);
                 if (c is null)
                 {
+                    // 用户侧就是截图里的"验证码加载失败"。具体原因（HTTP/repCode/空图）已由 AjCaptchaService 记明，这里补一条 VM 侧卡点。
+                    AppLog.Warning($"{nameof(AuthChallengePageViewModel)}.{nameof(LoadCaptchaAsync)}", "captcha get returned null, showing load-failed to user");
                     CaptchaError = "验证码加载失败，请点击「换一张」重试";
                     return;
                 }
@@ -140,7 +143,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(AuthChallengePageViewModel)}.{nameof(LoadCaptchaAsync)}] {ex}");
+                AppLog.Error(ex, $"{nameof(AuthChallengePageViewModel)}.{nameof(LoadCaptchaAsync)}");
                 CaptchaError = "验证码加载异常：" + ex.Message;
             }
             finally
@@ -181,7 +184,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(AuthChallengePageViewModel)}.{nameof(SubmitCaptchaAsync)}] {ex}");
+                AppLog.Error(ex, $"{nameof(AuthChallengePageViewModel)}.{nameof(SubmitCaptchaAsync)}");
                 CaptchaError = "验证异常：" + ex.Message;
             }
             finally
@@ -198,6 +201,8 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
                 var qr = await _qr.CreateAsync(captchaVerification, CancellationToken.None);
                 if (qr is null)
                 {
+                    // 滑块已过但换二维码失败——用户被打回验证步。这是登录链上一个高价值卡点，必须记。
+                    AppLog.Warning($"{nameof(AuthChallengePageViewModel)}.{nameof(StartQrAsync)}", "qr create returned null after captcha passed, user bounced back to captcha");
                     StatusText = "获取二维码失败";
                     CaptchaError = "获取二维码失败，请重新验证";
                     IsCaptchaStage = true;
@@ -208,6 +213,9 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
                 _currentQr = qr;
                 VerificationCode = qr.VerificationCode;
                 QrImage = await DownloadImageAsync(qr.QrCodeUrl);
+                if (QrImage is null)
+                    // 拿到二维码数据但图片下载/解码失败——用户会看到空白二维码却无从得知原因，记下 URL 便于排查。
+                    AppLog.Warning($"{nameof(AuthChallengePageViewModel)}.{nameof(StartQrAsync)}", $"qr image download failed, url={qr.QrCodeUrl}");
                 StepTitle = "微信扫码登录";
                 IsCaptchaStage = false;
                 IsQrStage = true;
@@ -220,7 +228,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(AuthChallengePageViewModel)}.{nameof(StartQrAsync)}] {ex}");
+                AppLog.Error(ex, $"{nameof(AuthChallengePageViewModel)}.{nameof(StartQrAsync)}");
                 StatusText = "获取二维码异常：" + ex.Message;
             }
         }
@@ -255,7 +263,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
                 catch (OperationCanceledException) { return; }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(AuthChallengePageViewModel)}.{nameof(PollLoopAsync)}] {ex}");
+                    AppLog.Error(ex, $"{nameof(AuthChallengePageViewModel)}.{nameof(PollLoopAsync)}");
                 }
                 try { await Task.Delay(interval, ct); } catch (OperationCanceledException) { return; }
             }
@@ -265,6 +273,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
         {
             try
             {
+                AppLog.Info($"{nameof(AuthChallengePageViewModel)}.{nameof(OnLoginSucceeded)}", "qr login succeeded, persisting token");
                 // Step 1: 先把 token 注入 state，让 HTTP 链路立即可用 Bearer。
                 _tokenState.Set(token);
 
@@ -286,7 +295,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(AuthChallengePageViewModel)}.{nameof(OnLoginSucceeded)}] {ex}");
+                AppLog.Error(ex, $"{nameof(AuthChallengePageViewModel)}.{nameof(OnLoginSucceeded)}", "保存 token 失败");
                 StatusText = "保存 token 失败：" + ex.Message;
             }
         }
@@ -326,7 +335,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(AuthChallengePageViewModel)}.{nameof(DecodeBase64Image)}] {ex}");
+                AppLog.Error(ex, $"{nameof(AuthChallengePageViewModel)}.{nameof(DecodeBase64Image)}");
                 return null;
             }
         }
@@ -357,7 +366,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(AuthChallengePageViewModel)}.{nameof(DownloadImageAsync)}] {ex}");
+                AppLog.Error(ex, $"{nameof(AuthChallengePageViewModel)}.{nameof(DownloadImageAsync)}");
                 return null;
             }
         }

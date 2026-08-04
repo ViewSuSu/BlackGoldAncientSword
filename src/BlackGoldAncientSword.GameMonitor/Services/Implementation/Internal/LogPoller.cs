@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
 {
@@ -58,7 +59,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
                 {
                     // 兜底：吞下非 OCE/ODE 的异常（IO 异常 / 行解析异常等），避免 PollLoop 提前结束让监控失效。
                     // 但必须留诊断线索——监控失灵但无日志会导致用户报"战绩不更新"无从排查。
-                    Debug.WriteLine($"[{nameof(LogPoller)}] PollLoop iteration failed: {ex.Message}");
+                    AppLog.Error(ex, nameof(LogPoller), "PollLoop iteration failed");
                 }
             }
         }

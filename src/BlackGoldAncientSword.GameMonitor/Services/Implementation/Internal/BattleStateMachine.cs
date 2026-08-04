@@ -202,7 +202,17 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation.Internal
             var mapIdMatch = MapIdRegex.Match(line);
             if (mapIdMatch.Success)
             {
-                lock (_stateLock) { _currentMapId = mapIdMatch.Groups[1].Value; }
+                // map_id 只用于记录当前战斗场景 id（供 Ended 事件 args 使用），不作为 Started 触发信号。
+                // 曾经把"已 Joined 且首次拿到 map_id"当作进对局的补充 Started 信号，但实测发现：
+                // 永劫在"开始连接战斗服务器"（=进入英雄选择）后同一秒就写入 map_id（StartLoadBattleScenePacket），
+                // 而真正进入对局（英雄选择结束）是几十秒后的 DoHideTeamOffLoadingPage。
+                // 用 map_id 触发 Started 会让状态在 Joined 后几毫秒即翻成 InGame，英雄选择窗口坍缩，
+                // 队伍 OCR 识别循环启动即被 StopOcrLoop 取消 → 整局英雄选择阶段都不识别队友。
+                // Started 只由下方 DoHideTeamOffLoadingPage / TeamBattle Init 触发。
+                lock (_stateLock)
+                {
+                    _currentMapId = mapIdMatch.Groups[1].Value;
+                }
             }
 
             var roomIdMatch = RoomIdRegex.Match(line);

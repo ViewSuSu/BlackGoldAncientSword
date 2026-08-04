@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Ocr;
 using BlackGoldAncientSword.ScreenCapture;
 
@@ -84,8 +85,10 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         {
             rawBgra = _screenCapture.CaptureFullRaw(hwnd, out fullWidth, out fullHeight);
         }
-        catch
+        catch (Exception ex)
         {
+            // 窗口已找到却截图失败（GPU/WGC 异常），会导致队伍识别静默返回空。记 Warning 便于定位。
+            AppLog.Warning($"{nameof(TeamInfoOcrService)}.{nameof(RecognizeTeamMembersAsync)}", $"CaptureFullRaw failed: {ex.Message}");
             return Array.Empty<string>();
         }
 
@@ -109,7 +112,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] OCR error (stitched): {ex.Message}");
+            AppLog.Error(ex, nameof(TeamInfoOcrService), "OCR error (stitched)");
             return Array.Empty<string>();
         }
 
@@ -127,8 +130,9 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         {
             rawBgra = _screenCapture.CaptureFullRaw(hwnd, out fullWidth, out fullHeight);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLog.Warning($"{nameof(TeamInfoOcrService)}.{nameof(RecognizeDuoTeamMembersAsync)}", $"CaptureFullRaw failed: {ex.Message}");
             return Array.Empty<string>();
         }
 
@@ -149,7 +153,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] Duo OCR error (stitched): {ex.Message}");
+            AppLog.Error(ex, nameof(TeamInfoOcrService), "Duo OCR error (stitched)");
             return Array.Empty<string>();
         }
 
@@ -167,8 +171,9 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         {
             rawBgra = _screenCapture.CaptureFullRaw(hwnd, out fullWidth, out fullHeight);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLog.Warning($"{nameof(TeamInfoOcrService)}.{nameof(RecognizeTeamMembersAutoAsync)}", $"CaptureFullRaw failed: {ex.Message}");
             return Array.Empty<string>();
         }
 
@@ -192,9 +197,10 @@ public class TeamInfoOcrService : ITeamInfoOcrService
                 isTrio = detectResults.Count > 0
                     && detectResults.Any(r => !string.IsNullOrWhiteSpace(r.Text));
             }
-            catch
+            catch (Exception ex)
             {
-                // 检测失败时安全地默认走双排
+                // 检测失败时安全地默认走双排——但这会让三排局漏识别一名队友，记 Warning 便于定位"队友识别不全"。
+                AppLog.Warning($"{nameof(TeamInfoOcrService)}.{nameof(RecognizeTeamMembersAutoAsync)}", $"team-size detect failed, defaulting to duo: {ex.Message}");
             }
         }
 
@@ -212,7 +218,7 @@ public class TeamInfoOcrService : ITeamInfoOcrService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[{nameof(TeamInfoOcrService)}] Auto OCR error (stitched): {ex.Message}");
+            AppLog.Error(ex, nameof(TeamInfoOcrService), "Auto OCR error (stitched)");
             return Array.Empty<string>();
         }
 

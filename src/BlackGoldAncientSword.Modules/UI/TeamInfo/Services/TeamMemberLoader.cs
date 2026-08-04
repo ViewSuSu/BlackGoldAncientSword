@@ -54,7 +54,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 string? userInfoMsg = null;
                 if (ctx.Source == DataSource.HeyBox)
                 {
-                    var resp = await NarakaApiClient.HeyBoxUserInfoAsync(ctx.RoleIdSimple, ct).ConfigureAwait(false);
+                    var resp = await NarakaApiClient.HeyBoxUserInfoAsync(ctx.RoleIdSimple, ct: ct).ConfigureAwait(false);
                     userInfo = UnifiedMapper.MapHeyBoxUser(resp, ctx.RoleIdSimple);
                     userInfoMsg = resp?.Msg;
                 }

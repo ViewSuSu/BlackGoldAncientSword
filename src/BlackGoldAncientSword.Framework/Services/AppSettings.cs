@@ -4,6 +4,7 @@ namespace BlackGoldAncientSword.Framework.Services
     {
         public string DataSavePath { get; set; } = string.Empty;
         public string CachePath { get; set; } = string.Empty;
+        public string LogPath { get; set; } = string.Empty;
 
         public string Language { get; set; } = "zh-CN";
 
@@ -25,6 +26,12 @@ namespace BlackGoldAncientSword.Framework.Services
         {
             var basePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             return System.IO.Path.Combine(basePath, "BlackGoldAncientSword");
+        }
+
+        public static string GetDefaultLogPath()
+        {
+            var basePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            return System.IO.Path.Combine(basePath, "BlackGoldAncientSword", "logs");
         }
 
         public static string GetDefaultGameLogPath()

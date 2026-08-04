@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
@@ -67,7 +68,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
-                Debug.WriteLine($"[{nameof(GiteeReleaseNotesFetcher)}] 拉取失败 {url}: {ex.Message}");
+                AppLog.Error(ex, nameof(GiteeReleaseNotesFetcher), $"拉取失败 {url}");
                 return null;
             }
         }
@@ -91,7 +92,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (JsonException ex)
             {
-                Debug.WriteLine($"[{nameof(GiteeReleaseNotesFetcher)}] JSON 解析失败: {ex.Message}");
+                AppLog.Error(ex, nameof(GiteeReleaseNotesFetcher), "JSON 解析失败");
                 return null;
             }
         }

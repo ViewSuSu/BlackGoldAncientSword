@@ -67,6 +67,27 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             }
         }
 
+        private string _logPath = string.Empty;
+        public string LogPath
+        {
+            get => _logPath;
+            set
+            {
+                if (_logPath == value) return;
+                _logPath = value;
+                RaisePropertyChanged(nameof(LogPath));
+
+                if (!string.IsNullOrWhiteSpace(value) && !System.IO.Directory.Exists(value))
+                    return;
+
+                _settings.Current.LogPath = value;
+                // 立即让日志切到新目录：Release 下重建 Serilog logger，DEBUG 下为空操作。
+                AppLog.Initialize(value);
+                SaveImmediate();
+                RefreshLogSizeAsync().SafeFireAndForget($"{nameof(SettingsPageViewModel)}.{nameof(RefreshLogSizeAsync)}");
+            }
+        }
+
         private string _cacheSizeText = string.Empty;
         public string CacheSizeText
         {
@@ -79,8 +100,21 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             }
         }
 
+        private string _logSizeText = string.Empty;
+        public string LogSizeText
+        {
+            get => _logSizeText;
+            set
+            {
+                if (_logSizeText == value) return;
+                _logSizeText = value;
+                RaisePropertyChanged(nameof(LogSizeText));
+            }
+        }
+
         public string DefaultPath => Framework.Services.AppSettings.GetDefaultPath();
         public string DefaultCachePath => Framework.Services.AppSettings.GetDefaultCachePath();
+        public string DefaultLogPath => Framework.Services.AppSettings.GetDefaultLogPath();
 
         public string CurrentVersionText => string.Format(L("Settings.CurrentVersion", "Current version: {0}"), _updateService.CurrentVersion);
 
@@ -177,7 +211,9 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
 
             _dataPath = _settings.Current.DataSavePath;
             _cachePath = _settings.Current.CachePath;
+            _logPath = _settings.Current.LogPath;
             RefreshCacheSizeAsync().SafeFireAndForget($"{nameof(SettingsPageViewModel)}.{nameof(RefreshCacheSizeAsync)}");
+            RefreshLogSizeAsync().SafeFireAndForget($"{nameof(SettingsPageViewModel)}.{nameof(RefreshLogSizeAsync)}");
 
             // 订阅配置广播：托盘菜单改动、FileSystemWatcher 检测到外部改写，都会走这里刷新 UI。
             // 事件可能在后台线程回调，Handler 内部再 marshal 到 UI 线程。
@@ -208,9 +244,11 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         {
             _dataPath = _settings.Current.DataSavePath;
             _cachePath = _settings.Current.CachePath;
+            _logPath = _settings.Current.LogPath;
 
             RaisePropertyChanged(nameof(DataPath));
             RaisePropertyChanged(nameof(CachePath));
+            RaisePropertyChanged(nameof(LogPath));
             RaisePropertyChanged(nameof(SelectedCloseBehavior));
             RaisePropertyChanged(nameof(RememberCloseBehavior));
             RaisePropertyChanged(nameof(SelectedLanguage));
@@ -235,13 +273,16 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
 
             _dataPath = _settings.Current.DataSavePath;
             _cachePath = _settings.Current.CachePath;
+            _logPath = _settings.Current.LogPath;
 
             RaisePropertyChanged(nameof(DataPath));
             RaisePropertyChanged(nameof(CachePath));
+            RaisePropertyChanged(nameof(LogPath));
             RaisePropertyChanged(nameof(SelectedCloseBehavior));
             RaisePropertyChanged(nameof(RememberCloseBehavior));
             RaisePropertyChanged(nameof(SelectedLanguage));
             RaisePropertyChanged(nameof(ShowTeamOverlayDuringHeroSelection));
+            RefreshLogSizeAsync().SafeFireAndForget($"{nameof(SettingsPageViewModel)}.{nameof(RefreshLogSizeAsync)}");
             base.OnNavigatedToExecute(navigationContext);
         }
 
@@ -278,19 +319,55 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                     return total;
                 }).ConfigureAwait(false);
 
-                CacheSizeText = size switch
-                {
-                    < 1024 => $"{size} B",
-                    < 1024 * 1024 => $"{size / 1024.0:F1} KB",
-                    < 1024 * 1024 * 1024 => $"{size / (1024.0 * 1024):F1} MB",
-                    _ => $"{size / (1024.0 * 1024 * 1024):F2} GB"
-                };
+                CacheSizeText = FormatSize(size);
             }
             catch
             {
                 CacheSizeText = L("Settings.CacheSizeUnknown", "Unknown");
             }
         }
+
+        public async System.Threading.Tasks.Task RefreshLogSizeAsync()
+        {
+            try
+            {
+                var path = _logPath;
+                if (string.IsNullOrWhiteSpace(path) || !System.IO.Directory.Exists(path))
+                {
+                    LogSizeText = "0 B";
+                    return;
+                }
+
+                // 只统计 *.log（与"清空日志"删除范围一致），Task.Run 卸载同步遍历到线程池，避免阻塞 UI 线程。
+                var size = await System.Threading.Tasks.Task.Run(() =>
+                {
+                    if (!System.IO.Directory.Exists(path))
+                        return 0L;
+
+                    long total = 0;
+                    foreach (var file in System.IO.Directory.EnumerateFiles(path, "*.log", System.IO.SearchOption.TopDirectoryOnly))
+                    {
+                        try { total += new System.IO.FileInfo(file).Length; }
+                        catch { }
+                    }
+                    return total;
+                }).ConfigureAwait(false);
+
+                LogSizeText = FormatSize(size);
+            }
+            catch
+            {
+                LogSizeText = L("Settings.CacheSizeUnknown", "Unknown");
+            }
+        }
+
+        private static string FormatSize(long size) => size switch
+        {
+            < 1024 => $"{size} B",
+            < 1024 * 1024 => $"{size / 1024.0:F1} KB",
+            < 1024 * 1024 * 1024 => $"{size / (1024.0 * 1024):F1} MB",
+            _ => $"{size / (1024.0 * 1024 * 1024):F2} GB"
+        };
 
         private DelegateCommand? _browseDataPathCommand;
         public DelegateCommand BrowseDataPathCommand =>
@@ -316,7 +393,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
-                    Debug.WriteLine($"[{nameof(SettingsPageViewModel)}.{nameof(BrowseDataPathCommand)}] {ex}");
+                    AppLog.Error(ex, $"{nameof(SettingsPageViewModel)}.{nameof(BrowseDataPathCommand)}");
                 }
             });
 
@@ -344,7 +421,35 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
-                    Debug.WriteLine($"[{nameof(SettingsPageViewModel)}.{nameof(BrowseCachePathCommand)}] {ex}");
+                    AppLog.Error(ex, $"{nameof(SettingsPageViewModel)}.{nameof(BrowseCachePathCommand)}");
+                }
+            });
+
+
+        private DelegateCommand? _browseLogPathCommand;
+        public DelegateCommand BrowseLogPathCommand =>
+            _browseLogPathCommand ??= new DelegateCommand(async () =>
+            {
+                try
+                {
+                    var dialog = new OpenFolderDialog
+                    {
+                        Title = L("Settings.BrowseLogPath", "Select log path"),
+                        InitialDirectory = string.IsNullOrWhiteSpace(LogPath) ? DefaultLogPath : LogPath
+                    };
+                    if (dialog.ShowDialog() == true)
+                    {
+                        var oldPath = _settings.Current.LogPath;
+                        LogPath = dialog.FolderName;
+                        if (!string.IsNullOrWhiteSpace(oldPath) && !string.Equals(oldPath, LogPath, System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            await MigrateFolderAsync(oldPath, LogPath);
+                        }
+                    }
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+                {
+                    AppLog.Error(ex, $"{nameof(SettingsPageViewModel)}.{nameof(BrowseLogPathCommand)}");
                 }
             });
 
@@ -362,7 +467,24 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
-                    Debug.WriteLine($"[{nameof(SettingsPageViewModel)}.{nameof(ClearCacheCommand)}] {ex}");
+                    AppLog.Error(ex, $"{nameof(SettingsPageViewModel)}.{nameof(ClearCacheCommand)}");
+                }
+            });
+
+        private DelegateCommand? _clearLogsCommand;
+        public DelegateCommand ClearLogsCommand =>
+            _clearLogsCommand ??= new DelegateCommand(async () =>
+            {
+                try
+                {
+                    await AppLog.ClearLogsAsync(LogPath);
+                    await RefreshLogSizeAsync();
+                    eventAggregator.GetEvent<TipMessageEvent>()
+                        .Publish(new TipMessageWithHighlightArgs(L("Settings.LogsCleared", "Logs cleared")));
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+                {
+                    AppLog.Error(ex, $"{nameof(SettingsPageViewModel)}.{nameof(ClearLogsCommand)}");
                 }
             });
 

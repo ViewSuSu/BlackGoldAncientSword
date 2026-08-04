@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BlackGoldAncientSword.Update.Infrastructure;
 using BlackGoldAncientSword.Update.Shell;
 using BlackGoldAncientSword.Update.ViewModels;
 // 用 HandyControl 的 MessageBox 替代 System.Windows.MessageBox，外观与主题统一
@@ -67,14 +68,17 @@ namespace BlackGoldAncientSword.Update.Services
                 _ui.Invoke(() => _window.IsCancellable = false);
                 await CopyOverAsync(extractDir).ConfigureAwait(false);
                 LaunchMainApp();
+                ProcLog.Info(nameof(UpdaterRunner), "update completed successfully, relaunching main app");
                 CleanupAndExit(0);
             }
             catch (OperationCanceledException)
             {
+                ProcLog.Warning(nameof(UpdaterRunner), "update cancelled by user");
                 CleanupAndExit(2);
             }
             catch (Exception ex)
             {
+                ProcLog.Error(ex, nameof(UpdaterRunner), "update failed");
                 Debug.WriteLine($"[Updater] 更新失败: {ex}");
                 _ui.Invoke(() => HCMessageBox.Show(
                     $"更新失败：{ex.Message}",
@@ -681,12 +685,15 @@ namespace BlackGoldAncientSword.Update.Services
             }
             catch (Exception ex)
             {
+                ProcLog.Warning(nameof(UpdaterRunner), $"cleanup temp dir failed: {ex.Message}");
                 Debug.WriteLine($"[Updater] 清理临时目录失败: {ex.Message}");
             }
            _ui.BeginInvoke(() =>
            {
                _window.IsCancellable = false;
                _window.ForceClose();
+               // 硬退出前刷新日志队列，否则 Async sink 里未落盘的日志会丢。
+               ProcLog.Flush();
                Environment.Exit(code);
            });
        }

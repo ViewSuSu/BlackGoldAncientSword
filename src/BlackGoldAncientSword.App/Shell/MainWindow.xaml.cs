@@ -126,7 +126,7 @@ namespace BlackGoldAncientSword.App.Shell
             {
                 // Settings 服务异常会让关闭行为静默回退到"直接退出"，丢失"最小化到托盘"语义；
                 // 至少留诊断让用户知道"为什么我设了最小化但点 X 还是直接退出"。
-                System.Diagnostics.Debug.WriteLine($"[MainWindow] OnClosing settings resolve failed: {ex.Message}");
+                AppLog.Error(ex, "MainWindow", "OnClosing settings resolve failed");
             }
 
             _isExiting = true;
@@ -276,7 +276,7 @@ namespace BlackGoldAncientSword.App.Shell
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[MainWindow] CloseButton_Click settings resolve failed: {ex.Message}");
+                AppLog.Error(ex, "MainWindow", "CloseButton_Click settings resolve failed");
             }
 
             // ExitDirectly 或异常兜底：直接终止进程，不执行任何优雅清理。
@@ -301,7 +301,7 @@ namespace BlackGoldAncientSword.App.Shell
             catch (Exception ex)
             {
                 // 浮层弹出失败时，回退到"直接退出"避免主窗口无法关闭。
-                System.Diagnostics.Debug.WriteLine($"[MainWindow] {nameof(ShowClosePromptOverlay)} failed: {ex.Message}");
+                AppLog.Error(ex, $"MainWindow.{nameof(ShowClosePromptOverlay)}");
                 System.Diagnostics.Process.GetCurrentProcess().Kill();
             }
         }

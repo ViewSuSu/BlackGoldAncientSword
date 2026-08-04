@@ -4,6 +4,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
     using System.Text;
     using BlackGoldAncientSword.Framework.Core.Attributes;
     using BlackGoldAncientSword.Framework.Core.Extensions;
+    using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
     /// <summary>
     /// 玩家偏好数据服务。从永劫无间的 player_prefs.txt 异步读取玩家信息。
@@ -67,7 +68,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
                 // 解析失败不影响主流程；保留上一次成功的 Current。
-                Debug.WriteLine($"[{nameof(PlayerPrefsService)}.{nameof(LoadAsync)}] {ex}");
+                AppLog.Error(ex, $"{nameof(PlayerPrefsService)}.{nameof(LoadAsync)}");
             }
         }
 
@@ -110,7 +111,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
-                Debug.WriteLine($"[{nameof(PlayerPrefsService)}.{nameof(TryReadActiveAidFromPlayerLogAsync)}] {ex}");
+                AppLog.Error(ex, $"{nameof(PlayerPrefsService)}.{nameof(TryReadActiveAidFromPlayerLogAsync)}");
                 return null;
             }
         }

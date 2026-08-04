@@ -549,26 +549,41 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         protected override void OnNavigatedToExecute(NavigationContext navigationContext)
         {
             base.OnNavigatedToExecute(navigationContext);
-            // 基类签名为 void，无法 await——把"重读 player_prefs + 刷新 UI + 拉战绩"整块塞进
+
+            // 队友卡片点"查看战绩"时通过导航参数携带目标玩家名。此时必须查该玩家，
+            // 不能 reload player_prefs（否则 Current.PlayerName 会被重置回本地账号，串到自己）。
+            var targetPlayer = navigationContext.Parameters
+                .GetValue<string>(NavigationParameterKeys.TargetPlayerName);
+
+            // 基类签名为 void，无法 await——把"确定目标玩家 + 刷新 UI + 拉战绩"整块塞进
             // fire-and-forget async。RefreshAllAsync 内部已有 try/catch 兜底。
-            _ = ReloadLocalUserAndRefreshAsync();
+            _ = LoadForTargetAndRefreshAsync(targetPlayer);
         }
 
         /// <summary>
-        /// 进入战绩页时实时重读本地登录用户：Steam ↔ 网易 客户端共用同一份 player_prefs.txt，
-        /// 用户在游戏内切了客户端后，构造时缓存的 <c>Current</c> 会陈旧。这里主动 reload 一次，
-        /// 避免搜索框/战绩查询用错账号。
+        /// 确定要查询的玩家并刷新战绩。
+        /// <para><paramref name="targetPlayer"/> 非空（来自队友卡片导航参数）：直接查该玩家，
+        /// 不重读 player_prefs，避免把队友名冲成本地账号。</para>
+        /// <para><paramref name="targetPlayer"/> 为空（底部导航/搜索页正常进入）：实时重读本地登录用户
+        /// —— Steam ↔ 网易 客户端共用同一份 player_prefs.txt，用户在游戏内切了客户端后构造时缓存的
+        /// <c>Current</c> 会陈旧，主动 reload 一次避免搜索框/战绩查询用错账号。</para>
         /// </summary>
-        private async System.Threading.Tasks.Task ReloadLocalUserAndRefreshAsync()
+        private async System.Threading.Tasks.Task LoadForTargetAndRefreshAsync(string? targetPlayer)
         {
-            try
+            if (!string.IsNullOrWhiteSpace(targetPlayer))
             {
-                await _playerPrefsService.LoadAsync();
+                _playerPrefsService.Current.PlayerName = targetPlayer.Trim();
             }
-            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            else
             {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[{nameof(StatsPageViewModel)}.{nameof(ReloadLocalUserAndRefreshAsync)}] reload prefs failed: {ex.Message}");
+                try
+                {
+                    await _playerPrefsService.LoadAsync();
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+                {
+                    AppLog.Error(ex, $"{nameof(StatsPageViewModel)}.{nameof(LoadForTargetAndRefreshAsync)}", "reload prefs failed");
+                }
             }
 
             RaisePropertyChanged(nameof(IsLocalUser));
@@ -787,7 +802,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
             catch (NarakaApiException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadAllAsync api error: code={ex.Code}, msg={ex.Msg}");
+                AppLog.Error(ex, "StatsPage", "LoadAllAsync api error");
                 // 搜索被后端拒绝（429/401/500 等）——渲染态与"没查到"分支保持一致：清空显示，
                 // 这样 IsLocalUser 会随 UserName 一并变 false，"回到我"按钮才不会误判为"你正在自己页面"。
                 ClearAllData();
@@ -799,7 +814,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             catch (Exception ex)
             {
                 // 未知底层异常（网络中断/反序列化失败等），无 msg 可展示，仅记日志。
-                System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadAllAsync failed: {ex}");
+                AppLog.Error(ex, "StatsPage", "LoadAllAsync failed");
                 ClearAllData();
                 return false;
             }
@@ -883,13 +898,13 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             catch (OperationCanceledException) { }
             catch (NarakaApiException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadStatsAsync api error: code={ex.Code}, msg={ex.Msg}");
+                AppLog.Error(ex, "StatsPage", "LoadStatsAsync api error");
                 if (!string.IsNullOrEmpty(ex.Msg))
                     _tipMessage.ShowError(ex.Msg!);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[StatsPage] LoadStatsAsync failed: {ex}");
+                AppLog.Error(ex, "StatsPage", "LoadStatsAsync failed");
             }
             finally
             {
@@ -963,13 +978,34 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             return $"{unknownKey}({gameMode})";
         }
 
-        private string FormatGameModeCategory(int gameMode)
+        /// <summary>
+        /// 把列表项携带的 gameMode 整数解析为 GameMode 枚举。
+        /// 该值可能是 GameMode 枚举原值（如 101），也可能是对局历史 API 编码 battleApiCode
+        /// （miniProgram 的 subtype / heyBox 归一化后的值，如 2=RankTrio）。两种都尝试，均不中返回 null。
+        /// </summary>
+        private static GameMode? TryResolveGameMode(int gameMode)
         {
             if (Enum.IsDefined(typeof(GameMode), gameMode))
+                return (GameMode)gameMode;
+
+            try
+            {
+                return GameModeExtensions.FromBattleApiCode(gameMode);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return null;
+            }
+        }
+
+        private string FormatGameModeCategory(int gameMode)
+        {
+            var gm = TryResolveGameMode(gameMode);
+            if (gm.HasValue)
             {
                 try
                 {
-                    var category = ((GameMode)gameMode).GetCategory();
+                    var category = gm.Value.GetCategory();
                     var key = "GameMode." + category.ToString();
                     return _localizedText.Get(key, category.ToString());
                 }
@@ -984,11 +1020,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private string FormatGameModeTeamSize(int gameMode)
         {
-            if (Enum.IsDefined(typeof(GameMode), gameMode))
+            var gm = TryResolveGameMode(gameMode);
+            if (gm.HasValue)
             {
                 try
                 {
-                    var teamSize = ((GameMode)gameMode).GetTeamSize();
+                    var teamSize = gm.Value.GetTeamSize();
                     var key = "GameMode." + teamSize.ToString();
                     return _localizedText.Get(key, teamSize.ToString());
                 }
@@ -1009,7 +1046,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[{nameof(StatsPageViewModel)}] FormatUnixTime failed for {unixMilliseconds}: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(StatsPageViewModel)}.FormatUnixTime", "FormatUnixTime failed");
                 return string.Empty;
             }
         }

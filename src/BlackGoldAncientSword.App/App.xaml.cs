@@ -112,7 +112,7 @@ namespace BlackGoldAncientSword.App
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(App)}] Auth pipeline init failed: {ex}");
+                AppLog.Error(ex, nameof(App), "Auth pipeline init failed");
             }
 
             // [2] Settings 加载。失败留默认值 + 日志。
@@ -120,10 +120,17 @@ namespace BlackGoldAncientSword.App
             {
                 var settings = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService>();
                 await settings.LoadAsync();
+                // Settings 就绪后立即初始化本地日志（Release 才落盘），后续启动步骤的 catch 才有 sink 可写。
+                var logPath = settings.Current.LogPath;
+                if (string.IsNullOrWhiteSpace(logPath))
+                    logPath = BlackGoldAncientSword.Framework.Services.AppSettings.GetDefaultLogPath();
+                AppLog.Initialize(logPath);
+                // 日志就绪后的第一条：标记本次启动，作为排查"卡在启动"时的时间锚点。
+                AppLog.Info($"{nameof(App)}.OnStartup", "app started, log ready; entering startup pipeline");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(App)}] Settings load failed: {ex}");
+                AppLog.Error(ex, $"{nameof(App)}.OnStartup", "Settings load failed");
             }
 
             // [3] ImageCache init。依赖 Settings。
@@ -140,7 +147,7 @@ namespace BlackGoldAncientSword.App
             catch (Exception ex)
             {
                 // 启动期 ImageCache/Settings 初始化失败：后续所有依赖图片缓存的视图都会异常，必须留诊断线索。
-                Debug.WriteLine($"[{nameof(App)}] ImageCache init failed: {ex}");
+                AppLog.Error(ex, nameof(App), "ImageCache init failed");
             }
 
             // [4] 新版本检测 + 更新 gate。await 检测完成，命中新版就阻塞等用户处理完弹窗。
@@ -161,6 +168,7 @@ namespace BlackGoldAncientSword.App
                 // → 后续 [5] challenge.ShowAsync 里 await updateGate.WaitAsync 立即返回 → challenge overlay 抢在
                 // update overlay 之前显示，两个 overlay 会同时冒出来。
                 await updater.CheckForUpdatesAsync(showNoUpdateMessage: false);
+                AppLog.Info(nameof(App), $"update check done, available={updater.IsUpdateAvailable}");
                 if (updater.IsUpdateAvailable)
                 {
                     // 检测出新版：先释放启动遮罩让 UpdateNotification overlay 能被用户看清并操作。
@@ -172,7 +180,7 @@ namespace BlackGoldAncientSword.App
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(App)}] Update check / gate failed: {ex}");
+                AppLog.Error(ex, nameof(App), "Update check / gate failed");
             }
             finally
             {
@@ -186,6 +194,7 @@ namespace BlackGoldAncientSword.App
             // [5] 登录 gate：本地无有效 token 才弹扫码。登录失败 / 用户取消 → Shutdown。
             if (challengeService != null && tokenStateForGate?.Current is null)
             {
+                AppLog.Info(nameof(App), "no valid token, showing login challenge");
                 bool loggedIn = false;
                 try
                 {
@@ -193,16 +202,18 @@ namespace BlackGoldAncientSword.App
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(App)}] Startup login gate failed: {ex}");
+                    AppLog.Error(ex, nameof(App), "Startup login gate failed");
                 }
                 if (!loggedIn)
                 {
+                    AppLog.Info(nameof(App), "login not completed, shutting down");
                     Shutdown();
                     return;
                 }
             }
 
             // [6] 主页导航。Eagerly create TeamInfo ViewModel so it can always listen for game status.
+            AppLog.Info(nameof(App), "startup pipeline done, navigating to home");
             var navigation = Container.Resolve<IMainContentNavigationService>();
             navigation.NavigateTo(PageNames.TeamInfoPage);
             navigation.NavigateTo(PageNames.HomePage);
@@ -218,7 +229,7 @@ namespace BlackGoldAncientSword.App
             catch (Exception ex)
             {
                 // 预热调度失败：业务首次 OCR 仍会自动加载模型，只是用户首次队伍识别会感受到冷启动延迟。
-                Debug.WriteLine($"[{nameof(App)}] OCR prewarm schedule failed: {ex}");
+                AppLog.Error(ex, nameof(App), "OCR prewarm schedule failed");
             }
         }
 
@@ -232,6 +243,9 @@ namespace BlackGoldAncientSword.App
 
             _authTokenExpiryMonitor?.Dispose();
             _authTokenExpiryMonitor = null;
+
+            // 刷新 Async 日志队列并释放文件句柄，避免退出时丢失尾部日志。
+            AppLog.Shutdown();
 
             base.OnExit(e);
         }
@@ -273,7 +287,7 @@ namespace BlackGoldAncientSword.App
             {
                 // PublishError 自身失败属于"异常处理器又抛了异常"的极端路径：不能再上抛或重入。
                 // 至少留一条诊断线索，避免静默吞掉根因。
-                Debug.WriteLine($"[{nameof(App)}.{nameof(PublishError)}] {publishEx}");
+                AppLog.Error(publishEx, $"{nameof(App)}.{nameof(PublishError)}");
             }
         }
     }

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BlackGoldAncientSword.Downloader.Infrastructure;
 using BlackGoldAncientSword.Downloader.Shell;
 using BlackGoldAncientSword.Downloader.ViewModels;
 
@@ -44,8 +45,8 @@ namespace BlackGoldAncientSword.Downloader.Services
             // 进程级兜底清理：任务管理器 kill、系统关机、未处理异常都能触发。
             // 只有在 Runner 明确"启动了安装程序"后（_installerLaunched=true）才跳过删除，
             // 因为 Inno Setup 还在读取临时目录里的 .bin 分卷。
-            AppDomain.CurrentDomain.ProcessExit += (_, _) => TryCleanupTempSafely();
-            Application.Current.SessionEnding += (_, _) => TryCleanupTempSafely();
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => { TryCleanupTempSafely(); ProcLog.Flush(); };
+            Application.Current.SessionEnding += (_, _) => { TryCleanupTempSafely(); ProcLog.Flush(); };
         }
 
         // ============ 主入口 ============
@@ -58,10 +59,12 @@ namespace BlackGoldAncientSword.Downloader.Services
             }
             catch (OperationCanceledException)
             {
+                ProcLog.Warning(nameof(DownloaderRunner), "download cancelled by user");
                 CleanupAndExit(exitCode: 2);
             }
             catch (Exception ex)
             {
+                ProcLog.Error(ex, nameof(DownloaderRunner), "download flow failed");
                 Debug.WriteLine($"[Downloader] 主流程失败: {ex}");
                 _ui.Invoke(() => ShowError(ex.Message));
                 // 错误态：清临时文件、保留窗口等用户点"重试"或关窗
@@ -334,6 +337,7 @@ namespace BlackGoldAncientSword.Downloader.Services
                 throw new InvalidOperationException("无法启动安装程序，可能被杀软拦截或用户取消 UAC");
 
             _installerLaunched = true;
+            ProcLog.Info(nameof(DownloaderRunner), $"installer launched, PID={proc.Id}");
             Debug.WriteLine($"[Downloader] 安装程序已启动，PID={proc.Id}");
             return proc;
         }
@@ -403,6 +407,8 @@ namespace BlackGoldAncientSword.Downloader.Services
             {
                 _window.IsCancellable = false;
                 _window.ForceClose();
+                // 硬退出前刷新日志队列，否则 Async sink 里未落盘的日志会丢。
+                ProcLog.Flush();
                 Environment.Exit(exitCode);
             });
         }

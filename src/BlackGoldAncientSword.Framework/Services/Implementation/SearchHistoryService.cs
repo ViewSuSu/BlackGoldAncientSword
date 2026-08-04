@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Extensions;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Framework.Services.Implementation
@@ -73,7 +74,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(SearchHistoryService)}] LoadAsync failed: {ex.Message}");
+                AppLog.Error(ex, nameof(SearchHistoryService), "LoadAsync failed");
             }
         }
 
@@ -90,7 +91,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(SearchHistoryService)}] SaveAsync failed: {ex.Message}");
+                AppLog.Error(ex, nameof(SearchHistoryService), "SaveAsync failed");
             }
         }
     }

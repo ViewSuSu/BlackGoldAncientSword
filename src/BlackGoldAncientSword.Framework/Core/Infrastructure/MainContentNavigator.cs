@@ -89,7 +89,7 @@ namespace BlackGoldAncientSword.Framework.Core.Infrastructure
             {
                 // KeyNotFoundException / UpdateRegionsException / 其他异常处理逻辑相同：
                 // 记录原因并触发 Navigated（参数为真实激活页），让 UI 绑定刷新到真实状态。
-                Debug.WriteLine($"[{nameof(MainContentNavigator)}] RequestNavigate 失败: {ex.Message}");
+                AppLog.Error(ex, nameof(MainContentNavigator), "RequestNavigate 失败");
                 Navigated?.Invoke(GetActiveContentName());
             }
         }
@@ -219,7 +219,7 @@ namespace BlackGoldAncientSword.Framework.Core.Infrastructure
             catch (Exception ex)
             {
                 // Module 可能已加载或未注册为 OnDemand；记录原因以便诊断真正的注册缺失。
-                Debug.WriteLine($"[{nameof(MainContentNavigator)}] LoadModule({moduleName}) 失败：{ex.Message}");
+                AppLog.Error(ex, nameof(MainContentNavigator), $"LoadModule({moduleName}) 失败");
             }
         }
 

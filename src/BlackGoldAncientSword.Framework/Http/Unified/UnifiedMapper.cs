@@ -104,7 +104,10 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
             {
                 GradeName = p.Level ?? string.Empty,
                 GradeIcon = p.LevelImg ?? string.Empty,
-                GradeScore = InferScoreFromRankName(p.Level),
+                // heyBox 的 playerInfo.rating 就是真实排位分（如 "3629"），与 miniProgram 的 gradeScore 同义。
+                // 直接采信，让 VM 既有的段位/子段/星级计算链得到与网页端一致的结果（蚀月Ⅳ 3629分）。
+                // 仅当 rating 缺失/为 0（该模式无数据）时，才退回按段位名反推大段基线。
+                GradeScore = ResolveHeyBoxGradeScore(p.Rating, p.Level),
                 GradeLevel = p.Level ?? string.Empty,
             };
 
@@ -165,23 +168,30 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
         {
             var list = resp?.Data?.MatchList;
             if (list == null) return new List<UnifiedRecentBattleItem>();
-            return list.Select(m => new UnifiedRecentBattleItem
+            return list.Select(m =>
             {
-                BattleId = m.MatchId ?? string.Empty,
-                Rank = (int)(m.Rank ?? 0),
-                HeroIcon = m.HeroAvatar ?? string.Empty,
-                HeroName = m.HeroName ?? string.Empty,
-                // heyBox battleTid 与 miniProgram 的 subtype/gameMode 语义近似，但值域不同（如 5000000=天选单排）。
-                // VM 层已通过 GameModeExtensions.FromBattleApiCode 兜底 ArgumentOutOfRangeException，
-                // 不匹配时显示 Unknown(x)，属占位策略下的可接受行为。
-                GameMode = ParseInt(m.BattleTid),
-                Kill = (int)(m.KillTimes ?? 0),
-                Damage = (int)(m.Damage ?? 0),
-                RoundRankScore = ParseDouble(m.Rating),
-                BeginRankScore = null,
-                BattleEndTimeMs = (m.Time ?? 0) * 1000L,
-                Rating = m.Grade ?? string.Empty,
-                HonorTitles = Array.Empty<UnifiedHonorTitle>(),
+                var roundScore = ParseDouble(m.Rating);
+                var delta = m.RatingDelta;
+                return new UnifiedRecentBattleItem
+                {
+                    BattleId = m.MatchId ?? string.Empty,
+                    Rank = (int)(m.Rank ?? 0),
+                    HeroIcon = m.HeroAvatar ?? string.Empty,
+                    HeroName = m.HeroName ?? string.Empty,
+                    // heyBox 的 battleTid 值域与 miniProgram 的 battleApiCode 不同（天选单排=5000000、天选三排=5000001）。
+                    // 归一化到 battleApiCode，使 VM 层（FormatGameMode/FromBattleApiCode）对两个数据源用同一套编码。
+                    // 未知 battleTid 保留原值，VM 侧走 Unknown(x) 兜底。
+                    GameMode = HeyBoxBattleTidToBattleApiCode(m.BattleTid),
+                    Kill = (int)(m.KillTimes ?? 0),
+                    Damage = (int)(m.Damage ?? 0),
+                    // heyBox 的 rating 字段承载排位分数值（如 "6747"），grade 字段承载评级字母（如 "C"）。
+                    RoundRankScore = roundScore,
+                    // heyBox 无 beginRankScore，但给了 ratingDelta（本局分差），反推起始分供 VM 计算分差显示。
+                    BeginRankScore = delta.HasValue ? roundScore - delta.Value : (double?)null,
+                    BattleEndTimeMs = (m.Time ?? 0) * 1000L,
+                    Rating = m.Grade ?? string.Empty,
+                    HonorTitles = Array.Empty<UnifiedHonorTitle>(),
+                };
             }).ToList();
         }
 
@@ -340,6 +350,24 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
             => int.TryParse(s, System.Globalization.NumberStyles.Integer,
                 System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
 
+        /// <summary>
+        /// 把 heyBox 对局的 battleTid 字符串归一化为 miniProgram 的 battleApiCode。
+        /// 无法识别（未知 battleTid / 解析失败）时保留原始整数值，交给 VM 层的 Unknown(x) 兜底展示。
+        /// </summary>
+        private static int HeyBoxBattleTidToBattleApiCode(string? battleTid)
+        {
+            var raw = ParseInt(battleTid);
+            try
+            {
+                return GameModeExtensions.FromHeyBoxBattleTid(raw).ToBattleApiCode();
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // 未知 battleTid，或已识别但无对应 battleApiCode（如无尽试炼）——保留原值。
+                return raw;
+            }
+        }
+
         private static double ParseDouble(string? s)
             => double.TryParse(s, System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
@@ -349,6 +377,15 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
         /// heyBox 不返回具体分数，仅返段位名，用基线值让 UI 段位标签有内容可绑，
         /// 星级/进阶格无法计算 —— 属占位策略下的可接受降级。
         /// </summary>
+        /// <summary>
+        /// 解析 heyBox 段位分：优先用 playerInfo.rating（真实分），缺失或为 0 时按段位名反推大段基线。
+        /// </summary>
+        private static double ResolveHeyBoxGradeScore(string? rating, string? level)
+        {
+            var parsed = ParseDouble(rating);
+            return parsed > 0 ? parsed : InferScoreFromRankName(level);
+        }
+
         private static double InferScoreFromRankName(string? name)
         {
             if (string.IsNullOrEmpty(name)) return 0;

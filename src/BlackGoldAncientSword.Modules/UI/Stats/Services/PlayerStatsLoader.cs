@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Unified;
 
@@ -28,7 +29,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             catch (NarakaApiException) { throw; }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[{nameof(PlayerStatsLoader)}] SearchRoleByNameAsync failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(PlayerStatsLoader)}.{nameof(SearchRoleByNameAsync)}");
                 return null;
             }
         }
@@ -38,7 +39,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
         {
             return ctx.Source == DataSource.HeyBox
                 ? InvokeAsync(async () => UnifiedMapper.MapHeyBoxUser(
-                    await NarakaApiClient.HeyBoxUserInfoAsync(ctx.RoleIdSimple, ct).ConfigureAwait(false),
+                    await NarakaApiClient.HeyBoxUserInfoAsync(ctx.RoleIdSimple, ct: ct).ConfigureAwait(false),
                     ctx.RoleIdSimple))
                 : InvokeAsync(async () => UnifiedMapper.MapMiniProgramUser(
                     await NarakaApiClient.GetUserInfoAsync(ctx.RoleIdSimple, ct).ConfigureAwait(false)));
@@ -56,21 +57,23 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             catch (NarakaApiException) { throw; }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[{nameof(PlayerStatsLoader)}] FetchSeasonsAsync failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(PlayerStatsLoader)}.{nameof(FetchSeasonsAsync)}");
                 return null;
             }
         }
 
         /// <summary>
         /// 查询指定赛季、指定模式的战绩明细。
-        /// heyBox 分支不吃 seasonId/gameMode，返回 HeyBoxUserInfo 的 overview[]（等价于当前赛季的综合统计）。
+        /// heyBox 分支同样吃 seasonId + battleTid：/heybox/user/info 会按赛季/模式返回对应的段位
+        /// (playerInfo.level) 与统计 (overview[])，battleTid 由 GameMode 反查得到。
         /// </summary>
         public Task<UnifiedPlayerStats?> FetchPlayerStatsAsync(
             PlayerSourceContext ctx, double? seasonId, GameMode gameMode, CancellationToken ct)
         {
             return ctx.Source == DataSource.HeyBox
                 ? InvokeAsync(async () => UnifiedMapper.MapHeyBoxStats(
-                    await NarakaApiClient.HeyBoxUserInfoAsync(ctx.RoleIdSimple, ct).ConfigureAwait(false)))
+                    await NarakaApiClient.HeyBoxUserInfoAsync(
+                        ctx.RoleIdSimple, seasonId, gameMode.ToHeyBoxBattleTid(), ct).ConfigureAwait(false)))
                 : InvokeAsync(async () => UnifiedMapper.MapMiniProgramStats(
                     await NarakaApiClient.GetPlayerStatsAsync(ctx.RoleIdSimple, seasonId, gameMode, ct).ConfigureAwait(false)));
         }
@@ -103,7 +106,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             catch (NarakaApiException) { throw; }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[{nameof(PlayerStatsLoader)}] FetchMiniProgramBattleDetailAsync failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(PlayerStatsLoader)}.{nameof(FetchMiniProgramBattleDetailAsync)}");
                 return null;
             }
         }
@@ -112,7 +115,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
         {
             try { return await call().ConfigureAwait(false); }
             catch (OperationCanceledException) { throw; }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                // 可选 API（team/top5）失败走软降级、不阻断主数据；但静默会让"部分数据缺失"无从排查，记 Warning。
+                AppLog.Warning($"{nameof(PlayerStatsLoader)}.{nameof(InvokeApiSafeAsync)}", $"optional API failed, continuing without result: {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>
@@ -137,7 +145,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[{nameof(PlayerStatsLoader)}] API call failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(PlayerStatsLoader)}.{nameof(InvokeAsync)}", "API call failed");
                 return null;
             }
         }

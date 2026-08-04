@@ -203,6 +203,35 @@
         "description": "判断 GameMode 是否属于天选排位模式",
         "returns": "如果是天选排位模式则返回 true",
         "body": "return value switch { GameMode.RankSolo or GameMode.RankDuo or GameMode.RankTrio => true, _ => false };"
+      },
+      {
+        "name": "FromHeyBoxBattleTid",
+        "isStatic": true,
+        "returnType": "GameMode",
+        "parameters": [
+          {
+            "name": "battleTid",
+            "type": "int",
+            "description": "heyBox 数据源对局的 battleTid（来自 /record/game-modes?dataSource=heyBox 的权威映射，值域与 miniProgram 的 battleApiCode 不同：天选单排=5000000、天选三排=5000001）"
+          }
+        ],
+        "description": "把 heyBox 数据源的 battleTid 映射为 GameMode 枚举值。heyBox 的 battleTid 与 miniProgram 的 battleApiCode 仅在天选单排/三排上不同，其余相同。",
+        "returns": "对应的 GameMode 枚举值",
+        "body": "return battleTid switch { 5000000 => GameMode.RankSolo, 12 => GameMode.RankDuo, 5000001 => GameMode.RankTrio, 6 => GameMode.MatchSolo, 9 => GameMode.MatchDuo, 7 => GameMode.MatchTrio, 4 => GameMode.TianrenSolo, 13 => GameMode.TianrenDuo, 5 => GameMode.TianrenTrio, 5000010 => GameMode.EndlessTrial, _ => throw new ArgumentOutOfRangeException(nameof(battleTid), $\"未知 heyBox battleTid: {battleTid}\") };"
+      },
+      {
+        "name": "ToHeyBoxBattleTid",
+        "returnType": "int",
+        "description": "把 GameMode 映射回 heyBox 数据源的 battleTid，用于查询 heybox/user/info 指定模式的段位与统计。",
+        "returns": "对应的 heyBox battleTid",
+        "body": "return value switch { GameMode.RankSolo => 5000000, GameMode.RankDuo => 12, GameMode.RankTrio => 5000001, GameMode.MatchSolo => 6, GameMode.MatchDuo => 9, GameMode.MatchTrio => 7, GameMode.TianrenSolo => 4, GameMode.TianrenDuo => 13, GameMode.TianrenTrio => 5, GameMode.EndlessTrial => 5000010, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
+      },
+      {
+        "name": "ToBattleApiCode",
+        "returnType": "int",
+        "description": "把 GameMode 映射为 miniProgram 对局历史 API 编码（battleApiCode）。用于把 heyBox 归一化到与 miniProgram 一致的编码，供 VM 层统一消费。",
+        "returns": "对应的 battleApiCode，无对应时抛异常",
+        "body": "return value switch { GameMode.RankSolo => 1, GameMode.RankDuo => 12, GameMode.RankTrio => 2, GameMode.MatchSolo => 6, GameMode.MatchDuo => 9, GameMode.MatchTrio => 7, GameMode.TianrenSolo => 4, GameMode.TianrenDuo => 13, GameMode.TianrenTrio => 5, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
       }
     ]
   }

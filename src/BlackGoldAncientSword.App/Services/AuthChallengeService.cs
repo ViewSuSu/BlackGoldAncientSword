@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Consts;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using Prism.Modularity;
 using Prism.Regions;
@@ -104,7 +105,7 @@ namespace BlackGoldAncientSword.App.Services
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[{nameof(AuthChallengeService)}.{nameof(NavigateToOverlay)}] {ex}");
+                    AppLog.Error(ex, $"{nameof(AuthChallengeService)}.{nameof(NavigateToOverlay)}");
                     TryFail(ex);
                 }
             }), DispatcherPriority.Normal);

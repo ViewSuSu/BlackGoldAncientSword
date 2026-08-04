@@ -38,6 +38,10 @@
       版本与主项目 Framework.csproj / Update.csproj 保持一致：HandyControl 3.5.0。
     -->
     <PackageReference Include="HandyControl" Version="3.5.0" />
+    <!-- 日志：与主程序 Framework 保持同版本，写入同一日志目录（我的文档\BlackGoldAncientSword\logs）。 -->
+    <PackageReference Include="Serilog" Version="4.4.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
   </ItemGroup>
 
   <!--

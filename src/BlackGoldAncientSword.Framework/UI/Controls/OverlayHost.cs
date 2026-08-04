@@ -7,6 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using Prism.Ioc;
 using Prism.Regions;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.Framework.UI.Controls
 {
@@ -184,7 +185,7 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[{nameof(OverlayHost)}.{nameof(Dismiss)}] region={regionName} failed: {ex.Message}");
+                AppLog.Error(ex, $"{nameof(OverlayHost)}.{nameof(Dismiss)}", $"region={regionName} failed");
             }
         }
     }

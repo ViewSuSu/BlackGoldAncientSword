@@ -128,9 +128,13 @@
     <ns1:String ns2:Key="Settings.DefaultPathHint">預設: 使用者資料夾下</ns1:String>
     <ns1:String ns2:Key="Settings.Category.General">資料儲存路徑</ns1:String>
     <ns1:String ns2:Key="Settings.Category.Cache">快取檔案路徑</ns1:String>
+    <ns1:String ns2:Key="Settings.Category.Log">日誌檔案路徑</ns1:String>
     <ns1:String ns2:Key="Settings.Category.Language">語言</ns1:String>
     <ns1:String ns2:Key="Settings.BrowseDataPath">選擇資料儲存路徑</ns1:String>
     <ns1:String ns2:Key="Settings.BrowseCachePath">選擇快取路徑</ns1:String>
+    <ns1:String ns2:Key="Settings.BrowseLogPath">選擇日誌路徑</ns1:String>
+    <ns1:String ns2:Key="Settings.ClearLogs">清空日誌</ns1:String>
+    <ns1:String ns2:Key="Settings.LogsCleared">日誌已清空</ns1:String>
     <ns1:String ns2:Key="Settings.CacheCleared">快取已清除</ns1:String>
     <ns1:String ns2:Key="Settings.InvalidDataPath">資料儲存路徑無效或不存在，請檢查後重試</ns1:String>
     <ns1:String ns2:Key="Settings.InvalidCachePath">快取路徑無效或不存在，請檢查後重試</ns1:String>
@@ -172,6 +176,7 @@
 
     <ns1:String ns2:Key="Settings.CachePath">緩存路徑</ns1:String>
     <ns1:String ns2:Key="Settings.CacheSize">緩存大小：</ns1:String>
+    <ns1:String ns2:Key="Settings.LogSize">日誌大小：</ns1:String>
     <ns1:String ns2:Key="Settings.ClearCache">清除緩存</ns1:String>
     <ns1:String ns2:Key="TitleBar.Back">返回</ns1:String>
 

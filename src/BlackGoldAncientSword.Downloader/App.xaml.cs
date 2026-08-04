@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Windows;
+using BlackGoldAncientSword.Downloader.Infrastructure;
 using BlackGoldAncientSword.Downloader.Services;
 using BlackGoldAncientSword.Downloader.Shell;
 using BlackGoldAncientSword.Downloader.ViewModels;
@@ -11,6 +12,8 @@ namespace BlackGoldAncientSword.Downloader
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            ProcLog.Initialize();
+            ProcLog.Info(nameof(App), "downloader started");
 
             var vm = new DownloadViewModel();
             var window = new DownloadWindow { DataContext = vm };
