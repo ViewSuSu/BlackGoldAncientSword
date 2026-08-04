@@ -84,7 +84,7 @@ namespace BlackGoldAncientSword.Tests.Http
 [Fact]
         public async Task HeyBox_GetUserInfo()
         {
-            var resp = await NarakaApiClient.HeyBoxUserInfoAsync(HeyBoxRoleIdSimple, CancellationToken.None);
+            var resp = await NarakaApiClient.HeyBoxUserInfoAsync(HeyBoxRoleIdSimple, ct: CancellationToken.None);
             Assert.NotNull(resp);
             Assert.True(resp.Code == 200 || resp.Code == 0, $"expected success code, got {resp.Code}");
             Assert.NotNull(resp.Data);
@@ -129,7 +129,7 @@ namespace BlackGoldAncientSword.Tests.Http
             Assert.Equal(DataSource.HeyBox, search!.DataSource);
 
             var user = UnifiedMapper.MapHeyBoxUser(
-                await NarakaApiClient.HeyBoxUserInfoAsync(search.RoleIdSimple, CancellationToken.None),
+                await NarakaApiClient.HeyBoxUserInfoAsync(search.RoleIdSimple, ct: CancellationToken.None),
                 search.RoleIdSimple);
             Assert.NotNull(user);
             Assert.Equal("菜刀", user!.RoleName);

@@ -1065,11 +1065,13 @@
     },
     {
       "id": "HeyBoxUserInfo",
-      "description": "小黑盒数据源：查询玩家基础信息+overview统计+heroes+weapons汇总。heyBox 无独立 stats endpoint，stats 从此接口的 overview[] 抽取。",
+      "description": "小黑盒数据源：查询玩家基础信息+overview统计+heroes+weapons汇总。heyBox 无独立 stats endpoint，stats 从此接口的 overview[] 抽取。传 seasonId+battleTid 时返回对应赛季/模式的段位(playerInfo.level)与统计(overview[])。",
       "method": "GET",
       "path": "/app-api/record/heybox/user/info",
       "queryParameters": {
-        "roleIdSimple": "string"
+        "roleIdSimple": "string",
+        "seasonId": "int",
+        "battleTid": "int"
       },
       "responseBody": {
         "type": "HeyBoxUserInfoResponse",

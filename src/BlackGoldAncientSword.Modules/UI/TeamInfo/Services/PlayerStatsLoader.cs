@@ -36,7 +36,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             UnifiedPlayerStats? stats;
             if (ctx.Source == DataSource.HeyBox)
             {
-                var resp = await NarakaApiClient.HeyBoxUserInfoAsync(ctx.RoleIdSimple, ct).ConfigureAwait(false);
+                var resp = await NarakaApiClient.HeyBoxUserInfoAsync(
+                    ctx.RoleIdSimple, seasonId, gameMode.ToHeyBoxBattleTid(), ct).ConfigureAwait(false);
                 stats = UnifiedMapper.MapHeyBoxStats(resp);
             }
             else

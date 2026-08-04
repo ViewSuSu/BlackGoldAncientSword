@@ -76,10 +76,11 @@ namespace BlackGoldAncientSword.Tests.Http
             Assert.Equal(3, items[0].Kill);
             Assert.Equal(17469, items[0].Damage);
             Assert.Equal(1782913141L * 1000L, items[0].BattleEndTimeMs);
-            Assert.Null(items[0].BeginRankScore);
             Assert.Equal(6747, items[0].RoundRankScore);
-            // battleTid=5000001 → GameMode 承载 heyBox 编码，VM 侧兜底显示 Unknown 或匹配 battleApiCode
-            Assert.Equal(5000001, items[0].GameMode);
+            // heyBox 只给 ratingDelta（本局分差 -4），BeginRankScore 由 RoundRankScore 反推：6747 - (-4) = 6751
+            Assert.Equal(6751, items[0].BeginRankScore);
+            // battleTid=5000001（天选三排）归一化为 miniProgram battleApiCode 2（RankTrio），供 VM 统一消费
+            Assert.Equal(2, items[0].GameMode);
         }
 
         [Fact]
@@ -97,7 +98,21 @@ namespace BlackGoldAncientSword.Tests.Http
             Assert.Equal("4.8%", stats.Stats[1].Value);
             Assert.NotNull(stats.Grade);
             Assert.Equal("青铜Ⅴ", stats.Grade!.GradeName);
+            // rating="0"（该模式无数据）→ 回退按段位名反推大段基线 青铜=1000
             Assert.Equal(1000, stats.Grade.GradeScore);
+        }
+
+        [Fact]
+        public void MapHeyBoxStats_RealRatingUsedAsGradeScore_NotInferredFromName()
+        {
+            // playerInfo.rating="3629" 是真实排位分，必须直接采信（对齐网页端 蚀月Ⅳ 3629 分），
+            // 而不是按段位名 "蚀月Ⅳ" 反推出大段基线 3500。
+            var json = "{\"code\":200,\"msg\":\"ok\",\"data\":{\"playerInfo\":{\"rating\":\"3629\",\"name\":\"爱的供养丶\",\"level\":\"蚀月Ⅳ\",\"levelImg\":\"https://x/3500.png\",\"lv\":\"439\",\"avatar\":\"https://x/a.png\"},\"overview\":[],\"heroes\":[],\"weapons\":[]}}";
+            var resp = JsonSerializer.Deserialize<HeyBoxUserInfoResponse>(json, NarakaApiClient.JsonOptions);
+            var stats = UnifiedMapper.MapHeyBoxStats(resp);
+            Assert.NotNull(stats!.Grade);
+            Assert.Equal("蚀月Ⅳ", stats.Grade!.GradeName);
+            Assert.Equal(3629, stats.Grade.GradeScore);
         }
 
         [Fact]

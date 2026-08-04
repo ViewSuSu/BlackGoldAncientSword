@@ -65,7 +65,7 @@ namespace BlackGoldAncientSword.Tests.Http.Auth
 
             await Probe("HeyBoxUserInfo (需 Bearer)", async ct =>
             {
-                var resp = await NarakaApiClient.HeyBoxUserInfoAsync("6118600130163", ct);
+                var resp = await NarakaApiClient.HeyBoxUserInfoAsync("6118600130163", ct: ct);
                 return $"code={resp.Code} msg=\"{resp.Msg}\" name={resp.Data?.PlayerInfo?.Name}";
             });
             await Task.Delay(1200);
