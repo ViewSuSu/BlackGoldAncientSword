@@ -136,22 +136,32 @@ namespace BlackGoldAncientSword.Modules.UI.Home.ViewModels
             }
         }
 
+        // BattleJoined/Started/Ended 由 GameLogMonitor 在 ThreadPool（OnLogChanged → Task.Run）
+        // 上同步触发，直接在后台线程写 StatusHint 会让 WPF 绑定漏刷新——曾出现"对局已结束、
+        // 标题栏更新为对局结束，但启动页正文仍停留在'对局中'"的不一致。故 StatusHint 赋值统一
+        // marshal 回 UI 线程。NotifyStatus 仍在原线程同步触发，下游 handler 各自负责自己的线程安全。
+        private void SetStatusHintOnUi(string hint)
+        {
+            if (_uiDispatcher.CheckAccess()) { StatusHint = hint; return; }
+            _ = _uiDispatcher.InvokeAsync(() => StatusHint = hint);
+        }
+
         private void OnBattleJoined(object? sender, BattleEventArgs args)
         {
             _gameStatusMonitor.NotifyStatus(GameStatus.HeroSelection);
-            StatusHint = string.Format(_localizedText.Get("Home.Status.HeroSelection", "英雄选择中 (RoomId: {0})"), args.RoomId);
+            SetStatusHintOnUi(string.Format(_localizedText.Get("Home.Status.HeroSelection", "英雄选择中 (RoomId: {0})"), args.RoomId));
         }
 
         private void OnBattleStarted(object? sender, BattleEventArgs args)
         {
             _gameStatusMonitor.NotifyStatus(GameStatus.InGame);
-            StatusHint = string.Format(_localizedText.Get("Home.Status.InGame", "对局中 (BattleId: {0})"), args.BattleId);
+            SetStatusHintOnUi(string.Format(_localizedText.Get("Home.Status.InGame", "对局中 (BattleId: {0})"), args.BattleId));
         }
 
         private void OnBattleEnded(object? sender, BattleEventArgs args)
         {
             _gameStatusMonitor.NotifyStatus(GameStatus.BattleEnded);
-            StatusHint = string.Empty;
+            SetStatusHintOnUi(string.Empty);
         }
 
         private static bool IsNarakaProcessRunning()

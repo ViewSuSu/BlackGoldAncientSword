@@ -196,12 +196,19 @@ public class TeamInfoOcrService : ITeamInfoOcrService
                 var detectResults = await _ocr.RecognizeAsync(detectStitched.bmp).ConfigureAwait(false);
                 isTrio = detectResults.Count > 0
                     && detectResults.Any(r => !string.IsNullOrWhiteSpace(r.Text));
+                DiagLog.Write("OCR",
+                    $"规模检测: isTrio={isTrio}, detectBox数={detectResults.Count}, 文本=[{string.Join(",", detectResults.Select(r => $"'{r.Text}'@{r.Confidence:F2}"))}]");
             }
             catch (Exception ex)
             {
                 // 检测失败时安全地默认走双排——但这会让三排局漏识别一名队友，记 Warning 便于定位"队友识别不全"。
+                DiagLog.Write("OCR", $"规模检测失败，默认 duo: {ex.Message}");
                 AppLog.Warning($"{nameof(TeamInfoOcrService)}.{nameof(RecognizeTeamMembersAutoAsync)}", $"team-size detect failed, defaulting to duo: {ex.Message}");
             }
+        }
+        else
+        {
+            DiagLog.Write("OCR", "规模检测: detectStitched.bmp==null，默认 duo");
         }
 
         // Step 2: 根据检测结果选择对应的完整区域进行识别
@@ -222,7 +229,12 @@ public class TeamInfoOcrService : ITeamInfoOcrService
             return Array.Empty<string>();
         }
 
-        return BucketAndExtractNames(stitched.regionXRanges, results);
+        DiagLog.Write("OCR",
+            $"{(isTrio ? "trio" : "duo")} 识别原始box数={results.Count}: [{string.Join(",", results.Select(r => $"'{r.Text}'@{r.Confidence:F2}(x={(r.Box.TopLeft.X + r.Box.TopRight.X) / 2})"))}], fullSize={fullWidth}x{fullHeight}");
+
+        var extracted = BucketAndExtractNames(stitched.regionXRanges, results);
+        DiagLog.Write("OCR", $"分桶后名字({extracted.Length}): [{string.Join(" | ", extracted)}]");
+        return extracted;
     }
 
     /// <summary>
