@@ -77,8 +77,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             TeamMembers = new ObservableCollection<TeamMemberInfo>();
             Seasons = new ObservableCollection<UnifiedSeason>();
-            DiffLeft = new ObservableCollection<MemberDiffItem>();
-            DiffRight = new ObservableCollection<MemberDiffItem>();
+            MergedStatRows = new ObservableCollection<MergedStatRow>();
             _selectedTeamSize = TeamSize.Trio;
             _selectedCategory = GameModeCategory.Rank;
             // _statusText 不能用字段初始化器调 L()，因为 _localizedText 此时还未注入。
@@ -183,9 +182,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public bool Member1Ready => HasMember1 && !TeamMembers[1].HasStatusError;
         public bool Member2Ready => HasMember2 && !TeamMembers[2].HasStatusError;
 
-        // === Diffs ===
-        public ObservableCollection<MemberDiffItem> DiffLeft { get; }
-        public ObservableCollection<MemberDiffItem> DiffRight { get; }
+        // === Merged stat rows（含 diff）===
+        public ObservableCollection<MergedStatRow> MergedStatRows { get; }
 
         private static bool MemberHasData(TeamMemberInfo m) =>
             !string.IsNullOrEmpty(m.UID) && m.Stats.Count > 0;
@@ -269,7 +267,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // GameStatusRecognized 可能从 ThreadPool 触发（GameLogMonitor 的 FileSystemWatcher.OnLogChanged
             // 走 Task.Run → 同步 raise BattleStarted/Ended/Joined → MainWindowViewModel/HomePageViewModel
             // 同步调 _gameStatusMonitor.NotifyStatus → 同步 raise GameStatusRecognized）。
-            // 下方 HandleGameStatusOnUiThread 会修改 ObservableCollection（TeamMembers.Clear/DiffLeft.Clear/DiffRight.Clear），
+            // 下方 HandleGameStatusOnUiThread 会修改 ObservableCollection（TeamMembers.Clear/MergedStatRows.Clear），
             // ObservableCollection.CollectionChanged 跨线程触发会让 WPF ItemsControl 抛
             // NotSupportedException 撕崩 UI 线程。务必在方法入口 marshal 回 UI 线程。
             if (!_uiDispatcher.CheckAccess())
@@ -313,8 +311,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                      {
                          _hasEverHadData = false;
                          TeamMembers.Clear();
-                         DiffLeft.Clear();
-                         DiffRight.Clear();
+                         MergedStatRows.Clear();
                          RaiseMemberProperties();
                      }
                     break;
@@ -329,8 +326,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                          _hasEverHadData = false;
                          _ocrDataLoadedSuccessfully = false;
                          TeamMembers.Clear();
-                         DiffLeft.Clear();
-                         DiffRight.Clear();
+                         MergedStatRows.Clear();
                          RaiseMemberProperties();
                      }
                     break;
@@ -511,10 +507,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 // retryInterval=Zero 时会变成"识别失败立刻重试"的零休眠死循环：
                 // 一旦英雄选择阶段 OCR 拿不到队友名（例如分辨率不匹配、UI 还没绘出），
                 // 每秒会反复触发 3 次 PaddleOCR 推理 + 全屏抓取，把 CPU 与磁盘打满。
-                // 800 ms 在人类感知上等同立刻，但 CPU 占用立刻降一个数量级。
+                // 1500 ms 在人类感知上仍近乎立刻，但 CPU 占用相比零休眠降一个数量级。
                 var names = await _ocrCoordinator.WaitForAutoRecognitionAsync(
                     initialDelay: TimeSpan.Zero,
-                    retryInterval: TimeSpan.FromMilliseconds(800),
+                    retryInterval: TimeSpan.FromMilliseconds(1500),
                     ct);
 
                 if (ct.IsCancellationRequested || names.Length == 0) return;
@@ -681,104 +677,107 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
+        // 与战绩页「数据详情」字段完全对齐的 16+1 个字段，顺序与 heyBox overview 一致。
+        private static readonly (string Key, string Label, bool IsPercent)[] StatDefs =
+        {
+            ("round",              "总场次",     false),
+            ("win_rate",           "夺冠率",     true),
+            ("top5_rate",          "前五率",     true),
+            ("avg_damage",         "场均伤害",   false),
+            ("dmg_per_kill",       "伤害/击杀",  false),
+            ("win",                "夺冠",       false),
+            ("top5",               "前五",       false),
+            ("kd",                 "K/D",        false),
+            ("max_damage",         "最高伤害",   false),
+            ("max_cure",           "最高恢复",   false),
+            ("max_kill",           "最高击杀",   false),
+            ("total_time",         "总对局时间", false),
+            ("avg_shock",          "场均振刀",   false),
+            ("avg_cure",           "场均恢复",   false),
+            ("avg_kill",           "场均击杀",   false),
+            ("avg_total_live_time","场均存活时间",false),
+            ("__rank__",           "段位分",     false),
+        };
+
+        /// <summary>
+        /// 重建 MergedStatRows：按 StatDefs 顺序每行合并 3 个成员的值 + 2 列 diff。
+        /// 一个集合绑定一个 ItemsControl，每行模板是 5 列 Grid，天然水平对齐。
+        /// </summary>
         private void UpdateDiffs()
         {
-            DiffLeft.Clear();
-            DiffRight.Clear();
+            MergedStatRows.Clear();
+
+            var m0 = TeamMembers.Count > 0 ? TeamMembers[0] : null;
+            var m1 = TeamMembers.Count > 1 ? TeamMembers[1] : null;
+            var m2 = TeamMembers.Count > 2 ? TeamMembers[2] : null;
 
             var localIdx = LocalUserIndex;
             if (localIdx < 0) localIdx = 0;
 
-            if (TeamMembers.Count >= 2)
+            // diff 的两侧：本地用户 vs 左边队友、本地用户 vs 右边队友
+            TeamMemberInfo? diffLeftA = null, diffLeftB = null;
+            TeamMemberInfo? diffRightA = null, diffRightB = null;
+            if (m0 != null && m1 != null)
             {
-                var otherIdx = localIdx == 0 ? 1 : 0;
-                ComputeDiff(DiffLeft, TeamMembers[localIdx], TeamMembers[otherIdx]);
+                diffLeftA = localIdx == 0 ? m0 : m1;
+                diffLeftB = localIdx == 0 ? m1 : m0;
+            }
+            if (m1 != null && m2 != null)
+            {
+                diffRightA = localIdx == 1 ? m1 : (localIdx == 2 ? m2 : m1);
+                diffRightB = localIdx == 1 ? m2 : (localIdx == 2 ? m1 : m2);
             }
 
-            if (TeamMembers.Count >= 3)
+            foreach (var def in StatDefs)
             {
-                var otherIdx = localIdx == 1 ? 2 : 1;
-                ComputeDiff(DiffRight, TeamMembers[localIdx], TeamMembers[otherIdx]);
+                var row = new MergedStatRow { Label = def.Label };
+
+                row.Val0 = GetStatVal(m0, def.Key);
+                row.Val1 = GetStatVal(m1, def.Key);
+                row.Val2 = GetStatVal(m2, def.Key);
+
+                if (diffLeftA != null && diffLeftB != null)
+                    FillDiff(row, isLeft: true, diffLeftA, diffLeftB, def);
+                if (diffRightA != null && diffRightB != null)
+                    FillDiff(row, isLeft: false, diffRightA, diffRightB, def);
+
+                MergedStatRows.Add(row);
             }
 
             RaisePropertyChanged(nameof(HasDiffLeft));
             RaisePropertyChanged(nameof(HasDiffRight));
         }
 
-        private static readonly (string Key, string Label, bool IsPercent, string Format)[] StatDefs =
+        private static string GetStatVal(TeamMemberInfo? m, string key)
         {
-            ("avg_kill", "场均击杀", false, "F1"),
-            ("avg_damage", "场均伤害", false, "F0"),
-            ("top5_rate", "前五率", true, "F1"),
-            ("avg_total_live_time", "场均生存", false, "F0"),
-            ("kd", "KD", false, "F2"),
-            ("avg_cure", "场均治疗", false, "F0"),
-            ("avg_assist", "场均助攻", false, "F1"),
-            ("max_kill", "最佳击杀", false, "F0"),
-            ("max_damage", "最佳伤害", false, "F0"),
-            ("max_shock_count", "最多振刀", false, "F0"),
-            ("win_rate", "第一率", true, "F1"),
-            ("round", "场次", false, "F0"),
-            ("win", "第一", false, "F0"),
-            ("top5", "前五", false, "F0"),
-            ("max_cure", "最佳治疗", false, "F0"),
-            ("max_assist", "最佳助攻", false, "F0"),
-            ("__rank__", "分数", false, "F0"),
-        };
-
-        private static void ComputeDiff(ObservableCollection<MemberDiffItem> target, TeamMemberInfo left, TeamMemberInfo right)
-        {
-            foreach (var def in StatDefs)
-            {
-                double lv, rv;
-                if (def.Key == "__rank__")
-                {
-                    lv = left.RankScore;
-                    rv = right.RankScore;
-                }
-                else
-                {
-                    lv = left.Stats.TryGetValue(def.Key, out var l) ? TryParseDouble(l) : 0;
-                    rv = right.Stats.TryGetValue(def.Key, out var r) ? TryParseDouble(r) : 0;
-                }
-
-                AddDiffItem(target, def.Label, lv, rv, def.IsPercent);
-            }
-
+            if (m == null) return "-";
+            if (key == "__rank__") return m.RankScore > 0 ? m.RankScore.ToString("F0") : "-";
+            return m.Stats.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v) ? v : "-";
         }
 
-        private static void AddDiffItem(ObservableCollection<MemberDiffItem> target, string label, double leftVal, double rightVal, bool isPercent)
+        private static void FillDiff(MergedStatRow row, bool isLeft,
+            TeamMemberInfo a, TeamMemberInfo b,
+            (string Key, string Label, bool IsPercent) def)
         {
-            var diff = leftVal - rightVal;
-            const string fmt = "0.##"; // at most 2 decimal places
-            string diffText;
-            string color;
-            if (Math.Abs(diff) < 0.001)
+            double av, bv;
+            if (def.Key == "__rank__")
             {
-                diffText = "0";
-                color = "#999999";
-            }
-            else if (diff > 0)
-            {
-                diffText = isPercent ? $"+{diff:F1}%" : $"+{diff.ToString(fmt)}";
-                color = "#22AA22";
+                av = a.RankScore; bv = b.RankScore;
             }
             else
             {
-                diffText = isPercent ? $"{diff:F1}%" : $"{diff.ToString(fmt)}";
-                color = "#DD3333";
+                av = a.Stats.TryGetValue(def.Key, out var al) ? TryParseDouble(al) : 0;
+                bv = b.Stats.TryGetValue(def.Key, out var bl) ? TryParseDouble(bl) : 0;
             }
+            var diff = av - bv;
+            const string fmt = "0.##";
+            string text, color;
+            if (Math.Abs(diff) < 0.001) { text = "0"; color = "#999999"; }
+            else if (diff > 0) { text = def.IsPercent ? $"+{diff:F1}%" : $"+{diff.ToString(fmt)}"; color = "#22AA22"; }
+            else { text = def.IsPercent ? $"{diff:F1}%" : $"{diff.ToString(fmt)}"; color = "#DD3333"; }
 
-            target.Add(new MemberDiffItem
-            {
-                Label = label,
-                LeftValue = isPercent ? $"{leftVal:F1}%" : $"{leftVal.ToString(fmt)}",
-                RightValue = isPercent ? $"{rightVal:F1}%" : $"{rightVal.ToString(fmt)}",
-                DiffText = diffText,
-                DiffColor = color,
-                IsLeftBetter = diff > 0.001,
-                DiffTooltip = diff.ToString()
-            });
+            if (isLeft) { row.DiffLeftText = text; row.DiffLeftColor = color; }
+            else { row.DiffRightText = text; row.DiffRightColor = color; }
         }
 
         private static double TryParseDouble(string s)
@@ -841,7 +840,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     // Step 6: 合并所有属性更新为单一批，降低 UI 线程队列压力
                     await _uiDispatcher.InvokeAsync(() =>
                     {
-                        member.UserName = loaded.UserName;
                         member.Level = loaded.Level;
                         member.UID = loaded.UID;
                         member.AvatarUrl = loaded.AvatarUrl;
@@ -1079,8 +1077,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 // 非英雄选择状态时清除旧队友数据，避免复杂UI（DropShadowEffect + 索引绑定）立即渲染导致卡死
                 _hasEverHadData = false;
                 TeamMembers.Clear();
-                DiffLeft.Clear();
-                DiffRight.Clear();
+                MergedStatRows.Clear();
                 RaiseMemberProperties();
 
                 IsHeroSelectionPhase = false;
@@ -1159,15 +1156,20 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         }
     }
 
-    public class MemberDiffItem
+    /// <summary>
+    /// 队友卡片的单行合并数据：标签 + 3 个成员的值 + 左右 diff。
+    /// MergedStatRows 绑定单个 ItemsControl，每行模板是 5 列 Grid，天然水平对齐。
+    /// </summary>
+    public class MergedStatRow
     {
         public string Label { get; set; } = string.Empty;
-        public string LeftValue { get; set; } = string.Empty;
-        public string RightValue { get; set; } = string.Empty;
-        public string DiffText { get; set; } = string.Empty;
-        public string DiffColor { get; set; } = "#999999";
-        public bool IsLeftBetter { get; set; }
-        public string DiffTooltip { get; set; } = string.Empty;
+        public string Val0 { get; set; } = "-";
+        public string Val1 { get; set; } = "-";
+        public string Val2 { get; set; } = "-";
+        public string DiffLeftText { get; set; } = string.Empty;
+        public string DiffLeftColor { get; set; } = "#999999";
+        public string DiffRightText { get; set; } = string.Empty;
+        public string DiffRightColor { get; set; } = "#999999";
     }
 
     public class TeamMemberInfo : ViewModelBase
@@ -1437,9 +1439,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         public System.Action<TeamMemberInfo>? RefreshAction { get; set; }
 
-        private DelegateCommand? _searchMemberCommand;
-        public DelegateCommand SearchMemberCommand =>
-            _searchMemberCommand ??= new DelegateCommand(() =>
+        private DelegateCommand<string>? _searchMemberCommand;
+        public DelegateCommand<string> SearchMemberCommand =>
+            _searchMemberCommand ??= new DelegateCommand<string>(input =>
             {
                 if (!_searchDebounce.TryEnter())
                 {
@@ -1447,6 +1449,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     _tipMessage?.ShowError(tip);
                     return;
                 }
+                // 用搜索框里用户输入的名字更新 UserName，再触发搜索
+                if (!string.IsNullOrWhiteSpace(input))
+                    UserName = input.Trim();
                 RefreshAction?.Invoke(this);
             });
 

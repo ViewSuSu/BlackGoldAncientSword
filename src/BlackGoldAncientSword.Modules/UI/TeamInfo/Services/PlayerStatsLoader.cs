@@ -53,18 +53,20 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             {
                 if (string.IsNullOrEmpty(stat.Key)) continue;
                 var val = string.IsNullOrEmpty(stat.Value) ? "-" : stat.Value;
-                result.Stats[stat.Key] = val;
-                // miniProgram 分支用英文 key 命中；heyBox 分支用中文 desc（作为 Key 存入）命中中文分支
-                switch (stat.Key)
+
+                // heyBox 数据源的 stat.Key 是中文 desc（如"最高伤害""KD"），归一化成 miniProgram
+                // 的英文 key 再入字典，让队友卡片 XAML 的 Stats[kd]/Stats[max_damage] 等英文索引能命中。
+                // miniProgram 本身就是英文 key，NormalizeStatKey 原样返回。
+                var normalizedKey = NormalizeStatKey(stat.Key);
+                result.Stats[normalizedKey] = val;
+
+                // 专有属性用归一化后的英文 key 命中，中英文数据源一致。
+                switch (normalizedKey)
                 {
-                    case "avg_kill":
-                    case "场均击杀": result.AvgKill = val; break;
-                    case "top5_rate":
-                    case "前五率": result.Top5Rate = val; break;
-                    case "avg_damage":
-                    case "场均伤害": result.AvgDamage = val; break;
-                    case "avg_total_live_time":
-                    case "场均存活时间": result.SurviveTime = FormatSurvivalTime(val); break;
+                    case "avg_kill": result.AvgKill = val; break;
+                    case "top5_rate": result.Top5Rate = val; break;
+                    case "avg_damage": result.AvgDamage = val; break;
+                    case "avg_total_live_time": result.SurviveTime = FormatSurvivalTime(val); break;
                 }
             }
 
@@ -81,6 +83,35 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// heyBox 数据源的 stat key 是中文 desc，归一化成英文 key，与队友卡片动态行的 key 对齐。
+        /// miniProgram 传入的已是英文 key，未命中中文表则原样返回。
+        /// 映射依据 heyBox 玩家页概览接口（/record/heybox/user/info）overview[].desc 实测全集。
+        /// </summary>
+        private static string NormalizeStatKey(string key)
+        {
+            return key switch
+            {
+                "总场次" => "round",
+                "夺冠" => "win",
+                "夺冠率" => "win_rate",
+                "前五" => "top5",
+                "前五率" => "top5_rate",
+                "场均伤害" => "avg_damage",
+                "场均击杀" => "avg_kill",
+                "KD" => "kd",
+                "场均恢复" => "avg_cure",
+                "最高伤害" => "max_damage",
+                "最高恢复" => "max_cure",
+                "最高击杀" => "max_kill",
+                "场均存活时间" => "avg_total_live_time",
+                "伤害/击杀" => "dmg_per_kill",
+                "总对局时间" => "total_time",
+                "场均振刀" => "avg_shock",
+                _ => key,
+            };
         }
 
         public static string FormatSurvivalTime(string secondsStr)

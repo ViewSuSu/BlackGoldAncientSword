@@ -1,4 +1,4 @@
-﻿<bases:UserControlBase
+<bases:UserControlBase
     x:Class="BlackGoldAncientSword.Modules.UI.TeamInfo.Views.TeamInfoPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -19,7 +19,7 @@
             <Grid ext:PageTransitionBehavior.IsEnabled="True" RenderTransformOrigin="0.5,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" MinHeight="28" />
+                    <RowDefinition Height="Auto" MinHeight="25" />
                 </Grid.RowDefinitions>
                 <Border
                     Grid.Row="0"
@@ -48,7 +48,7 @@
                                 TextTrimming="CharacterEllipsis" />
                             <ComboBox
                                 Width="160"
-                                Height="28"
+                                Height="25"
                                 DisplayMemberPath="Name"
                                 ItemsSource="{Binding Seasons}"
                                 SelectedItem="{Binding SelectedSeason}" />
@@ -117,7 +117,7 @@
                         <Button
                             Grid.Column="4"
                             Width="28"
-                            Height="28"
+                            Height="25"
                             Margin="6,0,0,0"
                             Padding="0"
                             VerticalAlignment="Center"
@@ -161,27 +161,10 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
-                        <RowDefinition Height="Auto" MinHeight="28" />
                     </Grid.RowDefinitions>
                     <Border
                         Grid.Row="0"
-                        Grid.RowSpan="20"
+                        Grid.RowSpan="3"
                         Grid.Column="0"
                         Padding="14,12"
                         Background="{DynamicResource CardGradientBrush}"
@@ -192,7 +175,7 @@
                         Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Border
                         Grid.Row="0"
-                        Grid.RowSpan="20"
+                        Grid.RowSpan="3"
                         Grid.Column="0"
                         Background="{DynamicResource SurfaceSecondaryBrush}"
                         CornerRadius="8"
@@ -208,7 +191,7 @@
                     </Border>
                     <Border
                         Grid.Row="1"
-                        Grid.RowSpan="19"
+                        Grid.RowSpan="2"
                         Grid.Column="0"
                         Panel.ZIndex="10"
                         Background="{DynamicResource SurfaceSecondaryBrush}"
@@ -224,7 +207,7 @@
                     </Border>
                     <Border
                         Grid.Row="0"
-                        Grid.RowSpan="20"
+                        Grid.RowSpan="3"
                         Grid.Column="2"
                         Padding="14,12"
                         Background="{DynamicResource CardGradientBrush}"
@@ -235,7 +218,7 @@
                         Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Border
                         Grid.Row="0"
-                        Grid.RowSpan="20"
+                        Grid.RowSpan="3"
                         Grid.Column="2"
                         Background="{DynamicResource SurfaceSecondaryBrush}"
                         CornerRadius="8"
@@ -251,7 +234,7 @@
                     </Border>
                     <Border
                         Grid.Row="1"
-                        Grid.RowSpan="19"
+                        Grid.RowSpan="2"
                         Grid.Column="2"
                         Panel.ZIndex="10"
                         Background="{DynamicResource SurfaceSecondaryBrush}"
@@ -267,7 +250,7 @@
                     </Border>
                     <Border
                         Grid.Row="0"
-                        Grid.RowSpan="20"
+                        Grid.RowSpan="3"
                         Grid.Column="4"
                         Padding="14,12"
                         Background="{DynamicResource CardGradientBrush}"
@@ -278,7 +261,7 @@
                         Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Border
                         Grid.Row="0"
-                        Grid.RowSpan="20"
+                        Grid.RowSpan="3"
                         Grid.Column="4"
                         Background="{DynamicResource SurfaceSecondaryBrush}"
                         CornerRadius="8"
@@ -294,7 +277,7 @@
                     </Border>
                     <Border
                         Grid.Row="1"
-                        Grid.RowSpan="19"
+                        Grid.RowSpan="2"
                         Grid.Column="4"
                         Panel.ZIndex="10"
                         Background="{DynamicResource SurfaceSecondaryBrush}"
@@ -318,18 +301,18 @@
                         </Grid.ColumnDefinitions>
                         <hc:SearchBar
                             Grid.Column="0"
-                            Height="28"
-                            Margin="12,2,8,8"
+                            Height="25"
+                            Margin="12,8,8,8"
                             hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
                             hc:TitleElement.Title="{DynamicResource Search.Title}"
                             hc:TitleElement.TitlePlacement="Left"
                             Command="{Binding Member0.SearchMemberCommand}"
                             Style="{StaticResource SearchBarExtend}"
-                            Text="{Binding Member0.UserName, UpdateSourceTrigger=PropertyChanged}" />
+                            Text="{Binding Member0.UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <Button
                             Grid.Column="1"
                             Width="Auto"
-                            Height="28"
+                            Height="25"
                             Margin="0,2,12,8"
                             Padding="8,0"
                             VerticalAlignment="Center"
@@ -355,18 +338,18 @@
                         </Grid.ColumnDefinitions>
                         <hc:SearchBar
                             Grid.Column="0"
-                            Height="28"
-                            Margin="12,2,8,8"
+                            Height="25"
+                            Margin="12,8,8,8"
                             hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
                             hc:TitleElement.Title="{DynamicResource Search.Title}"
                             hc:TitleElement.TitlePlacement="Left"
                             Command="{Binding Member1.SearchMemberCommand}"
                             Style="{StaticResource SearchBarExtend}"
-                            Text="{Binding Member1.UserName, UpdateSourceTrigger=PropertyChanged}" />
+                            Text="{Binding Member1.UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <Button
                             Grid.Column="1"
                             Width="Auto"
-                            Height="28"
+                            Height="25"
                             Margin="0,2,12,8"
                             Padding="8,0"
                             VerticalAlignment="Center"
@@ -392,18 +375,18 @@
                         </Grid.ColumnDefinitions>
                         <hc:SearchBar
                             Grid.Column="0"
-                            Height="28"
-                            Margin="12,2,8,8"
+                            Height="25"
+                            Margin="12,8,8,8"
                             hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
                             hc:TitleElement.Title="{DynamicResource Search.Title}"
                             hc:TitleElement.TitlePlacement="Left"
                             Command="{Binding Member2.SearchMemberCommand}"
                             Style="{StaticResource SearchBarExtend}"
-                            Text="{Binding Member2.UserName, UpdateSourceTrigger=PropertyChanged}" />
+                            Text="{Binding Member2.UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <Button
                             Grid.Column="1"
                             Width="Auto"
-                            Height="28"
+                            Height="25"
                             Margin="0,2,12,8"
                             Padding="8,0"
                             VerticalAlignment="Center"
@@ -456,8 +439,7 @@
                             <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                                 <TextBlock
                                     FontSize="11"
-                                    Foreground="{DynamicResource TextMutedBrush}"
-                                    TextTrimming="CharacterEllipsis"><Run Text="UID:" /><Run Text="{Binding Member0.UID}" /></TextBlock>
+                                    Foreground="{DynamicResource TextMutedBrush}"><Run Text="UID:" /><Run Text="{Binding Member0.UID}" /></TextBlock>
                                 <Button
                                     Width="16"
                                     Height="16"
@@ -569,8 +551,7 @@
                             <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                                 <TextBlock
                                     FontSize="11"
-                                    Foreground="{DynamicResource TextMutedBrush}"
-                                    TextTrimming="CharacterEllipsis"><Run Text="UID:" /><Run Text="{Binding Member1.UID}" /></TextBlock>
+                                    Foreground="{DynamicResource TextMutedBrush}"><Run Text="UID:" /><Run Text="{Binding Member1.UID}" /></TextBlock>
                                 <Button
                                     Width="16"
                                     Height="16"
@@ -682,8 +663,7 @@
                             <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                                 <TextBlock
                                     FontSize="11"
-                                    Foreground="{DynamicResource TextMutedBrush}"
-                                    TextTrimming="CharacterEllipsis"><Run Text="UID:" /><Run Text="{Binding Member2.UID}" /></TextBlock>
+                                    Foreground="{DynamicResource TextMutedBrush}"><Run Text="UID:" /><Run Text="{Binding Member2.UID}" /></TextBlock>
                                 <Button
                                     Width="16"
                                     Height="16"
@@ -758,1870 +738,107 @@
                                 TextTrimming="CharacterEllipsis"><Run Text="{Binding Member2.RankTierScore, StringFormat={}{0}}" /><Run Text="{DynamicResource Stats.Points}" /></TextBlock>
                         </StackPanel>
                     </Grid>
-                    <Border
-                        Grid.Row="2"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.KillCount}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgKills}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="2"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[0].DiffColor}"
-                            Text="{Binding DiffLeft[0].DiffText}" ToolTip="{Binding DiffLeft[0].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="2"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.KillCount}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgKills}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="2"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[0].DiffColor}"
-                            Text="{Binding DiffRight[0].DiffText}" ToolTip="{Binding DiffRight[0].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="2"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.KillCount}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgKills}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="3"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.DamagePlayer}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgDamage}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="3"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[1].DiffColor}"
-                            Text="{Binding DiffLeft[1].DiffText}" ToolTip="{Binding DiffLeft[1].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="3"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.DamagePlayer}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgDamage}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="3"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[1].DiffColor}"
-                            Text="{Binding DiffRight[1].DiffText}" ToolTip="{Binding DiffRight[1].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="3"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.DamagePlayer}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgDamage}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="4"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Top5Rate}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.TopFiveRate}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="4"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[2].DiffColor}"
-                            Text="{Binding DiffLeft[2].DiffText}" ToolTip="{Binding DiffLeft[2].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="4"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Top5Rate}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.TopFiveRate}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="4"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[2].DiffColor}"
-                            Text="{Binding DiffRight[2].DiffText}" ToolTip="{Binding DiffRight[2].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="4"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Top5Rate}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.TopFiveRate}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="5"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.SurviveTime}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgSurvival}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="5"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[3].DiffColor}"
-                            Text="{Binding DiffLeft[3].DiffText}" ToolTip="{Binding DiffLeft[3].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="5"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.SurviveTime}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgSurvival}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="5"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[3].DiffColor}"
-                            Text="{Binding DiffRight[3].DiffText}" ToolTip="{Binding DiffRight[3].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="5"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.SurviveTime}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgSurvival}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="6"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[kd]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.KD}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="6"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[4].DiffColor}"
-                            Text="{Binding DiffLeft[4].DiffText}" ToolTip="{Binding DiffLeft[4].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="6"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[kd]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.KD}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="6"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[4].DiffColor}"
-                            Text="{Binding DiffRight[4].DiffText}" ToolTip="{Binding DiffRight[4].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="6"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[kd]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.KD}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="7"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[avg_cure]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgHeal}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="7"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[5].DiffColor}"
-                            Text="{Binding DiffLeft[5].DiffText}" ToolTip="{Binding DiffLeft[5].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="7"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[avg_cure]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgHeal}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="7"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[5].DiffColor}"
-                            Text="{Binding DiffRight[5].DiffText}" ToolTip="{Binding DiffRight[5].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="7"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[avg_cure]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgHeal}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="8"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[avg_assist]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgAssists}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="8"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[6].DiffColor}"
-                            Text="{Binding DiffLeft[6].DiffText}" ToolTip="{Binding DiffLeft[6].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="8"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[avg_assist]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgAssists}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="8"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[6].DiffColor}"
-                            Text="{Binding DiffRight[6].DiffText}" ToolTip="{Binding DiffRight[6].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="8"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[avg_assist]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.AvgAssists}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="9"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[max_kill]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestKills}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="9"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[7].DiffColor}"
-                            Text="{Binding DiffLeft[7].DiffText}" ToolTip="{Binding DiffLeft[7].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="9"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[max_kill]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestKills}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="9"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[7].DiffColor}"
-                            Text="{Binding DiffRight[7].DiffText}" ToolTip="{Binding DiffRight[7].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="9"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[max_kill]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestKills}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="10"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[max_damage]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestDamage}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="10"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[8].DiffColor}"
-                            Text="{Binding DiffLeft[8].DiffText}" ToolTip="{Binding DiffLeft[8].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="10"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[max_damage]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestDamage}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="10"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[8].DiffColor}"
-                            Text="{Binding DiffRight[8].DiffText}" ToolTip="{Binding DiffRight[8].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="10"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[max_damage]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestDamage}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="11"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[max_shock_count]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.MostParry}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="11"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[9].DiffColor}"
-                            Text="{Binding DiffLeft[9].DiffText}" ToolTip="{Binding DiffLeft[9].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="11"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[max_shock_count]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.MostParry}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="11"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[9].DiffColor}"
-                            Text="{Binding DiffRight[9].DiffText}" ToolTip="{Binding DiffRight[9].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="11"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[max_shock_count]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.MostParry}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="12"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[win_rate]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.FirstRate}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="12"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[10].DiffColor}"
-                            Text="{Binding DiffLeft[10].DiffText}" ToolTip="{Binding DiffLeft[10].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="12"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[win_rate]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.FirstRate}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="12"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[10].DiffColor}"
-                            Text="{Binding DiffRight[10].DiffText}" ToolTip="{Binding DiffRight[10].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="12"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[win_rate]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.FirstRate}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="13"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[round]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.Matches}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="13"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[11].DiffColor}"
-                            Text="{Binding DiffLeft[11].DiffText}" ToolTip="{Binding DiffLeft[11].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="13"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[round]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.Matches}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="13"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[11].DiffColor}"
-                            Text="{Binding DiffRight[11].DiffText}" ToolTip="{Binding DiffRight[11].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="13"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[round]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.Matches}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="14"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[win]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.FirstPlace}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="14"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[12].DiffColor}"
-                            Text="{Binding DiffLeft[12].DiffText}" ToolTip="{Binding DiffLeft[12].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="14"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[win]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.FirstPlace}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="14"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[12].DiffColor}"
-                            Text="{Binding DiffRight[12].DiffText}" ToolTip="{Binding DiffRight[12].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="14"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[win]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.FirstPlace}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="15"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[top5]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.TopFive}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="15"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[13].DiffColor}"
-                            Text="{Binding DiffLeft[13].DiffText}" ToolTip="{Binding DiffLeft[13].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="15"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[top5]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.TopFive}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="15"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[13].DiffColor}"
-                            Text="{Binding DiffRight[13].DiffText}" ToolTip="{Binding DiffRight[13].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="15"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[top5]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.TopFive}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="16"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[max_cure]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestHeal}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="16"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[14].DiffColor}"
-                            Text="{Binding DiffLeft[14].DiffText}" ToolTip="{Binding DiffLeft[14].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="16"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[max_cure]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestHeal}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="16"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[14].DiffColor}"
-                            Text="{Binding DiffRight[14].DiffText}" ToolTip="{Binding DiffRight[14].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="16"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[max_cure]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestHeal}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="17"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.Stats[max_assist]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestAssists}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="17"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[15].DiffColor}"
-                            Text="{Binding DiffLeft[15].DiffText}" ToolTip="{Binding DiffLeft[15].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="17"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.Stats[max_assist]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestAssists}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="17"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[15].DiffColor}"
-                            Text="{Binding DiffRight[15].DiffText}" ToolTip="{Binding DiffRight[15].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="17"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0,0,0,0.5"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.Stats[max_assist]}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.BestAssists}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="18"
-                        Grid.Column="0"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        Visibility="{Binding Member0Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member0.RankScore, StringFormat={}{0}}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.Header.RankScore}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="18"
-                        Grid.Column="1"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffLeft[16].DiffColor}"
-                            Text="{Binding DiffLeft[16].DiffText}" ToolTip="{Binding DiffLeft[16].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="18"
-                        Grid.Column="2"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        Visibility="{Binding Member1Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member1.RankScore, StringFormat={}{0}}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.Header.RankScore}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
-                    <Border
-                        Grid.Row="18"
-                        Grid.Column="3"
-                        Margin="4,2,4,2"
-                        Padding="2,0"
-                        Background="{DynamicResource SurfaceTertiaryBrush}"
-                        BorderBrush="{DynamicResource BorderLightBrush}"
-                        BorderThickness="0.5"
-                        CornerRadius="3"
-                        Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontSize="13"
-                            FontWeight="Bold"
-                            Foreground="{Binding DiffRight[16].DiffColor}"
-                            Text="{Binding DiffRight[16].DiffText}" ToolTip="{Binding DiffRight[16].DiffTooltip, FallbackValue=''}"
-                            TextTrimming="CharacterEllipsis" />
-                    </Border>
-                    <Border
-                        Grid.Row="18"
-                        Grid.Column="4"
-                        Margin="14,2,14,2"
-                        Padding="8,0"
-                        Visibility="{Binding Member2Ready, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                DockPanel.Dock="Right"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Text="{Binding Member2.RankScore, StringFormat={}{0}}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                VerticalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Text="{DynamicResource Stats.Header.RankScore}"
-                                TextTrimming="CharacterEllipsis" />
-                        </DockPanel>
-                    </Border>
+                    <!-- Member0 统计行 -->
+                    <ItemsControl Grid.Row="2" Grid.Column="0"
+                                  ItemsSource="{Binding MergedStatRows}"
+                                  Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Height="25" Margin="14,2,14,2" Padding="8,0"
+                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                        BorderThickness="0,0,0,0.5">
+                                    <DockPanel>
+                                        <TextBlock VerticalAlignment="Center" DockPanel.Dock="Right"
+                                                   FontSize="14" FontWeight="SemiBold"
+                                                   Text="{Binding Val0}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock VerticalAlignment="Center" FontSize="12"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <!-- DiffLeft 统计行 -->
+                    <ItemsControl Grid.Row="2" Grid.Column="1"
+                                  ItemsSource="{Binding MergedStatRows}"
+                                  Visibility="{Binding HasDiffLeft, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Height="25" Margin="4,2,4,2" Padding="2,0"
+                                        Background="{DynamicResource SurfaceTertiaryBrush}"
+                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                        BorderThickness="0.5" CornerRadius="3">
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="13" FontWeight="Bold"
+                                               Foreground="{Binding DiffLeftColor}"
+                                               Text="{Binding DiffLeftText}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <!-- Member1 统计行 -->
+                    <ItemsControl Grid.Row="2" Grid.Column="2"
+                                  ItemsSource="{Binding MergedStatRows}"
+                                  Visibility="{Binding HasMember1, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Height="25" Margin="14,2,14,2" Padding="8,0"
+                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                        BorderThickness="0,0,0,0.5">
+                                    <DockPanel>
+                                        <TextBlock VerticalAlignment="Center" DockPanel.Dock="Right"
+                                                   FontSize="14" FontWeight="SemiBold"
+                                                   Text="{Binding Val1}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock VerticalAlignment="Center" FontSize="12"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <!-- DiffRight 统计行 -->
+                    <ItemsControl Grid.Row="2" Grid.Column="3"
+                                  ItemsSource="{Binding MergedStatRows}"
+                                  Visibility="{Binding HasDiffRight, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Height="25" Margin="4,2,4,2" Padding="2,0"
+                                        Background="{DynamicResource SurfaceTertiaryBrush}"
+                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                        BorderThickness="0.5" CornerRadius="3">
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="13" FontWeight="Bold"
+                                               Foreground="{Binding DiffRightColor}"
+                                               Text="{Binding DiffRightText}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <!-- Member2 统计行 -->
+                    <ItemsControl Grid.Row="2" Grid.Column="4"
+                                  ItemsSource="{Binding MergedStatRows}"
+                                  Visibility="{Binding HasMember2, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Height="25" Margin="14,2,14,2" Padding="8,0"
+                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                        BorderThickness="0,0,0,0.5">
+                                    <DockPanel>
+                                        <TextBlock VerticalAlignment="Center" DockPanel.Dock="Right"
+                                                   FontSize="14" FontWeight="SemiBold"
+                                                   Text="{Binding Val2}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock VerticalAlignment="Center" FontSize="12"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </Grid>
             </Grid>
         </ScrollViewer>
