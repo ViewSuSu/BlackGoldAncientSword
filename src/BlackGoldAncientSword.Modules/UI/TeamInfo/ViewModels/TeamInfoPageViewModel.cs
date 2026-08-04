@@ -397,6 +397,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 // 用本地已知昵称 (player_prefs.txt) 校正 OCR 结果中"最像自己"的那一格。
                 // 只改自己那一格，队友格永不动。命中率提升让下游 ReorderMembersForLocalUser
                 // 能稳定把自己放到中间卡片。
+                await ReloadLocalUserAsync();
                 names = TeamMemberNameCorrector.Apply(names, _playerPrefsService.Current.OriginalPlayerName);
 
                 // 智能去重：本轮 OCR 名字与当前 TeamMembers 比对——
@@ -572,11 +573,33 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
+        /// <summary>
+        /// 校正本地用户名前主动重读 player_prefs，确保 <see cref="IPlayerPrefsService.Current"/>
+        /// 与战绩页用的是同一份最新本地登录账号。
+        /// </summary>
+        /// <remarks>
+        /// 战绩页每次进入都会 reload，而队友卡片原先只用构造时的陈旧快照——用户在游戏内切了
+        /// Steam↔网易客户端后，两页定位到的"本地用户"就会不一致。reload 一次即可对齐。
+        /// reload 失败不阻断识别，沿用旧快照兜底。
+        /// </remarks>
+        private async Task ReloadLocalUserAsync()
+        {
+            try
+            {
+                await _playerPrefsService.LoadAsync();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+                AppLog.Error(ex, $"{nameof(TeamInfoPageViewModel)}.{nameof(ReloadLocalUserAsync)}", "reload prefs failed");
+            }
+        }
+
         private async Task UpdateTeamMembersAsync(string[] names, CancellationToken ct)
         {
             // 用本地已知昵称 (player_prefs.txt) 校正 OCR 结果中"最像自己"的那一格。
             // 只改自己那一格，队友格永不动。校正后再做 identical-skip 判断，避免
             // 上次已校正的 TeamMembers 与本轮未校正的 names 比较时出现假差异。
+            await ReloadLocalUserAsync();
             names = TeamMemberNameCorrector.Apply(names, _playerPrefsService.Current.OriginalPlayerName);
 
             // Skip if recognized names are identical to current members
