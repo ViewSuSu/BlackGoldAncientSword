@@ -1065,12 +1065,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 StartOcrLoop();
             }
             else if (_gameStatusMonitor.CurrentStatus == GameStatus.InGame
-                     && TeamMembers.Count > 0
-                     && TeamMembers.All(m => !m.HasStatusError && !string.IsNullOrEmpty(m.UID)))
+                     && TeamMembers.Count > 0)
             {
-                // 游戏中且已有识别的有效队伍数据：保留数据，不清理
-                // 只有所有成员都有有效数据（无错误、有UID）时才保留，
-                // 避免残留的查询失败数据在导航时错误显示。
+                // 游戏中且英雄选择阶段已识别到队友：整页保留，不清理。
+                // 只要识别到成员就保留，即使部分成员查询失败（失败卡片自带错误覆盖层展示 msg），
+                // 也不因个别失败把整页打回"等待进入英雄选择"的转圈态。
                 IsHeroSelectionPhase = false;
                 StatusText = string.Empty;
                 _teamOverlayService.Hide();
