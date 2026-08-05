@@ -33,19 +33,22 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             double? selectedSeasonCode,
             GameModeCategory category,
             TeamSize teamSize,
-            CancellationToken ct)
+            CancellationToken ct,
+            string? localUidOverride = null)
         {
             var result = new MemberLoadResult();
 
             try
             {
-                var searchResp = await NarakaApiClient.SearchRecordAsync(userName, ct).ConfigureAwait(false);
-                var search = UnifiedMapper.MapSearch(searchResp);
+                // 本地用户格：优先用本地 UID（Player.log aid / 活跃账号 section-key）查询。
+                // SearchRecord "支持昵称或角色ID"，UID 一定命中；用户名可能重名/查无。
+                // UID 查不到再回退用户名，保证渐进增强、不比纯用户名路径更差。
+                var (search, searchMsg) = await SearchByUidThenNameAsync(userName, localUidOverride, ct);
                 if (search == null)
                 {
-                    // code=200 但 data 空（如"查无此人"）：后端可能在 msg 里给了原因，透传给 UI。
+                    // code=200 但 data 空（如"查无此人"）：透传 msg 给 UI。
                     result.Failed = true;
-                    result.FailMsg = searchResp?.Msg;
+                    result.FailMsg = searchMsg;
                     return result;
                 }
 
@@ -93,6 +96,30 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 result.FailMsg = ex.Msg;
                 return result;
             }
+        }
+
+        /// <summary>
+        /// 先用本地 UID 搜索（若提供且命中直接返回），否则用用户名搜索。
+        /// UID 分支的 <see cref="NarakaApiException"/> 被吞掉走回退——本地用户查询绝不能因 UID
+        /// 路径异常整格失败，用户名兜底至少与旧行为等价。返回 (搜索结果, 用户名分支的 msg)。
+        /// </summary>
+        private static async Task<(UnifiedSearchResult? search, string? msg)> SearchByUidThenNameAsync(
+            string userName, string? localUidOverride, CancellationToken ct)
+        {
+            if (!string.IsNullOrWhiteSpace(localUidOverride))
+            {
+                try
+                {
+                    var uidResp = await NarakaApiClient.SearchRecordAsync(localUidOverride, ct).ConfigureAwait(false);
+                    var uidSearch = UnifiedMapper.MapSearch(uidResp);
+                    if (uidSearch != null) return (uidSearch, uidResp?.Msg);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (NarakaApiException) { /* UID 路径失败 → 回退用户名 */ }
+            }
+
+            var resp = await NarakaApiClient.SearchRecordAsync(userName, ct).ConfigureAwait(false);
+            return (UnifiedMapper.MapSearch(resp), resp?.Msg);
         }
     }
 

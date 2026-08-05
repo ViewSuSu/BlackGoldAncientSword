@@ -35,3 +35,13 @@ GEMINI.md
 .roo/
 .roomodes
 .clinerules
+# OpenSquilla (local-only, never upload)
+.opensquilla/
+opensquilla-skills/
+TOOLS.md
+USER.md
+SOUL.md
+MEMORY.md
+HEARTBEAT.md
+BOOTSTRAP.md
+IDENTITY.md
