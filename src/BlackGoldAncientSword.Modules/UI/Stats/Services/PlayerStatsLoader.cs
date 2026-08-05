@@ -34,6 +34,37 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             }
         }
 
+        /// <summary>
+        /// 本地用户查询：先用本地 UID（player_prefs 的 player_id，SearchRecord "支持昵称或角色ID"）搜，
+        /// 命中直接返回；UID 查不到（未登录鉴权/接口不认该格式/查无）再回退用户名搜。
+        /// <para>
+        /// UID 一定唯一、不重名，而用户名可能重名或查无——本地用户查自己用 UID 更可靠。
+        /// UID 分支的 <see cref="NarakaApiException"/> 被吞掉走回退，保证不比纯用户名路径更差。
+        /// </para>
+        /// </summary>
+        public async Task<UnifiedSearchResult?> SearchRoleByUidThenNameAsync(
+            string? localUid, string playerName, CancellationToken ct)
+        {
+            if (!string.IsNullOrWhiteSpace(localUid))
+            {
+                try
+                {
+                    var uidResp = await NarakaApiClient.SearchRecordAsync(localUid, ct).ConfigureAwait(false);
+                    var uidSearch = UnifiedMapper.MapSearch(uidResp);
+                    if (uidSearch != null && !string.IsNullOrEmpty(uidSearch.RoleIdSimple))
+                        return uidSearch;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (NarakaApiException) { /* UID 路径失败 → 回退用户名 */ }
+                catch (Exception ex)
+                {
+                    AppLog.Error(ex, $"{nameof(PlayerStatsLoader)}.{nameof(SearchRoleByUidThenNameAsync)}", "uid search failed, fallback to name");
+                }
+            }
+
+            return await SearchRoleByNameAsync(playerName, ct).ConfigureAwait(false);
+        }
+
         /// <summary>查询玩家基础信息（昵称、头像、等级、当前赛季）。</summary>
         public Task<UnifiedUserInfo?> FetchUserInfoAsync(PlayerSourceContext ctx, CancellationToken ct)
         {

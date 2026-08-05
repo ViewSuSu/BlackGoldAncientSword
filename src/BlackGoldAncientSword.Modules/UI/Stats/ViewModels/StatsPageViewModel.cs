@@ -154,8 +154,13 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     _tipMessage.ShowError(L("Stats.NoLocalUser", "未检测到本地用户信息"));
                     return;
                 }
+                // 查询身份仍用本地登录名（PlayerName == OriginalPlayerName 触发 LoadAllAsync 的
+                // UID 优先分支）；搜索框展示本地 UID（player_id）——UID 存在时显示 UID，否则回退显示名字。
                 _playerPrefsService.Current.PlayerName = _playerPrefsService.Current.OriginalPlayerName;
-                SearchText = _playerPrefsService.Current.OriginalPlayerName;
+                var localUid = _playerPrefsService.Current.PlayerId;
+                SearchText = !string.IsNullOrEmpty(localUid)
+                    ? localUid
+                    : _playerPrefsService.Current.OriginalPlayerName;
                 await RefreshAllAsync();
             });
 
@@ -587,7 +592,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
 
             RaisePropertyChanged(nameof(IsLocalUser));
-            SearchText = _playerPrefsService.Current.PlayerName;
+            // 查本地用户（targetPlayer 为空，非队友卡片跳转）时搜索框展示本地 UID（player_id），
+            // 与「回到我」一致——UID 唯一可查、不重名；队友跳转仍显示队友名字。
+            var localUid = _playerPrefsService.Current.PlayerId;
+            SearchText = string.IsNullOrWhiteSpace(targetPlayer) && !string.IsNullOrEmpty(localUid)
+                ? localUid
+                : _playerPrefsService.Current.PlayerName;
             await RefreshAllAsync();
         }
 
@@ -708,7 +718,15 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
             try
             {
-                var search = await _playerStatsLoader.SearchRoleByNameAsync(localName, ct);
+                // 查的是本地用户时优先用本地 UID（player_prefs 的 player_id）：UID 唯一、不重名，
+                // 用户名可能重名/查无。判断"是否本地用户"用 PlayerName == OriginalPlayerName。
+                var localUid =
+                    !string.IsNullOrEmpty(_playerPrefsService.Current.OriginalPlayerName)
+                    && string.Equals(localName, _playerPrefsService.Current.OriginalPlayerName, StringComparison.OrdinalIgnoreCase)
+                        ? _playerPrefsService.Current.PlayerId
+                        : null;
+
+                var search = await _playerStatsLoader.SearchRoleByUidThenNameAsync(localUid, localName, ct);
                 if (search == null || string.IsNullOrEmpty(search.RoleIdSimple))
                 {
                     ShowNotFound = true;

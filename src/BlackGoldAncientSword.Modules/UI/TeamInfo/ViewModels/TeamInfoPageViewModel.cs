@@ -712,24 +712,36 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // 漏到最右侧卡片。argmax 保证总能定位到"最像自己"的那一格。
             if (TeamMembers.Count < 2) return;
 
-            // FindSelfIndex 返回 -1 仅当本地名为空（无法定位），此时不重排；
-            // 否则返回 argmax 下标（含 0），无条件把本地用户移到中间 index 1。
-            var localName = _playerPrefsService.Current.OriginalPlayerName;
-            var names = TeamMembers.Select(m => m.UserName).ToArray();
-            var localIdx = TeamMemberNameCorrector.FindSelfIndex(names, localName);
+            // ResolveLocalUserIndex 返回 -1 仅当本地名为空（无法定位），此时不重排；
+            // 否则返回定位下标（含 0），无条件把本地用户移到中间 index 1。
+            var localIdx = ResolveLocalUserIndex();
             if (localIdx < 0 || localIdx == 1) return;
 
             // 中间卡片固定为 index 1（3 人队 = 正中，2 人队 = 带蓝色高亮边框的 Member1）。
             TeamMembers.Move(localIdx, 1);
         }
 
+        /// <summary>
+        /// 定位本地用户在 <see cref="TeamMembers"/> 中的下标，供重排与 diff 计算共用，保证口径一致。
+        /// <para>
+        /// 本地环境拿不到可靠的本地 UID（player_prefs 的 player_id 常为空，section UID 与战绩 API
+        /// UID 不同体系），战绩页判定本地用户同样只靠 <c>OriginalPlayerName</c> 名字比对。因此这里
+        /// 唯一可靠的信号就是本地登录名 + <see cref="TeamMemberNameCorrector.FindSelfIndex"/> 的
+        /// argmax 相似度定位，与查询成功与否无关——本地用户查不到数据也必须能被定位居中。
+        /// </para>
+        /// </summary>
+        private int ResolveLocalUserIndex()
+        {
+            var localName = _playerPrefsService.Current.OriginalPlayerName;
+            var names = TeamMembers.Select(m => m.UserName).ToArray();
+            return TeamMemberNameCorrector.FindSelfIndex(names, localName);
+        }
+
         private int LocalUserIndex
         {
             get
             {
-                var localName = _playerPrefsService.Current.OriginalPlayerName;
-                var names = TeamMembers.Select(m => m.UserName).ToArray();
-                var idx = TeamMemberNameCorrector.FindSelfIndex(names, localName);
+                var idx = ResolveLocalUserIndex();
                 return idx < 0 ? 0 : idx;
             }
         }
@@ -871,13 +883,24 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             try
             {
+                // 本地用户格无条件用本地 UID 查询。判定"这格是不是本地用户"与居中定位共用同一个
+                // ResolveLocalUserIndex（逐字符相似度 argmax），而非精确名字相等——OCR 把本地名识别
+                // 错字时精确相等会失配、退回用错名字查导致中间卡片查无数据。只要这格被定位为本地用户，
+                // 就无条件传本地 UID（player_id），让 TeamMemberLoader 用 UID 命中，保证本地用户卡片
+                // 一定有数据、且位置正确。FindSelfIndex 靠名字算、不依赖集合顺序，故先于重排调用也正确。
+                var localUid = _playerPrefsService.Current.PlayerId;
+                var isLocalUserSlot = TeamMembers.IndexOf(member) == ResolveLocalUserIndex();
+                var localUidOverride =
+                    isLocalUserSlot && !string.IsNullOrEmpty(localUid) ? localUid : null;
+
                 // Step 1-4: 调 Loader 在后台线程拉数据；返回 DTO 后回 UI 线程逐批写回属性。
                 var loaded = await _memberLoader.LoadAsync(
                     userName,
                     _selectedSeason?.Code,
                     _selectedCategory,
                     _selectedTeamSize,
-                    ct).ConfigureAwait(false);
+                    ct,
+                    localUidOverride).ConfigureAwait(false);
 
                 if (loaded.Failed)
                 {
@@ -947,6 +970,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.IsLoading = false;
+                    // 成员数据到手后再校正一次本地用户居中：UpdateTeamMembersAsync 里 Add(newNames)
+                    // 会把新成员追加到末尾、移除又打乱顺序，首次 ReorderMembersForLocalUser 之后
+                    // TeamMembers 顺序可能与 OCR 槽位不再一致。此处每格加载完补一次重排，
+                    // 保证三排本地用户最终稳定落在中间卡片（index 1），与查询成功与否无关。
+                    ReorderMembersForLocalUser();
                     UpdateDiffs();
                     IsLoading = TeamMembers.Any(m => m.IsLoading);
                     RaiseMemberProperties();

@@ -159,14 +159,21 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             var active = PickActiveAccount(uidSections, activeAid, activeLoginMd5);
             if (active != null)
             {
-                if (active.TryGetValue("player_name", out var name))
+                if (active.Value.kv.TryGetValue("player_name", out var name))
                 {
                     result.PlayerName = name;
                     result.OriginalPlayerName = name;
                 }
-                if (active.TryGetValue("player_id", out var id))
+                // 本地用户角色 ID：取活跃账号段内 player_id 字段（与 player_name 在同一段配对出现，
+                // 如 player_id,l77c000015949400120163 / player_name,爱的供养丶）。该值含字母前缀，
+                // 是永劫角色 ID，SearchRecord 接口"支持昵称或角色ID"，本地用户查询用它绕过名字查不到
+                // 的问题（用户名可能重名/查无，角色 ID 唯一）。
+                // 极少数段缺 player_id 时回退到 account_prefs_<UID> 的 section-key（登录账号 aid）。
+                if (active.Value.kv.TryGetValue("player_id", out var id) && !string.IsNullOrEmpty(id))
                     result.PlayerId = id;
-                if (active.TryGetValue("player_level", out var lvl) && int.TryParse(lvl, out var level))
+                else if (!string.IsNullOrEmpty(active.Value.uid))
+                    result.PlayerId = active.Value.uid;
+                if (active.Value.kv.TryGetValue("player_level", out var lvl) && int.TryParse(lvl, out var level))
                     result.PlayerLevel = level;
             }
 
@@ -180,7 +187,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         /// 3) 兜底 heuristic（Player.log 缺失时）：优先取有 <c>login_md5</c> 字段的段；多段都有则用
         ///    空 UID 段 md5 精确匹配；再不行取字段数最多的段。
         /// </summary>
-        private static Dictionary<string, string>? PickActiveAccount(
+        private static (string uid, Dictionary<string, string> kv)? PickActiveAccount(
             List<(string uid, Dictionary<string, string> kv)> uidSections,
             string? activeAid,
             string? activeLoginMd5)
@@ -190,22 +197,22 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             // 1) 权威：Player.log 里 Login Success 的 aid 直接匹配 UID。
             if (!string.IsNullOrEmpty(activeAid))
             {
-                foreach (var (uid, kv) in uidSections)
+                foreach (var section in uidSections)
                 {
-                    if (uid == activeAid) return kv;
+                    if (section.uid == activeAid) return section;
                 }
                 // aid 找到但 prefs 段还没落盘（极少见）——继续兜底。
             }
 
             // 2) 单段兜底。
-            if (uidSections.Count == 1) return uidSections[0].kv;
+            if (uidSections.Count == 1) return uidSections[0];
 
             // 3) 兜底 heuristic：优先"含 login_md5"的段。
-            var loggedIn = new List<Dictionary<string, string>>();
-            foreach (var (_, kv) in uidSections)
+            var loggedIn = new List<(string uid, Dictionary<string, string> kv)>();
+            foreach (var section in uidSections)
             {
-                if (kv.ContainsKey("login_md5"))
-                    loggedIn.Add(kv);
+                if (section.kv.ContainsKey("login_md5"))
+                    loggedIn.Add(section);
             }
 
             if (loggedIn.Count == 1) return loggedIn[0];
@@ -214,10 +221,10 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             {
                 if (!string.IsNullOrEmpty(activeLoginMd5))
                 {
-                    foreach (var kv in loggedIn)
+                    foreach (var section in loggedIn)
                     {
-                        if (kv.TryGetValue("login_md5", out var md5) && md5 == activeLoginMd5)
-                            return kv;
+                        if (section.kv.TryGetValue("login_md5", out var md5) && md5 == activeLoginMd5)
+                            return section;
                     }
                 }
                 return PickMostPopulated(loggedIn);
@@ -227,16 +234,17 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             return null;
         }
 
-        private static Dictionary<string, string> PickMostPopulated(List<Dictionary<string, string>> sections)
+        private static (string uid, Dictionary<string, string> kv) PickMostPopulated(
+            List<(string uid, Dictionary<string, string> kv)> sections)
         {
             var best = sections[0];
-            var bestScore = best.Count;
+            var bestScore = best.kv.Count;
             for (var i = 1; i < sections.Count; i++)
             {
-                if (sections[i].Count > bestScore)
+                if (sections[i].kv.Count > bestScore)
                 {
                     best = sections[i];
-                    bestScore = sections[i].Count;
+                    bestScore = sections[i].kv.Count;
                 }
             }
             return best;
