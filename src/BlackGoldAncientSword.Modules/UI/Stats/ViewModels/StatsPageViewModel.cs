@@ -49,7 +49,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             _localizationService.PropertyChanged += _onLanguageChangedHandler;
             Seasons = new ObservableCollection<UnifiedSeason>();
             DetailStats = new ObservableCollection<StatEntryItem>();
-            RecentBattles = new ObservableCollection<RecentBattleDisplayItem>();
+            RecentBattles = new RangeObservableCollection<RecentBattleDisplayItem>();
         }
 
         // === Player Info ===
@@ -228,18 +228,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
         }
 
-        private string _rankDisplayWithStars = string.Empty;
-        public string RankDisplayWithStars
-        {
-            get => _rankDisplayWithStars;
-            set
-            {
-                if (_rankDisplayWithStars == value) return;
-                _rankDisplayWithStars = value;
-                RaisePropertyChanged(nameof(RankDisplayWithStars));
-            }
-        }
-
         private double _rankTierScore;
         public double RankTierScore
         {
@@ -287,6 +275,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 RaisePropertyChanged(nameof(PageHasStars));
             }
         }
+
 
         // === Rank Stats ===
         private string _totalGames = "0";
@@ -414,7 +403,165 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         // === Collections ===
         public ObservableCollection<UnifiedSeason> Seasons { get; }
         public ObservableCollection<StatEntryItem> DetailStats { get; }
-        public ObservableCollection<RecentBattleDisplayItem> RecentBattles { get; }
+        public RangeObservableCollection<RecentBattleDisplayItem> RecentBattles { get; }
+
+        // 最近对局全量缓存：后端一次性返回的所有对局（modeCode=null）。RecentBattles 是它按
+        // 下拉筛选后的视图；筛选纯前端内存过滤，与网页端一致，不重新请求。
+        private readonly List<RecentBattleDisplayItem> _allBattles = new();
+
+        // === 最近对局模式筛选（仿网页端级联下拉）===
+        // 可空表示"该维度不约束"；两者皆 null = 无筛选（默认，看全部）。与统计区的非空
+        // SelectedCategory/SelectedTeamSize 完全隔离，互不影响。
+        private GameModeCategory? _selectedBattleCategory;
+        public GameModeCategory? SelectedBattleCategory
+        {
+            get => _selectedBattleCategory;
+            set
+            {
+                if (_selectedBattleCategory == value) return;
+                _selectedBattleCategory = value;
+                RaisePropertyChanged(nameof(SelectedBattleCategory));
+                ApplyBattleFilter();
+            }
+        }
+
+        private TeamSize? _selectedBattleTeamSize;
+        public TeamSize? SelectedBattleTeamSize
+        {
+            get => _selectedBattleTeamSize;
+            set
+            {
+                if (_selectedBattleTeamSize == value) return;
+                _selectedBattleTeamSize = value;
+                RaisePropertyChanged(nameof(SelectedBattleTeamSize));
+                ApplyBattleFilter();
+            }
+        }
+
+        private bool _isBattleFilterOpen;
+        public bool IsBattleFilterOpen
+        {
+            get => _isBattleFilterOpen;
+            set
+            {
+                if (_isBattleFilterOpen == value) return;
+                _isBattleFilterOpen = value;
+                RaisePropertyChanged(nameof(IsBattleFilterOpen));
+                if (!value) HoveredBattleCategory = null; // 收起主下拉时一并收起二级
+
+            }
+        }
+
+        // 仅控制二级（排数）子菜单的展开，不参与筛选：鼠标悬停到某个一级大类时置为该大类，
+        // 二级面板据此显示；鼠标移出一级列时清空、收起二级。
+        private GameModeCategory? _hoveredBattleCategory;
+        public GameModeCategory? HoveredBattleCategory
+        {
+            get => _hoveredBattleCategory;
+            set
+            {
+                if (_hoveredBattleCategory == value) return;
+                _hoveredBattleCategory = value;
+                RaisePropertyChanged(nameof(HoveredBattleCategory));
+                RaisePropertyChanged(nameof(IsBattleSubMenuOpen));
+            }
+        }
+
+        /// <summary>二级子菜单是否展开（悬停到任一一级大类时展开）。</summary>
+        public bool IsBattleSubMenuOpen => _hoveredBattleCategory != null;
+
+        private DelegateCommand<GameModeCategory?>? _hoverBattleCategoryCommand;
+        public DelegateCommand<GameModeCategory?> HoverBattleCategoryCommand =>
+            _hoverBattleCategoryCommand ??= new DelegateCommand<GameModeCategory?>(cat =>
+            {
+                HoveredBattleCategory = cat;
+            });
+
+        private bool _hasNoBattleResult;
+        public bool HasNoBattleResult
+        {
+            get => _hasNoBattleResult;
+            set
+            {
+                if (_hasNoBattleResult == value) return;
+                _hasNoBattleResult = value;
+                RaisePropertyChanged(nameof(HasNoBattleResult));
+            }
+        }
+
+        /// <summary>
+        /// 下拉按钮当前文字：无筛选显示"最近对局"；两维都选显示组合模式名（如"天选三排"）；
+        /// 只选一维显示那一维的名字。走本地化资源，语言切换时随 <see cref="BattleFilterDisplayText"/> 通知刷新。
+        /// </summary>
+        public string BattleFilterDisplayText
+        {
+            get
+            {
+                if (_selectedBattleCategory == null && _selectedBattleTeamSize == null)
+                    return L("Stats.RecentBattles", "最近对局");
+                if (_selectedBattleCategory != null && _selectedBattleTeamSize != null)
+                {
+                    var gm = GameModeExtensions.FromCategoryAndTeamSize(
+                        _selectedBattleCategory.Value, _selectedBattleTeamSize.Value);
+                    return _localizedText.Get("GameMode." + gm, gm.ToString());
+                }
+                if (_selectedBattleCategory != null)
+                    return _localizedText.Get("GameMode." + _selectedBattleCategory.Value, _selectedBattleCategory.Value.ToString());
+                return _localizedText.Get("GameMode." + _selectedBattleTeamSize!.Value, _selectedBattleTeamSize.Value.ToString());
+            }
+        }
+
+        private DelegateCommand? _resetBattleFilterCommand;
+        public DelegateCommand ResetBattleFilterCommand =>
+            _resetBattleFilterCommand ??= new DelegateCommand(() =>
+            {
+                _selectedBattleCategory = null;
+                _selectedBattleTeamSize = null;
+                RaisePropertyChanged(nameof(SelectedBattleCategory));
+                RaisePropertyChanged(nameof(SelectedBattleTeamSize));
+                IsBattleFilterOpen = false;
+                ApplyBattleFilter();
+            });
+
+        // 点击一级/二级项：再次点已选中的项则取消该维度（切换语义）。
+        // 取消大类时同时取消排数——"天选"没了，"天选三排"里的三排也失去归属，回到全部更符合直觉。
+        private DelegateCommand<GameModeCategory?>? _selectBattleCategoryCommand;
+        public DelegateCommand<GameModeCategory?> SelectBattleCategoryCommand =>
+            _selectBattleCategoryCommand ??= new DelegateCommand<GameModeCategory?>(cat =>
+            {
+                if (cat == null) return;
+                if (_selectedBattleCategory == cat.Value)
+                {
+                    // 取消大类 → 连同排数一起清空，回到全部
+                    _selectedBattleCategory = null;
+                    _selectedBattleTeamSize = null;
+                    RaisePropertyChanged(nameof(SelectedBattleCategory));
+                    RaisePropertyChanged(nameof(SelectedBattleTeamSize));
+                    ApplyBattleFilter();
+                }
+                else
+                {
+                    SelectedBattleCategory = cat.Value;
+                }
+            });
+
+        private DelegateCommand<TeamSize?>? _selectBattleTeamSizeCommand;
+        public DelegateCommand<TeamSize?> SelectBattleTeamSizeCommand =>
+            _selectBattleTeamSizeCommand ??= new DelegateCommand<TeamSize?>(size =>
+            {
+                if (size == null) return;
+
+                // 选二级排数时，把当前悬停的一级大类一并选上——用户是"悬停天选 → 点三排"来表达"天选三排"，
+                // 不能只设排数而丢掉大类（否则会筛成所有模式的三排）。悬停态由二级子菜单的展开来源保证非空。
+                if (_hoveredBattleCategory != null && _selectedBattleCategory != _hoveredBattleCategory)
+                {
+                    _selectedBattleCategory = _hoveredBattleCategory;
+                    RaisePropertyChanged(nameof(SelectedBattleCategory));
+                }
+
+                // 再次点已选排数 → 仅取消排数，保留大类（如"天选三排"点三排 → "天选"全部）
+                SelectedBattleTeamSize = _selectedBattleTeamSize == size.Value ? null : size.Value;
+            });
 
         // === 打开对局详情 Overlay ===
         // 传整行 RecentBattleDisplayItem，把已经算好的段位/星数/分差直接透传给 BattleDetail，
@@ -548,6 +695,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             {
                 TeamSizes.ResetBindings();
                 Categories.ResetBindings();
+                RaisePropertyChanged(nameof(BattleFilterDisplayText));
             }
         }
 
@@ -623,6 +771,37 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             base.Dispose(disposing);
         }
 
+        private RecentBattleDisplayItem BuildBattleDisplayItem(UnifiedRecentBattleItem b)
+        {
+            var modeCode = b.GameMode;
+            return new RecentBattleDisplayItem
+            {
+                BattleId = b.BattleId,
+                Rank = b.Rank,
+                HeroIcon = b.HeroIcon,
+                HeroName = string.IsNullOrEmpty(b.HeroName) ? "Unknown" : b.HeroName,
+                GameModeText = ResolveModeName(b),
+                GameModeCategoryText = ResolveModeCategoryText(b),
+                GameModeTeamSizeText = ResolveModeTeamSizeText(b),
+                GameMode = modeCode,
+                IsRankMode = IsTianxuanMode(modeCode),
+                Kill = b.Kill,
+                Damage = b.Damage,
+                ScoreNumber = GetRankTierScore(b.RoundRankScore, modeCode),
+                // 分差直接采用 unified 后端算好的 score.delta，不再客户端 end-begin 相减。
+                ScoreDiff = b.ScoreDelta,
+                RankDisplayText = GetRankNameForScore(b.RoundRankScore, modeCode) + GetSubTierName(b.RoundRankScore, IsTianxuanMode(modeCode)),
+                ShowScoreNumber = ShouldShowTierScore(b.RoundRankScore, modeCode),
+                StarCount = GetStarCount(b.RoundRankScore, modeCode),
+                HasStars = IsTianxuanMode(modeCode) && b.RoundRankScore >= 4500,
+                ScoreDiffDisplay = b.ScoreDelta == 0 && b.BeginRankScore == null
+                    ? string.Empty
+                    : FormatScoreDiff(b.ScoreDelta),
+                BattleTime = FormatUnixTime(b.BattleEndTimeMs),
+                Rating = b.Rating ?? string.Empty,
+            };
+        }
+
         private async void RefreshStats()
         {
             CancelAndDispose(ref _loadStatsCts);
@@ -657,7 +836,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             PageRankName = string.Empty;
             PageStarCount = 0;
             PageHasStars = false;
-            RankDisplayWithStars = string.Empty;
             RankTierScore = 0;
             TotalGames = "0";
             TopOneCount = "0";
@@ -665,6 +843,55 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             AvgDamage = "0";
             DetailStats.Clear();
             RecentBattles.Clear();
+            _allBattles.Clear();
+            _selectedBattleCategory = null;
+            _selectedBattleTeamSize = null;
+            RaisePropertyChanged(nameof(SelectedBattleCategory));
+            RaisePropertyChanged(nameof(SelectedBattleTeamSize));
+            RaisePropertyChanged(nameof(BattleFilterDisplayText));
+            IsBattleFilterOpen = false;
+            HasNoBattleResult = false;
+        }
+
+        /// <summary>
+        /// 按当前下拉选中的大类/排数（可空=不约束）从 <see cref="_allBattles"/> 过滤并刷新
+        /// <see cref="RecentBattles"/>。无筛选时显示全部（含无法归类的"未知模式"行）；一旦选了任一
+        /// 具体维度，无法解析模式的行被排除（选具体模式时不该混入未知模式）。
+        /// </summary>
+        private void ApplyBattleFilter()
+        {
+            var noFilter = _selectedBattleCategory == null && _selectedBattleTeamSize == null;
+            var filtered = new List<RecentBattleDisplayItem>(_allBattles.Count);
+            foreach (var item in _allBattles)
+            {
+                var gm = TryResolveGameMode(item.GameMode);
+                if (gm == null)
+                {
+                    if (noFilter) filtered.Add(item);
+                    continue;
+                }
+
+                GameModeCategory cat;
+                TeamSize size;
+                try
+                {
+                    cat = gm.Value.GetCategory();
+                    size = gm.Value.GetTeamSize();
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    if (noFilter) filtered.Add(item);
+                    continue;
+                }
+
+                if ((_selectedBattleCategory == null || _selectedBattleCategory == cat)
+                    && (_selectedBattleTeamSize == null || _selectedBattleTeamSize == size))
+                    filtered.Add(item);
+            }
+
+            RecentBattles.ReplaceAll(filtered);
+            HasNoBattleResult = _allBattles.Count > 0 && filtered.Count == 0;
+            RaisePropertyChanged(nameof(BattleFilterDisplayText));
         }
 
         private async System.Threading.Tasks.Task RefreshAllAsync()
@@ -736,82 +963,20 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 }
                 _roleId = search.RoleIdSimple;
                 _sourceContext = new PlayerSourceContext(_roleId, search.DataSource);
+                var ctx = _sourceContext;
 
-                // Fire all three requests in parallel
-                var userInfoTask = _playerStatsLoader.FetchUserInfoAsync(_sourceContext, ct);
-                var seasonsTask = _playerStatsLoader.FetchSeasonsAsync(ct);
-                var battlesTask = _battleListLoader.FetchBattleListAsync(_sourceContext, ct);
+                // 三块数据（玩家信息 / 赛季 / 对局列表）彼此无依赖：并行发起，且各自完成即绑定自己的 UI，
+                // 不再 WhenAll 干等最慢的一路。原实现等三者全回来才统一绑定，最慢的 battles（实测约 5s）
+                // 把 userInfo（约 1s）也拖成 5s 才显示——用户整页转圈无法操作。拆开后玩家信息一秒即出，
+                // 对局列表区自己转圈，谁快谁先亮。三个 Apply* 各自 try/catch + 关自己的 loading，互不影响。
+                var userInfoApply = ApplyUserInfoAsync(ctx, localName, ct);
+                var seasonsApply = ApplySeasonsAsync(ct);
+                var battlesApply = ApplyBattlesAsync(ctx, ct);
 
-                await System.Threading.Tasks.Task.WhenAll(userInfoTask, seasonsTask, battlesTask);
-                ct.ThrowIfCancellationRequested();
-
-                // 用 await 而非 .Result：
-                // 1) .Result 会把 TaskCanceledException 重新包装成 AggregateException，
-                //    导致下游 `catch (OperationCanceledException)` 漏接；
-                // 2) await 与上面的 userInfoTask/seasonsTask 取值方式一致，异常类型对称。
-                // 此时 WhenAll 已完成，await 不会再产生续接调度开销。
-                var battlesResult = await battlesTask;
-                // Process userInfo and seasons first (fast responses)
-                var userInfo = await userInfoTask;
-                if (userInfo != null)
-                {
-                    UserName = string.IsNullOrEmpty(userInfo.RoleName) ? localName : userInfo.RoleName;
-                    Level = $"Lv.{(int)userInfo.RoleLevel}";
-                    UID = userInfo.Uid;
-                    AvatarUrl = userInfo.HeadIcon;
-                }
-                PlayerInfoProgress = 100;
-                IsPlayerInfoLoading = false;
-
-                var seasonsResult = await seasonsTask;
-                if (seasonsResult != null)
-                {
-                    Seasons.Clear();
-                    foreach (var s in seasonsResult) Seasons.Add(s);
-                    if (Seasons.Count > 0) SelectedSeason = Seasons[0];
-                }
-
-                // Populate recent battles basic info, then serially fetch team performance
-                if (battlesResult != null)
-                {
-                    var battleItems = battlesResult.Take(10).ToList();
-
-                    RecentBattles.Clear();
-                    for (int i = 0; i < battleItems.Count; i++)
-                    {
-                        var b = battleItems[i];
-                        var modeCode = b.GameMode;
-                        RecentBattles.Add(new RecentBattleDisplayItem
-                       {
-                           BattleId = b.BattleId,
-                           Rank = b.Rank,
-                           HeroIcon = b.HeroIcon,
-                            HeroName = string.IsNullOrEmpty(b.HeroName) ? "Unknown" : b.HeroName,
-                            GameModeText = FormatGameMode(modeCode),
-                            GameModeCategoryText = FormatGameModeCategory(modeCode),
-                            GameModeTeamSizeText = FormatGameModeTeamSize(modeCode),
-                            GameMode = modeCode,
-                            IsRankMode = IsTianxuanMode(modeCode),
-                            Kill = b.Kill,
-                            Damage = b.Damage,
-                            ScoreNumber = GetRankTierScore(b.RoundRankScore, modeCode),
-                            ScoreDiff = b.RoundRankScore - (b.BeginRankScore ?? b.RoundRankScore),
-                            RankDisplayText = GetRankNameForScore(b.RoundRankScore, modeCode) + GetSubTierName(b.RoundRankScore, IsTianxuanMode(modeCode)),
-                            ShowScoreNumber = ShouldShowTierScore(b.RoundRankScore, modeCode),
-                            StarCount = GetStarCount(b.RoundRankScore, modeCode),
-                            HasStars = IsTianxuanMode(modeCode) && b.RoundRankScore >= 4500,
-                            ScoreDiffDisplay = b.BeginRankScore == null
-                                ? string.Empty
-                                : FormatScoreDiff(b.RoundRankScore - b.BeginRankScore.Value),
-                            BattleTime = FormatUnixTime(b.BattleEndTimeMs)
-                        });
-                    }
-
-                   RecentBattlesProgress = 100;
-                   IsRecentBattlesLoading = false;
-               }
-
-               return true;
+                // search 已成功即代表"找到玩家"，"搜索成功"提示不必等三块数据全部绑定完。
+                // 等三条续接结束仅为让 RefreshAllAsync 的成功判定在数据落地后返回。
+                await System.Threading.Tasks.Task.WhenAll(userInfoApply, seasonsApply, battlesApply);
+                return true;
             }
             catch (OperationCanceledException)
             {
@@ -836,11 +1001,113 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 ClearAllData();
                 return false;
             }
+        }
+
+        /// <summary>玩家信息（昵称/等级/UID/头像）：拉取后立即绑定，与赛季/对局互不阻塞。</summary>
+        private async System.Threading.Tasks.Task ApplyUserInfoAsync(
+            PlayerSourceContext ctx, string localName, CancellationToken ct)
+        {
+            try
+            {
+                var userInfo = await _playerStatsLoader.FetchUserInfoAsync(ctx, ct);
+                ct.ThrowIfCancellationRequested();
+                if (userInfo != null)
+                {
+                    UserName = string.IsNullOrEmpty(userInfo.RoleName) ? localName : userInfo.RoleName;
+                    Level = $"Lv.{(int)userInfo.RoleLevel}";
+                    UID = userInfo.Uid;
+                    AvatarUrl = userInfo.HeadIcon;
+                }
+                PlayerInfoProgress = 100;
+            }
+            catch (OperationCanceledException) { }
+            catch (NarakaApiException ex)
+            {
+                AppLog.Error(ex, "StatsPage", $"{nameof(ApplyUserInfoAsync)} api error");
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "StatsPage", $"{nameof(ApplyUserInfoAsync)} failed");
+            }
             finally
             {
                 IsPlayerInfoLoading = false;
-                IsRecentBattlesLoading = false;
+            }
+        }
+
+        /// <summary>赛季列表：绑定后选中当前赛季，触发 LoadStatsAsync 拉取该赛季统计。</summary>
+        private async System.Threading.Tasks.Task ApplySeasonsAsync(CancellationToken ct)
+        {
+            try
+            {
+                var seasonsResult = await _playerStatsLoader.FetchSeasonsAsync(ct);
+                ct.ThrowIfCancellationRequested();
+                Seasons.Clear();
+                if (seasonsResult != null)
+                    foreach (var s in seasonsResult) Seasons.Add(s);
+
+                if (Seasons.Count > 0)
+                {
+                    // SelectedSeason 赋值会触发 RefreshStats → LoadStatsAsync，由其 finally 关闭 IsStatsLoading。
+                    // 但重复查同一玩家时新旧值可能相等（setter 短路不触发 RefreshStats），会让 IsStatsLoading
+                    // 悬空转圈——此时显式刷新一次统计。
+                    var target = Seasons[0];
+                    if (Equals(SelectedSeason, target))
+                        RefreshStats();
+                    else
+                        SelectedSeason = target;
+                }
+                else
+                {
+                    // 无赛季则不会触发 LoadStatsAsync，需在此关闭统计区 loading，避免永久转圈。
+                    IsStatsLoading = false;
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (NarakaApiException ex)
+            {
+                AppLog.Error(ex, "StatsPage", $"{nameof(ApplySeasonsAsync)} api error");
                 IsStatsLoading = false;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "StatsPage", $"{nameof(ApplySeasonsAsync)} failed");
+                IsStatsLoading = false;
+            }
+        }
+
+        /// <summary>对局列表：拉取后一次性构造全部行并 ReplaceAll（仅一次 Reset 通知），与其它两块互不阻塞。</summary>
+        private async System.Threading.Tasks.Task ApplyBattlesAsync(PlayerSourceContext ctx, CancellationToken ct)
+        {
+            try
+            {
+                var battlesResult = await _battleListLoader.FetchBattleListAsync(ctx, ct);
+                ct.ThrowIfCancellationRequested();
+                if (battlesResult != null)
+                {
+                    // 展示后端 matches 单页返回的全部对局（与网页一致，单页约 50 条），不再截断到 10 条。
+                    // 先一次性构造全部行，再用 ReplaceAll 只发一次 Reset 通知——逐条 Add 会触发约 50 次
+                    // 列表布局刷新，是战绩页放开全量后 UI 卡顿的主因。
+                    var displayItems = battlesResult.Select(BuildBattleDisplayItem).ToList();
+                    // 缓存全量后走筛选视图（默认无筛选=显示全部），供下拉级联本地过滤复用同一份数据。
+                    _allBattles.Clear();
+                    _allBattles.AddRange(displayItems);
+                    ApplyBattleFilter();
+                    RecentBattlesProgress = 100;
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (NarakaApiException ex)
+            {
+                AppLog.Error(ex, "StatsPage", $"{nameof(ApplyBattlesAsync)} api error");
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "StatsPage", $"{nameof(ApplyBattlesAsync)} failed");
+            }
+            finally
+            {
+                IsRecentBattlesLoading = false;
             }
         }
 
@@ -866,17 +1133,35 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     return;
                 }
 
-                if (stats.Grade != null)
+                // 段位卡：仅当后端给出有效段位（Grade 非空且有段位名/分数）时才显示实际段位；
+                // 否则视为该模式未定级——重置为占位，绝不残留上一次模式的段位（切到未定级双排却
+                // 还显示三排"蚀月Ⅳ 3600"就是这个 bug）。判定与右侧数据占位分支保持同一口径。
+                var hasRank = stats.Grade != null
+                    && (!string.IsNullOrEmpty(stats.Grade.GradeName) || stats.Grade.GradeScore > 0);
+                if (hasRank)
                 {
-                    RankName = stats.Grade.GradeName;
-                    RankIcon = stats.Grade.GradeIcon;
-                    RankScore = stats.Grade.GradeScore;
-                    RankLevel = stats.Grade.GradeLevel;
-                    PageRankName = GetRankNameForScore(stats.Grade.GradeScore, (int)gameMode) + GetSubTierName(stats.Grade.GradeScore, IsTianxuanMode((int)gameMode));
-                    PageStarCount = GetStarCount(stats.Grade.GradeScore, (int)gameMode);
-                    PageHasStars = IsTianxuanMode((int)gameMode) && stats.Grade.GradeScore >= 4500;
-                    RankDisplayWithStars = FormatPageRankDisplay(stats.Grade.GradeScore, (int)gameMode);
-                    RankTierScore = GetRankTierScore(stats.Grade.GradeScore, (int)gameMode);
+                    var grade = stats.Grade!;
+                    RankName = grade.GradeName;
+                    RankIcon = grade.GradeIcon;
+                    RankScore = grade.GradeScore;
+                    RankLevel = grade.GradeLevel;
+                    // 上行段位文字：段位名 + 折算的子段/星数。
+                    // - 星阶段位（天玄 >=4500）：名称保持纯段位名，星数由右侧 ⭐图标 + PageStarCount 展示。
+                    // - 非星阶排位段：名称后直接拼子段数字（如“坠日4”）。
+                    // 段位名优先用后端 rank.name；后端未给（该模式无数据）时才按分数自算。
+                    var pageRankBase = !string.IsNullOrEmpty(grade.GradeName)
+                        ? grade.GradeName.Trim()
+                        : GetRankNameForScore(grade.GradeScore, (int)gameMode);
+                    PageStarCount = GetStarCount(grade.GradeScore, (int)gameMode);
+                    PageHasStars = IsTianxuanMode((int)gameMode) && grade.GradeScore >= 4500;
+                    PageRankName = PageHasStars
+                        ? pageRankBase
+                        : pageRankBase + GetSubTierName(grade.GradeScore, IsTianxuanMode((int)gameMode));
+                    RankTierScore = GetRankTierScore(grade.GradeScore, (int)gameMode);
+                }
+                else
+                {
+                    ResetRankCardToUnranked();
                 }
 
                 DetailStats.Clear();
@@ -911,6 +1196,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     TopOneCount = "0";
                     TopFiveCount = "0";
                     AvgDamage = "0";
+                    // 未定级/该模式无数据：与网页 core-stats 一致，仍显示固定指标标题、值用 "-" 占位，
+                    // 而非整块空白。
+                    AddPlaceholderStats();
                 }
             }
             catch (OperationCanceledException) { }
@@ -942,6 +1230,39 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             return !string.IsNullOrEmpty(fallbackName) ? fallbackName : (key ?? string.Empty);
         }
 
+        /// <summary>
+        /// 未定级/该模式无段位：段位卡重置为占位——清空图标、分数，段位名显示"未定级"，隐藏星标与分数行。
+        /// 避免切到未定级模式时残留上一次模式的段位（与右侧数据项 "-" 占位同一语义）。
+        /// </summary>
+        private void ResetRankCardToUnranked()
+        {
+            RankName = string.Empty;
+            RankIcon = string.Empty;
+            RankScore = 0;
+            RankLevel = string.Empty;
+            PageRankName = _localizedText.Get("Stats.Unranked", "未定级");
+            PageStarCount = 0;
+            PageHasStars = false;
+            RankTierScore = 0;
+        }
+
+        /// <summary>
+        /// 未定级/无数据时的占位指标：与网页 core-stats 一致，显示固定标题（对局数/前五率/K/D/场伤），
+        /// 值统一为 "-"。标题走本地化，与有数据时同一套资源 key。
+        /// </summary>
+        private void AddPlaceholderStats()
+        {
+            var placeholders = new[]
+            {
+                _localizedText.Get("Stats.Matches", "对局数"),
+                _localizedText.Get("Stats.TopFiveRate", "前五率"),
+                _localizedText.Get("Stats.KD", "K/D"),
+                _localizedText.Get("Stats.AvgDamage", "场伤"),
+            };
+            foreach (var label in placeholders)
+                DetailStats.Add(new StatEntryItem { Label = label, Value = "-" });
+        }
+
         private static string FindStatValue(List<UnifiedStatEntry> stats, params string[] keyPatterns)
         {
             foreach (var s in stats)
@@ -970,31 +1291,51 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             return secondsStr;
         }
 
-        private string FormatGameMode(int gameMode)
+        /// <summary>
+        /// 模式名优先取后端 mode.name（与网页一致）；后端未给（dashen 源 mode 为 null）时显示"未知模式"。
+        /// </summary>
+        private string ResolveModeName(UnifiedRecentBattleItem b)
         {
-            var enumValue = gameMode switch
-            {
-                1 => GameMode.RankSolo,
-                12 => GameMode.RankDuo,
-                2 => GameMode.RankTrio,
-                6 => GameMode.MatchSolo,
-                9 => GameMode.MatchDuo,
-                7 => GameMode.MatchTrio,
-                4 => GameMode.TianrenSolo,
-                13 => GameMode.TianrenDuo,
-                5 => GameMode.TianrenTrio,
-                _ => (GameMode?)null
-            };
-
-            if (enumValue.HasValue)
-            {
-                var key = "GameMode." + enumValue.Value.ToString();
-                return _localizedText.Get(key, enumValue.Value.ToString());
-            }
-
-            var unknownKey = _localizedText.Get("GameMode.Unknown", "Unknown");
-            return $"{unknownKey}({gameMode})";
+            if (!string.IsNullOrEmpty(b.ModeName)) return b.ModeName!;
+            return _localizedText.Get("GameMode.Unknown", "未知");
         }
+
+        /// <summary>
+        /// 模式大类文本：优先用后端 mode.category（rank/match/tianren）本地化；后端未给时回退按 battleApiCode 反推，仍无则"未知模式"。
+        /// </summary>
+        private string ResolveModeCategoryText(UnifiedRecentBattleItem b)
+        {
+            var category = ParseCategory(b.ModeCategory);
+            if (category.HasValue)
+                return _localizedText.Get("GameMode." + category.Value, category.Value.ToString());
+            return FormatGameModeCategory(b.GameMode);
+        }
+
+        /// <summary>
+        /// 队伍人数文本：优先用后端 mode.teamSize（1/2/3）本地化；后端未给（0）时回退按 battleApiCode 反推。
+        /// </summary>
+        private string ResolveModeTeamSizeText(UnifiedRecentBattleItem b)
+        {
+            var size = b.ModeTeamSize switch
+            {
+                1 => (TeamSize?)TeamSize.Solo,
+                2 => TeamSize.Duo,
+                3 => TeamSize.Trio,
+                _ => null,
+            };
+            if (size.HasValue)
+                return _localizedText.Get("GameMode." + size.Value, size.Value.ToString());
+            return FormatGameModeTeamSize(b.GameMode);
+        }
+
+        private static GameModeCategory? ParseCategory(string? category) => category?.ToLowerInvariant() switch
+        {
+            "rank" => GameModeCategory.Rank,
+            "match" => GameModeCategory.Match,
+            "tianren" => GameModeCategory.Tianren,
+            "fun" => GameModeCategory.Fun,
+            _ => null,
+        };
 
         /// <summary>
         /// 把列表项携带的 gameMode 整数解析为 GameMode 枚举。
@@ -1133,15 +1474,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             return "(" + sign + diff + ")";
         }
 
-        private string FormatPageRankDisplay(double score, int gameMode = 0)
-        {
-            var rankName = GetRankNameForScore(score, gameMode);
-            var stars = GetStarCount(score, gameMode);
-            if (IsTianxuanMode(gameMode) && score >= 4500)
-                return rankName + " " + stars + "?";
-            return rankName;
-        }
-
         private static double GetRankTierScore(double score, int gameMode = 0)
         {
             var isTianxuan = IsTianxuanMode(gameMode);
@@ -1250,6 +1582,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string ScoreDiffDisplay { get; set; } = string.Empty;
         public string BattleTime { get; set; } = string.Empty;
         public bool IsRankMode { get; set; }
+        public string Rating { get; set; } = string.Empty;
    }
 
    public class TeamSizeOption
