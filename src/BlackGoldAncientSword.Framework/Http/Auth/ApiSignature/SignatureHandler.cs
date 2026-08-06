@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using BlackGoldAncientSword.Framework.Core.Infrastructure;
 
 namespace BlackGoldAncientSword.Framework.Http.Auth.ApiSignature
 {
@@ -33,6 +34,12 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.ApiSignature
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            // 排查"同参数同一时刻并发两次"：记录方法+完整 URI+线程 ID+高精度时间戳，
+            // 重复请求会表现为两条 URI 相同、时间戳几乎一致的记录。
+            AppLog.Info(
+                nameof(SignatureHandler),
+                $"HTTP {request.Method} {request.RequestUri} tid={Environment.CurrentManagedThreadId} ts={DateTime.Now:HH:mm:ss.fff}");
+
             var ticket = await _ticketProvider.GetAsync(cancellationToken).ConfigureAwait(false);
             var timestamp = _clockMs();
             var nonce = _nonceGenerator();

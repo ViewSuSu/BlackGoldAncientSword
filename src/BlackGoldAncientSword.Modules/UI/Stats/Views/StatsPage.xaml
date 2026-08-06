@@ -77,18 +77,6 @@
                         Cursor="Hand"
                         ToolTip="{DynamicResource Stats.BackToMe}"
                         ToolTipService.ShowOnDisabled="True">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="IsEnabled" Value="True" />
-                                <Setter Property="Opacity" Value="1" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsLocalUser}" Value="True">
-                                        <Setter Property="IsEnabled" Value="False" />
-                                        <Setter Property="Opacity" Value="0.5" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
                         <Image
                             Width="16"
                             Height="16"
