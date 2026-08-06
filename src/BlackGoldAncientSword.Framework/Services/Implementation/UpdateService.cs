@@ -145,7 +145,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 var splitUrls = await ProbeSplitUrlsAsync(latest).ConfigureAwait(false);
                 string? splitZipUrlFirst =
                     (splitUrls is { Count: > 0 }) ? splitUrls[0] : null;
-                var releaseNotes = await _releaseNotesFetcher.FetchAsync(latest).ConfigureAwait(false);
+                var releaseNotes = await FetchRangeReleaseNotesAsync(CurrentVersion, latest).ConfigureAwait(false);
 
                 // 必须 await：调用方 (App.OnStartup) 依赖"CheckForUpdatesAsync 返回时 IsUpdateAvailable 已经是最新值"
                 // 来决定是否 await updateGate。fire-and-forget 会让 caller 拿到过期的 false，进而误判"无新版"。
@@ -333,6 +333,59 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             if (Version.TryParse(a, out var va) && Version.TryParse(b, out var vb))
                 return va.CompareTo(vb);
             return string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string StripVPrefix(string version) =>
+            version.StartsWith('v') || version.StartsWith('V') ? version[1..] : version;
+
+        /// <summary>
+        /// 拉取 <paramref name="currentVersion"/> 到 <paramref name="latestVersion"/> 之间
+        /// 所有 tag 的 release notes 并合并。若中间某个 tag 不存在（FetchAsync 返 null），
+        /// 跳过该 tag。仅在前三段版本号一致时尝试枚举中间 tag；否则退回单 latest tag。
+        /// </summary>
+        internal async Task<string?> FetchRangeReleaseNotesAsync(string currentVersion, string latestVersion)
+        {
+            var tags = EnumerateIntermediateTags(currentVersion, latestVersion);
+            var notesList = new List<string>();
+            foreach (var tag in tags)
+            {
+                var notes = await _releaseNotesFetcher.FetchAsync(tag).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(notes))
+                    notesList.Add(notes);
+            }
+            return notesList.Count > 0 ? string.Join("\n\n", notesList) : null;
+        }
+
+        /// <summary>
+        /// 枚举 <paramref name="currentVersion"/> 到 <paramref name="latestVersion"/> 之间
+        /// 所有可能存在的 tag（不含 current，含 latest）。
+        /// 仅处理前三段相同、最后一段递增的简单场景；跨度超过 100 则退回单 latest。
+        /// </summary>
+        internal static List<string> EnumerateIntermediateTags(string currentVersion, string latestVersion)
+        {
+            var result = new List<string> { latestVersion };
+
+            if (!Version.TryParse(StripVPrefix(currentVersion), out var current) ||
+                !Version.TryParse(StripVPrefix(latestVersion), out var latest))
+                return result;
+
+            if (latest <= current) return result;
+
+            // 仅在前面三段一致时才能按最后一段递增枚举
+            if (current.Major != latest.Major ||
+                current.Minor != latest.Minor ||
+                current.Build != latest.Build)
+                return result;
+
+            var span = latest.Revision - current.Revision;
+            if (span <= 1 || span > 100) return result;
+
+            result.Clear();
+            for (int d = current.Revision + 1; d <= latest.Revision; d++)
+            {
+                result.Add(new Version(current.Major, current.Minor, current.Build, d).ToString());
+            }
+            return result;
         }
     }
 }

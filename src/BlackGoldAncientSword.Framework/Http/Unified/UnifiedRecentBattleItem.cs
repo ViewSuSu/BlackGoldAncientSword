@@ -16,12 +16,22 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
         public string HeroName { get; init; } = string.Empty;
         /// <summary>miniProgram 分支来自 subtype/gameMode（对局 API 编码），heyBox 分支来自 battleTid。</summary>
         public int GameMode { get; init; }
+        /// <summary>后端 mode.name（完整模式名，如"天选三排"）。dashen 源无法识别时后端返回 null，客户端与网页一致显示"未知模式"。</summary>
+        public string? ModeName { get; init; }
+        /// <summary>后端 mode.category（rank/match/tianren）。null 表示后端未给出模式。</summary>
+        public string? ModeCategory { get; init; }
+        /// <summary>后端 mode.teamSize（1/2/3）。0 表示后端未给出。</summary>
+        public int ModeTeamSize { get; init; }
         public int Kill { get; init; }
         public int Damage { get; init; }
         public double RoundRankScore { get; init; }
         public double? BeginRankScore { get; init; }
         public long BattleEndTimeMs { get; init; }
         public string Rating { get; init; } = string.Empty;
+        /// <summary>unified 后端直接给出的本局段位/评价名（evaluation.level），列表行优先展示，免客户端按分自算。</summary>
+        public string RankName { get; init; } = string.Empty;
+        /// <summary>unified 后端给出的段位分差（score.delta）。</summary>
+        public double ScoreDelta { get; init; }
         public IReadOnlyList<UnifiedHonorTitle> HonorTitles { get; init; } = System.Array.Empty<UnifiedHonorTitle>();
     }
 

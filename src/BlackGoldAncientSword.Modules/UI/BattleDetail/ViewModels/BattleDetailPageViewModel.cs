@@ -40,6 +40,13 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
         public bool IsTeamTab => SelectedTab == "Team";
         public bool IsTop5Tab => SelectedTab == "Top5";
 
+        // === Tab 可见性（与网页一致：队伍/前五数据缺失时不显示对应 tab，dashen 源基本只剩个人表现） ===
+        private bool _hasTeam;
+        public bool HasTeam { get => _hasTeam; set { _hasTeam = value; RaisePropertyChanged(); } }
+
+        private bool _hasTop5;
+        public bool HasTop5 { get => _hasTop5; set { _hasTop5 = value; RaisePropertyChanged(); } }
+
         private DelegateCommand<string>? _switchTabCommand;
         public DelegateCommand<string> SwitchTabCommand =>
             _switchTabCommand ??= new DelegateCommand<string>(tab => { if (!string.IsNullOrEmpty(tab)) SelectedTab = tab; });
@@ -47,7 +54,11 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
         // === 展开更多数据 ===
         private bool _showMoreStats;
         public bool ShowMoreStats { get => _showMoreStats; set { _showMoreStats = value; RaisePropertyChanged(); RaisePropertyChanged(nameof(ExpandMoreText)); } }
-        public string ExpandMoreText => ShowMoreStats ? "收起" : "展开更多数据";
+        public string ExpandMoreText => ShowMoreStats ? "收起更多数据" : "展开更多数据";
+
+        // 有可展开的额外指标时才显示展开按钮（core-data 之外还有 MoreStats）。
+        private bool _hasMoreStats;
+        public bool HasMoreStats { get => _hasMoreStats; set { _hasMoreStats = value; RaisePropertyChanged(); } }
         private DelegateCommand? _toggleMoreStatsCommand;
         public DelegateCommand ToggleMoreStatsCommand =>
             _toggleMoreStatsCommand ??= new DelegateCommand(() => ShowMoreStats = !ShowMoreStats);
@@ -220,11 +231,19 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             ApplyPersonal(d?.Personal);
             ApplyTeam(d?.Team);
             ApplyTop5(d?.Top5);
+            // 当前选中的 tab 若因数据缺失而隐藏，回退到始终存在的"个人表现"。
+            if ((SelectedTab == "Team" && !HasTeam) || (SelectedTab == "Top5" && !HasTop5))
+                SelectedTab = "Personal";
         }
 
         private void ApplyPersonal(UnifiedPersonalDetail? p)
         {
             if (p == null) return;
+
+            // 模式名优先用 match 接口自己返回的完整 mode.name（如"天选三排"），与网页一致；
+            // 后端未给（dashen 源 mode 为 null）时保留导航参数透传的大类文本作回退。
+            if (!string.IsNullOrEmpty(p.ModeName))
+                ModeType = p.ModeName!;
 
             BattleTime = FormatShortTime(p.BattleEndTimeMs);
             RankText = FormatRank(p.Rank);
@@ -255,6 +274,8 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
                     MoreStats.Add(entry);
                 i++;
             }
+            HasMoreStats = MoreStats.Count > 0;
+            ShowMoreStats = false; // 每次打开详情默认折叠，与网页一致
 
             Weapons.Clear();
             foreach (var w in p.Weapons)
@@ -281,6 +302,7 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
         private void ApplyTeam(System.Collections.Generic.IReadOnlyList<UnifiedTeammate>? teammates)
         {
             Teammates.Clear();
+            HasTeam = teammates != null && teammates.Count > 0;
             if (teammates == null) return;
             foreach (var m in teammates)
             {
@@ -325,6 +347,7 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
         private void ApplyTop5(System.Collections.Generic.IReadOnlyList<UnifiedTop5Entry>? top5)
         {
             Top5Entries.Clear();
+            HasTop5 = top5 != null && top5.Count > 0;
             if (top5 == null) return;
             foreach (var e in top5)
             {

@@ -120,20 +120,24 @@
                             Background="{DynamicResource SurfaceTertiaryBrush}"
                             BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
                             CornerRadius="10">
-                        <UniformGrid Rows="1" Columns="3">
-                            <RadioButton GroupName="BattleDetailTab" Content="个人表现"
+                        <!-- 队伍/前五数据缺失时隐藏对应 tab（与网页一致，dashen 源多数只剩个人表现）。
+                             用横向 StackPanel 让隐藏后自动收拢，不留空位。 -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <RadioButton GroupName="BattleDetailTab" Content="个人表现" MinWidth="110"
                                          IsChecked="{Binding IsPersonalTab, Mode=OneWay}"
                                          Command="{Binding SwitchTabCommand}" CommandParameter="Personal"
                                          Style="{DynamicResource DetailTabStyle}" />
-                            <RadioButton GroupName="BattleDetailTab" Content="队伍表现"
+                            <RadioButton GroupName="BattleDetailTab" Content="队伍表现" MinWidth="110"
                                          IsChecked="{Binding IsTeamTab, Mode=OneWay}"
                                          Command="{Binding SwitchTabCommand}" CommandParameter="Team"
+                                         Visibility="{Binding HasTeam, Converter={StaticResource BooleanToVisibilityConverter}}"
                                          Style="{DynamicResource DetailTabStyle}" />
-                            <RadioButton GroupName="BattleDetailTab" Content="本局前五"
+                            <RadioButton GroupName="BattleDetailTab" Content="本局前五" MinWidth="110"
                                          IsChecked="{Binding IsTop5Tab, Mode=OneWay}"
                                          Command="{Binding SwitchTabCommand}" CommandParameter="Top5"
+                                         Visibility="{Binding HasTop5, Converter={StaticResource BooleanToVisibilityConverter}}"
                                          Style="{DynamicResource DetailTabStyle}" />
-                        </UniformGrid>
+                        </StackPanel>
                     </Border>
 
                     <!-- ============ Personal Tab ============ -->
@@ -246,8 +250,16 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <!-- MoreStats（chip 风格 4 列，与上方大卡形成主/次层级） -->
-                        <ItemsControl Margin="0,10,0,0" ItemsSource="{Binding MoreStats}">
+                        <!-- 展开/收起按钮（与网页一致：默认只显 4 格核心数据，点开才追加更多指标） -->
+                        <Button Margin="0,12,0,0" MinWidth="140" HorizontalAlignment="Center"
+                                Command="{Binding ToggleMoreStatsCommand}"
+                                Content="{Binding ExpandMoreText}"
+                                Visibility="{Binding HasMoreStats, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                Style="{DynamicResource SecondaryButtonStyle}" />
+
+                        <!-- MoreStats（chip 风格 4 列，与上方大卡形成主/次层级）；折叠受 ShowMoreStats 控制 -->
+                        <ItemsControl Margin="0,10,0,0" ItemsSource="{Binding MoreStats}"
+                                      Visibility="{Binding ShowMoreStats, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
@@ -267,85 +279,6 @@
                                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                                        Text="{Binding Value}" />
                                         </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <!-- Section: 本局兵器 -->
-                        <Grid Margin="0,20,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="4" VerticalAlignment="Stretch"
-                                    Background="{DynamicResource AccentGradientBrush}" CornerRadius="2" />
-                            <TextBlock Grid.Column="1" Margin="10,0,0,0"
-                                       VerticalAlignment="Center"
-                                       FontSize="15" FontWeight="Bold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       Text="本局兵器" />
-                            <Border Grid.Column="2" Margin="12,0,0,0" Height="1"
-                                    VerticalAlignment="Center"
-                                    Background="{DynamicResource BorderLightBrush}" Opacity="0.7" />
-                        </Grid>
-                        <ItemsControl ItemsSource="{Binding Weapons}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="0,0,0,8" Padding="12,10"
-                                            Background="{DynamicResource CardGradientBrush}"
-                                            BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
-                                            CornerRadius="10"
-                                            Effect="{DynamicResource ShadowCardEffect}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <!-- 图标外框：金色渐变环 -->
-                                            <Border Grid.Column="0" Width="46" Height="46"
-                                                    Background="{DynamicResource GoldRingGradientBrush}"
-                                                    CornerRadius="8" Padding="1.5">
-                                                <Border Background="{DynamicResource SurfaceTertiaryBrush}"
-                                                        CornerRadius="7">
-                                                    <Image Margin="3" Stretch="Uniform"
-                                                           Source="{Binding Icon, Converter={StaticResource UrlToImageSourceConverter}}" />
-                                                </Border>
-                                            </Border>
-                                            <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                                <TextBlock FontSize="14" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextPrimaryBrush}"
-                                                           Text="{Binding Name}" />
-                                                <TextBlock Margin="0,2,0,0" FontSize="10" FontWeight="Medium"
-                                                           Foreground="{DynamicResource TextMutedBrush}"
-                                                           Text="{Binding Level, StringFormat='Lv. {0}'}" />
-                                            </StackPanel>
-                                            <!-- 击杀/伤害并列指标 -->
-                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal">
-                                                <StackPanel Margin="0,0,20,0" HorizontalAlignment="Center">
-                                                    <TextBlock HorizontalAlignment="Center"
-                                                               FontFamily="Segoe UI, Consolas"
-                                                               FontSize="16" FontWeight="Bold"
-                                                               Foreground="{DynamicResource TextPrimaryBrush}"
-                                                               Text="{Binding Kill}" />
-                                                    <TextBlock HorizontalAlignment="Center"
-                                                               FontSize="10" Foreground="{DynamicResource TextMutedBrush}"
-                                                               Text="击杀" />
-                                                </StackPanel>
-                                                <StackPanel HorizontalAlignment="Center">
-                                                    <TextBlock HorizontalAlignment="Center"
-                                                               FontFamily="Segoe UI, Consolas"
-                                                               FontSize="16" FontWeight="Bold"
-                                                               Foreground="{DynamicResource TextPrimaryBrush}"
-                                                               Text="{Binding Damage}" />
-                                                    <TextBlock HorizontalAlignment="Center"
-                                                               FontSize="10" Foreground="{DynamicResource TextMutedBrush}"
-                                                               Text="伤害" />
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

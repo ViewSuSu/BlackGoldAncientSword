@@ -18,6 +18,8 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
         public string HeroName { get; init; } = string.Empty;
         public string HeroIcon { get; init; } = string.Empty;
         public string RoleName { get; init; } = string.Empty;
+        /// <summary>后端 match.mode.name（完整模式名，如"天选三排"）。与网页一致直接展示；dashen 源 mode 为 null 时为空。</summary>
+        public string? ModeName { get; init; }
         public int Rank { get; init; }
         public long BattleEndTimeMs { get; init; }
         public IReadOnlyList<UnifiedHonorTitle> HonorTitles { get; init; } = System.Array.Empty<UnifiedHonorTitle>();
