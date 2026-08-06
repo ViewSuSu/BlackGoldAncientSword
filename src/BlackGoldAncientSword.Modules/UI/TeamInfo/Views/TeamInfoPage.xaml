@@ -344,6 +344,7 @@
                             hc:TitleElement.Title="{DynamicResource Search.Title}"
                             hc:TitleElement.TitlePlacement="Left"
                             Command="{Binding Member1.SearchMemberCommand}"
+                            IsReadOnly="{Binding Member1.IsLocalUser}"
                             Style="{StaticResource SearchBarExtend}"
                             Text="{Binding Member1.UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <Button
@@ -430,7 +431,15 @@
                                 </Border>
                             </Border>
                             <TextBlock
-                                Margin="0,4,0,0"
+                                Margin="0,6,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="13"
+                                FontWeight="Bold"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                Text="{Binding Member0.DisplayName}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                Margin="0,2,0,0"
                                 HorizontalAlignment="Center"
                                 FontSize="11"
                                 Foreground="{DynamicResource TextMutedBrush}"
@@ -542,7 +551,15 @@
                                 </Border>
                             </Border>
                             <TextBlock
-                                Margin="0,4,0,0"
+                                Margin="0,6,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="13"
+                                FontWeight="Bold"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                Text="{Binding Member1.DisplayName}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                Margin="0,2,0,0"
                                 HorizontalAlignment="Center"
                                 FontSize="11"
                                 Foreground="{DynamicResource TextMutedBrush}"
@@ -654,7 +671,15 @@
                                 </Border>
                             </Border>
                             <TextBlock
-                                Margin="0,4,0,0"
+                                Margin="0,6,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="13"
+                                FontWeight="Bold"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                Text="{Binding Member2.DisplayName}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                Margin="0,2,0,0"
                                 HorizontalAlignment="Center"
                                 FontSize="11"
                                 Foreground="{DynamicResource TextMutedBrush}"
