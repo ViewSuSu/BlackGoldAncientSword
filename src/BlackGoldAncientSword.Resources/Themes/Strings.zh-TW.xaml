@@ -283,6 +283,8 @@
     <ns1:String ns2:Key="TeamInfo.DiffBestHeal">最高治差</ns1:String>
     <ns1:String ns2:Key="TeamInfo.DiffBestAssist">最高助差</ns1:String>
     <ns1:String ns2:Key="TeamInfo.DiffRankScore">段位差</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.RankScore">段位分</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.SelfNoSearch">本人卡片，無需搜尋</ns1:String>
     <ns1:String ns2:Key="TeamInfo.Title">隊伍資訊</ns1:String>
     <ns1:String ns2:Key="TeamInfo.WaitingForHeroSelect">等待遊戲進入英雄選擇...</ns1:String>
     <ns1:String ns2:Key="TeamInfo.HeroSelectRecognizing">英雄選擇中，正在識別隊友...</ns1:String>

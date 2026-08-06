@@ -1,0 +1,93 @@
+<UserControl
+    x:Class="BlackGoldAncientSword.Framework.UI.Controls.SeasonFilterBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:local="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    x:Name="Root"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <!--  本地声明一份，避免依赖 App 合并字典的加载时序导致 StaticResource 解析失败  -->
+        <ext:EnumEqualityConverter x:Key="EnumEqualityConverter" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <!--  赛季下拉  -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal">
+            <TextBlock
+                Margin="0,0,6,0"
+                VerticalAlignment="Center"
+                FontSize="13"
+                Text="{DynamicResource Stats.Season}"
+                TextTrimming="CharacterEllipsis" />
+            <ComboBox
+                Width="160"
+                Height="25"
+                DisplayMemberPath="Name"
+                ItemsSource="{Binding Seasons, ElementName=Root}"
+                SelectedItem="{Binding SelectedSeason, ElementName=Root, Mode=TwoWay}" />
+        </StackPanel>
+
+        <!--  排数（三排/双排/单排）  -->
+        <ItemsControl
+            Grid.Column="1"
+            Margin="20,0,0,0"
+            ItemsSource="{x:Static local:SeasonFilterBar.TeamSizeOptions}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <RadioButton
+                        Margin="0,0,12,0"
+                        Click="OnTeamSizeClick"
+                        Content="{Binding DisplayName}"
+                        GroupName="TeamSize">
+                        <RadioButton.IsChecked>
+                            <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
+                                <Binding Path="Value" />
+                                <Binding ElementName="Root" Path="SelectedTeamSize" />
+                            </MultiBinding>
+                        </RadioButton.IsChecked>
+                    </RadioButton>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!--  模式大类（天选/匹配/天人）  -->
+        <ItemsControl Grid.Column="3" ItemsSource="{x:Static local:SeasonFilterBar.CategoryOptions}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <RadioButton
+                        Margin="0,0,12,0"
+                        Click="OnCategoryClick"
+                        Content="{Binding DisplayName}"
+                        GroupName="Category">
+                        <RadioButton.IsChecked>
+                            <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
+                                <Binding Path="Value" />
+                                <Binding ElementName="Root" Path="SelectedCategory" />
+                            </MultiBinding>
+                        </RadioButton.IsChecked>
+                    </RadioButton>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>

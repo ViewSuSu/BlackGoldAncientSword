@@ -11,7 +11,6 @@ using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using System.Linq;
 using System.Runtime;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
-using BlackGoldAncientSword.Modules.UI.Stats.ViewModels;
 using BlackGoldAncientSword.Framework.UI.Controls;
 
 namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
@@ -130,20 +129,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        private DelegateCommand<TeamSizeOption>? _selectTeamSizeCommand;
-        public DelegateCommand<TeamSizeOption> SelectTeamSizeCommand =>
-            _selectTeamSizeCommand ??= new DelegateCommand<TeamSizeOption>(param =>
-            {
-                if (param != null) SelectedTeamSize = param.Value;
-            });
-
-        private DelegateCommand<GameModeCategoryOption>? _selectCategoryCommand;
-        public DelegateCommand<GameModeCategoryOption> SelectCategoryCommand =>
-            _selectCategoryCommand ??= new DelegateCommand<GameModeCategoryOption>(param =>
-            {
-                if (param != null) SelectedCategory = param.Value;
-            });
-
         private DelegateCommand? _refreshOcrCommand;
         public DelegateCommand RefreshOcrCommand =>
             _refreshOcrCommand ??= new DelegateCommand(async () =>
@@ -155,12 +140,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 }
                 await RefreshOcrOnceAsync();
             });
-
-        public static System.ComponentModel.BindingList<TeamSizeOption> TeamSizes { get; } =
-            new(new[] { new TeamSizeOption(TeamSize.Trio), new TeamSizeOption(TeamSize.Duo), new TeamSizeOption(TeamSize.Solo) });
-
-        public static System.ComponentModel.BindingList<GameModeCategoryOption> Categories { get; } =
-            new(new[] { new GameModeCategoryOption(GameModeCategory.Rank), new GameModeCategoryOption(GameModeCategory.Match), new GameModeCategoryOption(GameModeCategory.Tianren) });
 
 
         // === Members ===
@@ -767,30 +746,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        // 与战绩页「数据详情」字段完全对齐的 16+1 个字段，顺序与 heyBox overview 一致。
-        private static readonly (string Key, string Label, bool IsPercent)[] StatDefs =
-        {
-            ("round",              "总场次",     false),
-            ("win_rate",           "夺冠率",     true),
-            ("top5_rate",          "前五率",     true),
-            ("avg_damage",         "场均伤害",   false),
-            ("dmg_per_kill",       "伤害/击杀",  false),
-            ("win",                "夺冠",       false),
-            ("top5",               "前五",       false),
-            ("kd",                 "K/D",        false),
-            ("max_damage",         "最高伤害",   false),
-            ("max_cure",           "最高恢复",   false),
-            ("max_kill",           "最高击杀",   false),
-            ("total_time",         "总对局时间", false),
-            ("avg_shock",          "场均振刀",   false),
-            ("avg_cure",           "场均恢复",   false),
-            ("avg_kill",           "场均击杀",   false),
-            ("avg_total_live_time","场均存活时间",false),
-            ("__rank__",           "段位分",     false),
-        };
+        // 段位分行的合成 key：后端 metrics 不含段位分，作为固定尾行单独追加。
+        private const string RankRowKey = "__rank__";
 
         /// <summary>
-        /// 重建 MergedStatRows：按 StatDefs 顺序每行合并 3 个成员的值 + 2 列 diff。
+        /// 重建 MergedStatRows：数据行以本地用户（中间栏）后端返回的 metrics 为准动态生成，
+        /// 与战绩页「数据详情」完全一致（后端给什么就展示什么，顺序也一致），末尾追加"段位分"行。
+        /// 三栏按 metric.code 对齐取值，缺失成员填 "-"；diff 列按 code 计算。
         /// 一个集合绑定一个 ItemsControl，每行模板是 5 列 Grid，天然水平对齐。
         /// </summary>
         private void UpdateDiffs()
@@ -818,13 +780,24 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 diffRightB = localIdx == 1 ? m2 : (localIdx == 2 ? m1 : m2);
             }
 
-            foreach (var def in StatDefs)
-            {
-                var row = new MergedStatRow { Label = def.Label };
+            // 行模板优先取本地用户（中间栏）返回的 metrics；本地用户查询失败/未加载时，
+            // 回退到任一有 metrics 的成员，避免整表空白。
+            var localMember = localIdx >= 0 && localIdx < TeamMembers.Count ? TeamMembers[localIdx] : m1;
+            var template = (localMember != null && localMember.Metrics.Count > 0)
+                ? localMember.Metrics
+                : TeamMembers.FirstOrDefault(x => x.Metrics.Count > 0)?.Metrics
+                  ?? new List<Services.PlayerStatMetric>();
 
-                row.Val0 = GetStatVal(m0, def.Key);
-                row.Val1 = GetStatVal(m1, def.Key);
-                row.Val2 = GetStatVal(m2, def.Key);
+            foreach (var metric in template)
+            {
+                var def = (metric.Key, metric.Label, metric.IsPercent);
+                var row = new MergedStatRow
+                {
+                    Label = metric.Label,
+                    Val0 = GetStatVal(m0, metric.Key),
+                    Val1 = GetStatVal(m1, metric.Key),
+                    Val2 = GetStatVal(m2, metric.Key),
+                };
 
                 if (diffLeftA != null && diffLeftB != null)
                     FillDiff(row, isLeft: true, diffLeftA, diffLeftB, def);
@@ -834,6 +807,21 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 MergedStatRows.Add(row);
             }
 
+            // 段位分固定尾行：后端 metrics 不含，用 __rank__ 合成 key 取各成员 RankScore。
+            var rankDef = (RankRowKey, L("TeamInfo.RankScore", "段位分"), false);
+            var rankRow = new MergedStatRow
+            {
+                Label = rankDef.Item2,
+                Val0 = GetStatVal(m0, RankRowKey),
+                Val1 = GetStatVal(m1, RankRowKey),
+                Val2 = GetStatVal(m2, RankRowKey),
+            };
+            if (diffLeftA != null && diffLeftB != null)
+                FillDiff(rankRow, isLeft: true, diffLeftA, diffLeftB, rankDef);
+            if (diffRightA != null && diffRightB != null)
+                FillDiff(rankRow, isLeft: false, diffRightA, diffRightB, rankDef);
+            MergedStatRows.Add(rankRow);
+
             RaisePropertyChanged(nameof(HasDiffLeft));
             RaisePropertyChanged(nameof(HasDiffRight));
         }
@@ -841,7 +829,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private static string GetStatVal(TeamMemberInfo? m, string key)
         {
             if (m == null) return "-";
-            if (key == "__rank__") return m.RankScore > 0 ? m.RankScore.ToString("F0") : "-";
+            if (key == RankRowKey) return m.RankScore > 0 ? m.RankScore.ToString("F0") : "-";
             return m.Stats.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v) ? v : "-";
         }
 
@@ -850,7 +838,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             (string Key, string Label, bool IsPercent) def)
         {
             double av, bv;
-            if (def.Key == "__rank__")
+            if (def.Key == RankRowKey)
             {
                 av = a.RankScore; bv = b.RankScore;
             }
@@ -963,10 +951,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         member.PageHasStars = s?.PageHasStars ?? false;
                         member.RankTierScore = s?.RankTierScore ?? 0;
                         member.Stats.Clear();
+                        member.Metrics.Clear();
                         if (loaded.Stats != null)
                         {
                             foreach (var kv in loaded.Stats.Stats)
                                 member.Stats[kv.Key] = kv.Value;
+                            member.Metrics.AddRange(loaded.Stats.Metrics);
                         }
                         member.StatusText = "";
                     });
@@ -1524,6 +1514,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         // Stats dictionary: key -> display value
         public System.Collections.Generic.Dictionary<string, string> Stats { get; } = new();
+
+        // 后端返回的 metric 有序列表（含标签），本地用户格用它作为三栏统一行模板。
+        public System.Collections.Generic.List<BlackGoldAncientSword.Modules.UI.TeamInfo.Services.PlayerStatMetric> Metrics { get; } = new();
 
         private string _killCount = string.Empty;
         public string KillCount
