@@ -37,14 +37,24 @@ namespace BlackGoldAncientSword.Framework.Core.Extensions
             if (value is not string url || string.IsNullOrEmpty(url))
                 return null;
 
+            // 解码目标宽度：显示尺寸很小（列表头像 30px、头像 52px、段位 100px），
+            // 按显示尺寸解码而非原图全尺寸，可把 WIC 解码成本降低一个数量级——
+            // 这是战绩页一次绑定 30~50 张头像时"一瞬卡顿"的主因（OnLoad 在绑定线程同步全尺寸解码）。
+            // 参数可选，不传按 0（不缩放）；缓存键带上宽度，避免不同尺寸互相覆盖。
+            var decodeWidth = ParseDecodeWidth(parameter);
+            var cacheKey = decodeWidth > 0 ? url + "|w" + decodeWidth : url;
+
             // 先查缓存：如果已有相同 URL 的冻结 BitmapImage，直接复用
-            if (_imageCache.TryGetValue(url, out var cached))
+            if (_imageCache.TryGetValue(cacheKey, out var cached))
                 return cached;
 
             try
             {
                 var bitmap = new BitmapImage();
                 bitmap.BeginInit();
+
+                if (decodeWidth > 0)
+                    bitmap.DecodePixelWidth = decodeWidth;
 
                 // 启用 WPF 内置 HTTP 缓存，避免相同 URL 的重复网络请求
                 bitmap.UriCachePolicy = new RequestCachePolicy(RequestCacheLevel.Default);
@@ -68,6 +78,7 @@ namespace BlackGoldAncientSword.Framework.Core.Extensions
                 if (cacheFile == null && bitmap.IsDownloading)
                 {
                     var capturedUrl = url;
+                    var capturedKey = cacheKey;
                     bitmap.DownloadCompleted += Handler;
                     void Handler(object? sender, EventArgs e)
                     {
@@ -78,7 +89,7 @@ namespace BlackGoldAncientSword.Framework.Core.Extensions
                         CacheImageAsync(capturedUrl).SafeFireAndForget("UrlToImageSourceConverter.CacheImage");
 
                         // 下载完成后将冻结的 BitmapImage 加入缓存，供后续复用
-                        _imageCache.TryAdd(capturedUrl, bitmap);
+                        _imageCache.TryAdd(capturedKey, bitmap);
                     }
                 }
                 else
@@ -87,7 +98,7 @@ namespace BlackGoldAncientSword.Framework.Core.Extensions
                         bitmap.Freeze();
 
                     // 从本地缓存读取时直接缓存冻结后的 BitmapImage
-                    _imageCache.TryAdd(url, bitmap);
+                    _imageCache.TryAdd(cacheKey, bitmap);
                 }
 
                 return bitmap;
@@ -100,12 +111,24 @@ namespace BlackGoldAncientSword.Framework.Core.Extensions
         }
 
         /// <summary>
-        /// 从缓存中移除指定 URL 对应的 BitmapImage。
+        /// 从缓存中移除指定 URL 对应的 BitmapImage（含所有解码宽度变体，键形如 "url" 或 "url|wNN"）。
         /// </summary>
         public static void InvalidateCacheEntry(string url)
         {
-            if (!string.IsNullOrEmpty(url))
-                _imageCache.TryRemove(url, out _);
+            if (string.IsNullOrEmpty(url)) return;
+            foreach (var key in _imageCache.Keys)
+            {
+                if (key == url || key.StartsWith(url + "|w", StringComparison.OrdinalIgnoreCase))
+                    _imageCache.TryRemove(key, out _);
+            }
+        }
+
+        /// <summary>解析 ConverterParameter 为解码目标宽度（像素）；无法解析或 ≤0 返回 0（不缩放）。</summary>
+        private static int ParseDecodeWidth(object? parameter)
+        {
+            if (parameter == null) return 0;
+            var s = parameter as string ?? parameter.ToString();
+            return int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var w) && w > 0 ? w : 0;
         }
 
         /// <summary>
