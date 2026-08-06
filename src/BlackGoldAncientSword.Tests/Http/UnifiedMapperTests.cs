@@ -78,6 +78,41 @@ namespace BlackGoldAncientSword.Tests.Http
         }
 
         [Fact]
+        public void MapRecentMatches_HonorTitlesMapped()
+        {
+            // unified matches 接口直接返回 honorTitles（无需逐场拉详情）。
+            var json = "{\"code\":0,\"msg\":\"\",\"data\":{\"hasMore\":false,\"records\":[{" +
+                "\"detailKey\":\"abc.123\",\"occurredAt\":\"2026-06-01T12:30:00Z\"," +
+                "\"mode\":null,\"hero\":{\"id\":\"1000026\",\"name\":\"张起灵\",\"iconUrl\":\"https://x/h.png\"}," +
+                "\"rank\":1,\"score\":null,\"evaluation\":{\"score\":0,\"level\":\"S\"}," +
+                "\"kills\":0,\"damage\":0,\"shockCount\":0,\"stats\":null," +
+                "\"honorTitles\":[{\"id\":\"1139\",\"name\":\"纯阳\",\"iconUrl\":\"https://x/1139.png\",\"description\":\"在回阳镜中获胜\"}," +
+                "{\"id\":\"1038\",\"name\":\"一人之下\",\"iconUrl\":\"https://x/1038.png\",\"description\":\"成功开启王屋\"}]}]}}";
+            var resp = JsonSerializer.Deserialize<GetRecentMatchesResponse>(json, NarakaApiClient.JsonOptions);
+            var items = UnifiedMapper.MapRecentMatches(resp);
+            Assert.Single(items);
+            Assert.Equal(2, items[0].HonorTitles.Count);
+            Assert.Equal("纯阳", items[0].HonorTitles[0].Name);
+            Assert.Equal("https://x/1139.png", items[0].HonorTitles[0].Icon);
+            Assert.Equal("在回阳镜中获胜", items[0].HonorTitles[0].Desc);
+            Assert.Equal("一人之下", items[0].HonorTitles[1].Name);
+        }
+
+        [Fact]
+        public void MapRecentMatches_NoHonorTitles_EmptyList()
+        {
+            var json = "{\"code\":0,\"msg\":\"\",\"data\":{\"hasMore\":false,\"records\":[{" +
+                "\"detailKey\":\"abc.123\",\"occurredAt\":\"2026-06-01T12:30:00Z\"," +
+                "\"mode\":null,\"hero\":{\"id\":\"1000026\",\"name\":\"张起灵\",\"iconUrl\":\"https://x/h.png\"}," +
+                "\"rank\":1,\"score\":null,\"evaluation\":{\"score\":0,\"level\":\"C\"}," +
+                "\"kills\":0,\"damage\":0,\"shockCount\":0,\"stats\":[]}]}}";
+            var resp = JsonSerializer.Deserialize<GetRecentMatchesResponse>(json, NarakaApiClient.JsonOptions);
+            var items = UnifiedMapper.MapRecentMatches(resp);
+            Assert.Single(items);
+            Assert.Empty(items[0].HonorTitles);
+        }
+
+        [Fact]
         public void MapRecentMatches_DaShenNullMode_ModeFieldsEmpty()
         {
             // dashen 源部分对局 mode 为 null（网页显示"未知模式"）；映射不得抛异常，mode 字段留空。

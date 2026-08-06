@@ -1070,7 +1070,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
         }
 
-        /// <summary>对局列表：拉取后一次性构造全部行并 ReplaceAll（仅一次 Reset 通知），与其它两块互不阻塞。</summary>
+        /// <summary>对局列表：拉取后一次性构造全部行并 ReplaceAll（仅一次 Reset 通知），与其它两块互不阻塞。
+        /// 行的成就图标不在此处同步填充（50 行 × 多图标同步建 BitmapImage 是首屏卡顿主因），
+        /// 由 <see cref="ApplyHonorTitlesAsync"/> 分批后台填充。</summary>
         private async System.Threading.Tasks.Task ApplyBattlesAsync(PlayerSourceContext ctx, CancellationToken ct)
         {
             try
@@ -1088,6 +1090,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     _allBattles.AddRange(displayItems);
                     ApplyBattleFilter();
                     RecentBattlesProgress = 100;
+                    // 行已先渲染：成就图标后台分批填充，每批让出 UI 线程，避免一次塞入大量图片卡顿。
+                    _ = ApplyHonorTitlesAsync(battlesResult, displayItems, ct);
                 }
             }
             catch (OperationCanceledException) { }
@@ -1102,6 +1106,58 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             finally
             {
                 IsRecentBattlesLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// 把接口返回的成就分批填充到已渲染的行上。行数据已经显示，成就只是"锦上添花"，
+        /// 不应拖慢首屏：每次仅处理若干行、每批之间让出 UI 线程让界面先绘制。
+        /// <paramref name="sourceItems"/> 与 <paramref name="displayItems"/> 索引一一对应。
+        /// </summary>
+        private async System.Threading.Tasks.Task ApplyHonorTitlesAsync(
+            System.Collections.Generic.List<UnifiedRecentBattleItem> sourceItems,
+            System.Collections.Generic.List<RecentBattleDisplayItem> displayItems,
+            CancellationToken ct)
+        {
+            // 每批行数：一次填充过多会造成单帧 Image 创建过多；太小则填充耗时。
+            const int batchSize = 5;
+            const int batchDelayMs = 8;
+            try
+            {
+                for (int i = 0; i < sourceItems.Count; i += batchSize)
+                {
+                    if (ct.IsCancellationRequested) return;
+                    var end = Math.Min(i + batchSize, sourceItems.Count);
+
+                    // 在 UI 线程填充本批成就：ObservableCollection.Add 会触发绑定更新，不能跨线程。
+                    await _uiDispatcher.InvokeAsync(() =>
+                    {
+                        for (int j = i; j < end; j++)
+                        {
+                            var source = sourceItems[j];
+                            if (source.HonorTitles == null || source.HonorTitles.Count == 0)
+                                continue;
+                            var row = displayItems[j];
+                            foreach (var h in source.HonorTitles)
+                            {
+                                row.HonorTitles.Add(new HonorTitleDisplayItem
+                                {
+                                    Icon = h.Icon,
+                                    Name = h.Name,
+                                    Desc = h.Desc,
+                                });
+                            }
+                        }
+                    }).ConfigureAwait(false);
+
+                    // 每批之间让出 UI 线程，让已填充的图标先绘制，避免整页一次卡死。
+                    await System.Threading.Tasks.Task.Delay(batchDelayMs, ct).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, "StatsPage", $"{nameof(ApplyHonorTitlesAsync)} failed");
             }
         }
 
@@ -1567,6 +1623,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string GameModeTeamSizeText { get; set; } = string.Empty;
         public int Kill { get; set; }
         public int Damage { get; set; }
+        /// <summary>本局获得的成就（荣誉徽章）。来自 unified matches 接口 honorTitles 字段。
+        /// 用 ObservableCollection 以便行先渲染、成就图标分批填充后自动通知 UI。</summary>
+        public ObservableCollection<HonorTitleDisplayItem> HonorTitles { get; } = new();
         public double ScoreNumber { get; set; }
         public double ScoreDiff { get; set; }
         public string RankDisplayText { get; set; } = string.Empty;
@@ -1578,5 +1637,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public bool IsRankMode { get; set; }
         public string Rating { get; set; } = string.Empty;
    }
+
+    public class HonorTitleDisplayItem
+    {
+        public string Icon { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Desc { get; set; } = string.Empty;
+    }
 
 }
