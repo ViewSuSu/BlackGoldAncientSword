@@ -656,23 +656,62 @@
    </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="50" Header="" CanUserResize="False">
+                        <DataGridTemplateColumn Width="170" Header="" CanUserResize="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Width="30" Height="30"
-                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Background="{DynamicResource SurfaceTertiaryBrush}"
-                                            BorderBrush="{DynamicResource BorderLightBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="15" ClipToBounds="True">
-                                        <Border.Clip>
-                                            <EllipseGeometry Center="15,15" RadiusX="15" RadiusY="15" />
-                                        </Border.Clip>
-                                        <Image Width="30" Height="30"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               Stretch="UniformToFill"
-                                               Source="{Binding HeroIcon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}, ConverterParameter=64}" />
-                                    </Border>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <!-- 英雄头像圆框 -->
+                                        <Border Grid.Column="0" Width="30" Height="30"
+                                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                Background="{DynamicResource SurfaceTertiaryBrush}"
+                                                BorderBrush="{DynamicResource BorderLightBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="15" ClipToBounds="True">
+                                            <Border.Clip>
+                                                <EllipseGeometry Center="15,15" RadiusX="15" RadiusY="15" />
+                                            </Border.Clip>
+                                            <Image Width="30" Height="30"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Stretch="UniformToFill"
+                                                   Source="{Binding HeroIcon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}, ConverterParameter=64}" />
+                                        </Border>
+                                        <!-- 成就图标横向排列（放不下自动换行） -->
+                                        <ItemsControl
+                                            Grid.Column="1"
+                                            Margin="4,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ItemsSource="{Binding HonorTitles}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <controls:DataGridWrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Image
+                                                        Width="26"
+                                                        Height="26"
+                                                        Margin="1"
+                                                        VerticalAlignment="Center"
+                                                        Source="{Binding Icon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}, ConverterParameter=52}"
+                                                        Stretch="Uniform">
+                                                        <Image.ToolTip>
+                                                            <ToolTip>
+                                                                <StackPanel>
+                                                                    <TextBlock FontWeight="Bold" Text="{Binding Name}" />
+                                                                    <TextBlock Text="{Binding Desc}" />
+                                                                </StackPanel>
+                                                            </ToolTip>
+                                                        </Image.ToolTip>
+                                                    </Image>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

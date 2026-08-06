@@ -106,7 +106,8 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
                     BattleEndTimeMs = ParseIso8601ToMs(m.OccurredAt),
                     Rating = m.Evaluation?.Level ?? string.Empty,
                     RankName = m.Evaluation?.Level ?? string.Empty,
-                    HonorTitles = Array.Empty<UnifiedHonorTitle>(),
+                    HonorTitles = m.HonorTitles?.Select(MapHonor).ToArray()
+                        ?? Array.Empty<UnifiedHonorTitle>(),
                 };
             }).ToList();
         }

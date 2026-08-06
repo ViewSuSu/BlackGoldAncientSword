@@ -199,7 +199,8 @@
                   "kills": { "type": "int" },
                   "damage": { "type": "long" },
                   "shockCount": { "type": "int" },
-                  "stats": { "type": "List<BattleStat>" }
+                  "stats": { "type": "List<BattleStat>" },
+                  "honorTitles": { "type": "List<HonorTitle>" }
                 },
                 "nestedTypes": {
                   "Mode": {
@@ -241,6 +242,15 @@
                       "name": { "type": "string" },
                       "value": { "type": "double" },
                       "unit": { "type": "string" }
+                    }
+                  },
+                  "HonorTitle": {
+                    "type": "HonorTitle",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "name": { "type": "string" },
+                      "iconUrl": { "type": "string" },
+                      "description": { "type": "string" }
                     }
                   }
                 }
