@@ -35,6 +35,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private CancellationTokenSource? _refreshOcrCts;
         private CancellationTokenSource? _loadSeasonsCts;
         private readonly SearchDebounceGate _refreshOcrDebounce = new();
+        // 筛选器（赛季/排数/大类）变更合并防抖：连续改多个条件只在最后一次之后触发一次整队重查，
+        // 避免每个 setter 各自发一批相同参数的 HTTP（实测重复请求根因）。
+        private const int FilterRefreshDebounceMs = 200;
+        private readonly TrailingDebouncer _filterRefreshDebouncer;
         // 已成功加载赛季后不再重复请求；后续切换页面也复用既有数据。
         private bool _seasonsLoaded;
         private bool _hasEverHadData;
@@ -85,6 +89,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // 构造函数中永久订阅（不依赖页面导航），确保进入英雄选择后立即启动 OCR 识别
             _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
             _teamOverlayService.Dismissed += OnOverlayDismissed;
+
+            _filterRefreshDebouncer = new TrailingDebouncer(FilterRefreshDebounceMs, RunFilterRefreshAsync);
         }
 
         // === Filters ===
@@ -99,7 +105,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 if (_selectedSeason == value) return;
                 _selectedSeason = value;
                 RaisePropertyChanged(nameof(SelectedSeason));
-                RefreshTeamMemberData();
+                _filterRefreshDebouncer.Trigger();
             }
         }
 
@@ -112,7 +118,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 if (_selectedTeamSize == value) return;
                 _selectedTeamSize = value;
                 RaisePropertyChanged(nameof(SelectedTeamSize));
-                RefreshTeamMemberData();
+                _filterRefreshDebouncer.Trigger();
             }
         }
 
@@ -125,7 +131,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 if (_selectedCategory == value) return;
                 _selectedCategory = value;
                 RaisePropertyChanged(nameof(SelectedCategory));
-                RefreshTeamMemberData();
+                _filterRefreshDebouncer.Trigger();
             }
         }
 
@@ -673,12 +679,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 $"UpdateTeamMembers 完成: 新增{newNames.Length}名, 移除{removed.Count}名, TeamMembers={TeamMembers.Count}, 开始HTTP加载");
         }
 
-        private void NavigateToMemberStats(string userName)
+        private void NavigateToMemberStats(TeamMemberInfo member)
         {
-            var parameters = new NavigationParameters
-            {
-                { NavigationParameterKeys.TargetPlayerName, userName }
-            };
+            // 本地用户卡片：不带 TargetPlayerName 导航到战绩页，战绩页会 reload 本地用户
+            // 并展示本地 UID —— 等价于战绩页「回到我」的效果，而非用 OCR 名去查自己。
+            var parameters = new NavigationParameters();
+            if (!member.IsLocalUser)
+                parameters.Add(NavigationParameterKeys.TargetPlayerName, member.UserName);
             _navigation.NavigateTo(PageNames.StatsPage, parameters);
         }
 
@@ -1054,13 +1061,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _teamOverlayService.Show(overlayMembers);
         }
 
-        private void RefreshTeamMemberData()
+        /// <summary>
+        /// 筛选器变更防抖到期后的实际重查回调。<paramref name="debounceCt"/> 仅代表"到期前是否被
+        /// 下一次筛选变更取代"；成员 HTTP 加载另用 <see cref="_refreshMembersCts"/>（导航离开/OCR 切换时取消），
+        /// 两者语义独立，不可混用。
+        /// </summary>
+        private async Task RunFilterRefreshAsync(CancellationToken debounceCt)
         {
+            if (debounceCt.IsCancellationRequested) return;
+
             CancelAndDispose(ref _refreshMembersCts);
             _refreshMembersCts = new CancellationTokenSource();
             var ct = _refreshMembersCts.Token;
-            // Task.Run 将整个刷新流程推到 ThreadPool，避免 UI 线程上的同步启动开销
-            _ = Task.Run(() => RefreshMembersAsync(ct), ct);
+            await RefreshMembersAsync(ct).ConfigureAwait(false);
         }
 
         private async Task RefreshMembersAsync(CancellationToken ct)
@@ -1245,6 +1258,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             {
                 _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
                 _teamOverlayService.Dismissed -= OnOverlayDismissed;
+                _filterRefreshDebouncer.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -1609,13 +1623,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     .Publish(new TipMessageWithHighlightArgs(CopySuccessText()));
             });
 
-        public System.Action<string>? NavigateToStatsAction { get; set; }
+        public System.Action<TeamMemberInfo>? NavigateToStatsAction { get; set; }
 
         private DelegateCommand? _navigateToStatsCommand;
         public DelegateCommand NavigateToStatsCommand =>
             _navigateToStatsCommand ??= new DelegateCommand(() =>
             {
-                NavigateToStatsAction?.Invoke(UserName);
+                NavigateToStatsAction?.Invoke(this);
             });
 
     }

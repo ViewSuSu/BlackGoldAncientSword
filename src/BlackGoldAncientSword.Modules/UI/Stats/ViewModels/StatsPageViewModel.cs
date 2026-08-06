@@ -155,6 +155,11 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     _tipMessage.ShowError(L("Stats.NoLocalUser", "未检测到本地用户信息"));
                     return;
                 }
+                if (!_searchDebounce.TryEnter())
+                {
+                    _tipMessage.ShowError(L("Search.TooFast", "点击过快请稍后重试"));
+                    return;
+                }
                 // 查询身份仍用本地登录名（PlayerName == OriginalPlayerName 触发 LoadAllAsync 的
                 // UID 优先分支）；搜索框展示本地 UID（player_id）——UID 存在时显示 UID，否则回退显示名字。
                 _playerPrefsService.Current.PlayerName = _playerPrefsService.Current.OriginalPlayerName;
