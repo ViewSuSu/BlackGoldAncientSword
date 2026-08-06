@@ -115,22 +115,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         }
 
         /// <summary>
-        /// 优先用网易大神数据源搜索：先传 source=dashen；大神查无（data 空）时回退不带 source
-        /// 由后端按名称/ID 选默认源，保证既满足"尽量查大神"又不因大神无该玩家而整体查不到。
+        /// 搜索角色：不传 source，后端默认优先网易大神（dashen）。大神查无时后端自动降级到其它源，
+        /// 并在响应体 source 字段回传实际源；后续按返回的 source 分派即可。
         /// </summary>
-        private static async Task<Framework.Http.Generated.SearchRecordResponse?> SearchPreferDaShenAsync(
+        private static Task<Framework.Http.Generated.SearchRecordResponse?> SearchPreferDaShenAsync(
             string keyword, CancellationToken ct)
         {
-            var daShen = DataSource.DaShen.ToApiString();
-            try
-            {
-                var resp = await NarakaApiClient.SearchRecordAsync(keyword, daShen, ct).ConfigureAwait(false);
-                if (UnifiedMapper.MapSearch(resp) != null) return resp;
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (NarakaApiException) { /* 大神源查无/被拒 → 回退默认源 */ }
-
-            return await NarakaApiClient.SearchRecordAsync(keyword, null, ct).ConfigureAwait(false);
+            return NarakaApiClient.SearchRecordAsync(keyword, null, ct);
         }
     }
 

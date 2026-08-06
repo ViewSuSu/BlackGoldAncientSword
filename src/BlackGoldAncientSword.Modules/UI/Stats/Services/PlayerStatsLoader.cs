@@ -14,7 +14,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
     /// <summary>
     /// Stats 页专用：从 NarakaApiClient 拉取"单个玩家"相关数据并归一化为 Unified 域模型。
     /// 后端 unified 接口已归一化三源（miniProgram/heyBox/dashen），本类不再按数据源分派；
-    /// source 仅作为 query 参数随请求下发。search 默认优先网易大神（dashen）。
+    /// search 不传 source，后端默认优先网易大神（dashen），查无时自动降级并回传实际 source。
     /// 与 <see cref="BlackGoldAncientSword.Modules.UI.TeamInfo.Services"/> 下同名类完全隔离（命名空间不同）。
     /// </summary>
     [Component(ComponentLifetime.Singleton)]
@@ -65,21 +65,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
         }
 
         /// <summary>
-        /// 优先网易大神搜索：先 source=dashen，查无（data 空）时回退不带 source 让后端选默认源。
-        /// 满足"尽量查大神"，同时不因大神无该玩家而整体查不到。
+        /// 搜索角色：不传 source，后端默认优先网易大神（dashen）。若大神查无，后端自动降级到
+        /// 其它源并在响应体的 source 字段回传实际源；后续流程直接用返回的 source 分派即可。
         /// </summary>
-        private static async Task<SearchRecordResponse?> SearchPreferDaShenAsync(string keyword, CancellationToken ct)
+        private static Task<SearchRecordResponse?> SearchPreferDaShenAsync(string keyword, CancellationToken ct)
         {
-            var daShen = DataSource.DaShen.ToApiString();
-            try
-            {
-                var resp = await NarakaApiClient.SearchRecordAsync(keyword, daShen, ct).ConfigureAwait(false);
-                if (UnifiedMapper.MapSearch(resp) != null) return resp;
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (NarakaApiException) { /* 大神源查无/被拒 → 回退默认源 */ }
-
-            return await NarakaApiClient.SearchRecordAsync(keyword, null, ct).ConfigureAwait(false);
+            return NarakaApiClient.SearchRecordAsync(keyword, null, ct);
         }
 
         /// <summary>查询玩家基础信息（昵称、头像、等级）。</summary>
