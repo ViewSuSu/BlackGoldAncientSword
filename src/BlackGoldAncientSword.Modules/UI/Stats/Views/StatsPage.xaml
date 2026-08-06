@@ -216,93 +216,13 @@
                 CornerRadius="5">
                 <StackPanel>
 
-                    <!--  === FILTERS ===  -->
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <!--  Season (left)  -->
-                        <StackPanel Grid.Column="0" Orientation="Horizontal">
-                            <TextBlock
-                                Margin="0,0,6,0"
-                                VerticalAlignment="Center"
-                                FontSize="13"
-                                Text="{DynamicResource Stats.Season}" />
-                            <ComboBox
-                                Width="160"
-                                Height="28"
-                                DisplayMemberPath="Name"
-                                ItemsSource="{Binding Seasons}"
-                                SelectedItem="{Binding SelectedSeason}" />
-                        </StackPanel>
-
-                        <!--  Team Size RadioButtons via ItemsControl  -->
-                        <ItemsControl
-                            Grid.Column="1"
-                            Margin="20,0,0,0"
-                            ItemsSource="{Binding TeamSizes}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <RadioButton
-                                        Margin="0,0,12,0"
-                                        CommandParameter="{Binding .}"
-                                        Content="{Binding DisplayName}"
-                                        GroupName="TeamSize">
-                                        <i:Interaction.Triggers>
-                                            <i:EventTrigger EventName="Click">
-                                                <i:InvokeCommandAction Command="{Binding DataContext.SelectTeamSizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding .}" />
-                                            </i:EventTrigger>
-                                        </i:Interaction.Triggers>
-                                        <RadioButton.IsChecked>
-                                            <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
-                                                <Binding Path="Value" />
-                                                <Binding Path="DataContext.SelectedTeamSize" RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                                            </MultiBinding>
-                                        </RadioButton.IsChecked>
-                                    </RadioButton>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <!--  Category RadioButtons via ItemsControl (right)  -->
-                        <ItemsControl Grid.Column="3" ItemsSource="{Binding Categories}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <RadioButton
-                                        Margin="0,0,12,0"
-                                        CommandParameter="{Binding .}"
-                                        Content="{Binding DisplayName}"
-                                        GroupName="Category">
-                                        <i:Interaction.Triggers>
-                                            <i:EventTrigger EventName="Click">
-                                                <i:InvokeCommandAction Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding .}" />
-                                            </i:EventTrigger>
-                                        </i:Interaction.Triggers>
-                                        <RadioButton.IsChecked>
-                                            <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
-                                                <Binding Path="Value" />
-                                                <Binding Path="DataContext.SelectedCategory" RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                                            </MultiBinding>
-                                        </RadioButton.IsChecked>
-                                    </RadioButton>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Grid>
+                    <!--  === FILTERS ===  赛季 + 排数 + 大类，与队伍信息页共用同一控件与选项源  -->
+                    <controls:SeasonFilterBar
+                        Margin="0,0,0,12"
+                        Seasons="{Binding Seasons}"
+                        SelectedSeason="{Binding SelectedSeason, Mode=TwoWay}"
+                        SelectedTeamSize="{Binding SelectedTeamSize, Mode=TwoWay}"
+                        SelectedCategory="{Binding SelectedCategory, Mode=TwoWay}" />
 
 
                     <!--  === DETAIL STATS ===  -->

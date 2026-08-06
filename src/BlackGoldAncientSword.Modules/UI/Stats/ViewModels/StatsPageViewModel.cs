@@ -3,6 +3,7 @@ using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Unified;
+using BlackGoldAncientSword.Framework.UI.Controls;
 using System.ComponentModel;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.Framework.Core.Events;
@@ -354,17 +355,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
 
-        private DelegateCommand<TeamSizeOption>? _selectTeamSizeCommand;
-        public DelegateCommand<TeamSizeOption> SelectTeamSizeCommand =>
-            _selectTeamSizeCommand ??= new DelegateCommand<TeamSizeOption>(param => { if (param != null) SelectedTeamSize = param.Value; });
-
-        private DelegateCommand<GameModeCategoryOption>? _selectCategoryCommand;
-        public DelegateCommand<GameModeCategoryOption> SelectCategoryCommand =>
-            _selectCategoryCommand ??= new DelegateCommand<GameModeCategoryOption>(param => { if (param != null) SelectedCategory = param.Value; });
-
-        public static System.ComponentModel.BindingList<TeamSizeOption> TeamSizes { get; } = new(new[] { new TeamSizeOption(TeamSize.Trio), new TeamSizeOption(TeamSize.Duo), new TeamSizeOption(TeamSize.Solo) });
-        public static System.ComponentModel.BindingList<GameModeCategoryOption> Categories { get; } = new(new[] { new GameModeCategoryOption(GameModeCategory.Rank), new GameModeCategoryOption(GameModeCategory.Match), new GameModeCategoryOption(GameModeCategory.Tianren) });
-
         private static readonly Dictionary<string, string> StatKeyToResourceKey = new(StringComparer.OrdinalIgnoreCase)
         {
             ["round"] = "Stats.Matches",
@@ -693,8 +683,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         {
             if (e.PropertyName == nameof(ILocalizationService.CurrentLanguage))
             {
-                TeamSizes.ResetBindings();
-                Categories.ResetBindings();
+                // 排数/大类选项文案由 SeasonFilterBar 控件自行 ResetBindings；此处只刷新本页专有的对局筛选文案。
                 RaisePropertyChanged(nameof(BattleFilterDisplayText));
             }
         }
@@ -1585,19 +1574,4 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string Rating { get; set; } = string.Empty;
    }
 
-   public class TeamSizeOption
-    {
-        public TeamSize Value { get; }
-        public TeamSizeOption(TeamSize value) => Value = value;
-        public string DisplayName =>
-            System.Windows.Application.Current?.TryFindResource("GameMode." + Value.ToString()) as string ?? Value.ToString();
-    }
-
-    public class GameModeCategoryOption
-    {
-        public GameModeCategory Value { get; }
-        public GameModeCategoryOption(GameModeCategory value) => Value = value;
-        public string DisplayName =>
-            System.Windows.Application.Current?.TryFindResource("GameMode." + Value.ToString()) as string ?? Value.ToString();
-    }
 }

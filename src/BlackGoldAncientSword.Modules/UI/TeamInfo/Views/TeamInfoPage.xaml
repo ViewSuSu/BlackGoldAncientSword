@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions;assembly=BlackGoldAncientSword.Framework"
     xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
+    xmlns:controls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hc="clr-namespace:HandyControl.Controls;assembly=HandyControl"
     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
@@ -33,89 +34,21 @@
                     Visibility="{Binding HasMember0, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid ext:PageTransitionBehavior.IsEnabled="True" RenderTransformOrigin="0.5,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Orientation="Horizontal">
-                            <TextBlock
-                                Margin="0,0,6,0"
-                                VerticalAlignment="Center"
-                                FontSize="13"
-                                Text="{DynamicResource Stats.Season}"
-                                TextTrimming="CharacterEllipsis" />
-                            <ComboBox
-                                Width="160"
-                                Height="25"
-                                DisplayMemberPath="Name"
-                                ItemsSource="{Binding Seasons}"
-                                SelectedItem="{Binding SelectedSeason}" />
-                        </StackPanel>
-                        <ItemsControl
-                            Grid.Column="1"
-                            Margin="20,0,0,0"
-                            ItemsSource="{Binding TeamSizes}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <RadioButton
-                                        Margin="0,0,12,0"
-                                        CommandParameter="{Binding .}"
-                                        Content="{Binding DisplayName}"
-                                        GroupName="TeamSize">
-                                        <i:Interaction.Triggers>
-                                            <i:EventTrigger EventName="Click">
-                                                <i:InvokeCommandAction Command="{Binding DataContext.SelectTeamSizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding .}" />
-                                            </i:EventTrigger>
-                                        </i:Interaction.Triggers>
-                                        <RadioButton.IsChecked>
-                                            <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
-                                                <Binding Path="Value" />
-                                                <Binding Path="DataContext.SelectedTeamSize" RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                                            </MultiBinding>
-                                        </RadioButton.IsChecked>
-                                    </RadioButton>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <ItemsControl Grid.Column="3" ItemsSource="{Binding Categories}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <RadioButton
-                                        Margin="0,0,12,0"
-                                        CommandParameter="{Binding .}"
-                                        Content="{Binding DisplayName}"
-                                        GroupName="Category">
-                                        <i:Interaction.Triggers>
-                                            <i:EventTrigger EventName="Click">
-                                                <i:InvokeCommandAction Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding .}" />
-                                            </i:EventTrigger>
-                                        </i:Interaction.Triggers>
-                                        <RadioButton.IsChecked>
-                                            <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
-                                                <Binding Path="Value" />
-                                                <Binding Path="DataContext.SelectedCategory" RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                                            </MultiBinding>
-                                        </RadioButton.IsChecked>
-                                    </RadioButton>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+
+                        <!--  赛季 + 排数 + 大类，与战绩页共用同一控件与选项源  -->
+                        <controls:SeasonFilterBar
+                            Grid.Column="0"
+                            Seasons="{Binding Seasons}"
+                            SelectedSeason="{Binding SelectedSeason, Mode=TwoWay}"
+                            SelectedTeamSize="{Binding SelectedTeamSize, Mode=TwoWay}"
+                            SelectedCategory="{Binding SelectedCategory, Mode=TwoWay}" />
 
                         <!-- Refresh button - only enabled during hero selection -->
                         <Button
-                            Grid.Column="4"
+                            Grid.Column="1"
                             Width="28"
                             Height="25"
                             Margin="6,0,0,0"
@@ -344,9 +277,22 @@
                             hc:TitleElement.Title="{DynamicResource Search.Title}"
                             hc:TitleElement.TitlePlacement="Left"
                             Command="{Binding Member1.SearchMemberCommand}"
-                            IsReadOnly="{Binding Member1.IsLocalUser}"
-                            Style="{StaticResource SearchBarExtend}"
-                            Text="{Binding Member1.UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            IsEnabled="{Binding Member1.IsSearchEnabled}"
+                            Text="{Binding Member1.UserName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                            <hc:SearchBar.Style>
+                                <!--  本地用户格：搜索框禁用且视觉明显置灰，用户一眼可辨为不可编辑  -->
+                                <Style BasedOn="{StaticResource SearchBarExtend}" TargetType="hc:SearchBar">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Opacity" Value="0.55" />
+                                            <Setter Property="Background" Value="{DynamicResource SurfaceTertiaryBrush}" />
+                                            <Setter Property="Cursor" Value="No" />
+                                            <Setter Property="ToolTip" Value="{DynamicResource TeamInfo.SelfNoSearch}" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </hc:SearchBar.Style>
+                        </hc:SearchBar>
                         <Button
                             Grid.Column="1"
                             Width="Auto"

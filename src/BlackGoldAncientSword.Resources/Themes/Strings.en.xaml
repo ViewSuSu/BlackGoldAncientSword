@@ -292,6 +292,8 @@
     <system:String x:Key="TeamInfo.DiffBestHeal">Best Heal Diff</system:String>
     <system:String x:Key="TeamInfo.DiffBestAssist">Best Assist Diff</system:String>
     <system:String x:Key="TeamInfo.DiffRankScore">Rank Diff</system:String>
+    <system:String x:Key="TeamInfo.RankScore">Rank Score</system:String>
+    <system:String x:Key="TeamInfo.SelfNoSearch">Your own card — no search needed</system:String>
     <system:String x:Key="TeamInfo.Title">Team Info</system:String>
     <system:String x:Key="TeamInfo.WaitingForHeroSelect">Waiting to enter hero selection...</system:String>
     <system:String x:Key="TeamInfo.HeroSelectRecognizing">Hero selection, identifying teammates...</system:String>

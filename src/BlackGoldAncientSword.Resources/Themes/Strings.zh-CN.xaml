@@ -291,6 +291,8 @@
     <system:String x:Key="TeamInfo.DiffBestHeal">最高治差</system:String>
     <system:String x:Key="TeamInfo.DiffBestAssist">最高助差</system:String>
     <system:String x:Key="TeamInfo.DiffRankScore">段位差</system:String>
+    <system:String x:Key="TeamInfo.RankScore">段位分</system:String>
+    <system:String x:Key="TeamInfo.SelfNoSearch">本人卡片，无需搜索</system:String>
     <system:String x:Key="TeamInfo.Title">队伍信息</system:String>
     <system:String x:Key="TeamInfo.WaitingForHeroSelect">等待游戏进入英雄选择...</system:String>
     <system:String x:Key="TeamInfo.HeroSelectRecognizing">英雄选择中，正在识别队友...</system:String>

@@ -54,7 +54,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 // unified 的 metric.code 已是统一英文编码，直接入字典；仍走 NormalizeStatKey
                 // 兜底历史中文 key（后端个别源可能回中文 label 当 code）。
                 var normalizedKey = NormalizeStatKey(stat.Key);
-                result.Stats[normalizedKey] = val;
+
+                // 存活时间后端返回原始秒数，与战绩页数据详情一致地格式化为 "X分XX秒" 再展示。
+                var displayVal = normalizedKey.Contains("live_time", System.StringComparison.OrdinalIgnoreCase)
+                    ? FormatSurvivalTime(val)
+                    : val;
+                result.Stats[normalizedKey] = displayVal;
+
+                // 保留后端返回的 metric 顺序 + 显示标签，供队友页动态生成数据行（与战绩页数据详情一致）。
+                // 标签优先用后端 Name，缺失回退 code；百分率行以 value 是否含 '%' 判定，用于 diff 格式化。
+                result.Metrics.Add(new PlayerStatMetric(
+                    normalizedKey,
+                    string.IsNullOrEmpty(stat.Name) ? stat.Key : stat.Name,
+                    val.Contains('%')));
 
                 // 专有属性用归一化后的英文 key 命中，中英文数据源一致。
                 switch (normalizedKey)
@@ -234,6 +246,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
     public class PlayerStatsLoadResult
     {
         public Dictionary<string, string> Stats { get; } = new();
+
+        /// <summary>
+        /// 后端返回的 metric 有序列表（含显示标签），保留原始顺序。
+        /// 队友页以本地用户这份列表作为三栏统一的行模板，实现与战绩页数据详情一致的动态数据项。
+        /// </summary>
+        public List<PlayerStatMetric> Metrics { get; } = new();
+
         public string? AvgKill { get; set; }
         public string? Top5Rate { get; set; }
         public string? AvgDamage { get; set; }
@@ -246,4 +265,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         public bool PageHasStars { get; set; }
         public double RankTierScore { get; set; }
     }
+
+    /// <summary>
+    /// 单个 metric 的行模板信息：归一化后的 code（跨成员对齐用）、显示标签、是否百分率（diff 格式化用）。
+    /// </summary>
+    public readonly record struct PlayerStatMetric(string Key, string Label, bool IsPercent);
 }
