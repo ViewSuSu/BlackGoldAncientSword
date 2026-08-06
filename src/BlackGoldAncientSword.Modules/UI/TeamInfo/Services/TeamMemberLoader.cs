@@ -53,25 +53,16 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 }
 
                 var ctx = new PlayerSourceContext(search.RoleIdSimple, search.DataSource);
-                UnifiedUserInfo? userInfo;
-                string? userInfoMsg = null;
-                if (ctx.Source == DataSource.HeyBox)
-                {
-                    var resp = await NarakaApiClient.HeyBoxUserInfoAsync(ctx.RoleIdSimple, ct: ct).ConfigureAwait(false);
-                    userInfo = UnifiedMapper.MapHeyBoxUser(resp, ctx.RoleIdSimple);
-                    userInfoMsg = resp?.Msg;
-                }
-                else
-                {
-                    var resp = await NarakaApiClient.GetUserInfoAsync(ctx.RoleIdSimple, ct).ConfigureAwait(false);
-                    userInfo = UnifiedMapper.MapMiniProgramUser(resp);
-                    userInfoMsg = resp?.Msg;
-                }
+
+                // unified/player 已归一化三源，不再分派。
+                var profileResp = await NarakaApiClient.GetPlayerProfileAsync(
+                    ctx.Source.ToApiString(), ctx.RoleIdSimple, ct).ConfigureAwait(false);
+                var userInfo = UnifiedMapper.MapPlayer(profileResp);
 
                 if (userInfo == null)
                 {
                     result.Failed = true;
-                    result.FailMsg = userInfoMsg;
+                    result.FailMsg = profileResp?.Msg;
                     return result;
                 }
 
@@ -79,12 +70,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 result.Level = "Lv." + userInfo.RoleLevel.ToString();
                 result.UID = userInfo.Uid;
                 result.AvatarUrl = userInfo.HeadIcon;
-                result.SoloRankScore = userInfo.SoloRankScore ?? 0;
-                result.DuoRankScore = userInfo.DuoRankScore ?? 0;
-                result.TrioRankScore = userInfo.TrioRankScore ?? 0;
+                // unified/player 不返回各模式段位分（旧 miniProgram 的 surviveXxxGrade 已无对应字段）；
+                // 当前选中模式的段位改由下方 stats 子查询（GetSeasonSummary）提供，这三项置 0（UI 未绑定）。
+                result.SoloRankScore = 0;
+                result.DuoRankScore = 0;
+                result.TrioRankScore = 0;
 
-                // heyBox 分支 CurrentSeasonId 为 null，seasonId 无实际用途；透传 selectedSeasonCode 即可。
-                var seasonId = selectedSeasonCode ?? userInfo.CurrentSeasonId;
+                var seasonId = selectedSeasonCode;
                 var gameMode = GameModeExtensions.FromCategoryAndTeamSize(category, teamSize);
                 result.Stats = await _statsLoader.LoadAsync(ctx, seasonId, gameMode, ct).ConfigureAwait(false);
                 return result;
@@ -110,7 +102,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             {
                 try
                 {
-                    var uidResp = await NarakaApiClient.SearchRecordAsync(localUidOverride, ct).ConfigureAwait(false);
+                    var uidResp = await SearchPreferDaShenAsync(localUidOverride, ct).ConfigureAwait(false);
                     var uidSearch = UnifiedMapper.MapSearch(uidResp);
                     if (uidSearch != null) return (uidSearch, uidResp?.Msg);
                 }
@@ -118,8 +110,27 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 catch (NarakaApiException) { /* UID 路径失败 → 回退用户名 */ }
             }
 
-            var resp = await NarakaApiClient.SearchRecordAsync(userName, ct).ConfigureAwait(false);
+            var resp = await SearchPreferDaShenAsync(userName, ct).ConfigureAwait(false);
             return (UnifiedMapper.MapSearch(resp), resp?.Msg);
+        }
+
+        /// <summary>
+        /// 优先用网易大神数据源搜索：先传 source=dashen；大神查无（data 空）时回退不带 source
+        /// 由后端按名称/ID 选默认源，保证既满足"尽量查大神"又不因大神无该玩家而整体查不到。
+        /// </summary>
+        private static async Task<Framework.Http.Generated.SearchRecordResponse?> SearchPreferDaShenAsync(
+            string keyword, CancellationToken ct)
+        {
+            var daShen = DataSource.DaShen.ToApiString();
+            try
+            {
+                var resp = await NarakaApiClient.SearchRecordAsync(keyword, daShen, ct).ConfigureAwait(false);
+                if (UnifiedMapper.MapSearch(resp) != null) return resp;
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (NarakaApiException) { /* 大神源查无/被拒 → 回退默认源 */ }
+
+            return await NarakaApiClient.SearchRecordAsync(keyword, null, ct).ConfigureAwait(false);
         }
     }
 

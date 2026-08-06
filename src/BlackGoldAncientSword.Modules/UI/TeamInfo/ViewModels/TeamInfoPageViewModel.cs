@@ -715,10 +715,31 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // ResolveLocalUserIndex 返回 -1 仅当本地名为空（无法定位），此时不重排；
             // 否则返回定位下标（含 0），无条件把本地用户移到中间 index 1。
             var localIdx = ResolveLocalUserIndex();
-            if (localIdx < 0 || localIdx == 1) return;
+            if (localIdx < 0) return;
 
             // 中间卡片固定为 index 1（3 人队 = 正中，2 人队 = 带蓝色高亮边框的 Member1）。
-            TeamMembers.Move(localIdx, 1);
+            if (localIdx != 1)
+                TeamMembers.Move(localIdx, 1);
+
+            MarkLocalUserSlot();
+        }
+
+        /// <summary>
+        /// 标记中间格（index 1）为本地用户：置 <see cref="TeamMemberInfo.IsLocalUser"/>，
+        /// 并把搜索框展示文本（UserName）回写为本地登录名 OriginalPlayerName——
+        /// 本地名与自身相似度最高，回写后不影响后续 <see cref="ResolveLocalUserIndex"/> 定位。
+        /// 其余格清除标志。仅在已重排到位（本地用户位于 index 1）后调用。
+        /// </summary>
+        private void MarkLocalUserSlot()
+        {
+            var localName = _playerPrefsService.Current.OriginalPlayerName;
+            for (int i = 0; i < TeamMembers.Count; i++)
+            {
+                var isLocal = i == 1;
+                TeamMembers[i].IsLocalUser = isLocal;
+                if (isLocal && !string.IsNullOrWhiteSpace(localName))
+                    TeamMembers[i].UserName = localName;
+            }
         }
 
         /// <summary>
@@ -922,6 +943,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     {
                         member.Level = loaded.Level;
                         member.UID = loaded.UID;
+                        // 后端真实昵称只写到 DisplayName（头像下展示），不碰 UserName（搜索框）以免回填
+                        if (!string.IsNullOrWhiteSpace(loaded.UserName))
+                            member.DisplayName = loaded.UserName;
                         member.AvatarUrl = loaded.AvatarUrl;
                         member.SoloRankScore = loaded.SoloRankScore;
                         member.DuoRankScore = loaded.DuoRankScore;
@@ -1183,24 +1207,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             try
             {
-                var seasonsResp = await NarakaApiClient.QuerySeasonsAsync().ConfigureAwait(false);
-                if (ct.IsCancellationRequested) return;
-
-                var seasons = UnifiedMapper.MapSeasons(seasonsResp);
-                if (seasons.Count > 0)
+                // 与战绩页共用同一赛季目录（前端内嵌，后端无 seasons 接口）；索引 0 为当前赛季。
+                var seasons = SeasonCatalog.All();
+                await _uiDispatcher.InvokeAsync(() =>
                 {
-                    await _uiDispatcher.InvokeAsync(() =>
-                    {
-                        if (ct.IsCancellationRequested) return;
-                        Seasons.Clear();
-                        foreach (var s in seasons)
-                            Seasons.Add(s);
-                        if (Seasons.Count > 0 && _selectedSeason == null)
-                            _selectedSeason = Seasons[0];
-                        RaisePropertyChanged(nameof(SelectedSeason));
-                        _seasonsLoaded = true;
-                    });
-                }
+                    if (ct.IsCancellationRequested) return;
+                    Seasons.Clear();
+                    foreach (var s in seasons)
+                        Seasons.Add(s);
+                    if (Seasons.Count > 0 && _selectedSeason == null)
+                        _selectedSeason = Seasons[0];
+                    RaisePropertyChanged(nameof(SelectedSeason));
+                    _seasonsLoaded = true;
+                });
             }
             catch (OperationCanceledException)
             {
@@ -1285,6 +1304,38 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 if (_userName == value) return;
                 _userName = value;
                 RaisePropertyChanged(nameof(UserName));
+            }
+        }
+
+        // 本地用户格（中间卡片）标志：三排/双排里中间格恒为本地用户。
+        // 为 true 时搜索框只读、禁止发起搜索（本地用户无需也不允许改查目标）。
+        private bool _isLocalUser;
+        public bool IsLocalUser
+        {
+            get => _isLocalUser;
+            set
+            {
+                if (_isLocalUser == value) return;
+                _isLocalUser = value;
+                RaisePropertyChanged(nameof(IsLocalUser));
+                RaisePropertyChanged(nameof(IsSearchEnabled));
+            }
+        }
+
+        // 搜索框是否允许编辑/搜索：本地用户格不允许。
+        public bool IsSearchEnabled => !_isLocalUser;
+
+        // 头像下方展示用的玩家名：与搜索框绑定的 UserName 解耦，
+        // 后端返回的真实昵称写到这里而不回填搜索框。
+        private string _displayName = string.Empty;
+        public string DisplayName
+        {
+            get => _displayName;
+            set
+            {
+                if (_displayName == value) return;
+                _displayName = value;
+                RaisePropertyChanged(nameof(DisplayName));
             }
         }
 
@@ -1528,6 +1579,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public DelegateCommand<string> SearchMemberCommand =>
             _searchMemberCommand ??= new DelegateCommand<string>(input =>
             {
+                // 本地用户格禁止搜索：中间卡片恒为本地用户，搜索框只读。
+                if (_isLocalUser) return;
                 if (!_searchDebounce.TryEnter())
                 {
                     var tip = _localizedText?.Get("Search.TooFast", "点击过快请稍后重试") ?? "点击过快请稍后重试";
