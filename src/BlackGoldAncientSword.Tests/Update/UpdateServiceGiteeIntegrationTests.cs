@@ -193,8 +193,10 @@ public class UpdateServiceGiteeIntegrationTests
             return;
         }
 
-        Assert.Equal(mockNotes, svc.LatestReleaseNotes);
-        fetcherMock.Verify(f => f.FetchAsync(svc.LatestVersion!), Times.Once);
+        // 新版支持范围拉取：会枚举 current..latest 之间所有 tag 并合并
+        Assert.NotNull(svc.LatestReleaseNotes);
+        Assert.Contains(mockNotes, svc.LatestReleaseNotes);
+        fetcherMock.Verify(f => f.FetchAsync(It.IsAny<string>()), Times.AtLeastOnce);
     }
 
     [Fact]

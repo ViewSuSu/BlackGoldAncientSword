@@ -11,7 +11,6 @@ using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using System.Linq;
 using System.Runtime;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
-using BlackGoldAncientSword.Modules.UI.Stats.ViewModels;
 using BlackGoldAncientSword.Framework.UI.Controls;
 
 namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
@@ -130,20 +129,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        private DelegateCommand<TeamSizeOption>? _selectTeamSizeCommand;
-        public DelegateCommand<TeamSizeOption> SelectTeamSizeCommand =>
-            _selectTeamSizeCommand ??= new DelegateCommand<TeamSizeOption>(param =>
-            {
-                if (param != null) SelectedTeamSize = param.Value;
-            });
-
-        private DelegateCommand<GameModeCategoryOption>? _selectCategoryCommand;
-        public DelegateCommand<GameModeCategoryOption> SelectCategoryCommand =>
-            _selectCategoryCommand ??= new DelegateCommand<GameModeCategoryOption>(param =>
-            {
-                if (param != null) SelectedCategory = param.Value;
-            });
-
         private DelegateCommand? _refreshOcrCommand;
         public DelegateCommand RefreshOcrCommand =>
             _refreshOcrCommand ??= new DelegateCommand(async () =>
@@ -155,12 +140,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 }
                 await RefreshOcrOnceAsync();
             });
-
-        public static System.ComponentModel.BindingList<TeamSizeOption> TeamSizes { get; } =
-            new(new[] { new TeamSizeOption(TeamSize.Trio), new TeamSizeOption(TeamSize.Duo), new TeamSizeOption(TeamSize.Solo) });
-
-        public static System.ComponentModel.BindingList<GameModeCategoryOption> Categories { get; } =
-            new(new[] { new GameModeCategoryOption(GameModeCategory.Rank), new GameModeCategoryOption(GameModeCategory.Match), new GameModeCategoryOption(GameModeCategory.Tianren) });
 
 
         // === Members ===
@@ -712,52 +691,68 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // 漏到最右侧卡片。argmax 保证总能定位到"最像自己"的那一格。
             if (TeamMembers.Count < 2) return;
 
-            // FindSelfIndex 返回 -1 仅当本地名为空（无法定位），此时不重排；
-            // 否则返回 argmax 下标（含 0），无条件把本地用户移到中间 index 1。
-            var localName = _playerPrefsService.Current.OriginalPlayerName;
-            var names = TeamMembers.Select(m => m.UserName).ToArray();
-            var localIdx = TeamMemberNameCorrector.FindSelfIndex(names, localName);
-            if (localIdx < 0 || localIdx == 1) return;
+            // ResolveLocalUserIndex 返回 -1 仅当本地名为空（无法定位），此时不重排；
+            // 否则返回定位下标（含 0），无条件把本地用户移到中间 index 1。
+            var localIdx = ResolveLocalUserIndex();
+            if (localIdx < 0) return;
 
             // 中间卡片固定为 index 1（3 人队 = 正中，2 人队 = 带蓝色高亮边框的 Member1）。
-            TeamMembers.Move(localIdx, 1);
+            if (localIdx != 1)
+                TeamMembers.Move(localIdx, 1);
+
+            MarkLocalUserSlot();
+        }
+
+        /// <summary>
+        /// 标记中间格（index 1）为本地用户：置 <see cref="TeamMemberInfo.IsLocalUser"/>，
+        /// 并把搜索框展示文本（UserName）回写为本地登录名 OriginalPlayerName——
+        /// 本地名与自身相似度最高，回写后不影响后续 <see cref="ResolveLocalUserIndex"/> 定位。
+        /// 其余格清除标志。仅在已重排到位（本地用户位于 index 1）后调用。
+        /// </summary>
+        private void MarkLocalUserSlot()
+        {
+            var localName = _playerPrefsService.Current.OriginalPlayerName;
+            for (int i = 0; i < TeamMembers.Count; i++)
+            {
+                var isLocal = i == 1;
+                TeamMembers[i].IsLocalUser = isLocal;
+                if (isLocal && !string.IsNullOrWhiteSpace(localName))
+                    TeamMembers[i].UserName = localName;
+            }
+        }
+
+        /// <summary>
+        /// 定位本地用户在 <see cref="TeamMembers"/> 中的下标，供重排与 diff 计算共用，保证口径一致。
+        /// <para>
+        /// 本地环境拿不到可靠的本地 UID（player_prefs 的 player_id 常为空，section UID 与战绩 API
+        /// UID 不同体系），战绩页判定本地用户同样只靠 <c>OriginalPlayerName</c> 名字比对。因此这里
+        /// 唯一可靠的信号就是本地登录名 + <see cref="TeamMemberNameCorrector.FindSelfIndex"/> 的
+        /// argmax 相似度定位，与查询成功与否无关——本地用户查不到数据也必须能被定位居中。
+        /// </para>
+        /// </summary>
+        private int ResolveLocalUserIndex()
+        {
+            var localName = _playerPrefsService.Current.OriginalPlayerName;
+            var names = TeamMembers.Select(m => m.UserName).ToArray();
+            return TeamMemberNameCorrector.FindSelfIndex(names, localName);
         }
 
         private int LocalUserIndex
         {
             get
             {
-                var localName = _playerPrefsService.Current.OriginalPlayerName;
-                var names = TeamMembers.Select(m => m.UserName).ToArray();
-                var idx = TeamMemberNameCorrector.FindSelfIndex(names, localName);
+                var idx = ResolveLocalUserIndex();
                 return idx < 0 ? 0 : idx;
             }
         }
 
-        // 与战绩页「数据详情」字段完全对齐的 16+1 个字段，顺序与 heyBox overview 一致。
-        private static readonly (string Key, string Label, bool IsPercent)[] StatDefs =
-        {
-            ("round",              "总场次",     false),
-            ("win_rate",           "夺冠率",     true),
-            ("top5_rate",          "前五率",     true),
-            ("avg_damage",         "场均伤害",   false),
-            ("dmg_per_kill",       "伤害/击杀",  false),
-            ("win",                "夺冠",       false),
-            ("top5",               "前五",       false),
-            ("kd",                 "K/D",        false),
-            ("max_damage",         "最高伤害",   false),
-            ("max_cure",           "最高恢复",   false),
-            ("max_kill",           "最高击杀",   false),
-            ("total_time",         "总对局时间", false),
-            ("avg_shock",          "场均振刀",   false),
-            ("avg_cure",           "场均恢复",   false),
-            ("avg_kill",           "场均击杀",   false),
-            ("avg_total_live_time","场均存活时间",false),
-            ("__rank__",           "段位分",     false),
-        };
+        // 段位分行的合成 key：后端 metrics 不含段位分，作为固定尾行单独追加。
+        private const string RankRowKey = "__rank__";
 
         /// <summary>
-        /// 重建 MergedStatRows：按 StatDefs 顺序每行合并 3 个成员的值 + 2 列 diff。
+        /// 重建 MergedStatRows：数据行以本地用户（中间栏）后端返回的 metrics 为准动态生成，
+        /// 与战绩页「数据详情」完全一致（后端给什么就展示什么，顺序也一致），末尾追加"段位分"行。
+        /// 三栏按 metric.code 对齐取值，缺失成员填 "-"；diff 列按 code 计算。
         /// 一个集合绑定一个 ItemsControl，每行模板是 5 列 Grid，天然水平对齐。
         /// </summary>
         private void UpdateDiffs()
@@ -785,13 +780,24 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 diffRightB = localIdx == 1 ? m2 : (localIdx == 2 ? m1 : m2);
             }
 
-            foreach (var def in StatDefs)
-            {
-                var row = new MergedStatRow { Label = def.Label };
+            // 行模板优先取本地用户（中间栏）返回的 metrics；本地用户查询失败/未加载时，
+            // 回退到任一有 metrics 的成员，避免整表空白。
+            var localMember = localIdx >= 0 && localIdx < TeamMembers.Count ? TeamMembers[localIdx] : m1;
+            var template = (localMember != null && localMember.Metrics.Count > 0)
+                ? localMember.Metrics
+                : TeamMembers.FirstOrDefault(x => x.Metrics.Count > 0)?.Metrics
+                  ?? new List<Services.PlayerStatMetric>();
 
-                row.Val0 = GetStatVal(m0, def.Key);
-                row.Val1 = GetStatVal(m1, def.Key);
-                row.Val2 = GetStatVal(m2, def.Key);
+            foreach (var metric in template)
+            {
+                var def = (metric.Key, metric.Label, metric.IsPercent);
+                var row = new MergedStatRow
+                {
+                    Label = metric.Label,
+                    Val0 = GetStatVal(m0, metric.Key),
+                    Val1 = GetStatVal(m1, metric.Key),
+                    Val2 = GetStatVal(m2, metric.Key),
+                };
 
                 if (diffLeftA != null && diffLeftB != null)
                     FillDiff(row, isLeft: true, diffLeftA, diffLeftB, def);
@@ -801,6 +807,21 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 MergedStatRows.Add(row);
             }
 
+            // 段位分固定尾行：后端 metrics 不含，用 __rank__ 合成 key 取各成员 RankScore。
+            var rankDef = (RankRowKey, L("TeamInfo.RankScore", "段位分"), false);
+            var rankRow = new MergedStatRow
+            {
+                Label = rankDef.Item2,
+                Val0 = GetStatVal(m0, RankRowKey),
+                Val1 = GetStatVal(m1, RankRowKey),
+                Val2 = GetStatVal(m2, RankRowKey),
+            };
+            if (diffLeftA != null && diffLeftB != null)
+                FillDiff(rankRow, isLeft: true, diffLeftA, diffLeftB, rankDef);
+            if (diffRightA != null && diffRightB != null)
+                FillDiff(rankRow, isLeft: false, diffRightA, diffRightB, rankDef);
+            MergedStatRows.Add(rankRow);
+
             RaisePropertyChanged(nameof(HasDiffLeft));
             RaisePropertyChanged(nameof(HasDiffRight));
         }
@@ -808,7 +829,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private static string GetStatVal(TeamMemberInfo? m, string key)
         {
             if (m == null) return "-";
-            if (key == "__rank__") return m.RankScore > 0 ? m.RankScore.ToString("F0") : "-";
+            if (key == RankRowKey) return m.RankScore > 0 ? m.RankScore.ToString("F0") : "-";
             return m.Stats.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v) ? v : "-";
         }
 
@@ -817,7 +838,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             (string Key, string Label, bool IsPercent) def)
         {
             double av, bv;
-            if (def.Key == "__rank__")
+            if (def.Key == RankRowKey)
             {
                 av = a.RankScore; bv = b.RankScore;
             }
@@ -871,13 +892,24 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             try
             {
+                // 本地用户格无条件用本地 UID 查询。判定"这格是不是本地用户"与居中定位共用同一个
+                // ResolveLocalUserIndex（逐字符相似度 argmax），而非精确名字相等——OCR 把本地名识别
+                // 错字时精确相等会失配、退回用错名字查导致中间卡片查无数据。只要这格被定位为本地用户，
+                // 就无条件传本地 UID（player_id），让 TeamMemberLoader 用 UID 命中，保证本地用户卡片
+                // 一定有数据、且位置正确。FindSelfIndex 靠名字算、不依赖集合顺序，故先于重排调用也正确。
+                var localUid = _playerPrefsService.Current.PlayerId;
+                var isLocalUserSlot = TeamMembers.IndexOf(member) == ResolveLocalUserIndex();
+                var localUidOverride =
+                    isLocalUserSlot && !string.IsNullOrEmpty(localUid) ? localUid : null;
+
                 // Step 1-4: 调 Loader 在后台线程拉数据；返回 DTO 后回 UI 线程逐批写回属性。
                 var loaded = await _memberLoader.LoadAsync(
                     userName,
                     _selectedSeason?.Code,
                     _selectedCategory,
                     _selectedTeamSize,
-                    ct).ConfigureAwait(false);
+                    ct,
+                    localUidOverride).ConfigureAwait(false);
 
                 if (loaded.Failed)
                 {
@@ -899,6 +931,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     {
                         member.Level = loaded.Level;
                         member.UID = loaded.UID;
+                        // 后端真实昵称只写到 DisplayName（头像下展示），不碰 UserName（搜索框）以免回填
+                        if (!string.IsNullOrWhiteSpace(loaded.UserName))
+                            member.DisplayName = loaded.UserName;
                         member.AvatarUrl = loaded.AvatarUrl;
                         member.SoloRankScore = loaded.SoloRankScore;
                         member.DuoRankScore = loaded.DuoRankScore;
@@ -916,10 +951,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         member.PageHasStars = s?.PageHasStars ?? false;
                         member.RankTierScore = s?.RankTierScore ?? 0;
                         member.Stats.Clear();
+                        member.Metrics.Clear();
                         if (loaded.Stats != null)
                         {
                             foreach (var kv in loaded.Stats.Stats)
                                 member.Stats[kv.Key] = kv.Value;
+                            member.Metrics.AddRange(loaded.Stats.Metrics);
                         }
                         member.StatusText = "";
                     });
@@ -947,6 +984,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.IsLoading = false;
+                    // 成员数据到手后再校正一次本地用户居中：UpdateTeamMembersAsync 里 Add(newNames)
+                    // 会把新成员追加到末尾、移除又打乱顺序，首次 ReorderMembersForLocalUser 之后
+                    // TeamMembers 顺序可能与 OCR 槽位不再一致。此处每格加载完补一次重排，
+                    // 保证三排本地用户最终稳定落在中间卡片（index 1），与查询成功与否无关。
+                    ReorderMembersForLocalUser();
                     UpdateDiffs();
                     IsLoading = TeamMembers.Any(m => m.IsLoading);
                     RaiseMemberProperties();
@@ -1155,24 +1197,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             try
             {
-                var seasonsResp = await NarakaApiClient.QuerySeasonsAsync().ConfigureAwait(false);
-                if (ct.IsCancellationRequested) return;
-
-                var seasons = UnifiedMapper.MapSeasons(seasonsResp);
-                if (seasons.Count > 0)
+                // 与战绩页共用同一赛季目录（前端内嵌，后端无 seasons 接口）；索引 0 为当前赛季。
+                var seasons = SeasonCatalog.All();
+                await _uiDispatcher.InvokeAsync(() =>
                 {
-                    await _uiDispatcher.InvokeAsync(() =>
-                    {
-                        if (ct.IsCancellationRequested) return;
-                        Seasons.Clear();
-                        foreach (var s in seasons)
-                            Seasons.Add(s);
-                        if (Seasons.Count > 0 && _selectedSeason == null)
-                            _selectedSeason = Seasons[0];
-                        RaisePropertyChanged(nameof(SelectedSeason));
-                        _seasonsLoaded = true;
-                    });
-                }
+                    if (ct.IsCancellationRequested) return;
+                    Seasons.Clear();
+                    foreach (var s in seasons)
+                        Seasons.Add(s);
+                    if (Seasons.Count > 0 && _selectedSeason == null)
+                        _selectedSeason = Seasons[0];
+                    RaisePropertyChanged(nameof(SelectedSeason));
+                    _seasonsLoaded = true;
+                });
             }
             catch (OperationCanceledException)
             {
@@ -1257,6 +1294,38 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 if (_userName == value) return;
                 _userName = value;
                 RaisePropertyChanged(nameof(UserName));
+            }
+        }
+
+        // 本地用户格（中间卡片）标志：三排/双排里中间格恒为本地用户。
+        // 为 true 时搜索框只读、禁止发起搜索（本地用户无需也不允许改查目标）。
+        private bool _isLocalUser;
+        public bool IsLocalUser
+        {
+            get => _isLocalUser;
+            set
+            {
+                if (_isLocalUser == value) return;
+                _isLocalUser = value;
+                RaisePropertyChanged(nameof(IsLocalUser));
+                RaisePropertyChanged(nameof(IsSearchEnabled));
+            }
+        }
+
+        // 搜索框是否允许编辑/搜索：本地用户格不允许。
+        public bool IsSearchEnabled => !_isLocalUser;
+
+        // 头像下方展示用的玩家名：与搜索框绑定的 UserName 解耦，
+        // 后端返回的真实昵称写到这里而不回填搜索框。
+        private string _displayName = string.Empty;
+        public string DisplayName
+        {
+            get => _displayName;
+            set
+            {
+                if (_displayName == value) return;
+                _displayName = value;
+                RaisePropertyChanged(nameof(DisplayName));
             }
         }
 
@@ -1446,6 +1515,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         // Stats dictionary: key -> display value
         public System.Collections.Generic.Dictionary<string, string> Stats { get; } = new();
 
+        // 后端返回的 metric 有序列表（含标签），本地用户格用它作为三栏统一行模板。
+        public System.Collections.Generic.List<BlackGoldAncientSword.Modules.UI.TeamInfo.Services.PlayerStatMetric> Metrics { get; } = new();
+
         private string _killCount = string.Empty;
         public string KillCount
         {
@@ -1500,6 +1572,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public DelegateCommand<string> SearchMemberCommand =>
             _searchMemberCommand ??= new DelegateCommand<string>(input =>
             {
+                // 本地用户格禁止搜索：中间卡片恒为本地用户，搜索框只读。
+                if (_isLocalUser) return;
                 if (!_searchDebounce.TryEnter())
                 {
                     var tip = _localizedText?.Get("Search.TooFast", "点击过快请稍后重试") ?? "点击过快请稍后重试";

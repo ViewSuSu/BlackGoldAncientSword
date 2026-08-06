@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http.Generated;
@@ -7,9 +8,9 @@ using BlackGoldAncientSword.Framework.Http.Generated;
 namespace BlackGoldAncientSword.Framework.Http.Unified
 {
     /// <summary>
-    /// 两套 API 响应 → Unified 域模型的集中转换。
-    /// miniProgram 与 heyBox 各持一套映射方法，字段差异（key/desc 语言、id 类型、时间单位、
-    /// 段位对象缺失）在此吸收，loader/VM 层不再感知源差。
+    /// unified 接口响应 → Unified 域模型的集中转换。
+    /// 后端已在 /app-api/record/unified/* 做完三源（miniProgram/heyBox/dashen）归一化，
+    /// 客户端不再按数据源分派；本类仅吸收传输层差异（ISO-8601 时间、字符串 modeCode、number 统计值）。
     /// </summary>
     public static class UnifiedMapper
     {
@@ -22,46 +23,22 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
             return new UnifiedSearchResult
             {
                 RoleIdSimple = d.RoleIdSimple ?? string.Empty,
-                RoleName = d.RoleName ?? string.Empty,
-                Avatar = d.Avatar ?? string.Empty,
-                RoleLevel = d.RoleLevel ?? 0,
-                DataSource = DataSourceExtensions.FromApiString(d.DataSource),
-                LevelName = d.LevelName ?? string.Empty,
-                LevelImg = d.LevelImg ?? string.Empty,
+                DataSource = DataSourceExtensions.FromApiString(d.Source),
             };
         }
 
-        // === User info ===
+        // === Player profile ===
 
-        public static UnifiedUserInfo? MapMiniProgramUser(GetUserInfoResponse? resp)
+        public static UnifiedUserInfo? MapPlayer(PlayerProfile? p)
         {
-            var d = resp?.Data;
-            if (d == null) return null;
+            if (p == null) return null;
             return new UnifiedUserInfo
             {
-                RoleName = d.Role?.RoleName ?? d.NickName ?? string.Empty,
-                RoleLevel = d.Role?.RoleLevel ?? 0,
-                Uid = d.Role?.Uid ?? string.Empty,
-                HeadIcon = d.Role?.HeadIcon ?? d.AvatarUrl ?? string.Empty,
-                CurrentSeasonId = d.CurrentSeasonId,
-                SoloRankScore = d.SurviveSingleGrade,
-                DuoRankScore = d.SurviveDoubleGrade,
-                TrioRankScore = d.SurviveTriplexGrade,
-            };
-        }
-
-        public static UnifiedUserInfo? MapHeyBoxUser(HeyBoxUserInfoResponse? resp, string roleIdSimple)
-        {
-            var d = resp?.Data;
-            var p = d?.PlayerInfo;
-            if (d == null || p == null) return null;
-            return new UnifiedUserInfo
-            {
-                RoleName = p.Name ?? string.Empty,
-                RoleLevel = ParseDouble(p.Lv),
-                Uid = roleIdSimple,
-                HeadIcon = p.Avatar ?? string.Empty,
-                // heyBox 无 seasonId / 三排段位分：全部留 null，UI 层退化为占位
+                RoleName = p.DisplayName ?? string.Empty,
+                RoleLevel = p.Level ?? 0,
+                Uid = p.RoleIdSimple ?? string.Empty,
+                HeadIcon = p.AvatarUrl ?? string.Empty,
+                // unified/player 不返回赛季/各模式段位分；段位数据改由 GetSeasonSummary 提供。
                 CurrentSeasonId = null,
                 SoloRankScore = null,
                 DuoRankScore = null,
@@ -69,189 +46,140 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
             };
         }
 
-        // === Player stats ===
+        public static UnifiedUserInfo? MapPlayer(GetPlayerProfileResponse? resp) => MapPlayer(resp?.Data);
 
-        public static UnifiedPlayerStats? MapMiniProgramStats(GetPlayerStatsResponse? resp)
+        // === Season summary (段位 + 统计指标) ===
+
+        public static UnifiedPlayerStats? MapSeasonSummary(GetSeasonSummaryResponse? resp)
         {
             var d = resp?.Data;
             if (d == null) return null;
 
-            var grade = d.Grade == null ? null : new UnifiedGradeInfo
+            var r = d.Rank;
+            var grade = r == null ? null : new UnifiedGradeInfo
             {
-                GradeName = d.Grade.GradeName ?? string.Empty,
-                GradeIcon = d.Grade.GradeIcon ?? string.Empty,
-                GradeScore = d.Grade.GradeScore ?? 0,
-                GradeLevel = d.Grade.GradeLevel ?? string.Empty,
+                GradeName = r.Name ?? string.Empty,
+                GradeIcon = r.IconUrl ?? string.Empty,
+                GradeScore = r.Score ?? 0,
+                GradeLevel = r.Level ?? string.Empty,
             };
 
-            var stats = d.Stats?.Select(s => new UnifiedStatEntry
+            var stats = d.Metrics?.Select(m => new UnifiedStatEntry
             {
-                Key = s.Key ?? string.Empty,
-                Name = s.Name ?? s.Key ?? string.Empty,
-                Value = s.Value ?? string.Empty,
+                Key = m.Code ?? string.Empty,
+                Name = m.Label ?? m.Code ?? string.Empty,
+                // 直接用后端 value 原文，与网页一致：该带的单位（如百分率的 "12.5%"）后端已放进 value；
+                // unit 是语义标签（count/damage/heal/seconds/%），不可拼接展示（拼了会出现 "12.5%%"、"8count"）。
+                Value = m.Value ?? string.Empty,
             }).ToList() ?? new List<UnifiedStatEntry>();
 
             return new UnifiedPlayerStats { Grade = grade, Stats = stats };
         }
 
-        public static UnifiedPlayerStats? MapHeyBoxStats(HeyBoxUserInfoResponse? resp)
+        // === Recent matches ===
+
+        public static List<UnifiedRecentBattleItem> MapRecentMatches(GetRecentMatchesResponse? resp)
         {
-            var d = resp?.Data;
-            if (d == null) return null;
-
-            var p = d.PlayerInfo;
-            var grade = p == null ? null : new UnifiedGradeInfo
-            {
-                GradeName = p.Level ?? string.Empty,
-                GradeIcon = p.LevelImg ?? string.Empty,
-                // heyBox 的 playerInfo.rating 就是真实排位分（如 "3629"），与 miniProgram 的 gradeScore 同义。
-                // 直接采信，让 VM 既有的段位/子段/星级计算链得到与网页端一致的结果（蚀月Ⅳ 3629分）。
-                // 仅当 rating 缺失/为 0（该模式无数据）时，才退回按段位名反推大段基线。
-                GradeScore = ResolveHeyBoxGradeScore(p.Rating, p.Level),
-                GradeLevel = p.Level ?? string.Empty,
-            };
-
-            var stats = d.Overview?.Select(o => new UnifiedStatEntry
-            {
-                // heyBox 用中文 desc 作 key —— StatsPageViewModel.FindStatValue 用中文关键字匹配，
-                // 大部分场景仍能命中；不做英文 key 归一化避免维护双向表。
-                Key = o.Desc ?? string.Empty,
-                Name = o.Desc ?? string.Empty,
-                Value = o.Value ?? string.Empty,
-            }).ToList() ?? new List<UnifiedStatEntry>();
-
-            return new UnifiedPlayerStats { Grade = grade, Stats = stats };
-        }
-
-        // === Seasons ===
-
-        public static List<UnifiedSeason> MapSeasons(QuerySeasonsResponse? resp)
-        {
-            var list = resp?.Data;
-            if (list == null) return new List<UnifiedSeason>();
-            return list
-                .Where(s => s.Code != null && s.Code > 0)
-                .Select(s => new UnifiedSeason
-                {
-                    Code = s.Code ?? 0,
-                    Name = s.Name ?? string.Empty,
-                    HeyBoxSeasonName = s.HeyBoxSeasonName,
-                })
-                .ToList();
-        }
-
-        // === Recent battles ===
-
-        public static List<UnifiedRecentBattleItem> MapMiniProgramRecent(GetRecentBattlesResponse? resp)
-        {
-            var list = resp?.Data?.List;
-            if (list == null) return new List<UnifiedRecentBattleItem>();
-            return list.Select(b => new UnifiedRecentBattleItem
-            {
-                BattleId = ((long)(b.BattleId ?? 0)).ToString(System.Globalization.CultureInfo.InvariantCulture),
-                Rank = (int)(b.Rank ?? 0),
-                HeroIcon = b.Hero?.HeroIcon ?? string.Empty,
-                HeroName = b.Hero?.HeroName ?? string.Empty,
-                GameMode = (int)(b.Subtype ?? b.GameMode ?? 0),
-                Kill = (int)(b.Kill ?? 0),
-                Damage = (int)(b.Damage ?? 0),
-                RoundRankScore = b.RoundRankScore ?? 0,
-                BeginRankScore = b.BeginRankScore,
-                BattleEndTimeMs = b.BattleEndTime ?? 0,
-                Rating = b.Rating ?? string.Empty,
-                HonorTitles = b.HonorTitles?.Select(MapHonor).ToArray()
-                    ?? Array.Empty<UnifiedHonorTitle>(),
-            }).ToList();
-        }
-
-        public static List<UnifiedRecentBattleItem> MapHeyBoxRecent(HeyBoxRecentBattlesResponse? resp)
-        {
-            var list = resp?.Data?.MatchList;
+            var list = resp?.Data?.Records;
             if (list == null) return new List<UnifiedRecentBattleItem>();
             return list.Select(m =>
             {
-                var roundScore = ParseDouble(m.Rating);
-                var delta = m.RatingDelta;
+                var end = m.Score?.End ?? 0;
+                var begin = m.Score?.Begin;
+                var delta = m.Score?.Delta ?? 0;
                 return new UnifiedRecentBattleItem
                 {
-                    BattleId = m.MatchId ?? string.Empty,
+                    BattleId = m.DetailKey ?? string.Empty,
                     Rank = (int)(m.Rank ?? 0),
-                    HeroIcon = m.HeroAvatar ?? string.Empty,
-                    HeroName = m.HeroName ?? string.Empty,
-                    // heyBox 的 battleTid 值域与 miniProgram 的 battleApiCode 不同（天选单排=5000000、天选三排=5000001）。
-                    // 归一化到 battleApiCode，使 VM 层（FormatGameMode/FromBattleApiCode）对两个数据源用同一套编码。
-                    // 未知 battleTid 保留原值，VM 侧走 Unknown(x) 兜底。
-                    GameMode = HeyBoxBattleTidToBattleApiCode(m.BattleTid),
-                    Kill = (int)(m.KillTimes ?? 0),
+                    HeroIcon = m.Hero?.IconUrl ?? string.Empty,
+                    HeroName = m.Hero?.Name ?? string.Empty,
+                    GameMode = ModeCodeToBattleApiCode(m.Mode?.Code),
+                    // 直接承载后端 mode，供 VM 与网页一致地显示模式名；dashen 源 mode 为 null 时字段留空。
+                    ModeName = m.Mode?.Name,
+                    ModeCategory = m.Mode?.Category,
+                    ModeTeamSize = (int)(m.Mode?.TeamSize ?? 0),
+                    Kill = (int)(m.Kills ?? 0),
                     Damage = (int)(m.Damage ?? 0),
-                    // heyBox 的 rating 字段承载排位分数值（如 "6747"），grade 字段承载评级字母（如 "C"）。
-                    RoundRankScore = roundScore,
-                    // heyBox 无 beginRankScore，但给了 ratingDelta（本局分差），反推起始分供 VM 计算分差显示。
-                    BeginRankScore = delta.HasValue ? roundScore - delta.Value : (double?)null,
-                    BattleEndTimeMs = (m.Time ?? 0) * 1000L,
-                    Rating = m.Grade ?? string.Empty,
+                    RoundRankScore = end,
+                    BeginRankScore = begin,
+                    ScoreDelta = delta,
+                    BattleEndTimeMs = ParseIso8601ToMs(m.OccurredAt),
+                    Rating = m.Evaluation?.Level ?? string.Empty,
+                    RankName = m.Evaluation?.Level ?? string.Empty,
                     HonorTitles = Array.Empty<UnifiedHonorTitle>(),
                 };
             }).ToList();
         }
 
-        // === Battle detail (personal + team + top5) ===
+        // === Game modes ===
 
-        public static UnifiedBattleDetail? MapMiniProgramBattleDetail(
-            GetBattleDetailResponse? personal,
-            GetTeamBattleDetailResponse? team,
-            GetTop5BattleDetailResponse? top5)
+        public static List<UnifiedMode> MapModes(GetGameModesResponse? resp)
+        {
+            var list = resp?.Data;
+            if (list == null) return new List<UnifiedMode>();
+            return list.Select(m => new UnifiedMode
+            {
+                Code = m.Code ?? string.Empty,
+                Name = m.Name ?? string.Empty,
+                Category = m.Category ?? string.Empty,
+                TeamSize = (int)(m.TeamSize ?? 0),
+            }).ToList();
+        }
+
+        // === Match detail (personal + team + top5) ===
+
+        public static UnifiedBattleDetail? MapMatchDetail(
+            GetMatchDetailResponse? personal,
+            GetMatchTeamResponse? team,
+            GetMatchTop5Response? top5)
         {
             var p = personal?.Data;
             if (p == null) return null;
 
             var personalView = new UnifiedPersonalDetail
             {
-                HeroName = p.Hero?.HeroName ?? string.Empty,
-                HeroIcon = p.Hero?.HeroIcon ?? string.Empty,
-                RoleName = p.Role?.RoleName ?? string.Empty,
+                HeroName = p.Hero?.Name ?? string.Empty,
+                HeroIcon = p.Hero?.IconUrl ?? string.Empty,
+                RoleName = p.Player?.DisplayName ?? string.Empty,
+                ModeName = p.Mode?.Name,
                 Rank = (int)(p.Rank ?? 0),
-                BattleEndTimeMs = p.BattleEndTime ?? 0,
+                BattleEndTimeMs = ParseIso8601ToMs(p.OccurredAt),
                 HonorTitles = p.HonorTitles?.Select(MapHonor).ToArray()
                     ?? Array.Empty<UnifiedHonorTitle>(),
-                DataList = p.DataList?.Select(MapStatItem).ToArray()
+                DataList = p.Stats?.Select(MapStat).ToArray()
                     ?? Array.Empty<UnifiedStatEntry>(),
                 Weapons = p.Weapons?.Select(MapWeapon).ToArray()
                     ?? Array.Empty<UnifiedWeapon>(),
                 SoulItems = p.SoulItems?.Select(MapSoul).ToArray()
                     ?? Array.Empty<UnifiedSoulItem>(),
-                Armor = p.Armor == null ? null : new UnifiedArmor
-                {
-                    Icon = p.Armor.ArmorIcon ?? string.Empty,
-                    Level = p.Armor.ArmorLevel ?? 0,
-                },
+                Armor = null, // 个人详情无护甲字段（护甲仅在队伍成员上）
             };
 
-            var teamView = team?.Data?.Teammates?.Select(t => new UnifiedTeammate
+            var teamView = team?.Data?.Select(t => new UnifiedTeammate
             {
-                HeroIcon = t.Hero?.HeroIcon ?? string.Empty,
-                HeroName = t.Hero?.HeroName ?? string.Empty,
-                RoleName = t.Role?.RoleName ?? string.Empty,
-                IsMe = t.IsMe ?? false,
+                HeroIcon = t.Hero?.IconUrl ?? string.Empty,
+                HeroName = t.Hero?.Name ?? string.Empty,
+                RoleName = t.Player?.DisplayName ?? string.Empty,
+                IsMe = t.Me ?? false,
                 Armor = t.Armor == null ? null : new UnifiedArmor
                 {
-                    Icon = t.Armor.ArmorIcon ?? string.Empty,
-                    Level = t.Armor.ArmorLevel ?? 0,
+                    Icon = t.Armor.IconUrl ?? string.Empty,
+                    Level = t.Armor.Level ?? 0,
                 },
                 Weapons = t.Weapons?.Select(MapWeapon).ToArray() ?? Array.Empty<UnifiedWeapon>(),
                 SoulItems = t.SoulItems?.Select(MapSoul).ToArray() ?? Array.Empty<UnifiedSoulItem>(),
-                DataList = t.DataList?.Select(MapStatItem).ToArray() ?? Array.Empty<UnifiedStatEntry>(),
+                DataList = t.Stats?.Select(MapStat).ToArray() ?? Array.Empty<UnifiedStatEntry>(),
             }).ToArray();
 
-            var top5View = top5?.Data?.Top5?.Select(e => new UnifiedTop5Entry
+            var top5View = top5?.Data?.Select(e => new UnifiedTop5Entry
             {
                 Rank = (int)(e.Rank ?? 0),
                 Members = e.Members?.Select(m => new UnifiedTop5Member
                 {
-                    HeroIcon = m.Hero?.HeroIcon ?? string.Empty,
-                    HeroName = m.Hero?.HeroName ?? string.Empty,
-                    RoleName = m.Role?.RoleName ?? string.Empty,
-                    IsMe = m.IsMe ?? false,
+                    HeroIcon = m.Hero?.IconUrl ?? string.Empty,
+                    HeroName = m.Hero?.Name ?? string.Empty,
+                    RoleName = m.DisplayName ?? string.Empty,
+                    IsMe = m.Me ?? false,
                 }).ToArray() ?? Array.Empty<UnifiedTop5Member>(),
             }).ToArray();
 
@@ -263,155 +191,78 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
             };
         }
 
-        public static UnifiedBattleDetail? MapHeyBoxBattleDetail(HeyBoxBattleDetailResponse? resp)
-        {
-            var d = resp?.Data;
-            if (d == null) return null;
-
-            var personalView = new UnifiedPersonalDetail
-            {
-                HeroName = string.Empty, // heyBox detail 不携带英雄名（有 heroId 无名字）
-                HeroIcon = string.Empty,
-                RoleName = d.Name ?? string.Empty,
-                Rank = (int)(d.Rank ?? 0),
-                BattleEndTimeMs = (d.Time ?? 0) * 1000L,
-                HonorTitles = d.Tags?.Select(t => new UnifiedHonorTitle
-                {
-                    Icon = t.Img ?? string.Empty,
-                    Name = t.Name ?? string.Empty,
-                    Desc = t.Desc ?? string.Empty,
-                }).ToArray() ?? Array.Empty<UnifiedHonorTitle>(),
-                DataList = d.Data?.Select(s => new UnifiedStatEntry
-                {
-                    Key = s.Desc ?? string.Empty,
-                    Name = s.Desc ?? string.Empty,
-                    Value = s.Value ?? string.Empty,
-                }).ToArray() ?? Array.Empty<UnifiedStatEntry>(),
-                Weapons = d.WeaponList?.Select(w => new UnifiedWeapon
-                {
-                    Icon = w.Img ?? string.Empty,
-                    Name = w.Name ?? string.Empty,
-                    Level = 0, // heyBox 无武器等级字段
-                    Kill = (int)(w.KillTimes ?? 0),
-                    Damage = (int)(w.Damage ?? 0),
-                    Percent = ParseDouble(w.Per),
-                }).ToArray() ?? Array.Empty<UnifiedWeapon>(),
-                SoulItems = d.SoulItemList?.Select(s => new UnifiedSoulItem
-                {
-                    Icon = s.Img ?? string.Empty,
-                    Name = s.Name ?? string.Empty,
-                    Level = 0,
-                }).ToArray() ?? Array.Empty<UnifiedSoulItem>(),
-                Armor = null, // heyBox 无护甲字段
-            };
-
-            return new UnifiedBattleDetail
-            {
-                Personal = personalView,
-                Team = null,
-                Top5 = null,
-            };
-        }
-
         // === Shared helpers ===
 
-        private static UnifiedHonorTitle MapHonor(HonorTitleInfo h) => new()
+        private static UnifiedHonorTitle MapHonor(HonorTitle h) => new()
         {
-            Icon = h.HonorIcon ?? string.Empty,
-            Name = h.HonorName ?? string.Empty,
-            Desc = h.HonorDesc ?? string.Empty,
+            Icon = h.IconUrl ?? string.Empty,
+            Name = h.Name ?? string.Empty,
+            Desc = h.Description ?? string.Empty,
         };
 
-        private static UnifiedStatEntry MapStatItem(StatItem s) => new()
+        private static UnifiedStatEntry MapStat(BattleStat s) => new()
         {
-            Key = s.Key ?? string.Empty,
-            Name = s.Name ?? s.Key ?? string.Empty,
-            Value = s.Value ?? string.Empty,
+            Key = s.Code ?? string.Empty,
+            Name = s.Name ?? s.Code ?? string.Empty,
+            Value = FormatStatValue(s.Value),
         };
 
-        private static UnifiedWeapon MapWeapon(WeaponInfo w) => new()
+        private static UnifiedWeapon MapWeapon(Weapon w) => new()
         {
-            Icon = w.WeaponIcon ?? string.Empty,
-            Name = w.WeaponName ?? string.Empty,
-            Level = w.WeaponLevel ?? 0,
-            Kill = (int)(w.Kill ?? 0),
+            Icon = w.IconUrl ?? string.Empty,
+            Name = w.Name ?? string.Empty,
+            Level = w.Level ?? 0,
+            Kill = (int)(w.Kills ?? 0),
             Damage = (int)(w.Damage ?? 0),
-            Percent = (double)(w.Percent ?? 0),
+            Percent = w.Percent ?? 0,
         };
 
-        private static UnifiedSoulItem MapSoul(SoulItemInfo s) => new()
+        private static UnifiedSoulItem MapSoul(SoulItem s) => new()
         {
-            Icon = s.SoulItemIcon ?? string.Empty,
-            Name = s.SoulItemName ?? string.Empty,
-            Level = s.SoulItemLevel ?? 0,
+            Icon = s.IconUrl ?? string.Empty,
+            Name = s.Name ?? string.Empty,
+            Level = s.Level ?? 0,
         };
 
-        private static int ParseInt(string? s)
-            => int.TryParse(s, System.Globalization.NumberStyles.Integer,
-                System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
+        private static string FormatStatValue(double? value)
+        {
+            if (value == null) return string.Empty;
+            var v = value.Value;
+            // 整数值不带小数点显示，与网页一致。unit 是语义标签（count/damage/seconds），不拼接。
+            return v == Math.Floor(v)
+                ? ((long)v).ToString(CultureInfo.InvariantCulture)
+                : v.ToString(CultureInfo.InvariantCulture);
+        }
 
         /// <summary>
-        /// 把 heyBox 对局的 battleTid 字符串归一化为 miniProgram 的 battleApiCode。
-        /// 无法识别（未知 battleTid / 解析失败）时保留原始整数值，交给 VM 层的 Unknown(x) 兜底展示。
+        /// 把 unified 的字符串 modeCode（口径为 battleTidHeyBox，如 "5000000"）归一化为
+        /// miniProgram 对局历史 battleApiCode，供 VM 层 FormatGameMode/FromBattleApiCode 统一消费。
+        /// 无法识别时返回原始整数值，VM 侧走 Unknown(x) 兜底。
         /// </summary>
-        private static int HeyBoxBattleTidToBattleApiCode(string? battleTid)
+        private static int ModeCodeToBattleApiCode(string? modeCode)
         {
-            var raw = ParseInt(battleTid);
+            var raw = ParseInt(modeCode);
+            if (raw == 0) return 0;
             try
             {
                 return GameModeExtensions.FromHeyBoxBattleTid(raw).ToBattleApiCode();
             }
             catch (ArgumentOutOfRangeException)
             {
-                // 未知 battleTid，或已识别但无对应 battleApiCode（如无尽试炼）——保留原值。
                 return raw;
             }
         }
 
-        private static double ParseDouble(string? s)
-            => double.TryParse(s, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0;
-
-        /// <summary>
-        /// 从 heyBox 段位名（"青铜Ⅴ" / "无相龙王" 等）反推 gradeScore 大段基线。
-        /// heyBox 不返回具体分数，仅返段位名，用基线值让 UI 段位标签有内容可绑，
-        /// 星级/进阶格无法计算 —— 属占位策略下的可接受降级。
-        /// </summary>
-        /// <summary>
-        /// 解析 heyBox 段位分：优先用 playerInfo.rating（真实分），缺失或为 0 时按段位名反推大段基线。
-        /// </summary>
-        private static double ResolveHeyBoxGradeScore(string? rating, string? level)
+        private static long ParseIso8601ToMs(string? iso)
         {
-            var parsed = ParseDouble(rating);
-            return parsed > 0 ? parsed : InferScoreFromRankName(level);
+            if (string.IsNullOrEmpty(iso)) return 0;
+            return DateTimeOffset.TryParse(iso, CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal, out var dto)
+                ? dto.ToUnixTimeMilliseconds()
+                : 0;
         }
 
-        private static double InferScoreFromRankName(string? name)
-        {
-            if (string.IsNullOrEmpty(name)) return 0;
-            // 大段基线，miniProgram 排位标注一致
-            if (name.Contains("无量梵天")) return 7500;
-            if (name.Contains("无相龙王")) return 6000;
-            if (name.Contains("无双修罗")) return 5000;
-            if (name.Contains("无间修罗")) return 4500;
-            if (name.Contains("坠日")) return 4000;
-            if (name.Contains("蚀月")) return 3500;
-            if (name.Contains("陨星")) return 3000;
-            if (name.Contains("铂金")) return 2500;
-            if (name.Contains("黄金")) return 2000;
-            if (name.Contains("白银")) return 1500;
-            if (name.Contains("青铜")) return 1000;
-            // 非排位段位（无间泰斗/御天尊者等）
-            if (name.Contains("无间泰斗")) return 7000;
-            if (name.Contains("御天尊者")) return 6500;
-            if (name.Contains("劫虚圣主")) return 6000;
-            if (name.Contains("穹苍魁首")) return 5500;
-            if (name.Contains("日曜名宿")) return 5000;
-            if (name.Contains("星月宗师")) return 4500;
-            if (name.Contains("云霄武圣")) return 4000;
-            if (name.Contains("绝顶高手")) return 3500;
-            if (name.Contains("凡尘武师")) return 3000;
-            return 0;
-        }
+        private static int ParseInt(string? s)
+            => int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : 0;
     }
 }

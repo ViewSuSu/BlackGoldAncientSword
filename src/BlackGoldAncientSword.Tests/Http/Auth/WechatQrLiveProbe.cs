@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Auth.ApiSignature;
 using Xunit;
@@ -35,38 +36,26 @@ namespace BlackGoldAncientSword.Tests.Http.Auth
             _output.WriteLine($"[ticket] appId={ticket.AppId}  secretLen={ticket.AppSecret?.Length ?? 0}  expireInMs={ticket.ExpireTime - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             _output.WriteLine("");
 
-            await Probe("QuerySeasons (公开)", async ct =>
-            {
-                var resp = await NarakaApiClient.QuerySeasonsAsync(ct);
-                return $"code={resp.Code} msg=\"{resp.Msg}\" dataCount={resp.Data?.Count ?? 0}";
-            });
-            await Task.Delay(1200);
+            var daShen = BlackGoldAncientSword.Framework.Core.Consts.DataSource.DaShen.ToApiString();
 
             await Probe("GetGameModes (公开)", async ct =>
             {
-                var resp = await NarakaApiClient.GetGameModesAsync(ct);
+                var resp = await NarakaApiClient.GetGameModesAsync(daShen, ct);
                 return $"code={resp.Code} msg=\"{resp.Msg}\" dataCount={resp.Data?.Count ?? 0}";
             });
             await Task.Delay(1200);
 
             await Probe("SearchRecord \"爱的供养丶\" (公开)", async ct =>
             {
-                var resp = await NarakaApiClient.SearchRecordAsync("爱的供养丶", ct);
-                return $"code={resp.Code} msg=\"{resp.Msg}\" roleIdSimple={resp.Data?.RoleIdSimple} src={resp.Data?.DataSource}";
+                var resp = await NarakaApiClient.SearchRecordAsync("爱的供养丶", daShen, ct);
+                return $"code={resp.Code} msg=\"{resp.Msg}\" roleIdSimple={resp.Data?.RoleIdSimple} src={resp.Data?.Source}";
             });
             await Task.Delay(1200);
 
-            await Probe("GetUserInfo (需 Bearer)", async ct =>
+            await Probe("GetPlayerProfile (需 Bearer)", async ct =>
             {
-                var resp = await NarakaApiClient.GetUserInfoAsync("15949400120163", ct);
-                return $"code={resp.Code} msg=\"{resp.Msg}\" roleName={resp.Data?.Role?.RoleName}";
-            });
-            await Task.Delay(1200);
-
-            await Probe("HeyBoxUserInfo (需 Bearer)", async ct =>
-            {
-                var resp = await NarakaApiClient.HeyBoxUserInfoAsync("6118600130163", ct: ct);
-                return $"code={resp.Code} msg=\"{resp.Msg}\" name={resp.Data?.PlayerInfo?.Name}";
+                var resp = await NarakaApiClient.GetPlayerProfileAsync(daShen, "15949400120163", ct);
+                return $"code={resp.Code} msg=\"{resp.Msg}\" roleName={resp.Data?.DisplayName}";
             });
             await Task.Delay(1200);
 

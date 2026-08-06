@@ -7,35 +7,35 @@ namespace BlackGoldAncientSword.Tests.Http
 {
     /// <summary>
     /// 验证 JsonFlexibleStringConverter 注册到 NarakaApiClient.JsonOptions 后，
-    /// 能正确处理后端 stats[].value 字段返回的数字 / 字符串混合形态。
-    /// 这是 Newtonsoft → STJ 迁移的关键回归测试：后端实测响应里 value 既有
-    /// 247（int）也有 "4.9%"（string）也有 1.51（double），DTO 全部声明为 string?。
+    /// 能正确处理后端 string 字段返回的数字 / 字符串混合形态。
+    /// unified 接口中 season.metrics[].value 声明为 string?，后端实测里既有
+    /// "42"（string）也可能回 42（int）或 4.8（double），该 converter 保证全部解析为 string。
     /// </summary>
     public class JsonFlexibleStringConverterTests
     {
         [Fact]
-        public void StatEntry_Value_Integer_Should_Deserialize_To_String()
+        public void MetricValue_Integer_Should_Deserialize_To_String()
         {
-            var json = "{\"name\":\"对局数\",\"key\":\"round\",\"value\":247}";
-            var entry = JsonSerializer.Deserialize<StatEntry>(json, NarakaApiClient.JsonOptions);
+            var json = "{\"code\":\"round\",\"label\":\"对局数\",\"value\":247,\"unit\":\"\"}";
+            var entry = JsonSerializer.Deserialize<Metric>(json, NarakaApiClient.JsonOptions);
             Assert.NotNull(entry);
             Assert.Equal("247", entry!.Value);
         }
 
         [Fact]
-        public void StatEntry_Value_Double_Should_Deserialize_To_String()
+        public void MetricValue_Double_Should_Deserialize_To_String()
         {
-            var json = "{\"name\":\"K/D\",\"key\":\"kd\",\"value\":1.51}";
-            var entry = JsonSerializer.Deserialize<StatEntry>(json, NarakaApiClient.JsonOptions);
+            var json = "{\"code\":\"kd\",\"label\":\"K/D\",\"value\":1.51,\"unit\":\"\"}";
+            var entry = JsonSerializer.Deserialize<Metric>(json, NarakaApiClient.JsonOptions);
             Assert.NotNull(entry);
             Assert.Equal("1.51", entry!.Value);
         }
 
         [Fact]
-        public void StatEntry_Value_String_Should_Stay_String()
+        public void MetricValue_String_Should_Stay_String()
         {
-            var json = "{\"name\":\"第一率\",\"key\":\"win_rate\",\"value\":\"4.9%\"}";
-            var entry = JsonSerializer.Deserialize<StatEntry>(json, NarakaApiClient.JsonOptions);
+            var json = "{\"code\":\"win_rate\",\"label\":\"第一率\",\"value\":\"4.9%\",\"unit\":\"\"}";
+            var entry = JsonSerializer.Deserialize<Metric>(json, NarakaApiClient.JsonOptions);
             Assert.NotNull(entry);
             Assert.Equal("4.9%", entry!.Value);
         }
@@ -52,41 +52,41 @@ namespace BlackGoldAncientSword.Tests.Http
         }
 
         /// <summary>
-        /// 验证嵌套场景：完整 PlayerStatsResponse 解析（含 List&lt;StatEntry&gt; 嵌套），
-        /// stats 数组里 int / double / string 三种 value token 都能正确反序列化为 string。
-        /// 这是用户截图 "数据全 0" 报告的真实链路回归。
+        /// 嵌套场景：完整 season 响应解析（含 List&lt;Metric&gt;），
+        /// metrics 数组里 int / double / string 三种 value token 都能正确反序列化为 string。
         /// </summary>
         [Fact]
-        public void GetPlayerStatsResponse_Real_Sample_Should_Deserialize_Nested_Stats()
+        public void GetSeasonSummaryResponse_Real_Sample_Should_Deserialize_Nested_Metrics()
         {
-            var json = "{\"code\":200,\"msg\":\"ok\",\"data\":{\"grade\":{\"gradeId\":5020062,\"gradeName\":\"无双修罗\",\"gradeScore\":5299},\"dragonKill\":0,\"stats\":["
-                + "{\"name\":\"对局数\",\"key\":\"round\",\"value\":247},"
-                + "{\"name\":\"K/D\",\"key\":\"kd\",\"value\":1.51},"
-                + "{\"name\":\"第一率\",\"key\":\"win_rate\",\"value\":\"4.9%\"},"
-                + "{\"name\":\"场均生存\",\"key\":\"avg_total_live_time\",\"value\":\"8'19\\\"\"}"
+            var json = "{\"code\":0,\"msg\":\"\",\"data\":{"
+                + "\"seasonCode\":\"S1\","
+                + "\"rank\":{\"name\":\"无双修罗\",\"iconUrl\":\"\",\"score\":5299,\"level\":\"Ⅱ\"},"
+                + "\"metrics\":["
+                + "{\"code\":\"round\",\"label\":\"对局数\",\"value\":247,\"unit\":\"\"},"
+                + "{\"code\":\"kd\",\"label\":\"K/D\",\"value\":1.51,\"unit\":\"\"},"
+                + "{\"code\":\"win_rate\",\"label\":\"第一率\",\"value\":\"4.9%\",\"unit\":\"\"}"
                 + "]}}";
-            var response = JsonSerializer.Deserialize<GetPlayerStatsResponse>(json, NarakaApiClient.JsonOptions);
+            var response = JsonSerializer.Deserialize<GetSeasonSummaryResponse>(json, NarakaApiClient.JsonOptions);
             Assert.NotNull(response);
-            Assert.Equal(200, response!.Code);
+            Assert.Equal(0, response!.Code);
             Assert.NotNull(response.Data);
-            Assert.Equal(5299, response.Data!.Grade!.GradeScore);
-            Assert.NotNull(response.Data.Stats);
-            Assert.Equal(4, response.Data.Stats!.Count);
-            Assert.Equal("247", response.Data.Stats[0].Value);   // int → "247"
-            Assert.Equal("1.51", response.Data.Stats[1].Value);  // double → "1.51"
-            Assert.Equal("4.9%", response.Data.Stats[2].Value);  // string → "4.9%"
-            Assert.Equal("8'19\"", response.Data.Stats[3].Value); // string with escape
+            Assert.Equal(5299, response.Data!.Rank!.Score);
+            Assert.NotNull(response.Data.Metrics);
+            Assert.Equal(3, response.Data.Metrics!.Count);
+            Assert.Equal("247", response.Data.Metrics[0].Value);
+            Assert.Equal("1.51", response.Data.Metrics[1].Value);
+            Assert.Equal("4.9%", response.Data.Metrics[2].Value);
         }
 
         /// <summary>
-        /// 验证 NumberHandling.AllowReadingFromString 防御行为：
-        /// 假设后端某天把 code 字段写成字符串 "200"，DTO 是 double?，应能正确解析为 200。
+        /// NumberHandling.AllowReadingFromString 防御：后端把 code 写成字符串 "200"，
+        /// DTO 是 double?，应能正确解析为 200。
         /// </summary>
         [Fact]
         public void JsonOptions_Should_Accept_Number_From_String_Token()
         {
             var json = "{\"code\":\"200\",\"msg\":\"ok\",\"data\":null}";
-            var response = JsonSerializer.Deserialize<GetPlayerStatsResponse>(json, NarakaApiClient.JsonOptions);
+            var response = JsonSerializer.Deserialize<GetSeasonSummaryResponse>(json, NarakaApiClient.JsonOptions);
             Assert.NotNull(response);
             Assert.Equal(200, response!.Code);
         }
