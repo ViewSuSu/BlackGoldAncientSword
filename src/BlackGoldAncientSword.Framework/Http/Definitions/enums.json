@@ -140,6 +140,11 @@
           "name": "HeyBox",
           "value": 2,
           "description": "小黑盒数据源"
+        },
+        {
+          "name": "DaShen",
+          "value": 3,
+          "description": "网易大神数据源"
         }
       ]
     }
@@ -159,7 +164,14 @@
         ],
         "description": "把 API 返回的 dataSource 字符串映射为 DataSource 枚举值，未识别时回退到 MiniProgram",
         "returns": "对应的 DataSource 枚举值",
-        "body": "return apiValue switch { \"heyBox\" => DataSource.HeyBox, \"heybox\" => DataSource.HeyBox, \"HeyBox\" => DataSource.HeyBox, _ => DataSource.MiniProgram };"
+        "body": "return apiValue?.ToLowerInvariant() switch { \"heybox\" => DataSource.HeyBox, \"dashen\" => DataSource.DaShen, \"miniprogram\" => DataSource.MiniProgram, _ => DataSource.MiniProgram };"
+      },
+      {
+        "name": "ToApiString",
+        "returnType": "string",
+        "description": "把 DataSource 枚举值转为 unified 接口的 source query 参数字符串",
+        "returns": "API 识别的 source 字符串（miniProgram / heyBox / dashen）",
+        "body": "return value switch { DataSource.HeyBox => \"heyBox\", DataSource.DaShen => \"dashen\", _ => \"miniProgram\" };"
       }
     ],
     "GameMode": [
