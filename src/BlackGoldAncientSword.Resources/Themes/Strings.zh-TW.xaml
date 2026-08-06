@@ -50,8 +50,10 @@
     <ns1:String ns2:Key="Stats.TopFive">前五數</ns1:String>
     <ns1:String ns2:Key="Stats.AvgDamage">場傷</ns1:String>
     <ns1:String ns2:Key="Stats.Points">分</ns1:String>
+    <ns1:String ns2:Key="Stats.Unranked">未定級</ns1:String>
     <ns1:String ns2:Key="Stats.Season">賽季：</ns1:String>
     <ns1:String ns2:Key="Stats.RecentBattles">最近對局</ns1:String>
+    <ns1:String ns2:Key="Stats.NoBattleInMode">該模式暫無對局</ns1:String>
     <ns1:String ns2:Key="Stats.LoadError">載入戰績失敗，請檢查網路後重試。</ns1:String>
     <ns1:String ns2:Key="Stats.NoPlayerName">請先在設定中設定玩家名稱</ns1:String>
     <ns1:String ns2:Key="Stats.GameNotInstalled">您目前未下載遊戲</ns1:String>
@@ -81,6 +83,7 @@
     <ns1:String ns2:Key="Stats.Header.Kill">擊敗</ns1:String>
     <ns1:String ns2:Key="Stats.Header.Damage">傷害</ns1:String>
     <ns1:String ns2:Key="Stats.Header.RankScore">段位</ns1:String>
+    <ns1:String ns2:Key="Stats.Header.Rating">評級</ns1:String>
     <ns1:String ns2:Key="Stats.Header.Time">時間</ns1:String>
     <ns1:String ns2:Key="Stats.RankName">無雙修羅</ns1:String>
     <ns1:String ns2:Key="Stats.RankName.Solo.7000">無量梵天</ns1:String>

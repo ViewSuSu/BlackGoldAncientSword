@@ -52,8 +52,10 @@
     <system:String x:Key="Stats.TopFive">Top 5</system:String>
     <system:String x:Key="Stats.AvgDamage">Avg Damage</system:String>
     <system:String x:Key="Stats.Points">pts</system:String>
+    <system:String x:Key="Stats.Unranked">Unranked</system:String>
     <system:String x:Key="Stats.Season">Season:</system:String>
     <system:String x:Key="Stats.RecentBattles">Recent Battles</system:String>
+    <system:String x:Key="Stats.NoBattleInMode">No matches in this mode</system:String>
     <system:String x:Key="Stats.LoadError">Failed to load stats. Check your network and try again.</system:String>
     <system:String x:Key="Stats.NoPlayerName">Please configure a player name in Settings first</system:String>
     <system:String x:Key="Stats.GameNotInstalled">Game not installed</system:String>
@@ -83,6 +85,7 @@
     <system:String x:Key="Stats.Header.Kill">Kills</system:String>
     <system:String x:Key="Stats.Header.Damage">Damage</system:String>
     <system:String x:Key="Stats.Header.RankScore">Tier</system:String>
+    <system:String x:Key="Stats.Header.Rating">Rating</system:String>
     <system:String x:Key="Stats.Header.Time">Time</system:String>
     <system:String x:Key="Stats.RankName">Unrivaled Asura</system:String>
     <system:String x:Key="Stats.RankName.Solo.7000">Nirvana Asura</system:String>
