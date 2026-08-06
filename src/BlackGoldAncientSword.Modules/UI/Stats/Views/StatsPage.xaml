@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
+    xmlns:consts="clr-namespace:BlackGoldAncientSword.Framework.Core.Consts;assembly=BlackGoldAncientSword.Framework"
     xmlns:controls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hc="clr-namespace:HandyControl.Controls;assembly=HandyControl"
@@ -131,7 +132,7 @@
                                 <Image Width="52" Height="52"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Stretch="UniformToFill"
-                                       Source="{Binding AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                       Source="{Binding AvatarUrl, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}, ConverterParameter=112}" />
                             </Border>
                         </Border>
 
@@ -315,7 +316,7 @@
                     </Grid>
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
@@ -331,9 +332,10 @@
                                 <Image
                                     Width="100"
                                     Height="100"
-                                    Source="{Binding RankIcon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}"
+                                    Source="{Binding RankIcon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}, ConverterParameter=200}"
                                     Stretch="Uniform" />
                             </Border>
+                            <!--  上行：段位名 + 折算星/子段数  -->
                             <StackPanel
                                 Margin="0,6,0,0"
                                 HorizontalAlignment="Center"
@@ -342,7 +344,8 @@
                                     VerticalAlignment="Center"
                                     FontSize="16"
                                     FontWeight="SemiBold"
-                                    Text="{Binding PageRankName}" />
+                                    Text="{Binding PageRankName}"
+                                    TextWrapping="NoWrap" />
                                 <Image
                                     Width="16"
                                     Height="16"
@@ -357,17 +360,14 @@
                                     Text="{Binding PageStarCount}"
                                     Visibility="{Binding PageHasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             </StackPanel>
-                            <StackPanel
+                            <!--  下行：段位内分数  -->
+                            <TextBlock
                                 Margin="0,2,0,0"
                                 HorizontalAlignment="Center"
-                                Orientation="Horizontal">
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    FontSize="13"
-                                    Foreground="{DynamicResource TextMutedBrush}">
-                                    <Run Text="{Binding RankTierScore, StringFormat='{}{0}'}" /><Run Text="{DynamicResource Stats.Points}" />
-                                </TextBlock>
-                            </StackPanel>
+                                FontSize="13"
+                                Foreground="{DynamicResource TextMutedBrush}">
+                                <Run Text="{Binding RankTierScore, StringFormat='{}{0}'}" /><Run Text="{DynamicResource Stats.Points}" />
+                            </TextBlock>
                         </StackPanel>
 
                         <!--  Detail stats (right column)  -->
@@ -427,10 +427,269 @@
             <Grid Grid.Row="3" Margin="0,20,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <Border Grid.Column="0" Style="{DynamicResource AccentBarStyle}" />
-                <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Stats.RecentBattles}" />
+
+                <!--  最近对局：模式筛选级联下拉（仿网页端）。默认按钮文字=当前筛选（无筛选时=“最近对局”）  -->
+                <Grid Grid.Column="1" Margin="10,0,0,0">
+                    <ToggleButton
+                        MinWidth="110"
+                        Height="28"
+                        Padding="10,0"
+                        HorizontalContentAlignment="Left"
+                        Background="{DynamicResource SurfaceTertiaryBrush}"
+                        BorderBrush="{DynamicResource BorderLightBrush}"
+                        BorderThickness="1"
+                        Cursor="Hand"
+                        IsChecked="{Binding IsBattleFilterOpen, Mode=TwoWay}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="14"
+                                FontWeight="SemiBold"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                Text="{Binding BattleFilterDisplayText}" />
+                            <Path
+                                Width="10"
+                                Height="6"
+                                Margin="8,2,0,0"
+                                VerticalAlignment="Center"
+                                Data="M0,0 L10,0 L5,6 Z"
+                                Fill="{DynamicResource TextMutedBrush}" />
+                        </StackPanel>
+                    </ToggleButton>
+
+                    <Popup
+                        AllowsTransparency="True"
+                        IsOpen="{Binding IsBattleFilterOpen, Mode=TwoWay}"
+                        Placement="Bottom"
+                        PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                        StaysOpen="False">
+                        <!--  移出整个菜单区域时收起二级子菜单（清空悬停大类）  -->
+                        <Border
+                            Margin="0,4,0,0"
+                            Background="{DynamicResource SurfaceSecondaryBrush}"
+                            BorderBrush="{DynamicResource BorderLightBrush}"
+                            BorderThickness="1"
+                            CornerRadius="5"
+                            Padding="4">
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="MouseLeave">
+                                    <i:InvokeCommandAction Command="{Binding HoverBattleCategoryCommand}" CommandParameter="{x:Null}" />
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+                            <StackPanel>
+                                <!--  重置项：回到无筛选（看全部）  -->
+                                <Button
+                                    MinWidth="140"
+                                    Padding="12,6"
+                                    HorizontalContentAlignment="Left"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Command="{Binding ResetBattleFilterCommand}"
+                                    Content="{DynamicResource Stats.RecentBattles}"
+                                    Cursor="Hand"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="MouseEnter">
+                                            <i:InvokeCommandAction Command="{Binding HoverBattleCategoryCommand}" CommandParameter="{x:Null}" />
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Button>
+                                <Border
+                                    Height="1"
+                                    Margin="4,2"
+                                    Background="{DynamicResource BorderLightBrush}" />
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!--  一级：大类（天选/匹配/天人）。悬停即展开右侧二级；点击=选中/再点取消。  -->
+                                    <StackPanel Grid.Column="0" MinWidth="130">
+                                        <Button
+                                            Padding="12,6"
+                                            HorizontalContentAlignment="Stretch"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Command="{Binding SelectBattleCategoryCommand}"
+                                            CommandParameter="{x:Static consts:GameModeCategory.Rank}"
+                                            Cursor="Hand">
+                                            <i:Interaction.Triggers>
+                                                <i:EventTrigger EventName="MouseEnter">
+                                                    <i:InvokeCommandAction Command="{Binding HoverBattleCategoryCommand}" CommandParameter="{x:Static consts:GameModeCategory.Rank}" />
+                                                </i:EventTrigger>
+                                            </i:Interaction.Triggers>
+                                            <DockPanel LastChildFill="False">
+                                                <TextBlock DockPanel.Dock="Left" Text="{DynamicResource GameMode.Rank}" />
+                                                <TextBlock DockPanel.Dock="Right" Margin="10,0,0,0" Foreground="{DynamicResource TextMutedBrush}" Text="›" />
+                                            </DockPanel>
+                                            <Button.Style>
+                                                <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="Rank" Binding="{Binding SelectedBattleCategory}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentPrimaryBrush}" />
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Value="Rank" Binding="{Binding HoveredBattleCategory}">
+                                                            <Setter Property="Background" Value="{DynamicResource SurfaceTertiaryBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button
+                                            Padding="12,6"
+                                            HorizontalContentAlignment="Stretch"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Command="{Binding SelectBattleCategoryCommand}"
+                                            CommandParameter="{x:Static consts:GameModeCategory.Match}"
+                                            Cursor="Hand">
+                                            <i:Interaction.Triggers>
+                                                <i:EventTrigger EventName="MouseEnter">
+                                                    <i:InvokeCommandAction Command="{Binding HoverBattleCategoryCommand}" CommandParameter="{x:Static consts:GameModeCategory.Match}" />
+                                                </i:EventTrigger>
+                                            </i:Interaction.Triggers>
+                                            <DockPanel LastChildFill="False">
+                                                <TextBlock DockPanel.Dock="Left" Text="{DynamicResource GameMode.Match}" />
+                                                <TextBlock DockPanel.Dock="Right" Margin="10,0,0,0" Foreground="{DynamicResource TextMutedBrush}" Text="›" />
+                                            </DockPanel>
+                                            <Button.Style>
+                                                <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="Match" Binding="{Binding SelectedBattleCategory}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentPrimaryBrush}" />
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Value="Match" Binding="{Binding HoveredBattleCategory}">
+                                                            <Setter Property="Background" Value="{DynamicResource SurfaceTertiaryBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button
+                                            Padding="12,6"
+                                            HorizontalContentAlignment="Stretch"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Command="{Binding SelectBattleCategoryCommand}"
+                                            CommandParameter="{x:Static consts:GameModeCategory.Tianren}"
+                                            Cursor="Hand">
+                                            <i:Interaction.Triggers>
+                                                <i:EventTrigger EventName="MouseEnter">
+                                                    <i:InvokeCommandAction Command="{Binding HoverBattleCategoryCommand}" CommandParameter="{x:Static consts:GameModeCategory.Tianren}" />
+                                                </i:EventTrigger>
+                                            </i:Interaction.Triggers>
+                                            <DockPanel LastChildFill="False">
+                                                <TextBlock DockPanel.Dock="Left" Text="{DynamicResource GameMode.Tianren}" />
+                                                <TextBlock DockPanel.Dock="Right" Margin="10,0,0,0" Foreground="{DynamicResource TextMutedBrush}" Text="›" />
+                                            </DockPanel>
+                                            <Button.Style>
+                                                <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="Tianren" Binding="{Binding SelectedBattleCategory}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentPrimaryBrush}" />
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Value="Tianren" Binding="{Binding HoveredBattleCategory}">
+                                                            <Setter Property="Background" Value="{DynamicResource SurfaceTertiaryBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <!--  二级：排数（三排/双排/单排）。仅当悬停到某一级大类时出现；点击=设排数/再点取消。  -->
+                                    <StackPanel
+                                        Grid.Column="1"
+                                        MinWidth="90"
+                                        Margin="4,0,0,0"
+                                        Visibility="{Binding IsBattleSubMenuOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Border
+                                            Width="1"
+                                            HorizontalAlignment="Left"
+                                            Background="{DynamicResource BorderLightBrush}"
+                                            Visibility="Collapsed" />
+                                        <Button
+                                            Padding="12,6"
+                                            HorizontalContentAlignment="Left"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Command="{Binding SelectBattleTeamSizeCommand}"
+                                            CommandParameter="{x:Static consts:TeamSize.Trio}"
+                                            Content="{DynamicResource GameMode.Trio}"
+                                            Cursor="Hand">
+                                            <Button.Style>
+                                                <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="Trio" Binding="{Binding SelectedBattleTeamSize}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentPrimaryBrush}" />
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button
+                                            Padding="12,6"
+                                            HorizontalContentAlignment="Left"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Command="{Binding SelectBattleTeamSizeCommand}"
+                                            CommandParameter="{x:Static consts:TeamSize.Duo}"
+                                            Content="{DynamicResource GameMode.Duo}"
+                                            Cursor="Hand">
+                                            <Button.Style>
+                                                <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="Duo" Binding="{Binding SelectedBattleTeamSize}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentPrimaryBrush}" />
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button
+                                            Padding="12,6"
+                                            HorizontalContentAlignment="Left"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Command="{Binding SelectBattleTeamSizeCommand}"
+                                            CommandParameter="{x:Static consts:TeamSize.Solo}"
+                                            Content="{DynamicResource GameMode.Solo}"
+                                            Cursor="Hand">
+                                            <Button.Style>
+                                                <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="Solo" Binding="{Binding SelectedBattleTeamSize}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentPrimaryBrush}" />
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </Grid>
             </Grid>
             <Grid Grid.Row="4">
                 <DataGrid
@@ -469,7 +728,7 @@
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTemplateColumn Width="50">
+                        <DataGridTemplateColumn Width="0.6*">
                             <DataGridTemplateColumn.Header>
                                 <TextBlock Text="{DynamicResource Stats.Header.Rank}" TextTrimming="CharacterEllipsis">
                                     <TextBlock.ToolTip>
@@ -489,7 +748,7 @@
    </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="50" Header="">
+                        <DataGridTemplateColumn Width="50" Header="" CanUserResize="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Width="30" Height="30"
@@ -504,12 +763,12 @@
                                         <Image Width="30" Height="30"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                Stretch="UniformToFill"
-                                               Source="{Binding HeroIcon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                               Source="{Binding HeroIcon, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}, ConverterParameter=64}" />
                                     </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="75">
+                        <DataGridTemplateColumn Width="1*">
                             <DataGridTemplateColumn.Header>
                                 <TextBlock Text="{DynamicResource Stats.Header.ModeCategory}" TextTrimming="CharacterEllipsis">
                                     <TextBlock.ToolTip>
@@ -522,6 +781,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock
+                                        HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         Foreground="{DynamicResource TextMutedBrush}"
                                         Text="{Binding GameModeCategoryText}"
@@ -529,7 +789,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="75">
+                        <DataGridTemplateColumn Width="1*">
                             <DataGridTemplateColumn.Header>
                                 <TextBlock Text="{DynamicResource Stats.Header.ModeType}" TextTrimming="CharacterEllipsis">
                                     <TextBlock.ToolTip>
@@ -542,6 +802,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock
+                                        HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         Foreground="{DynamicResource TextMutedBrush}"
                                         Text="{Binding GameModeTeamSizeText}"
@@ -549,7 +810,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="50">
+                        <DataGridTemplateColumn Width="0.6*">
                             <DataGridTemplateColumn.Header>
                                 <TextBlock Text="{DynamicResource Stats.Header.Kill}" TextTrimming="CharacterEllipsis">
                                     <TextBlock.ToolTip>
@@ -562,6 +823,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock
+                                        HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         FontWeight="SemiBold"
                                         Foreground="{DynamicResource TextPrimaryBrush}"
@@ -569,7 +831,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="65">
+                        <DataGridTemplateColumn Width="0.9*">
                             <DataGridTemplateColumn.Header>
                                 <TextBlock Text="{DynamicResource Stats.Header.Damage}" TextTrimming="CharacterEllipsis">
                                     <TextBlock.ToolTip>
@@ -582,13 +844,14 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock
+                                        HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         Foreground="{DynamicResource TextPrimaryBrush}"
                                         Text="{Binding Damage}" />
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="140">
+                        <DataGridTemplateColumn Width="1.8*">
                             <DataGridTemplateColumn.Header>
                                 <TextBlock Text="{DynamicResource Stats.Header.RankScore}" TextTrimming="CharacterEllipsis">
                                     <TextBlock.ToolTip>
@@ -600,34 +863,22 @@
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center"
-                                          Visibility="{Binding IsRankMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition />
-                                            <RowDefinition />
-                                        </Grid.RowDefinitions>
-                                        <TextBlock
-                                            Grid.Column="0"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"
-                                            FontSize="12"
-                                            FontWeight="SemiBold"
-                                            Foreground="{DynamicResource TextPrimaryBrush}"
-                                            Text="{Binding RankDisplayText}" />
-                                        <StackPanel
-                                            Grid.Column="1"
-                                            Grid.RowSpan="2"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"
-                                            Orientation="Horizontal">
+                                    <!--  段位整体居中：第一行 段位名+星，第二行 分数+分差，两行各自水平居中（与网页端一致）  -->
+                                    <StackPanel
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Visibility="{Binding IsRankMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                                Text="{Binding RankDisplayText}" />
                                             <Image
                                                 Width="14"
                                                 Height="14"
-                                                Margin="2,0,0,0"
+                                                Margin="4,0,0,0"
                                                 VerticalAlignment="Center"
                                                 Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/star_icon.png"
                                                 Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -640,13 +891,10 @@
                                                 Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                         </StackPanel>
                                         <StackPanel
-                                            Grid.Row="1"
-                                            Grid.RowSpan="2"
+                                            Margin="0,2,0,0"
                                             HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
                                             Orientation="Horizontal">
                                             <TextBlock
-                                                Margin="3,0,0,0"
                                                 VerticalAlignment="Center"
                                                 FontSize="11"
                                                 FontWeight="ExtraLight"
@@ -661,11 +909,34 @@
                                                 Foreground="{Binding ScoreDiff, Converter={StaticResource ScoreDiffToColorConverter}}"
                                                 Text="{Binding ScoreDiffDisplay}" />
                                         </StackPanel>
-                                    </Grid>
+                                    </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Width="130">
+                        <!--  评级列 (S/A/B/C，与网页端一致)  -->
+                        <DataGridTemplateColumn Width="0.7*">
+                            <DataGridTemplateColumn.Header>
+                                <TextBlock Text="{DynamicResource Stats.Header.Rating}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{DynamicResource Stats.Header.Rating}" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
+                            </DataGridTemplateColumn.Header>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource TextPrimaryBrush}"
+                                        Text="{Binding Rating}"
+                                        TextAlignment="Center" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Width="1.2*">
                             <DataGridTemplateColumn.Header>
                                 <TextBlock Text="{DynamicResource Stats.Header.Time}" TextTrimming="CharacterEllipsis">
                                     <TextBlock.ToolTip>
@@ -678,6 +949,7 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock
+                                        HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         FontSize="11"
                                         Foreground="{DynamicResource TextMutedBrush}"
@@ -685,8 +957,8 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <!--  详情按钮列 (空标题, 宽 40)  -->
-                        <DataGridTemplateColumn Width="40">
+                        <!--  详情按钮列 (空标题, 固定宽)  -->
+                        <DataGridTemplateColumn Width="50" CanUserResize="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button
@@ -711,6 +983,16 @@
                         </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <!--  空结果提示：当前筛选下无对局（全量非空但过滤后为空）  -->
+                <TextBlock
+                    Margin="0,40,0,0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    FontSize="14"
+                    Foreground="{DynamicResource TextMutedBrush}"
+                    Text="{DynamicResource Stats.NoBattleInMode}"
+                    Visibility="{Binding HasNoBattleResult, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                 <!--  Recent battles loading overlay  -->
                 <Border

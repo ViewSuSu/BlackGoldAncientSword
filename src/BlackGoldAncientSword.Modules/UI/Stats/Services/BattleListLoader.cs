@@ -30,18 +30,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
         {
             try
             {
-                if (ctx.Source == DataSource.HeyBox)
-                {
-                    var resp = await NarakaApiClient.HeyBoxRecentBattlesAsync(
-                        ctx.RoleIdSimple, pageIndex: 1, pageSize: 20, ct: ct).ConfigureAwait(false);
-                    return UnifiedMapper.MapHeyBoxRecent(resp);
-                }
-                else
-                {
-                    var resp = await NarakaApiClient.GetRecentBattlesAsync(
-                        ctx.RoleIdSimple, gameMode: null, ct: ct).ConfigureAwait(false);
-                    return UnifiedMapper.MapMiniProgramRecent(resp);
-                }
+                // unified/matches 已归一化三源；modeCode 传 null 查全部模式，pageNo 从 1 开始。
+                var resp = await NarakaApiClient.GetRecentMatchesAsync(
+                    ctx.Source.ToApiString(), ctx.RoleIdSimple, modeCode: null, pageNo: 1, ct: ct).ConfigureAwait(false);
+                return UnifiedMapper.MapRecentMatches(resp);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
