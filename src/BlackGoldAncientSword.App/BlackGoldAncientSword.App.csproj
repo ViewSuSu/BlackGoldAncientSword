@@ -19,9 +19,9 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <Version>1.0.0.17</Version>
-    <AssemblyVersion>1.0.0.17</AssemblyVersion>
-    <FileVersion>1.0.0.17</FileVersion>
+    <Version>1.0.0.18</Version>
+    <AssemblyVersion>1.0.0.18</AssemblyVersion>
+    <FileVersion>1.0.0.18</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
