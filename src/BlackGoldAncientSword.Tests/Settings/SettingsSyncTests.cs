@@ -92,7 +92,8 @@ namespace BlackGoldAncientSword.Tests.Settings
                 new Mock<IImageCacheService>().Object,
                 updateService.Object,
                 new Mock<IClipboardService>().Object,
-                new SyncUIDispatcher());
+                new SyncUIDispatcher(),
+                new Mock<IUiScaleService>().Object);
         }
 
         private static ClosePromptPageViewModel BuildClosePromptVm(FakeSettingsService settings)

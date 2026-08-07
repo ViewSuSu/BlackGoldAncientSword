@@ -16,6 +16,9 @@ namespace BlackGoldAncientSword.Framework.Services
 
         public bool ShowTeamOverlayDuringHeroSelection { get; set; } = true;
 
+        /// <summary>字体缩放档位（0 = 应用默认字号，每档 +1px，最大 5）。</summary>
+        public int FontScale { get; set; } = 0;
+
         public static string GetDefaultCachePath()
         {
             var basePath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);

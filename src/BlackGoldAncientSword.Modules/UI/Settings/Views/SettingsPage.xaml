@@ -8,6 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:hc="https://handyorg.github.io/handycontrol"
+    xmlns:controls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
     d:DesignHeight="400"
     d:DesignWidth="600"
     Background="{DynamicResource SurfacePrimaryBrush}"
@@ -23,7 +24,7 @@
         <TextBlock
             Grid.Row="0"
             Margin="0,0,0,12"
-            FontSize="18"
+            FontSize="{DynamicResource FontSize.Title}"
             FontWeight="SemiBold"
             Text="{DynamicResource Settings.Title}" />
 
@@ -39,7 +40,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" Style="{DynamicResource AccentBarStyle}" />
-                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.Language}" />
+                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="{DynamicResource FontSize.Section}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.Language}" />
                         </Grid>
                     </GroupBox.Header>
                     <ItemsControl VerticalAlignment="Center" ItemsSource="{Binding LanguageOptions}">
@@ -78,7 +79,7 @@
 <GroupBox Margin="0,12,0,0" Style="{x:Null}" MinHeight="70" Padding="0,5,0,5">
                     <GroupBox.Header>
                         <TextBlock
-                            FontSize="14"
+                            FontSize="{DynamicResource FontSize.Section}"
                             FontWeight="SemiBold"
                             VerticalAlignment="Center"
                             Text="{DynamicResource Settings.Category.TeamOverlay}" />
@@ -91,6 +92,34 @@
                     </StackPanel>
                 </GroupBox>
 
+                <!--  Appearance · FontSize  -->
+                <GroupBox Margin="0,12,0,0" Style="{x:Null}" Padding="0,5,0,12">
+                    <GroupBox.Header>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{DynamicResource AccentBarStyle}" />
+                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="{DynamicResource FontSize.Section}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.Appearance}" />
+                        </Grid>
+                    </GroupBox.Header>
+                    <StackPanel>
+                        <TextBlock
+                            Margin="0,0,0,4"
+                            FontSize="{DynamicResource FontSize.Metadata}"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            Text="{DynamicResource Settings.FontSize.Description}"
+                            TextWrapping="Wrap" />
+
+                        <controls:FontScaleSlider
+                            Width="280"
+                            HorizontalAlignment="Left"
+                            Margin="0,10,0,0"
+                            FontScale="{Binding FontScale}" />
+                    </StackPanel>
+                </GroupBox>
+
                 <!--  General  -->
                 <GroupBox Margin="0,12,0,0" Style="{x:Null}" MinHeight="70" Padding="0,5,0,5">
                     <GroupBox.Header>
@@ -100,7 +129,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" Style="{DynamicResource AccentBarStyle}" />
-                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.General}" />
+                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="{DynamicResource FontSize.Section}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.General}" />
                         </Grid>
                     </GroupBox.Header>
                     <StackPanel>
@@ -138,7 +167,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" Style="{DynamicResource AccentBarStyle}" />
-                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.Cache}" />
+                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="{DynamicResource FontSize.Section}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.Cache}" />
                         </Grid>
                     </GroupBox.Header>
                     <StackPanel>
@@ -173,14 +202,14 @@
                             <TextBlock
                                 Grid.Column="0"
                                 VerticalAlignment="Center"
-                                FontSize="12"
+                                FontSize="{DynamicResource FontSize.Metadata}"
                                 Foreground="{DynamicResource TextMutedBrush}"
                                 Text="{DynamicResource Settings.CacheSize}" />
                             <TextBlock
                                 Grid.Column="1"
                                 Margin="8,0,0,0"
                                 VerticalAlignment="Center"
-                                FontSize="12"
+                                FontSize="{DynamicResource FontSize.Metadata}"
                                 Text="{Binding CacheSizeText}" />
                             <Button
                                 Grid.Column="2"
@@ -205,7 +234,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" Style="{DynamicResource AccentBarStyle}" />
-                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.Log}" />
+                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="{DynamicResource FontSize.Section}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.Log}" />
                         </Grid>
                     </GroupBox.Header>
                     <StackPanel>
@@ -240,14 +269,14 @@
                             <TextBlock
                                 Grid.Column="0"
                                 VerticalAlignment="Center"
-                                FontSize="12"
+                                FontSize="{DynamicResource FontSize.Metadata}"
                                 Foreground="{DynamicResource TextMutedBrush}"
                                 Text="{DynamicResource Settings.LogSize}" />
                             <TextBlock
                                 Grid.Column="1"
                                 Margin="8,0,0,0"
                                 VerticalAlignment="Center"
-                                FontSize="12"
+                                FontSize="{DynamicResource FontSize.Metadata}"
                                 Text="{Binding LogSizeText}" />
                             <Button
                                 Grid.Column="2"
@@ -273,13 +302,13 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" Style="{DynamicResource AccentBarStyle}" />
-                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.CloseBehavior}" />
+                            <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="{DynamicResource FontSize.Section}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Settings.Category.CloseBehavior}" />
                         </Grid>
                     </GroupBox.Header>
                     <StackPanel>
                         <TextBlock
                             Margin="0,0,0,8"
-                            FontSize="12"
+                            FontSize="{DynamicResource FontSize.Metadata}"
                             Foreground="{DynamicResource TextMutedBrush}"
                             Text="{DynamicResource Settings.CloseBehavior.Description}" />
                         <ItemsControl VerticalAlignment="Center" ItemsSource="{Binding CloseBehaviorOptions}">

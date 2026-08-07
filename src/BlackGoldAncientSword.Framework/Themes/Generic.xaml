@@ -1,6 +1,7 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions"
     xmlns:ctrls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls">
 
@@ -78,6 +79,18 @@
     <ext:EnumEqualityConverter x:Key="EnumEqualityConverter" />
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
+    <!-- ====================== 字号 token（设置页滑块统一缩放） ======================
+         基准值 ≈ 应用现状字号，滑块范围为各 token 基准值 ~ 基准值 + 5。
+         设置变更时 UiScaleService 直接改写 Application.Resources 里这些 key，
+         DynamicResource 引用会全应用即时刷新，无需逐页绑定。 -->
+    <sys:Double x:Key="FontSize.Caption">11</sys:Double>
+    <sys:Double x:Key="FontSize.Body">13</sys:Double>
+    <sys:Double x:Key="FontSize.Metadata">12</sys:Double>
+    <sys:Double x:Key="FontSize.Section">14</sys:Double>
+    <sys:Double x:Key="FontSize.Title">16</sys:Double>
+    <sys:Double x:Key="FontSize.Display">20</sys:Double>
+
+
     <!-- ====================== OverlayHost 默认样式 ====================== -->
     <Style TargetType="{x:Type ctrls:OverlayHost}">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -115,7 +128,7 @@
                                     <TextBlock
                                         Grid.Column="0"
                                         VerticalAlignment="Center"
-                                        FontSize="16"
+                                        FontSize="{DynamicResource FontSize.Title}"
                                         FontWeight="SemiBold"
                                         Foreground="{StaticResource TextPrimaryBrush}"
                                         Text="{TemplateBinding Title}"

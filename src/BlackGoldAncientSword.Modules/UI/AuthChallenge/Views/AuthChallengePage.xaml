@@ -1,4 +1,4 @@
-<bases:UserControlBase
+﻿<bases:UserControlBase
     x:Class="BlackGoldAncientSword.Modules.UI.AuthChallenge.Views.AuthChallengePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -23,7 +23,7 @@
             <!--  提示  -->
             <TextBlock
                 Margin="0,0,0,12"
-                FontSize="13"
+                FontSize="{DynamicResource FontSize.Body}"
                 Foreground="{DynamicResource TextPrimaryBrush}"
                 Text="{Binding StepTitle}"
                 TextWrapping="Wrap" />
@@ -89,7 +89,7 @@
                             <TextBlock
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                FontSize="12"
+                                FontSize="{DynamicResource FontSize.Metadata}"
                                 Foreground="{DynamicResource TextSecondaryBrush}"
                                 Text="{Binding SliderHintText}" />
                             <!--  手柄  -->
@@ -110,7 +110,7 @@
                                 <TextBlock
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    FontSize="18"
+                                    FontSize="{DynamicResource FontSize.Title}"
                                     Foreground="{DynamicResource AccentPrimaryBrush}"
                                     Text="›" />
                             </Border>
@@ -120,7 +120,7 @@
                     <TextBlock
                         Margin="0,8,0,0"
                         HorizontalAlignment="Center"
-                        FontSize="11"
+                        FontSize="{DynamicResource FontSize.Caption}"
                         Foreground="Red"
                         Text="{Binding CaptchaError}"
                         Visibility="{Binding HasCaptchaError, Converter={StaticResource BoolToVisibilityConverter}}" />
@@ -130,7 +130,7 @@
                         HorizontalAlignment="Right"
                         Command="{Binding RefreshCaptchaCommand}"
                         Content="换一张"
-                        FontSize="11" />
+                        FontSize="{DynamicResource FontSize.Caption}" />
                 </StackPanel>
             </Grid>
 
@@ -139,7 +139,7 @@
                 <TextBlock
                     Margin="0,0,0,8"
                     HorizontalAlignment="Center"
-                    FontSize="12"
+                    FontSize="{DynamicResource FontSize.Metadata}"
                     Foreground="{DynamicResource TextSecondaryBrush}"
                     Text="使用微信扫码关注公众号，然后发送下方验证码" />
                 <Border
@@ -163,7 +163,7 @@
                     CornerRadius="4">
                     <TextBlock
                         FontFamily="Consolas"
-                        FontSize="18"
+                        FontSize="{DynamicResource FontSize.Title}"
                         FontWeight="Bold"
                         Foreground="{DynamicResource AccentPrimaryBrush}"
                         Text="{Binding VerificationCode}" />
@@ -171,7 +171,7 @@
                 <TextBlock
                     Margin="0,8,0,0"
                     HorizontalAlignment="Center"
-                    FontSize="11"
+                    FontSize="{DynamicResource FontSize.Caption}"
                     Foreground="{DynamicResource TextSecondaryBrush}"
                     Text="{Binding QrStatusText}" />
             </StackPanel>
@@ -179,7 +179,7 @@
             <!--  底部状态（右上角 X 已提供关闭入口，此处只留状态提示）  -->
             <TextBlock
                 Margin="0,16,0,0"
-                FontSize="11"
+                FontSize="{DynamicResource FontSize.Caption}"
                 Foreground="{DynamicResource TextSecondaryBrush}"
                 Text="{Binding StatusText}"
                 TextWrapping="Wrap" />
