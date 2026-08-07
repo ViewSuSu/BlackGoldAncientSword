@@ -194,7 +194,6 @@ namespace BlackGoldAncientSword.App.Shell
 
         private bool _updateCheckCompleted;
         private bool _updateNotificationShown;
-        private bool _isCheckingForUpdate;
         private bool _isUpdateAvailable;
         public bool IsUpdateAvailable
         {
@@ -254,42 +253,21 @@ namespace BlackGoldAncientSword.App.Shell
 
         private DelegateCommand? _checkForUpdatesCommand;
         public DelegateCommand CheckForUpdatesCommand =>
-            _checkForUpdatesCommand ??= new DelegateCommand(async () =>
+            _checkForUpdatesCommand ??= new DelegateCommand(() =>
             {
-                // 左下角"发现新版本"点击 → 先强制重查远端最新 tag 并刷新下载 URL，再弹更新卡片。
+                // 左下角"发现新版本"点击 → 复用启动期发现新版时的半透明卡片提示。
                 // 用户主动点击：忽略 _updateNotificationShown 守卫，以便关闭后还能再次打开。
-                //
-                // 不能用会话内缓存：首次检出新版后后台轮询即停止（UpdateService.OnPollingTick → StopPolling），
-                // 若用户长时间登录而远端已发布多个新版本，LatestVersion / ZipDownloadUrl 仍停留在旧 tag；
-                // 而 Gitee 同步会清空历史 tag 附件，旧 tag 的 zip 直链 404，直接弹卡片会拿到失效的下载地址。
                 try
                 {
-                    if (_isCheckingForUpdate) return;
-                    _isCheckingForUpdate = true;
-
-                    // 先置守卫：重查命中新版时 CheckForUpdatesAsync 内部会触发 UpdateAvailabilityChanged(true)，
-                    // 事件驱动的 TryShowUpdateNotification 会再弹一次卡片，与下方显式导航重复。用户已主动点击
-                    // 按钮，后续只走命令内的显式导航，抑制事件驱动弹卡。
-                    _updateNotificationShown = true;
-
-                    await _updateService.CheckForUpdatesAsync(showNoUpdateMessage: false);
-                    // 重查成功且仍确认有新版才弹卡片。瞬时网络失败时 CheckForUpdatesAsync 保留原可用状态，
-                    // 这里保持卡片关闭不打断用户；左下角"发现新版本"指示（IsUpdateAvailable）依然可见可重试。
-                    if (!_updateService.IsUpdateAvailable)
-                        return;
-
                     EnsureModuleLoaded(PageNames.UpdateNotificationPage);
                     _regionManager.RequestNavigate(
                         GlobalConstant.UpdateNotificationRegion,
                         PageNames.UpdateNotificationPage);
+                    _updateNotificationShown = true;
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
                     AppLog.Error(ex, $"{nameof(MainWindowViewModel)}.{nameof(CheckForUpdatesCommand)}", "弹出更新通知失败");
-                }
-                finally
-                {
-                    _isCheckingForUpdate = false;
                 }
             });
 

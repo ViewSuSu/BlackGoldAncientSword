@@ -114,14 +114,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             Debug.WriteLine($"[{nameof(UpdateService)}] 构造完成，当前版本: {CurrentVersion}");
         }
 
-        /// <summary>
-        /// 检查远端是否有新版本并刷新 <see cref="IsUpdateAvailable"/> / <see cref="LatestVersion"/> /
-        /// 各类下载 URL / <see cref="LatestReleaseNotes"/>。
-        ///
-        /// 可用性语义：仅当"确认无新版"（latest tag 解析成功且 ≤ 当前版本）时才清空可用状态；
-        /// "无法确认"（latest tag 解析失败 / 网络异常）时保留原状态不清空。这样用户主动点击
-        /// "发现新版本"重查时，瞬时网络失败不会把指示按钮藏掉，下次仍可重试。
-        /// </summary>
         public async Task CheckForUpdatesAsync(bool showNoUpdateMessage = true)
         {
             Debug.WriteLine($"[{nameof(UpdateService)}.{nameof(CheckForUpdatesAsync)}] 开始检查");
@@ -131,9 +123,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 var latest = await FetchLatestTagAsync().ConfigureAwait(false);
                 if (string.IsNullOrEmpty(latest))
                 {
-                    // 无法解析到 latest tag（302 缺失 / 反爬 / 网络异常）：属于"无法确认"而非"确认无新版"，
-                    // 保留原可用状态不清理，避免用户主动重查时因瞬时网络失败导致"发现新版本"指示消失。
                     Debug.WriteLine($"[{nameof(UpdateService)}] 未从 302 Location 解析到 latest tag");
+                    await ClearAvailabilityAsync().ConfigureAwait(false);
                     return;
                 }
 
@@ -172,9 +163,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
-                // 检查异常（网络 / 超时 / 反爬）属于"无法确认"而非"确认无新版"：保留原可用状态，
-                // 避免后台轮询或用户主动重查时因瞬时失败把"发现新版本"指示清掉，用户失去重试入口。
                 AppLog.Error(ex, nameof(UpdateService), "检查失败（静默）");
+                await ClearAvailabilityAsync().ConfigureAwait(false);
             }
         }
 
