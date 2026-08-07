@@ -14,6 +14,8 @@
         public const string UpdateNotificationRegion = nameof(UpdateNotificationRegion);
         public const string BattleDetailRegion = nameof(BattleDetailRegion);
         public const string AuthChallengeRegion = nameof(AuthChallengeRegion);
+        public const string SponsorRegion = nameof(SponsorRegion);
+        public const string UpdateLogRegion = nameof(UpdateLogRegion);
     }
 }
 

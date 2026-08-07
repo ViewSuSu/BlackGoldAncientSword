@@ -152,6 +152,7 @@
     <ns1:String ns2:Key="Nav.Personal">個人</ns1:String>
     <ns1:String ns2:Key="Nav.Announcement">公告</ns1:String>
     <ns1:String ns2:Key="Nav.Feedback">反饋</ns1:String>
+    <ns1:String ns2:Key="Nav.Sponsor">打賞</ns1:String>
     <ns1:String ns2:Key="Auth.User.Login">登入</ns1:String>
     <ns1:String ns2:Key="Auth.User.Logout">登出</ns1:String>
     <ns1:String ns2:Key="Auth.User.RoleNormal">一般用戶</ns1:String>
@@ -322,6 +323,29 @@
     <ns1:String ns2:Key="Feedback.WebTitle">網頁端</ns1:String>
     <ns1:String ns2:Key="Feedback.GitHubTitle">GitHub</ns1:String>
     <ns1:String ns2:Key="Feedback.Close">關閉</ns1:String>
+
+    <!--  Sponsor  -->
+    <ns1:String ns2:Key="Sponsor.AuthorTitle">黑金古刀作者：小窗同學</ns1:String>
+    <ns1:String ns2:Key="Sponsor.SelectPaymentMethod">選擇打賞方式</ns1:String>
+    <ns1:String ns2:Key="Sponsor.WeChatPay">微信</ns1:String>
+    <ns1:String ns2:Key="Sponsor.Alipay">支付寶</ns1:String>
+    <ns1:String ns2:Key="Sponsor.ShowQRCode">顯示收款碼</ns1:String>
+    <ns1:String ns2:Key="Sponsor.DataProviderTitle">贊助資料提供方</ns1:String>
+    <ns1:String ns2:Key="Sponsor.DataProviderDesc">資料來源於 naraka.drivod.top，贊助支持其持續提供服務。</ns1:String>
+    <ns1:String ns2:Key="Sponsor.Close">關閉</ns1:String>
+
+    <ns1:String ns2:Key="Settings.Category.Appearance">外觀</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.Description">拖動滑桿可調整整個軟體的字體大小，即時生效。</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.Standard">標準</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.Large">更大</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.Value.Default">當前字號：{0} px（預設）</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.Value.Scaled">當前字號：{0} px（放大 {1}）</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.Preview">即時預覽</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.PreviewCaption">輔助說明文字</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.PreviewBody">正文文字內容</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.PreviewSection">章節標題</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.PreviewTitle">頁面標題</ns1:String>
+    <ns1:String ns2:Key="Settings.FontSize.PreviewDisplay">大數字 12345</ns1:String>
 </ns0:ResourceDictionary>
 
 

@@ -13,6 +13,7 @@
   <ItemGroup>
     <Resource Include="Images\*.png" />
     <Resource Include="Images\*.ico" />
+    <Resource Include="Images\*.jpg" />
     <Resource Include="Images\Avatar\*.png" />
   </ItemGroup>
 

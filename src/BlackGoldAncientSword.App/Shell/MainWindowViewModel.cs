@@ -123,6 +123,37 @@ namespace BlackGoldAncientSword.App.Shell
                 _navigation.NavigateTo(PageNames.TeamInfoPage);
             });
 
+        private DelegateCommand? _navigateToTestTrioCommand;
+        public DelegateCommand NavigateToTestTrioCommand =>
+            _navigateToTestTrioCommand ??= new DelegateCommand(() =>
+            {
+                _navigation.NavigateTo(PageNames.TestTrioPage);
+            });
+
+        private DelegateCommand? _navigateToTestDuoCommand;
+        public DelegateCommand NavigateToTestDuoCommand =>
+            _navigateToTestDuoCommand ??= new DelegateCommand(() =>
+            {
+                _navigation.NavigateTo(PageNames.TestDuoPage);
+            });
+
+        /// <summary>
+        /// 仅 Debug 构建为 true，Release 恒为 false。
+        /// 用于 XAML 中把测试页入口（测试三排/测试双排）绑定 Visibility，
+        /// 保证 Release 下完全不出现，满足"Debug-only 入口"需求。
+        /// </summary>
+        public bool IsDebugBuild
+        {
+            get
+            {
+#if DEBUG
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
+
         private DelegateCommand? _navigateToSearchCommand;
         public DelegateCommand NavigateToSearchCommand =>
             _navigateToSearchCommand ??= new DelegateCommand(() =>
@@ -136,6 +167,22 @@ namespace BlackGoldAncientSword.App.Shell
             {
                 EnsureModuleLoaded(PageNames.FeedbackPage);
                 _regionManager.RequestNavigate(GlobalConstant.FeedbackRegion, PageNames.FeedbackPage);
+            });
+
+        private DelegateCommand? _openSponsorCommand;
+        public DelegateCommand OpenSponsorCommand =>
+            _openSponsorCommand ??= new DelegateCommand(() =>
+            {
+                EnsureModuleLoaded(PageNames.SponsorPage);
+                _regionManager.RequestNavigate(GlobalConstant.SponsorRegion, PageNames.SponsorPage);
+            });
+
+        private DelegateCommand? _openUpdateLogCommand;
+        public DelegateCommand OpenUpdateLogCommand =>
+            _openUpdateLogCommand ??= new DelegateCommand(() =>
+            {
+                EnsureModuleLoaded(PageNames.UpdateLogPage);
+                _regionManager.RequestNavigate(GlobalConstant.UpdateLogRegion, PageNames.UpdateLogPage);
             });
 
         private DelegateCommand? _navigateToAnnouncementCommand;
