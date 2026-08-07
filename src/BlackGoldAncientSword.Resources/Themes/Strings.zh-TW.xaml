@@ -106,7 +106,6 @@
     <ns1:String ns2:Key="Stats.RankName.Trio.4000">雲霄武聖</ns1:String>
     <ns1:String ns2:Key="Stats.RankName.Trio.3500">絕頂高手</ns1:String>
     <ns1:String ns2:Key="Stats.RankName.Trio.3000">凡塵武師</ns1:String>
-    <ns1:String ns2:Key="Stats.Refresh">重新整理</ns1:String>
     <ns1:String ns2:Key="Stats.BackToMe">回到我</ns1:String>
 
     <ns1:String ns2:Key="Search.Title">搜尋</ns1:String>

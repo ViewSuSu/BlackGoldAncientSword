@@ -108,7 +108,6 @@
     <system:String x:Key="Stats.RankName.Trio.4000">Cloud Warrior</system:String>
     <system:String x:Key="Stats.RankName.Trio.3500">Supreme Expert</system:String>
     <system:String x:Key="Stats.RankName.Trio.3000">Mortal Adept</system:String>
-    <system:String x:Key="Stats.Refresh">Refresh</system:String>
     <system:String x:Key="Stats.BackToMe">Back to me</system:String>
 
     <system:String x:Key="Search.Title">Search</system:String>

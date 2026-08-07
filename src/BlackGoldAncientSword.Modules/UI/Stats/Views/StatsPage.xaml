@@ -1,4 +1,4 @@
-<bases:UserControlBase
+﻿<bases:UserControlBase
     x:Class="BlackGoldAncientSword.Modules.UI.Stats.Views.StatsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -49,22 +49,6 @@
                     Grid.Column="2"
                     Margin="10,0,0,0"
                     Orientation="Horizontal">
-                    <!--  Refresh button  -->
-                    <Button
-                        Width="28"
-                        Height="28"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Command="{Binding RefreshAllCommand}"
-                        Cursor="Hand"
-                        ToolTip="{DynamicResource Stats.Refresh}">
-                        <Image
-                            Width="16"
-                            Height="16"
-                            Source="pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/refresh_data.png" />
-                    </Button>
-
                     <!--  Back to me button (hidden when viewing local user)  -->
                     <Button
                         Width="28"
@@ -95,7 +79,7 @@
                 <TextBlock
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    FontSize="18"
+                    FontSize="{DynamicResource FontSize.Title}"
                     Foreground="{DynamicResource TextMutedBrush}"
                     Text="{DynamicResource Stats.UserNotFound}" />
             </Border>
@@ -131,13 +115,13 @@
                             Orientation="Horizontal">
                             <TextBlock
                                 VerticalAlignment="Center"
-                                FontSize="11"
+                                FontSize="{DynamicResource FontSize.Caption}"
                                 Foreground="{DynamicResource TextMutedBrush}"
                                 Text="{Binding Level}" />
                             <TextBlock
                                 Margin="6,0,0,0"
                                 VerticalAlignment="Center"
-                                FontSize="16"
+                                FontSize="{DynamicResource FontSize.Title}"
                                 FontWeight="Bold"
                                 Text="{Binding UserName}" />
                         </StackPanel>
@@ -149,7 +133,7 @@
                             Orientation="Horizontal">
                             <TextBlock
                                 VerticalAlignment="Center"
-                                FontSize="12"
+                                FontSize="{DynamicResource FontSize.Metadata}"
                                 Foreground="{DynamicResource TextMutedBrush}">
                                 <Run Text="UID: " /><Run Text="{Binding UID}" />
                             </TextBlock>
@@ -220,7 +204,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Border Grid.Column="0" Style="{DynamicResource AccentBarStyle}" />
-                        <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Stats.DetailTitle}" />
+                        <TextBlock Grid.Column="1" Margin="10,0,0,0" FontSize="{DynamicResource FontSize.Section}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="{DynamicResource Stats.DetailTitle}" />
                     </Grid>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -250,7 +234,7 @@
                                 Orientation="Horizontal">
                                 <TextBlock
                                     VerticalAlignment="Center"
-                                    FontSize="16"
+                                    FontSize="{DynamicResource FontSize.Title}"
                                     FontWeight="SemiBold"
                                     Text="{Binding PageRankName}"
                                     TextWrapping="NoWrap" />
@@ -263,7 +247,7 @@
                                     Visibility="{Binding PageHasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <TextBlock
                                     VerticalAlignment="Center"
-                                    FontSize="16"
+                                    FontSize="{DynamicResource FontSize.Title}"
                                     FontWeight="SemiBold"
                                     Text="{Binding PageStarCount}"
                                     Visibility="{Binding PageHasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -272,7 +256,7 @@
                             <TextBlock
                                 Margin="0,2,0,0"
                                 HorizontalAlignment="Center"
-                                FontSize="13"
+                                FontSize="{DynamicResource FontSize.Body}"
                                 Foreground="{DynamicResource TextMutedBrush}">
                                 <Run Text="{Binding RankTierScore, StringFormat='{}{0}'}" /><Run Text="{DynamicResource Stats.Points}" />
                             </TextBlock>
@@ -297,12 +281,12 @@
                                             <TextBlock
                                                 VerticalAlignment="Center"
                                                 DockPanel.Dock="Right"
-                                                FontSize="14"
+                                                FontSize="{DynamicResource FontSize.Section}"
                                                 FontWeight="Bold"
                                                 Text="{Binding Value}" />
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                FontSize="11"
+                                                FontSize="{DynamicResource FontSize.Caption}"
                                                 Foreground="{DynamicResource TextMutedBrush}"
                                                 Text="{Binding Label}" />
                                         </DockPanel>
@@ -355,7 +339,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock
                                 VerticalAlignment="Center"
-                                FontSize="14"
+                                FontSize="{DynamicResource FontSize.Section}"
                                 FontWeight="SemiBold"
                                 Foreground="{DynamicResource TextPrimaryBrush}"
                                 Text="{Binding BattleFilterDisplayText}" />
@@ -609,6 +593,107 @@
                     IsReadOnly="True"
                     ItemsSource="{Binding RecentBattles}"
                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" Style="{DynamicResource ModernDataGridStyle}">
+                    <DataGrid.Resources>
+                        <!--  竹青圆角滚动条（局部样式，仅战绩页生效）  -->
+                        <Style x:Key="ModernScrollThumbStyle" TargetType="{x:Type Thumb}">
+                            <Setter Property="IsTabStop" Value="False" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                        <Border
+                                            x:Name="ThumbBd"
+                                            Margin="2"
+                                            Background="{DynamicResource AccentPrimaryBrush}"
+                                            CornerRadius="4"
+                                            Opacity="0.7" />
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ThumbBd" Property="Margin" Value="1" />
+                                                <Setter TargetName="ThumbBd" Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+                                                <Setter TargetName="ThumbBd" Property="Opacity" Value="1" />
+                                            </Trigger>
+                                            <Trigger Property="IsDragging" Value="True">
+                                                <Setter TargetName="ThumbBd" Property="Margin" Value="1" />
+                                                <Setter TargetName="ThumbBd" Property="Background" Value="{DynamicResource AccentPressedBrush}" />
+                                                <Setter TargetName="ThumbBd" Property="Opacity" Value="1" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+
+                        <ControlTemplate x:Key="VertScrollBarTemplate" TargetType="{x:Type ScrollBar}">
+                            <Border x:Name="Bg" Background="Transparent" CornerRadius="5">
+                                <Track x:Name="PART_Track"
+                                       IsDirectionReversed="True"
+                                       Maximum="{TemplateBinding Maximum}"
+                                       Minimum="{TemplateBinding Minimum}"
+                                       Orientation="{TemplateBinding Orientation}"
+                                       Value="{TemplateBinding Value}"
+                                       ViewportSize="{TemplateBinding ViewportSize}">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Focusable="False" Opacity="0" />
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Focusable="False" Opacity="0" />
+                                    </Track.IncreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource ModernScrollThumbStyle}" />
+                                    </Track.Thumb>
+                                </Track>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger SourceName="Bg" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceTertiaryBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+
+                        <ControlTemplate x:Key="HorizScrollBarTemplate" TargetType="{x:Type ScrollBar}">
+                            <Border x:Name="Bg" Background="Transparent" CornerRadius="5">
+                                <Track x:Name="PART_Track"
+                                       IsDirectionReversed="True"
+                                       Maximum="{TemplateBinding Maximum}"
+                                       Minimum="{TemplateBinding Minimum}"
+                                       Orientation="{TemplateBinding Orientation}"
+                                       Value="{TemplateBinding Value}"
+                                       ViewportSize="{TemplateBinding ViewportSize}">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static ScrollBar.PageLeftCommand}" Focusable="False" Opacity="0" />
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static ScrollBar.PageRightCommand}" Focusable="False" Opacity="0" />
+                                    </Track.IncreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource ModernScrollThumbStyle}" />
+                                    </Track.Thumb>
+                                </Track>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger SourceName="Bg" Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SurfaceTertiaryBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+
+                        <Style TargetType="{x:Type ScrollBar}">
+                            <Setter Property="Width" Value="14" />
+                            <Setter Property="MinWidth" Value="14" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                            <Setter Property="Template" Value="{StaticResource VertScrollBarTemplate}" />
+                            <Style.Triggers>
+                                <Trigger Property="Orientation" Value="Horizontal">
+                                    <Setter Property="Width" Value="Auto" />
+                                    <Setter Property="MinWidth" Value="0" />
+                                    <Setter Property="Height" Value="14" />
+                                    <Setter Property="MinHeight" Value="14" />
+                                    <Setter Property="Template" Value="{StaticResource HorizScrollBarTemplate}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.Resources>
                     <DataGrid.ColumnHeaderStyle>
                         <Style BasedOn="{StaticResource ModernDataGridColumnHeaderStyle}" TargetType="DataGridColumnHeader">
                             <Setter Property="HorizontalContentAlignment" Value="Center" />
@@ -818,7 +903,7 @@
                                         <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                FontSize="12"
+                                                FontSize="{DynamicResource FontSize.Metadata}"
                                                 FontWeight="SemiBold"
                                                 Foreground="{DynamicResource TextPrimaryBrush}"
                                                 Text="{Binding RankDisplayText}" />
@@ -831,7 +916,7 @@
                                                 Visibility="{Binding HasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                FontSize="12"
+                                                FontSize="{DynamicResource FontSize.Metadata}"
                                                 FontWeight="SemiBold"
                                                 Foreground="{DynamicResource TextPrimaryBrush}"
                                                 Text="{Binding StarCount}"
@@ -843,7 +928,7 @@
                                             Orientation="Horizontal">
                                             <TextBlock
                                                 VerticalAlignment="Center"
-                                                FontSize="11"
+                                                FontSize="{DynamicResource FontSize.Caption}"
                                                 FontWeight="ExtraLight"
                                                 Foreground="{DynamicResource TextMutedBrush}"
                                                 Text="{Binding ScoreNumber}"
@@ -851,7 +936,7 @@
                                             <TextBlock
                                                 Margin="6,0,0,0"
                                                 VerticalAlignment="Center"
-                                                FontSize="12"
+                                                FontSize="{DynamicResource FontSize.Metadata}"
                                                 FontWeight="SemiBold"
                                                 Foreground="{Binding ScoreDiff, Converter={StaticResource ScoreDiffToColorConverter}}"
                                                 Text="{Binding ScoreDiffDisplay}" />
@@ -898,7 +983,7 @@
                                     <TextBlock
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        FontSize="11"
+                                        FontSize="{DynamicResource FontSize.Caption}"
                                         Foreground="{DynamicResource TextMutedBrush}"
                                         Text="{Binding BattleTime}" />
                                 </DataTemplate>
@@ -920,7 +1005,7 @@
                                         CommandParameter="{Binding}"
                                         ToolTip="查看对局详情">
                                         <TextBlock
-                                            FontSize="12"
+                                            FontSize="{DynamicResource FontSize.Metadata}"
                                             Foreground="{DynamicResource AccentPrimaryBrush}"
                                             TextDecorations="Underline"
                                             Text="详情" />
@@ -936,7 +1021,7 @@
                     Margin="0,40,0,0"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top"
-                    FontSize="14"
+                    FontSize="{DynamicResource FontSize.Section}"
                     Foreground="{DynamicResource TextMutedBrush}"
                     Text="{DynamicResource Stats.NoBattleInMode}"
                     Visibility="{Binding HasNoBattleResult, Converter={StaticResource BooleanToVisibilityConverter}}" />

@@ -180,10 +180,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     .Publish(new TipMessageWithHighlightArgs(_localizedText.Get("Stats.CopySuccess", "复制成功")));
             });
 
-        private DelegateCommand? _refreshAllCommand;
-        public DelegateCommand RefreshAllCommand =>
-            _refreshAllCommand ??= new DelegateCommand(async () => await RefreshAllAsync());
-
 
         // === Rank ===
         private string _rankName = string.Empty;

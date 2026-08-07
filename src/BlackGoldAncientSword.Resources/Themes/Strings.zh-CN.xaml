@@ -108,7 +108,6 @@
     <system:String x:Key="Stats.RankName.Trio.4000">云霄武圣</system:String>
     <system:String x:Key="Stats.RankName.Trio.3500">绝顶高手</system:String>
     <system:String x:Key="Stats.RankName.Trio.3000">凡尘武师</system:String>
-    <system:String x:Key="Stats.Refresh">刷新</system:String>
     <system:String x:Key="Stats.BackToMe">回到我</system:String>
 
     <system:String x:Key="Search.Title">搜索</system:String>

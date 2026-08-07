@@ -23,7 +23,7 @@
         <TextBlock
             Grid.Row="0"
             Margin="0,0,0,16"
-            FontSize="22"
+            FontSize="{DynamicResource FontSize.Display}"
             FontWeight="Bold"
             Text="{DynamicResource Search.Title}" />
 
@@ -35,10 +35,6 @@
             BorderBrush="{DynamicResource BorderLightBrush}"
             BorderThickness="1">
             <Grid ext:PageTransitionBehavior.IsEnabled="True" RenderTransformOrigin="0.5,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
                 <Grid Grid.Column="0">
                     <TextBox
                         Name="SearchTextBox"
@@ -66,18 +62,6 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </Grid>
-                <Button
-                    Grid.Column="1"
-                    MinWidth="80"
-                    Height="32"
-                    Margin="8,0,0,0"
-                    ToolTip="{DynamicResource Search.Button}" Content="{DynamicResource Search.Button}">
-                    <i:Interaction.Triggers>
-                        <i:EventTrigger EventName="Click">
-                            <i:InvokeCommandAction Command="{Binding SearchCommand}" />
-                        </i:EventTrigger>
-                    </i:Interaction.Triggers>
-                </Button>
             </Grid>
         </Border>
 
@@ -95,7 +79,7 @@
                 <TextBlock
                     Grid.Row="0"
                     Margin="12,8,12,4"
-                    FontSize="14"
+                    FontSize="{DynamicResource FontSize.Section}"
                     FontWeight="Bold"
                     Text="{DynamicResource Search.History}" />
                 <ListBox
@@ -124,7 +108,7 @@
                                     Margin="8,0,8,0"
                                     VerticalAlignment="Center"
                                     d:Text="2026-01-01 12:00"
-                                    FontSize="11"
+                                    FontSize="{DynamicResource FontSize.Caption}"
                                     Foreground="{DynamicResource TextMutedBrush}"
                                     Text="{Binding Timestamp, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
                                 <Button
@@ -141,7 +125,7 @@
                                         </i:EventTrigger>
                                     </i:Interaction.Triggers>
                                 </Button>
-                                    FontSize="11"
+                                    FontSize="{DynamicResource FontSize.Caption}"
                                     Foreground="{DynamicResource TextMutedBrush}" />
                                 <Button
                                     Grid.Column="3"
@@ -158,7 +142,7 @@
                                         </i:EventTrigger>
                                     </i:Interaction.Triggers>
                                 </Button>
-                                    FontSize="11"
+                                    FontSize="{DynamicResource FontSize.Caption}"
                                     Foreground="{DynamicResource TextMutedBrush}" />
                             </Grid>
                         </DataTemplate>
