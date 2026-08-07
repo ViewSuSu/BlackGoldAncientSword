@@ -1,0 +1,109 @@
+<UserControl
+    x:Class="BlackGoldAncientSword.Modules.UI.Sponsor.Views.SponsorPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
+    xmlns:consts="clr-namespace:BlackGoldAncientSword.Framework.Core.Consts;assembly=BlackGoldAncientSword.Framework"
+    xmlns:ctrls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    mc:Ignorable="d">
+    <ctrls:OverlayHost
+        CardMaxWidth="420"
+        CardPadding="20"
+        RegionName="{x:Static consts:GlobalConstant.SponsorRegion}"
+        Title="{DynamicResource Nav.Sponsor}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <ScrollViewer Grid.Row="0" Margin="0,0,0,16">
+                <StackPanel>
+                    <!--  打赏数据提供方  -->
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        FontSize="{DynamicResource FontSize.Section}"
+                        FontWeight="SemiBold"
+                        Text="{DynamicResource Sponsor.DataProviderTitle}" />
+                    <TextBlock
+                        Margin="0,0,0,6"
+                        FontSize="{DynamicResource FontSize.Metadata}"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
+                        Text="{DynamicResource Sponsor.DataProviderDesc}"
+                        TextWrapping="Wrap" />
+                    <TextBlock Margin="0,0,0,12" FontSize="{DynamicResource FontSize.Metadata}">
+                        <Hyperlink
+                            Cursor="Hand"
+                            Foreground="{DynamicResource AccentPrimaryBrush}"
+                            NavigateUri="https://naraka.drivod.top/account/sponsor"
+                            RequestNavigate="Hyperlink_RequestNavigate">
+                            https://naraka.drivod.top/account/sponsor
+                        </Hyperlink>
+                    </TextBlock>
+
+                    <Separator Margin="0,4,0,12" />
+
+                    <!--  打赏作者区域  -->
+                    <TextBlock
+                        Margin="0,0,0,8"
+                        FontSize="{DynamicResource FontSize.Section}"
+                        FontWeight="SemiBold"
+                        Text="{DynamicResource Sponsor.AuthorTitle}" />
+
+                    <!--  支付方式选择  -->
+                    <TextBlock
+                        Margin="0,0,0,6"
+                        FontSize="{DynamicResource FontSize.Body}"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
+                        Text="{DynamicResource Sponsor.SelectPaymentMethod}" />
+                    <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                        <RadioButton
+                            Margin="0,0,16,0"
+                            GroupName="PaymentMethod"
+                            IsChecked="{Binding IsWeChatSelected}"
+                            Content="{DynamicResource Sponsor.WeChatPay}" />
+                        <RadioButton
+                            GroupName="PaymentMethod"
+                            IsChecked="{Binding IsAlipaySelected}"
+                            Content="{DynamicResource Sponsor.Alipay}" />
+                    </StackPanel>
+
+                    <!--  显示收款码按钮 / 二维码图片  -->
+                    <Button
+                        Margin="0,0,0,10"
+                        Padding="10,6"
+                        HorizontalAlignment="Left"
+                        Background="{DynamicResource AccentPrimaryBrush}"
+                        BorderThickness="0"
+                        Command="{Binding ShowQrCodeCommand}"
+                        Content="{DynamicResource Sponsor.ShowQRCode}"
+                        Cursor="Hand"
+                        Foreground="{DynamicResource TextOnAccentBrush}"
+                        Visibility="{Binding QrCodeVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                    <Image
+                        Width="180"
+                        Height="180"
+                        HorizontalAlignment="Left"
+                        Source="{Binding QrCodeSource}"
+                        Stretch="Uniform"
+                        Visibility="{Binding QrCodeVisible, Converter={StaticResource BoolToVisibilityConverter}}" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <StackPanel
+                Grid.Row="1"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal">
+                <Button
+                    MinWidth="80"
+                    Height="32"
+                    Command="{Binding ConfirmCommand}"
+                    Content="{DynamicResource Sponsor.Close}" />
+            </StackPanel>
+        </Grid>
+    </ctrls:OverlayHost>
+</UserControl>

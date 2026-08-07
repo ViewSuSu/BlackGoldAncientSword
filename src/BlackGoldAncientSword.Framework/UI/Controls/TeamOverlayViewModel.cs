@@ -78,15 +78,6 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
                 return;
             }
 
-            // Step 1: 将当前成员按 UserName 建立索引（忽略大小写）
-            var existingByName = new Dictionary<string, TeamOverlayMemberItem>(StringComparer.OrdinalIgnoreCase);
-            foreach (var m in Members)
-            {
-                if (!string.IsNullOrEmpty(m.UserName))
-                    existingByName[m.UserName] = m;
-            }
-
-            // Step 2: 收集需要移除的成员（UI 上不再出现的）
             var incomingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var m in members)
             {
@@ -94,25 +85,33 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
                     incomingNames.Add(m.UserName);
             }
 
+            // 移除不在新名单中的成员
             for (int i = Members.Count - 1; i >= 0; i--)
             {
                 var existing = Members[i];
                 if (!string.IsNullOrEmpty(existing.UserName) && !incomingNames.Contains(existing.UserName))
                 {
-                    // 即将移除的 Image 绑定——清除 URL 让旧 BitmapImage 的引用释放
                     existing.AvatarUrl = string.Empty;
                     existing.RankIcon = string.Empty;
                     Members.RemoveAt(i);
                 }
             }
 
-            // Step 3: 更新或添加成员
-            foreach (var m in members)
+            // 建立现有成员索引（移除后进行，保证只包含保留的成员）
+            var existingByName = new Dictionary<string, TeamOverlayMemberItem>(StringComparer.OrdinalIgnoreCase);
+            foreach (var m in Members)
             {
+                if (!string.IsNullOrEmpty(m.UserName))
+                    existingByName[m.UserName] = m;
+            }
+
+            // 按传入顺序重建集合，复用已有成员对象以保持 WPF 可视化树稳定
+            for (int targetIdx = 0; targetIdx < members.Count; targetIdx++)
+            {
+                var m = members[targetIdx];
                 var userName = m.UserName ?? string.Empty;
                 if (existingByName.TryGetValue(userName, out var existing))
                 {
-                    // 已有成员——原地更新属性，ItemsControl 不会重建容器
                     existing.AvatarUrl = m.AvatarUrl;
                     existing.RankName = m.RankName;
                     existing.RankIcon = m.RankIcon;
@@ -121,11 +120,14 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
                     existing.PageHasStars = m.PageHasStars;
                     existing.RankTierScore = m.RankTierScore;
                     existing.IsLoading = m.IsLoading;
+
+                    var currentIdx = Members.IndexOf(existing);
+                    if (currentIdx >= 0 && currentIdx != targetIdx)
+                        Members.Move(currentIdx, targetIdx);
                 }
                 else
                 {
-                    // 新成员——添加到集合
-                    Members.Add(new TeamOverlayMemberItem
+                    Members.Insert(targetIdx, new TeamOverlayMemberItem
                     {
                         UserName = userName,
                         AvatarUrl = m.AvatarUrl,

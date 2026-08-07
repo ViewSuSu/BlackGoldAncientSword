@@ -23,13 +23,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private readonly ITeamOverlayService _teamOverlayService;
         private readonly IUIDispatcher _uiDispatcher;
         private readonly IClipboardService _clipboard;
-        private readonly TeamOcrCoordinator _ocrCoordinator;
+        private readonly ICcMiniTeammateMonitor _teammateMonitor;
         private readonly TeamMemberLoader _memberLoader;
         private readonly ILocalizedTextProvider _localizedText;
         private readonly ITipMessageService _tipMessage;
-        private CancellationTokenSource? _ocrLoopCts;
-        private bool _isOcrRunning;
-        private readonly object _ocrLock = new();
+        private bool _isMonitoring;
+        private readonly object _monitorLock = new();
         private bool _isHeroSelectionPhase;
         private CancellationTokenSource? _refreshMembersCts;
         private CancellationTokenSource? _refreshOcrCts;
@@ -45,12 +44,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private bool _overlayShownForThisRound;
         private bool _overlayDismissedThisRound;
         /// <summary>
-        /// 标记 OCR 是否已成功完成至少一轮完整识别（识别 + 数据加载）。
-        /// 用于 <see cref="StartOcrLoop"/> 的保护性判断：已有有效数据时不再重复启动轮询循环，
-        /// 但用户仍可通过刷新按钮手动触发单次重新识别。
+        /// 标记是否已成功从语音日志识别到完整队伍名单（含数据加载）。
+        /// 用于保护性判断：已有有效数据时不再重复监听，但用户仍可通过刷新按钮手动触发重查。
         /// 在游戏状态变为 Unknown 时重置。
         /// </summary>
-        private bool _ocrDataLoadedSuccessfully;
+        private bool _teamDataLoadedSuccessfully;
 
         // 通过 ILocalizedTextProvider 访问字符串本地化资源，避免 VM 直接依赖 System.Windows.Application。
         private string L(string key, string fallback) => _localizedText.Get(key, fallback);
@@ -62,7 +60,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             IMainContentNavigationService navigation,
             IUIDispatcher uiDispatcher,
             IClipboardService clipboard,
-            TeamOcrCoordinator ocrCoordinator,
+            ICcMiniTeammateMonitor teammateMonitor,
             TeamMemberLoader memberLoader,
             ILocalizedTextProvider localizedText,
             ITipMessageService tipMessage)
@@ -73,7 +71,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _navigation = navigation;
             _uiDispatcher = uiDispatcher;
             _clipboard = clipboard;
-            _ocrCoordinator = ocrCoordinator;
+            _teammateMonitor = teammateMonitor;
             _memberLoader = memberLoader;
             _localizedText = localizedText;
             _tipMessage = tipMessage;
@@ -86,9 +84,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // _statusText 不能用字段初始化器调 L()，因为 _localizedText 此时还未注入。
             _statusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
 
-            // 构造函数中永久订阅（不依赖页面导航），确保进入英雄选择后立即启动 OCR 识别
+            // 构造函数中永久订阅（不依赖页面导航），确保进入英雄选择后立即启动日志监听。
             _gameStatusMonitor.GameStatusRecognized += OnGameStatusRecognized;
             _teamOverlayService.Dismissed += OnOverlayDismissed;
+            _teammateMonitor.TeammatesReady += OnTeammatesReady;
 
             _filterRefreshDebouncer = new TrailingDebouncer(FilterRefreshDebounceMs, RunFilterRefreshAsync);
         }
@@ -144,7 +143,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     _tipMessage.ShowError(L("Search.TooFast", "点击过快请稍后重试"));
                     return;
                 }
-                await RefreshOcrOnceAsync();
+                await RefreshTeamMemberDataAsync();
             });
 
 
@@ -217,29 +216,29 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private void OnGameStatusRecognized(object? sender, GameStatusChangedEventArgs args)
         {
             BlackGoldAncientSword.Framework.Core.Infrastructure.DiagLog.Write(
-                "VM", $"OnGameStatusRecognized status={args.Status}, dataLoaded={_ocrDataLoadedSuccessfully}");
+                "VM", $"OnGameStatusRecognized status={args.Status}, dataLoaded={_teamDataLoadedSuccessfully}");
 
-            // 非英雄选择状态时立即取消 OCR 循环，无需等待 UI 线程调度。
+            // 对局结束/状态未知时立即停止日志监听，无需等待 UI 线程调度。
+            // InGame 不在此列：进入对局后队友仍可能退出/换人，需保持监听以更新卡片。
             // GameLogMonitor 在 ThreadPool 上触发事件，HandleGameStatusOnUiThread 通过
-            // _uiDispatcher.InvokeAsync marshal 到 UI 线程，从事件触发到实际执行 StopOcrLoop
-            // 之间存在延迟窗口，OCR 截图循环在此期间会继续执行。
-            // StopOcrLoop 内部持有 _ocrLock，线程安全，可从任意线程调用。
-            if (args.Status != GameStatus.HeroSelection)
+            // _uiDispatcher.InvokeAsync marshal 到 UI 线程，从事件触发到实际执行 StopMonitor
+            // 之间存在延迟窗口。StopMonitor 内部持有 _monitorLock，线程安全，可从任意线程调用。
+            if (args.Status is GameStatus.BattleEnded or GameStatus.Unknown)
             {
-                StopOcrLoop();
+                StopMonitor();
             }
 
-            // 注意：不能在这里因 _ocrDataLoadedSuccessfully=True 就早退。
+            // 注意：不能在这里因 _teamDataLoadedSuccessfully=True 就早退。
             // BattleStateMachine 只在 !alreadyInBattle 时才 emit Joined（同一局的掉线重连不会重复
             // emit），所以每次收到 HeroSelection 事件都代表"新一局英雄选择开始"，必须重置
-            // _ocrDataLoadedSuccessfully 并重启 OCR。
+            // _teamDataLoadedSuccessfully 并重启监听。
             // 若上一局异常退出（玩家杀进程 / crash，无 TeamBattle Destroy 等 Ended marker），
-            // _ocrDataLoadedSuccessfully 会残留 True；此处若早退就永远跳过 HandleGameStatusOnUiThread
-            // 里的重置，导致新一局英雄选择阶段 OCR 循环永不启动（实测复现的 bug）。
-            // 统一交给下方 HandleGameStatusOnUiThread 的 HeroSelection 分支处理（重置 + StartOcrLoop）。
+            // _teamDataLoadedSuccessfully 会残留 True；此处若早退就永远跳过 HandleGameStatusOnUiThread
+            // 里的重置，导致新一局英雄选择阶段日志监听永不启动（实测复现的 bug）。
+            // 统一交给下方 HandleGameStatusOnUiThread 的 HeroSelection 分支处理（重置 + StartMonitor）。
 
-            // HandleGameStatusOnUiThread 中 InGame/BattleEnded/Unknown 分支仍会调用
-            // StopOcrLoop()，但 _isOcrRunning 已为 false 时会通过 lock 内早期 return 快速退出。
+            // HandleGameStatusOnUiThread 中 BattleEnded/Unknown 分支仍会调用
+            // StopMonitor()，但 _isMonitoring 已为 false 时会通过 lock 内早期 return 快速退出。
 
             // GameStatusRecognized 可能从 ThreadPool 触发（GameLogMonitor 的 FileSystemWatcher.OnLogChanged
             // 走 Task.Run → 同步 raise BattleStarted/Ended/Joined → MainWindowViewModel/HomePageViewModel
@@ -265,23 +264,24 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     IsHeroSelectionPhase = true;
                     _overlayShownForThisRound = false;
                     _overlayDismissedThisRound = false;
-                    _ocrDataLoadedSuccessfully = false;
+                    _teamDataLoadedSuccessfully = false;
                     StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
-                    StartOcrLoop();
+                    // 新一局开始：清空 Monitor 上一局残留的 UID 与触发快照，从当前文件位置继续。
+                    _teammateMonitor.Reset();
+                    StartMonitor();
                     break;
                 case GameStatus.InGame:
                     IsHeroSelectionPhase = false;
                     _teamOverlayService.Hide();
-                     StopOcrLoop();
-                     CancelAndDispose(ref _refreshOcrCts);
+                    // 不 StopMonitor：进入对局后队友仍可能退出/换人（set-uid-vol 增量写入新 UID），
+                    // 需保持监听以更新卡片，直到本局结束（BattleEnded/Unknown）才停。
                     ClearImageMemoryCaches();
                     break;
                 case GameStatus.BattleEnded:
                     IsHeroSelectionPhase = false;
-                    _ocrDataLoadedSuccessfully = false;
+                    _teamDataLoadedSuccessfully = false;
                     _teamOverlayService.Hide();
-                     StopOcrLoop();
-                     CancelAndDispose(ref _refreshOcrCts);
+                     StopMonitor();
                     ClearImageMemoryCaches();
                     StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
                      if (TeamMembers.Count > 0)
@@ -295,13 +295,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 case GameStatus.Unknown:
                     IsHeroSelectionPhase = false;
                     _teamOverlayService.Hide();
-                     StopOcrLoop();
+                     StopMonitor();
                     StatusText = L("TeamInfo.WaitingForHeroSelect", "等待游戏进入英雄选择...");
                      if (TeamMembers.Count > 0)
                     ClearImageMemoryCaches();
                      {
                          _hasEverHadData = false;
-                         _ocrDataLoadedSuccessfully = false;
+                         _teamDataLoadedSuccessfully = false;
                          TeamMembers.Clear();
                          MergedStatRows.Clear();
                          RaiseMemberProperties();
@@ -310,33 +310,49 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        private void StartOcrLoop()
+        private void StartMonitor()
         {
             BlackGoldAncientSword.Framework.Core.Infrastructure.DiagLog.Write(
-                "VM", $"StartOcrLoop 入口, dataLoaded={_ocrDataLoadedSuccessfully}, isRunning={_isOcrRunning}");
+                "VM", $"StartMonitor 入口, dataLoaded={_teamDataLoadedSuccessfully}, isRunning={_isMonitoring}");
 
-            // 如果上一轮已成功完成完整识别（有 UID、数据已加载），不再重复启动 OCR 轮询。
-            // 用户仍可通过右上角的刷新按钮手动触发单次识别（RefreshOcrCommand → RefreshOcrOnceAsync）。
-            if (_ocrDataLoadedSuccessfully)
+            // 如果上一轮已成功识别（数据已加载），不再重复监听。
+            // 用户仍可通过右上角的刷新按钮手动触发单次重查（RefreshTeamMemberDataCommand）。
+            if (_teamDataLoadedSuccessfully)
             {
-                Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}] Skip OCR loop: valid data already loaded.");
+                Debug.WriteLine($"[{nameof(TeamInfoPageViewModel)}] Skip monitor: valid data already loaded.");
                 return;
             }
 
-            // Token 必须在 lock 内取出：单 UI 线程下虽然 Stop/Start 不会并发，
-            // 但写成 lock 外读 `_ocrLoopCts!.Token` 会让"如果有人并发 Stop"
-            // 的场景命中 NullReferenceException（CancelAndDispose 把 ref 置 null）。
-            // 在 lock 内取出 CancellationToken（struct），离 lock 后即可安全使用。
-            CancellationToken ct;
-            lock (_ocrLock)
+            lock (_monitorLock)
             {
-                if (_isOcrRunning) return;
-                _isOcrRunning = true;
-                CancelAndDispose(ref _ocrLoopCts);
-                _ocrLoopCts = new CancellationTokenSource();
-                ct = _ocrLoopCts.Token;
+                if (_isMonitoring) return;
+                _isMonitoring = true;
             }
-            _ = OcrLoopAsync(ct);
+            _teammateMonitor.Start();
+        }
+
+        /// <summary>
+        /// 语音日志识别到/更新队友名单时触发（Monitor 的 ThreadPool 线程）。
+        /// 首次识别与对局中队友退出/换人（UID 集合变化）都会走到这里，更新卡片数据。
+        /// marshal 回 UI 线程后写入队伍页。
+        /// </summary>
+        private void OnTeammatesReady(object? sender, CcMiniTeammatesEventArgs args)
+        {
+            DiagLog.Write("VM", $"OnTeammatesReady: {args.TeammateUids.Count} 名队友");
+            if (!_uiDispatcher.CheckAccess())
+            {
+                _ = _uiDispatcher.InvokeAsync(() => HandleTeammatesReady(args));
+                return;
+            }
+            HandleTeammatesReady(args);
+        }
+
+        private void HandleTeammatesReady(CcMiniTeammatesEventArgs args)
+        {
+            if (args.TeammateUids.Count == 0) return;
+            // 不做早退：队友在英雄选择阶段可能退出/换人（UID 集合变化），每次变化都要更新卡片。
+            _teamDataLoadedSuccessfully = true;
+            _ = SafeUpdateTeamMembers(args.TeammateUids);
         }
 
         private void OnOverlayDismissed()
@@ -344,17 +360,20 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _overlayDismissedThisRound = true;
         }
 
-        private void StopOcrLoop()
+        private void StopMonitor()
         {
-            lock (_ocrLock)
+            lock (_monitorLock)
             {
-                if (!_isOcrRunning) return;
-                _isOcrRunning = false;
-                CancelAndDispose(ref _ocrLoopCts);
+                if (!_isMonitoring) return;
+                _isMonitoring = false;
             }
+            _teammateMonitor.Stop();
         }
 
-        private async Task RefreshOcrOnceAsync()
+        /// <summary>
+        /// 手动刷新：用 Monitor 最近一次识别到的 UID（含已加载/失败重试）重建队伍数据。
+        /// </summary>
+        private async Task RefreshTeamMemberDataAsync()
         {
             // 取消之前的刷新操作
             CancelAndDispose(ref _refreshOcrCts);
@@ -366,100 +385,30 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             {
                 StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
 
-                var names = await _ocrCoordinator.RecognizeAutoAsync(ct);
-                ct.ThrowIfCancellationRequested();
+                var uids = _teammateMonitor.TeammateUids;
+                if (uids.Count == 0) return;
 
-                if (names.Length == 0) return;
-
-                // 用本地已知昵称 (player_prefs.txt) 校正 OCR 结果中"最像自己"的那一格。
-                // 只改自己那一格，队友格永不动。命中率提升让下游 ReorderMembersForLocalUser
-                // 能稳定把自己放到中间卡片。
                 await ReloadLocalUserAsync();
-                names = TeamMemberNameCorrector.Apply(names, _playerPrefsService.Current.OriginalPlayerName);
-
-                // 智能去重：本轮 OCR 名字与当前 TeamMembers 比对——
-                // - 新增名字：加入 TeamMembers，加入请求列表
-                // - 已存在且已成功加载（有 UID + stats + 无错误）：跳过，不重发 HTTP（省后端压力）
-                // - 已存在但上次失败/未加载：重置状态并加入请求列表（允许用户通过刷新按钮重试）
-                // - 本轮未识别到的旧成员：从 TeamMembers 移除
-                var toLoad = new List<TeamMemberInfo>();
-                await _uiDispatcher.InvokeAsync(() =>
-                {
-                    _hasEverHadData = true;
-
-                    var recognizedSet = names.ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    var removed = TeamMembers.Where(m => !recognizedSet.Contains(m.UserName)).ToList();
-                    foreach (var r in removed)
-                        TeamMembers.Remove(r);
-
-                    var existingNames = TeamMembers.Select(m => m.UserName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    foreach (var name in names)
-                    {
-                        if (existingNames.Contains(name)) continue;
-
-                        var member = new TeamMemberInfo(_clipboard, _localizedText, _tipMessage)
-                        {
-                            UserName = name,
-                            IsLoading = true,
-                            RefreshAction = RefreshSingleMember,
-                            NavigateToStatsAction = NavigateToMemberStats
-                        };
-                        TeamMembers.Add(member);
-                        toLoad.Add(member);
-                    }
-
-                    // 对已存在的成员判断是否需要重新请求
-                    foreach (var member in TeamMembers)
-                    {
-                        if (toLoad.Contains(member)) continue; // 上面新增的已经登记
-
-                        var alreadyLoaded = !string.IsNullOrEmpty(member.UID)
-                                            && member.Stats.Count > 0
-                                            && !member.HasStatusError;
-                        if (alreadyLoaded) continue; // 已成功加载 → 跳过 HTTP
-
-                        // 上次失败或未加载完：重置状态并加入本轮请求列表
-                        member.IsLoading = true;
-                        member.StatusText = string.Empty;
-                        toLoad.Add(member);
-                    }
-
-                    ReorderMembersForLocalUser();
-                    RaiseMemberProperties();
-                });
-
-                // 只对需要请求的成员启动 LoadWithIndependentToken
-                if (toLoad.Count > 0)
-                {
-                    var tasks = new List<Task>();
-                    await _uiDispatcher.InvokeAsync(() =>
-                    {
-                        foreach (var member in toLoad)
-                        {
-                            tasks.Add(LoadWithIndependentToken(member, ct));
-                        }
-                    });
-                    await Task.WhenAll(tasks);
-                }
-                _ocrDataLoadedSuccessfully = true;
+                await UpdateTeamMembersAsync(uids);
+                _teamDataLoadedSuccessfully = true;
             }
             catch (OperationCanceledException)
             {
-                Debug.WriteLine("[TeamInfo] Refresh OCR cancelled");
+                Debug.WriteLine("[TeamInfo] Refresh team data cancelled");
             }
             catch (Exception ex)
             {
-                AppLog.Error(ex, "TeamInfo", "Refresh OCR error");
+                AppLog.Error(ex, "TeamInfo", "Refresh team data error");
             }
         }
 
 
         /// <summary>
-        /// 覆盖层弹窗请求刷新时的回调。重置覆盖层标志后走完整的 OCR 刷新流程，
+        /// 覆盖层弹窗请求刷新时的回调。重置覆盖层标志后走完整的刷新流程，
         /// 刷新完成后覆盖层会自动重新显示。
         /// <para>
         /// **async void 安全契约**：本方法被 ITeamOverlayService.RefreshAction (Action 类型) 持有调用，
-        /// 必须保持 async void 签名。<see cref="RefreshOcrOnceAsync"/> 内部完整 try/catch 兜底所有 await 异常，
+        /// 必须保持 async void 签名。<see cref="RefreshTeamMemberDataAsync"/> 内部完整 try/catch 兜底所有 await 异常，
         /// 修改时**不得把抛出语义移出该 try/catch**——否则异常会直接冲到 SynchronizationContext，
         /// 由 App.xaml.cs 的 DispatcherUnhandledException 接管并向用户弹错。
         /// 如需返回 Task，必须同步把 RefreshAction 类型改为 Func&lt;Task&gt; 并审计所有调用方。
@@ -470,7 +419,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             try
             {
                 _overlayShownForThisRound = false;
-                await RefreshOcrOnceAsync();
+                await RefreshTeamMemberDataAsync();
             }
             catch (Exception ex)
             {
@@ -479,110 +428,23 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         }
 
         /// <summary>
-        /// 判定 OCR 结果是否已"识别完整、可停止重试"的最少人数阈值。
-        /// 队伍至少 2 人（含本地用户），识别到 &lt; 2 个名字说明队友卡片尚未全部渲染，
-        /// 属于英雄选择阶段刚进入的过渡态，必须继续重试而非自锁。
-        /// </summary>
-        private const int MinRecognizedMembers = 2;
-
-        private async Task OcrLoopAsync(CancellationToken ct)
-        {
-            try
-            {
-                // 自行驱动重试循环，而非依赖 coordinator 的"抓到 ≥1 个就返回"——
-                // 英雄选择刚进入时队友卡片逐个渲染（通常本地用户先出现），
-                // 首帧往往只 OCR 到 1 个残缺名单。若此时置 _ocrDataLoadedSuccessfully=true
-                // 并退出循环，StartOcrLoop 会因该标志永久早退，OCR 就"突然停止"在残缺态。
-                // 只有识别到 >= MinRecognizedMembers 个名字才算完整、可停止。
-                //
-                // retryInterval=1500ms：零休眠会让识别不全时每秒反复触发全屏抓取 + PaddleOCR，
-                // 打满 CPU/磁盘；1500ms 在人类感知上仍近乎立刻，但 CPU 占用降一个数量级。
-                string[] names;
-                int attempt = 0;
-                while (true)
-                {
-                    ct.ThrowIfCancellationRequested();
-
-                    attempt++;
-                    try
-                    {
-                        names = await _ocrCoordinator.RecognizeAutoAsync(ct);
-                        DiagLog.Write("OCR",
-                            $"attempt#{attempt} 识别到 {names.Length} 名: [{string.Join(" | ", names)}], 阈值={MinRecognizedMembers}, status={_gameStatusMonitor.CurrentStatus}");
-                        if (names.Length >= MinRecognizedMembers) break;
-                    }
-                    catch (OperationCanceledException) { throw; }
-                    catch (Exception ex)
-                    {
-                        // 单次截图 / 推理失败（GPU/WGC 抖动等）不应中断循环，记录后按节奏重试。
-                        DiagLog.Write("OCR", $"attempt#{attempt} 识别异常: {ex.GetType().Name}: {ex.Message}");
-                        AppLog.Error(ex, "TeamInfo", "OCR recognize attempt error");
-                    }
-
-                    await Task.Delay(TimeSpan.FromMilliseconds(1500), ct);
-                }
-
-                if (ct.IsCancellationRequested) return;
-
-                DiagLog.Write("OCR", $"识别完整({names.Length}名), 停止重试, 置 dataLoaded=true, 进入数据加载");
-
-                // ★ 识别到完整队友名单后，立即停止后续 OCR 截图。
-                // 即使 HTTP 数据加载失败，也不应重复截图识别。
-                _ocrDataLoadedSuccessfully = true;
-
-                // 注意：此处刻意不再因 CurrentStatus != HeroSelection 就 early-return。
-                // 既然已经识别到有效队友名单，就应无条件写入队伍信息页——即使识别返回时
-                // 游戏已切到 InGame（英雄选择末尾才识别成功的局）。这与 OnNavigatedToExecute
-                // 中 InGame 且有成员时保留展示的逻辑一致：对局中同样需要看队友战绩。
-                // 早退会导致"英雄选择末尾识别成功却因状态切换被整批丢弃"的空白页 bug。
-
-                // 确保赛季数据已加载后再加载成员数据，避免 _selectedSeason?.Code 为 null
-                await LoadSeasonsAsync();
-                DiagLog.Write("OCR", $"LoadSeasonsAsync 完成, seasonsLoaded={_seasonsLoaded}, selectedSeason={_selectedSeason?.Code}");
-
-                await _uiDispatcher.InvokeAsync(() =>
-                {
-                    // InvokeAsync 委托签名是 Action，无法 await。fire-and-forget 但通过 SafeUpdateTeamMembers
-                    // 包一层 try/catch，避免 OperationCanceledException / 其他异常变成 UnobservedTaskException。
-                    _ = SafeUpdateTeamMembers(names);
-                });
-
-                // Wait for all member data to load, then navigate to TeamInfo
-                while (TeamMembers.Any(m => m.IsLoading) && !ct.IsCancellationRequested)
-                {
-                    await Task.Delay(300, ct);
-                }
-                // 数据已在单例 ViewModel 中，保留已加载的数据，无需重新导航
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
-            {
-                AppLog.Error(ex, "TeamInfo", "OCR loop error");
-            }
-            finally
-            {
-                StopOcrLoop();
-            }
-        }
-
-        /// <summary>
         /// fire-and-forget 包装：捕获 <see cref="UpdateTeamMembersAsync"/> 异常以避免
         /// UnobservedTaskException（OperationCanceledException 视为正常取消）。
         /// </summary>
-        private async Task SafeUpdateTeamMembers(string[] names)
+        private async Task SafeUpdateTeamMembers(IReadOnlyList<string> uids)
         {
-            DiagLog.Write("OCR", $"SafeUpdateTeamMembers 入口: {names.Length}名");
+            DiagLog.Write("VM", $"SafeUpdateTeamMembers 入口: {uids.Count}名");
             try
             {
-                await UpdateTeamMembersAsync(names);
+                await UpdateTeamMembersAsync(uids);
             }
             catch (OperationCanceledException)
             {
-                DiagLog.Write("OCR", "SafeUpdateTeamMembers 被取消(OperationCanceledException)");
+                DiagLog.Write("VM", "SafeUpdateTeamMembers 被取消(OperationCanceledException)");
             }
             catch (Exception ex)
             {
-                DiagLog.Write("OCR", $"SafeUpdateTeamMembers 异常: {ex.GetType().Name}: {ex.Message}");
+                DiagLog.Write("VM", $"SafeUpdateTeamMembers 异常: {ex.GetType().Name}: {ex.Message}");
                 AppLog.Error(ex, $"{nameof(TeamInfoPageViewModel)}.{nameof(SafeUpdateTeamMembers)}");
             }
         }
@@ -608,61 +470,87 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        // 注意：本方法刻意不接收 OCR 循环的 CancellationToken。
-        // OCR 已识别到有效名字（_ocrDataLoadedSuccessfully 已置 true），把结果写入 UI 这一步
-        // 必须无条件完成——绝不能因 OCR 循环 token 在 await(ReloadLocalUser/LoadSeasons) 让出线程
-        // 期间被 StopOcrLoop 取消，就把已识别的成员整批丢弃（实测 bug：识别到 3 人却因 ct 取消
+        // 注意：本方法刻意不接收监控循环的 CancellationToken。
+        // 语音日志已识别到有效 UID（_teamDataLoadedSuccessfully 已置 true），把结果写入 UI 这一步
+        // 必须无条件完成——绝不能因 token 在 await(ReloadLocalUser/LoadSeasons) 让出线程
+        // 期间被取消，就把已识别的成员整批丢弃（实测 bug：识别到 3 人却因 ct 取消
         // 抛 OperationCanceledException，TeamMembers 一个都没加，页面空白）。
         // 成员 HTTP 加载有独立的 _refreshMembersCts（loadCt），其取消语义与此无关。
-        private async Task UpdateTeamMembersAsync(string[] names)
+        private async Task UpdateTeamMembersAsync(IReadOnlyList<string> uids)
         {
-            // 用本地已知昵称 (player_prefs.txt) 校正 OCR 结果中"最像自己"的那一格。
-            // 只改自己那一格，队友格永不动。校正后再做 identical-skip 判断，避免
-            // 上次已校正的 TeamMembers 与本轮未校正的 names 比较时出现假差异。
-            await ReloadLocalUserAsync();
-            var localName = _playerPrefsService.Current.OriginalPlayerName;
-            var beforeCorrect = string.Join(" | ", names);
-            names = TeamMemberNameCorrector.Apply(names, localName);
-            DiagLog.Write("OCR",
-                $"UpdateTeamMembers 校正: localName='{localName}', 校正前=[{beforeCorrect}], 校正后=[{string.Join(" | ", names)}], 当前TeamMembers={TeamMembers.Count}");
+            if (uids.Count == 0) return;
 
-            // Skip if recognized names are identical to current members
-            if (names.Length == TeamMembers.Count &&
-                names.All(n => TeamMembers.Any(m =>
-                    string.Equals(m.UserName, n, StringComparison.OrdinalIgnoreCase))))
-            {
-                DiagLog.Write("OCR", "UpdateTeamMembers 名字与当前成员完全一致，跳过写入(identical-skip)");
-                return;
-            }
+            await ReloadLocalUserAsync();
+            var localUid = _playerPrefsService.Current.PlayerId;
+            var localName = _playerPrefsService.Current.OriginalPlayerName;
+            DiagLog.Write("VM",
+                $"UpdateTeamMembers 入口: uids=[{string.Join(" | ", uids)}], localUid={localUid}, localName='{localName}', 当前TeamMembers={TeamMembers.Count}");
+
+            // 本地用户格判定改为按 UID 精确匹配：语音日志给出的 UID 中本地用户必有一个等于
+            // PlayerId（来自 player_prefs 的 player_id）。队友格全部按 UID 查询。
+            // 若本地 UID 不在名单中（极端：本地 UID 读取失败），则把首格视为本地用户兜底。
+
+            // 队伍规模由队友 UID 数量决定（语音日志 set-uid-vol 只给队友设音量）：
+            // 1 名队友 = 双排，2 名队友 = 三排。同步 _selectedTeamSize 保证 stats 查询用对模式。
+            if (uids.Count == 1)
+                _selectedTeamSize = TeamSize.Duo;
+            else if (uids.Count >= 2)
+                _selectedTeamSize = TeamSize.Trio;
 
             // Mark that we have loaded data at least once
             _hasEverHadData = true;
 
-            // 给成员数据加载用独立 token，不复用 OCR loop 的 ct。
-            // 原因：游戏状态 HeroSelection → InGame 切换会 StopOcrLoop()→取消 _ocrLoopCts，
-            // 此时若 stats HTTP 仍在 in-flight 会抛 OperationCanceledException，
-            // LoadMemberDataAsync 跳过字段写入 block，卡片出现"段位有数据但 stats 全空"的不一致状态。
+            // 给成员数据加载用独立 token，不复用监控生命周期 token。
             // member-scoped 加载只应在用户主动整队刷新（RefreshTeamMemberData）或离开页面时取消。
             if (_refreshMembersCts == null || _refreshMembersCts.IsCancellationRequested)
             {
                 CancelAndDispose(ref _refreshMembersCts);
-                    _refreshMembersCts = new CancellationTokenSource();
+                _refreshMembersCts = new CancellationTokenSource();
             }
             var loadCt = _refreshMembersCts.Token;
 
-            var existingNames = TeamMembers.Select(m => m.UserName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var newNames = names.Where(n => !existingNames.Contains(n)).ToArray();
+            // 按 UID 去重名单；本地用户格也占一格（作为查询模板 / diff 基准）。
+            var recognizedUids = uids.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            // 若本地 UID 不在语音日志给出的队友 UID 中，补上本地用户格（中间卡）。
+            var localPresent = !string.IsNullOrEmpty(localUid)
+                               && recognizedUids.Contains(localUid, StringComparer.OrdinalIgnoreCase);
+            if (!localPresent)
+            {
+                // 本地 UID 读取失败或本地用户在 set-uid-vol 中未出现：仍保留本地卡（本地用户必在队伍）。
+                recognizedUids.Add(localUid);
+            }
 
-            var recognizedSet = names.ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var removed = TeamMembers.Where(m => !recognizedSet.Contains(m.UserName)).ToList();
+            // 移除已不在本局名单中的旧成员。
+            var recognizedSet = recognizedUids.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var removed = TeamMembers.Where(m => !recognizedSet.Contains(m.UID)).ToList();
             foreach (var r in removed)
                 TeamMembers.Remove(r);
 
-            foreach (var name in newNames)
+            foreach (var uid in recognizedUids)
             {
+                // 已存在且已成功加载（有 UID + stats + 无错误）：跳过，不重发 HTTP。
+                var existing = TeamMembers.FirstOrDefault(m =>
+                    string.Equals(m.UID, uid, StringComparison.OrdinalIgnoreCase));
+                if (existing != null)
+                {
+                    var alreadyLoaded = !string.IsNullOrEmpty(existing.UID)
+                                        && existing.Stats.Count > 0
+                                        && !existing.HasStatusError;
+                    if (alreadyLoaded) continue;
+                    // 上次失败或未加载完：重置状态并重新请求。
+                    existing.IsLoading = true;
+                    existing.StatusText = string.Empty;
+                    _ = LoadWithIndependentToken(existing, loadCt);
+                    continue;
+                }
+
+                var isLocal = !string.IsNullOrEmpty(localUid)
+                              && string.Equals(uid, localUid, StringComparison.OrdinalIgnoreCase);
                 var member = new TeamMemberInfo(_clipboard, _localizedText, _tipMessage)
                 {
-                    UserName = name,
+                    UID = uid,
+                    UserName = isLocal && !string.IsNullOrWhiteSpace(localName) ? localName : uid,
+                    IsLocalUser = isLocal,
                     IsLoading = true,
                     RefreshAction = RefreshSingleMember,
                     NavigateToStatsAction = NavigateToMemberStats
@@ -675,14 +563,17 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             UpdateDiffs();
             IsLoading = TeamMembers.Any(m => m.IsLoading);
             RaiseMemberProperties();
-            DiagLog.Write("OCR",
-                $"UpdateTeamMembers 完成: 新增{newNames.Length}名, 移除{removed.Count}名, TeamMembers={TeamMembers.Count}, 开始HTTP加载");
+            DiagLog.Write("VM",
+                $"UpdateTeamMembers 完成: TeamMembers={TeamMembers.Count}, 开始HTTP加载");
+
+            // 队友变化（有人退出/重进）时立即刷右下角弹窗，确保队员列表实时更新。
+            UpdateOverlayMembers();
         }
 
         private void NavigateToMemberStats(TeamMemberInfo member)
         {
             // 本地用户卡片：不带 TargetPlayerName 导航到战绩页，战绩页会 reload 本地用户
-            // 并展示本地 UID —— 等价于战绩页「回到我」的效果，而非用 OCR 名去查自己。
+            // 并展示本地 UID —— 等价于战绩页「回到我」的效果，而非用队友名去查自己。
             var parameters = new NavigationParameters();
             if (!member.IsLocalUser)
                 parameters.Add(NavigationParameterKeys.TargetPlayerName, member.UserName);
@@ -691,15 +582,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         private void ReorderMembersForLocalUser()
         {
-            // 2 人或 3 人队里必然有一格是本地用户，本地用户名本地可知（OriginalPlayerName），
-            // 无需依赖 OCR 精确识别——只要挑出最像本地名的那一格强制移到中间即可。
-            // 用 FindSelfIndex（argmax、无阈值）而非精确匹配：OCR 把本地名识别错、
-            // 或 TeamMemberNameCorrector 阈值不过没改名时，精确匹配会失败导致本地用户
-            // 漏到最右侧卡片。argmax 保证总能定位到"最像自己"的那一格。
+            // 2 人或 3 人队里必然有一格是本地用户。定位规则：本地用户 UID == player_prefs 的
+            // PlayerId（本地卡在 UpdateTeamMembersAsync 中已置 IsLocalUser）。无条件强制，
+            // 移到中间卡片 index 1，其余格即队友。
             if (TeamMembers.Count < 2) return;
 
-            // ResolveLocalUserIndex 返回 -1 仅当本地名为空（无法定位），此时不重排；
-            // 否则返回定位下标（含 0），无条件把本地用户移到中间 index 1。
             var localIdx = ResolveLocalUserIndex();
             if (localIdx < 0) return;
 
@@ -712,9 +599,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         /// <summary>
         /// 标记中间格（index 1）为本地用户：置 <see cref="TeamMemberInfo.IsLocalUser"/>，
-        /// 并把搜索框展示文本（UserName）回写为本地登录名 OriginalPlayerName——
-        /// 本地名与自身相似度最高，回写后不影响后续 <see cref="ResolveLocalUserIndex"/> 定位。
-        /// 其余格清除标志。仅在已重排到位（本地用户位于 index 1）后调用。
+        /// 并把该格搜索框展示文本回写为本地登录名 OriginalPlayerName（本地名本地可知）。
+        /// 其余格清除标志。
         /// </summary>
         private void MarkLocalUserSlot()
         {
@@ -731,26 +617,38 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         /// <summary>
         /// 定位本地用户在 <see cref="TeamMembers"/> 中的下标，供重排与 diff 计算共用，保证口径一致。
         /// <para>
-        /// 本地环境拿不到可靠的本地 UID（player_prefs 的 player_id 常为空，section UID 与战绩 API
-        /// UID 不同体系），战绩页判定本地用户同样只靠 <c>OriginalPlayerName</c> 名字比对。因此这里
-        /// 唯一可靠的信号就是本地登录名 + <see cref="TeamMemberNameCorrector.FindSelfIndex"/> 的
-        /// argmax 相似度定位，与查询成功与否无关——本地用户查不到数据也必须能被定位居中。
+        /// 优先用创建时设置的 <see cref="TeamMemberInfo.IsLocalUser"/> 标志（UpdateTeamMembersAsync
+        /// 在生成本地卡时已精确判定），因为它不依赖 UID 字符串格式——后端返回的 RoleIdSimple 是纯数字
+        /// （如 15949400120163），与本地 PlayerId（l77c000015949400120163）带前缀不同，字符串匹配必失败。
+        /// UID 匹配仅作兜底（极端：标志未设置）。
         /// </para>
         /// </summary>
         private int ResolveLocalUserIndex()
         {
-            var localName = _playerPrefsService.Current.OriginalPlayerName;
-            var names = TeamMembers.Select(m => m.UserName).ToArray();
-            return TeamMemberNameCorrector.FindSelfIndex(names, localName);
+            if (TeamMembers.Count == 0) return -1;
+
+            // 1) 首选：IsLocalUser 标志（创建时已按 PlayerId 精确判定）。
+            for (int i = 0; i < TeamMembers.Count; i++)
+            {
+                if (TeamMembers[i].IsLocalUser) return i;
+            }
+
+            // 2) 兜底：UID 精确匹配 PlayerId（仅当标志未设置时生效）。
+            var localUid = _playerPrefsService.Current.PlayerId;
+            if (!string.IsNullOrEmpty(localUid))
+            {
+                for (int i = 0; i < TeamMembers.Count; i++)
+                {
+                    if (string.Equals(TeamMembers[i].UID, localUid, StringComparison.OrdinalIgnoreCase))
+                        return i;
+                }
+            }
+            return 0;
         }
 
         private int LocalUserIndex
         {
-            get
-            {
-                var idx = ResolveLocalUserIndex();
-                return idx < 0 ? 0 : idx;
-            }
+            get => ResolveLocalUserIndex();
         }
 
         // 段位分行的合成 key：后端 metrics 不含段位分，作为固定尾行单独追加。
@@ -771,25 +669,25 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             var m2 = TeamMembers.Count > 2 ? TeamMembers[2] : null;
 
             var localIdx = LocalUserIndex;
-            if (localIdx < 0) localIdx = 0;
-
-            // diff 的两侧：本地用户 vs 左边队友、本地用户 vs 右边队友
+            // 未定位到本地用户（-1）时 diff 两侧退化为普通左右相邻比较，模板取任一有数据的成员。
             TeamMemberInfo? diffLeftA = null, diffLeftB = null;
             TeamMemberInfo? diffRightA = null, diffRightB = null;
             if (m0 != null && m1 != null)
             {
-                diffLeftA = localIdx == 0 ? m0 : m1;
-                diffLeftB = localIdx == 0 ? m1 : m0;
+                if (localIdx == 0) { diffLeftA = m0; diffLeftB = m1; }
+                else if (localIdx == 1) { diffLeftA = m1; diffLeftB = m0; }
+                else { diffLeftA = m0; diffLeftB = m1; }
             }
             if (m1 != null && m2 != null)
             {
-                diffRightA = localIdx == 1 ? m1 : (localIdx == 2 ? m2 : m1);
-                diffRightB = localIdx == 1 ? m2 : (localIdx == 2 ? m1 : m2);
+                if (localIdx == 1) { diffRightA = m1; diffRightB = m2; }
+                else if (localIdx == 2) { diffRightA = m2; diffRightB = m1; }
+                else { diffRightA = m1; diffRightB = m2; }
             }
 
-            // 行模板优先取本地用户（中间栏）返回的 metrics；本地用户查询失败/未加载时，
+            // 行模板优先取本地用户返回的 metrics；未定位到本地用户或其查询失败/未加载时，
             // 回退到任一有 metrics 的成员，避免整表空白。
-            var localMember = localIdx >= 0 && localIdx < TeamMembers.Count ? TeamMembers[localIdx] : m1;
+            var localMember = localIdx >= 0 && localIdx < TeamMembers.Count ? TeamMembers[localIdx] : null;
             var template = (localMember != null && localMember.Metrics.Count > 0)
                 ? localMember.Metrics
                 : TeamMembers.FirstOrDefault(x => x.Metrics.Count > 0)?.Metrics
@@ -899,15 +797,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             try
             {
-                // 本地用户格无条件用本地 UID 查询。判定"这格是不是本地用户"与居中定位共用同一个
-                // ResolveLocalUserIndex（逐字符相似度 argmax），而非精确名字相等——OCR 把本地名识别
-                // 错字时精确相等会失配、退回用错名字查导致中间卡片查无数据。只要这格被定位为本地用户，
-                // 就无条件传本地 UID（player_id），让 TeamMemberLoader 用 UID 命中，保证本地用户卡片
-                // 一定有数据、且位置正确。FindSelfIndex 靠名字算、不依赖集合顺序，故先于重排调用也正确。
-                var localUid = _playerPrefsService.Current.PlayerId;
-                var isLocalUserSlot = TeamMembers.IndexOf(member) == ResolveLocalUserIndex();
-                var localUidOverride =
-                    isLocalUserSlot && !string.IsNullOrEmpty(localUid) ? localUid : null;
+                // 所有成员按 UID 查询：优先用 member.UID 作为 SearchRecord 的 keyword（UID 精确命中），
+                // 用户名（UserName）仅作兜底回退。本地用户格与队友格无差别——都走 UID 优先。
+                var uidOverride = string.IsNullOrWhiteSpace(member.UID) ? null : member.UID;
 
                 // Step 1-4: 调 Loader 在后台线程拉数据；返回 DTO 后回 UI 线程逐批写回属性。
                 var loaded = await _memberLoader.LoadAsync(
@@ -916,7 +808,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     _selectedCategory,
                     _selectedTeamSize,
                     ct,
-                    localUidOverride).ConfigureAwait(false);
+                    uidOverride).ConfigureAwait(false);
 
                 if (loaded.Failed)
                 {
@@ -937,7 +829,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     await _uiDispatcher.InvokeAsync(() =>
                     {
                         member.Level = loaded.Level;
-                        member.UID = loaded.UID;
+                        // 本地卡 UID 保持本地 PlayerId 不变（后端返回的 RoleIdSimple 是纯数字，
+                        // 与本地带前缀 ID 不同；覆盖会导致本地卡定位失效 + 下次匹配重复建卡）。
+                        // 队友卡才回写后端返回的 UID。
+                        if (!member.IsLocalUser)
+                            member.UID = loaded.UID;
                         // 后端真实昵称只写到 DisplayName（头像下展示），不碰 UserName（搜索框）以免回填
                         if (!string.IsNullOrWhiteSpace(loaded.UserName))
                             member.DisplayName = loaded.UserName;
@@ -991,36 +887,31 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     member.IsLoading = false;
-                    // 成员数据到手后再校正一次本地用户居中：UpdateTeamMembersAsync 里 Add(newNames)
-                    // 会把新成员追加到末尾、移除又打乱顺序，首次 ReorderMembersForLocalUser 之后
-                    // TeamMembers 顺序可能与 OCR 槽位不再一致。此处每格加载完补一次重排，
+                    // 成员数据到手后再校正一次本地用户居中：UpdateTeamMembersAsync 里 Add 新成员
+                    // 会追加到末尾、移除又打乱顺序，首次 ReorderMembersForLocalUser 之后
+                    // TeamMembers 顺序可能不再稳定。此处每格加载完补一次重排，
                     // 保证三排本地用户最终稳定落在中间卡片（index 1），与查询成功与否无关。
                     ReorderMembersForLocalUser();
                     UpdateDiffs();
                     IsLoading = TeamMembers.Any(m => m.IsLoading);
                     RaiseMemberProperties();
 
-                    // 所有成员数据加载完毕时显示覆盖层提示框
-                    if (TeamMembers.Count >= 2 && TeamMembers.All(m => !m.IsLoading) && !_overlayShownForThisRound && !_overlayDismissedThisRound)
+                    // 所有成员数据加载完毕时显示覆盖层提示框。
+                    // 仅英雄选择阶段弹窗；游戏中打开程序识别到队友时直接展示页面，不弹窗打扰。
+                    if (TeamMembers.Count >= 2 && TeamMembers.All(m => !m.IsLoading) && !_overlayShownForThisRound && !_overlayDismissedThisRound && IsHeroSelectionPhase)
                     {
                         _overlayShownForThisRound = true;
-                        _ocrDataLoadedSuccessfully = true;
-                        var overlayMembers = TeamMembers.Select(m => new TeamOverlayMemberItem
-                        {
-                            UserName = m.UserName,
-                            AvatarUrl = m.AvatarUrl,
-                            RankName = m.RankName,
-                            RankIcon = m.RankIcon,
-                            PageRankName = m.PageRankName,
-                            PageStarCount = m.PageStarCount,
-                            PageHasStars = m.PageHasStars,
-                            RankTierScore = m.RankTierScore
-                        }).ToList();
-                        _teamOverlayService.Show(overlayMembers);
+                        _teamDataLoadedSuccessfully = true;
+                        _teamOverlayService.Show(BuildOverlayMembers());
                         _teamOverlayService.RefreshAction = RefreshFromOverlay;
                     }
+                    // 弹窗已显示后，每格数据加载完毕时刷新弹窗中队名/段位等最新数据。
+                    else if (_overlayShownForThisRound)
+                    {
+                        UpdateOverlayMembers();
+                    }
                 });
-                _ocrDataLoadedSuccessfully = true;
+                _teamDataLoadedSuccessfully = true;
             }
             catch (Exception ex)
             {
@@ -1036,19 +927,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        private void UpdateOverlayMembers()
+        private List<TeamOverlayMemberItem> BuildOverlayMembers()
         {
-            if (_overlayDismissedThisRound) return;
-            if (TeamMembers.Count < 2) return;
-            if (!_overlayShownForThisRound)
+            return TeamMembers.Select(m => new TeamOverlayMemberItem
             {
-                _overlayShownForThisRound = true;
-                _teamOverlayService.RefreshAction = RefreshFromOverlay;
-            }
-
-            var overlayMembers = TeamMembers.Select(m => new TeamOverlayMemberItem
-            {
-                UserName = m.UserName,
+                UserName = ResolveDisplayName(m),
                 AvatarUrl = m.AvatarUrl,
                 RankName = m.RankName,
                 RankIcon = m.RankIcon,
@@ -1058,12 +941,36 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 RankTierScore = m.RankTierScore,
                 IsLoading = m.IsLoading
             }).ToList();
-            _teamOverlayService.Show(overlayMembers);
+        }
+
+        private void UpdateOverlayMembers()
+        {
+            if (_overlayDismissedThisRound) return;
+            if (TeamMembers.Count < 2) return;
+            // 仅英雄选择阶段弹窗；游戏中打开程序识别到队友时直接展示页面，不弹窗。
+            if (!IsHeroSelectionPhase) return;
+            if (!_overlayShownForThisRound)
+            {
+                _overlayShownForThisRound = true;
+                _teamOverlayService.RefreshAction = RefreshFromOverlay;
+            }
+
+            _teamOverlayService.Show(BuildOverlayMembers());
+        }
+
+        /// <summary>
+        /// 展示名：优先后端查得的真实昵称（DisplayName），未加载完成（队友卡初始 UserName=UID）时
+        /// 回退到 UserName。避免弹窗直接暴露队友 UID。
+        /// </summary>
+        private static string ResolveDisplayName(TeamMemberInfo m)
+        {
+            if (!string.IsNullOrWhiteSpace(m.DisplayName)) return m.DisplayName;
+            return m.UserName;
         }
 
         /// <summary>
         /// 筛选器变更防抖到期后的实际重查回调。<paramref name="debounceCt"/> 仅代表"到期前是否被
-        /// 下一次筛选变更取代"；成员 HTTP 加载另用 <see cref="_refreshMembersCts"/>（导航离开/OCR 切换时取消），
+        /// 下一次筛选变更取代"；成员 HTTP 加载另用 <see cref="_refreshMembersCts"/>（导航离开/刷新时取消），
         /// 两者语义独立，不可混用。
         /// </summary>
         private async Task RunFilterRefreshAsync(CancellationToken debounceCt)
@@ -1172,17 +1079,25 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 IsHeroSelectionPhase = true;
                 _overlayShownForThisRound = false;
                 StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
-                StartOcrLoop();
+                StartMonitor();
             }
-            else if (_gameStatusMonitor.CurrentStatus == GameStatus.InGame
-                     && TeamMembers.Count > 0)
+            else if (_gameStatusMonitor.CurrentStatus == GameStatus.InGame)
             {
-                // 游戏中且英雄选择阶段已识别到队友：整页保留，不清理。
-                // 只要识别到成员就保留，即使部分成员查询失败（失败卡片自带错误覆盖层展示 msg），
-                // 也不因个别失败把整页打回"等待进入英雄选择"的转圈态。
+                // 游戏中打开软件 / 进入页面：尝试从当前语音日志读取已写入的队友 UID 并展示。
+                // 英雄选择阶段已识别到队友时 TeamMembers 非空，直接保留；
+                // 若是中途打开（对局已在进行），Monitor.Reset+Start 会回放当前 m*.log 中已有的
+                // set-uid-vol，从而拿到当前队友。
                 IsHeroSelectionPhase = false;
-                StatusText = string.Empty;
-                _teamOverlayService.Hide();
+                if (TeamMembers.Count == 0)
+                {
+                    _overlayShownForThisRound = false;
+                    StartMonitor();
+                }
+                else
+                {
+                    StatusText = string.Empty;
+                    _teamOverlayService.Hide();
+                }
             }
             else
             {
@@ -1237,11 +1152,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
             // 离开页面时清理页面级操作和事件订阅。
-            // _gameStatusMonitor.GameStatusRecognized / _teamOverlayService.Dismissed 是构造函数中永久订阅的，
-            // 离开页面不解绑——后台 OCR 和右下角弹窗在任意页面都需要正常工作。
+            // _gameStatusMonitor.GameStatusRecognized / _teamOverlayService.Dismissed / _teammateMonitor.TeammatesReady
+            // 是构造函数中永久订阅的，离开页面不解绑——后台监听和右下角弹窗在任意页面都需要正常工作。
             // 但 _teamOverlayService.RefreshAction 持有 VM 的方法回调（RefreshFromOverlay），
             // overlay service 是单例，必须在此清空，防止 VM 通过委托被外部单例长期持引用。
-            // 注意：OCR 循环由游戏状态驱动，不在此处 Stop（否则离开 TeamInfo 页面后后台识别会中断）。
+            // 注意：日志监听由游戏状态驱动，不在此处 Stop（否则离开 TeamInfo 页面后后台识别会中断）。
             _teamOverlayService.RefreshAction = null;
 
             CancelAndDispose(ref _refreshMembersCts);
@@ -1258,6 +1173,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             {
                 _gameStatusMonitor.GameStatusRecognized -= OnGameStatusRecognized;
                 _teamOverlayService.Dismissed -= OnOverlayDismissed;
+                _teammateMonitor.TeammatesReady -= OnTeammatesReady;
                 _filterRefreshDebouncer.Dispose();
             }
             base.Dispose(disposing);
@@ -1285,7 +1201,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private readonly IClipboardService? _clipboard;
         private readonly ILocalizedTextProvider? _localizedText;
         private readonly ITipMessageService? _tipMessage;
-        private readonly SearchDebounceGate _searchDebounce = new();
 
         /// <summary>
         /// 默认 ctor 仅供 d:DesignInstance 等设计时反射用；运行时所有 TeamMemberInfo 必须走 ctor(IClipboardService, ILocalizedTextProvider, ITipMessageService)。
@@ -1312,7 +1227,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         }
 
         // 本地用户格（中间卡片）标志：三排/双排里中间格恒为本地用户。
-        // 为 true 时搜索框只读、禁止发起搜索（本地用户无需也不允许改查目标）。
         private bool _isLocalUser;
         public bool IsLocalUser
         {
@@ -1322,12 +1236,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 if (_isLocalUser == value) return;
                 _isLocalUser = value;
                 RaisePropertyChanged(nameof(IsLocalUser));
-                RaisePropertyChanged(nameof(IsSearchEnabled));
             }
         }
-
-        // 搜索框是否允许编辑/搜索：本地用户格不允许。
-        public bool IsSearchEnabled => !_isLocalUser;
 
         // 头像下方展示用的玩家名：与搜索框绑定的 UserName 解耦，
         // 后端返回的真实昵称写到这里而不回填搜索框。
@@ -1581,47 +1491,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         }
 
         public System.Action<TeamMemberInfo>? RefreshAction { get; set; }
-
-        private DelegateCommand<string>? _searchMemberCommand;
-        public DelegateCommand<string> SearchMemberCommand =>
-            _searchMemberCommand ??= new DelegateCommand<string>(input =>
-            {
-                // 本地用户格禁止搜索：中间卡片恒为本地用户，搜索框只读。
-                if (_isLocalUser) return;
-                if (!_searchDebounce.TryEnter())
-                {
-                    var tip = _localizedText?.Get("Search.TooFast", "点击过快请稍后重试") ?? "点击过快请稍后重试";
-                    _tipMessage?.ShowError(tip);
-                    return;
-                }
-                // 用搜索框里用户输入的名字更新 UserName，再触发搜索
-                if (!string.IsNullOrWhiteSpace(input))
-                    UserName = input.Trim();
-                RefreshAction?.Invoke(this);
-            });
-
-        // 通过 ILocalizedTextProvider 访问字符串本地化资源，避免 VM 直接依赖 System.Windows.Application。
-        // 设计时默认 ctor 可能没有 provider，此时回退到中文 fallback。
-        private string CopySuccessText() =>
-            _localizedText?.Get("Stats.CopySuccess", "复制成功") ?? "复制成功";
-
-        private DelegateCommand? _copyUserNameCommand;
-        public DelegateCommand CopyUserNameCommand =>
-            _copyUserNameCommand ??= new DelegateCommand(() =>
-            {
-                _clipboard?.TrySetText(UserName);
-                eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(CopySuccessText()));
-            });
-
-        private DelegateCommand? _copyUIDCommand;
-        public DelegateCommand CopyUIDCommand =>
-            _copyUIDCommand ??= new DelegateCommand(() =>
-            {
-                _clipboard?.TrySetText(UID);
-                eventAggregator.GetEvent<TipMessageEvent>()
-                    .Publish(new TipMessageWithHighlightArgs(CopySuccessText()));
-            });
 
         public System.Action<TeamMemberInfo>? NavigateToStatsAction { get; set; }
 

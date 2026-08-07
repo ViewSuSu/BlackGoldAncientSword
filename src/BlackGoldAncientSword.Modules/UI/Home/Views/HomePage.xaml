@@ -46,14 +46,14 @@
             </Border>
 
             <TextBlock
-                FontSize="18"
+                FontSize="{DynamicResource FontSize.Title}"
                 FontWeight="SemiBold"
                 Foreground="{DynamicResource TextSecondaryBrush}"
                 HorizontalAlignment="Center"
                 Text="{Binding StatusText}" />
             <TextBlock
                 Margin="0,12,0,0"
-                FontSize="13"
+                FontSize="{DynamicResource FontSize.Body}"
                 Foreground="{DynamicResource TextMutedBrush}"
                 HorizontalAlignment="Center"
                 Text="{Binding StatusHint}" />

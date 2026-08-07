@@ -108,7 +108,6 @@
     <system:String x:Key="Stats.RankName.Trio.4000">云霄武圣</system:String>
     <system:String x:Key="Stats.RankName.Trio.3500">绝顶高手</system:String>
     <system:String x:Key="Stats.RankName.Trio.3000">凡尘武师</system:String>
-    <system:String x:Key="Stats.Refresh">刷新</system:String>
     <system:String x:Key="Stats.BackToMe">回到我</system:String>
 
     <system:String x:Key="Search.Title">搜索</system:String>
@@ -155,6 +154,7 @@
     <system:String x:Key="Nav.Personal">个人</system:String>
     <system:String x:Key="Nav.Announcement">公告</system:String>
     <system:String x:Key="Nav.Feedback">反馈</system:String>
+    <system:String x:Key="Nav.Sponsor">打赏</system:String>
     <system:String x:Key="Auth.User.Login">登录</system:String>
     <system:String x:Key="Auth.User.Logout">退出登录</system:String>
     <system:String x:Key="Auth.User.RoleNormal">普通用户</system:String>
@@ -331,6 +331,29 @@
     <system:String x:Key="Feedback.WebTitle">网页端</system:String>
     <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
     <system:String x:Key="Feedback.Close">关闭</system:String>
+
+    <!--  Sponsor  -->
+    <system:String x:Key="Sponsor.AuthorTitle">打赏黑金古刀作者</system:String>
+    <system:String x:Key="Sponsor.SelectPaymentMethod">选择打赏方式</system:String>
+    <system:String x:Key="Sponsor.WeChatPay">微信</system:String>
+    <system:String x:Key="Sponsor.Alipay">支付宝</system:String>
+    <system:String x:Key="Sponsor.ShowQRCode">显示收款码</system:String>
+    <system:String x:Key="Sponsor.DataProviderTitle">打赏数据提供方</system:String>
+    <system:String x:Key="Sponsor.DataProviderDesc">数据来源于 naraka.drivod.top，打赏支持其持续提供服务。</system:String>
+    <system:String x:Key="Sponsor.Close">关闭</system:String>
+
+    <system:String x:Key="Settings.Category.Appearance">外观</system:String>
+    <system:String x:Key="Settings.FontSize.Description">拖动滑块可调整整个软件的字体大小，实时生效。</system:String>
+    <system:String x:Key="Settings.FontSize.Standard">标准</system:String>
+    <system:String x:Key="Settings.FontSize.Large">更大</system:String>
+    <system:String x:Key="Settings.FontSize.Value.Default">当前字号：{0} px（默认）</system:String>
+    <system:String x:Key="Settings.FontSize.Value.Scaled">当前字号：{0} px（放大 {1}）</system:String>
+    <system:String x:Key="Settings.FontSize.Preview">实时预览</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewCaption">辅助说明文字</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewBody">正文文字内容</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewSection">章节标题</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewTitle">页面标题</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewDisplay">大数字 12345</system:String>
 </ResourceDictionary>
 
 

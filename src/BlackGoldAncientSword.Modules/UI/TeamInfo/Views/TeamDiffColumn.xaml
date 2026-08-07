@@ -1,0 +1,70 @@
+﻿<UserControl
+    x:Class="BlackGoldAncientSword.Modules.UI.TeamInfo.Views.TeamDiffColumn"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:BlackGoldAncientSword.Modules.UI.TeamInfo.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    x:Name="Root"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <local:TeamDiffValueConverter x:Key="TeamDiffValueConverter" />
+        <local:TeamDiffColorConverter x:Key="TeamDiffColorConverter" />
+    </UserControl.Resources>
+
+    <!--  与卡片（TeamMemberCard）外层 Border 相同的 Padding，使内部 Grid 起点与卡片内部 Grid 一致，
+         保证 diff 统计区与卡片统计行垂直逐行对齐（SharedSizeGroup 只同步行高、不同步起点）  -->
+    <Border Padding="14,12,14,12">
+        <!--  前两行与卡片用相同 SharedSizeGroup，使 diff 行垂直起点与卡片内统计行对齐；
+             统计区（Row2）为 *，与卡片同宿主行内等高  -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" SharedSizeGroup="CardH0" />
+                <RowDefinition Height="Auto" SharedSizeGroup="CardH1" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!--  搜索框区 + 头像段位区：占位（与卡片同高的上两行），diff 只对齐统计行区  -->
+            <Grid Grid.Row="0" Grid.RowSpan="2" />
+
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding StatItemsSource, ElementName=Root}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="1" Rows="{Binding StatCount, ElementName=Root}" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border
+                            Margin="4,2,4,2"
+                            Padding="2,0"
+                            Background="{DynamicResource SurfaceTertiaryBrush}"
+                            BorderBrush="{DynamicResource BorderLightBrush}"
+                            BorderThickness="0.5"
+                            CornerRadius="3">
+                            <TextBlock
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="{DynamicResource FontSize.Body}"
+                                FontWeight="Bold"
+                                TextTrimming="CharacterEllipsis">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource TeamDiffValueConverter}">
+                                        <Binding />
+                                        <Binding ElementName="Root" Path="DiffSide" />
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                                <TextBlock.Foreground>
+                                    <MultiBinding Converter="{StaticResource TeamDiffColorConverter}">
+                                        <Binding />
+                                        <Binding ElementName="Root" Path="DiffSide" />
+                                    </MultiBinding>
+                                </TextBlock.Foreground>
+                            </TextBlock>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </Border>
+</UserControl>

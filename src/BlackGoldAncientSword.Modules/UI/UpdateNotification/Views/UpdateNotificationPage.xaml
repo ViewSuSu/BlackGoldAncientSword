@@ -24,7 +24,7 @@
                 <StackPanel Margin="0,0,0,12" Orientation="Horizontal">
                     <TextBlock
                         VerticalAlignment="Center"
-                        FontSize="13"
+                        FontSize="{DynamicResource FontSize.Body}"
                         Foreground="{DynamicResource TextPrimaryBrush}"
                         Text="{DynamicResource UpdateNotification.NewVersion}" />
                     <Border
@@ -34,7 +34,7 @@
                         Background="{DynamicResource AccentLightBrush}"
                         CornerRadius="3">
                         <TextBlock
-                            FontSize="12"
+                            FontSize="{DynamicResource FontSize.Metadata}"
                             FontWeight="SemiBold"
                             Foreground="{DynamicResource AccentPrimaryBrush}"
                             Text="{Binding LatestVersion}" />
@@ -44,7 +44,7 @@
                 <!--  说明  -->
                 <TextBlock
                     Margin="0,0,0,10"
-                    FontSize="13"
+                    FontSize="{DynamicResource FontSize.Body}"
                     Foreground="{DynamicResource TextPrimaryBrush}"
                     Text="{DynamicResource UpdateNotification.Message}"
                     TextWrapping="Wrap" />
@@ -57,7 +57,7 @@
                     CornerRadius="4"
                     Visibility="{Binding HasDownloadUrl, Converter={StaticResource BoolToVisibilityConverter}}">
                     <TextBlock
-                        FontSize="12"
+                        FontSize="{DynamicResource FontSize.Metadata}"
                         TextTrimming="CharacterEllipsis"
                         TextWrapping="NoWrap"
                         ToolTip="{Binding DownloadUrl}">
@@ -89,7 +89,7 @@
                         <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto">
                             <TextBlock
                                 FontFamily="Consolas, Microsoft YaHei UI"
-                                FontSize="12"
+                                FontSize="{DynamicResource FontSize.Metadata}"
                                 Foreground="{DynamicResource TextPrimaryBrush}"
                                 Text="{Binding ReleaseNotes}"
                                 TextWrapping="Wrap" />
@@ -114,7 +114,7 @@
                         Command="{Binding OnlineUpdateCommand}"
                         Content="{DynamicResource UpdateNotification.OnlineUpdate}"
                         Cursor="Hand"
-                        FontSize="13"
+                        FontSize="{DynamicResource FontSize.Body}"
                         FontWeight="Bold"
                         Foreground="White"
                         IsEnabled="{Binding CanOnlineUpdate}"

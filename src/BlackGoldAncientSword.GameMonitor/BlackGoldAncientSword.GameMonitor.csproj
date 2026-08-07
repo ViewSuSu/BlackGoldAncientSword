@@ -13,15 +13,5 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
-    <ProjectReference Include="..\BlackGoldAncientSword.ScreenCapture\BlackGoldAncientSword.ScreenCapture.csproj" />
-    <ProjectReference Include="..\BlackGoldAncientSword.Ocr\BlackGoldAncientSword.Ocr.csproj" />
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <Content Include="..\BlackGoldAncientSword.ScreenCapture\runtimes\win-x64\native\wgc_capture.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>wgc_capture.dll</Link>
-    </Content>
   </ItemGroup>
 </Project>

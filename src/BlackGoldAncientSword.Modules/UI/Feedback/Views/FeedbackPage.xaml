@@ -27,7 +27,7 @@
                 <StackPanel>
                     <TextBlock
                         Margin="0,0,0,8"
-                        FontSize="14"
+                        FontSize="{DynamicResource FontSize.Section}"
                         FontWeight="SemiBold"
                         Text="{DynamicResource Feedback.ClientGroupTitle}" />
                     <TextBox
@@ -35,19 +35,19 @@
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
-                        FontSize="12"
+                        FontSize="{DynamicResource FontSize.Metadata}"
                         Foreground="{DynamicResource TextMutedBrush}"
                         IsReadOnly="True"
                         Text="{DynamicResource Feedback.ClientGroupQQ}" />
 
                     <TextBlock
                         Margin="0,0,0,8"
-                        FontSize="14"
+                        FontSize="{DynamicResource FontSize.Section}"
                         FontWeight="SemiBold"
                         Text="{DynamicResource Feedback.DataGroupTitle}" />
                     <TextBlock
                         Margin="0,0,0,4"
-                        FontSize="12"
+                        FontSize="{DynamicResource FontSize.Metadata}"
                         Foreground="{DynamicResource TextMutedBrush}"
                         Text="{DynamicResource Feedback.BotDescription}"
                         TextWrapping="Wrap" />
@@ -56,7 +56,7 @@
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
-                        FontSize="12"
+                        FontSize="{DynamicResource FontSize.Metadata}"
                         Foreground="{DynamicResource TextMutedBrush}"
                         IsReadOnly="True"
                         Text="{DynamicResource Feedback.DataGroup1}" />
@@ -65,7 +65,7 @@
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
-                        FontSize="12"
+                        FontSize="{DynamicResource FontSize.Metadata}"
                         Foreground="{DynamicResource TextMutedBrush}"
                         IsReadOnly="True"
                         Text="{DynamicResource Feedback.DataGroup2}" />
@@ -74,13 +74,13 @@
                         Padding="0"
                         Background="Transparent"
                         BorderThickness="0"
-                        FontSize="12"
+                        FontSize="{DynamicResource FontSize.Metadata}"
                         Foreground="{DynamicResource TextMutedBrush}"
                         IsReadOnly="True"
                         Text="{DynamicResource Feedback.DataGroup3}" />
                     <TextBlock
                         Margin="0,0,0,16"
-                        FontSize="11"
+                        FontSize="{DynamicResource FontSize.Caption}"
                         Foreground="{DynamicResource TextMutedBrush}"
                         Text="{DynamicResource Feedback.QQEntryRequirement}"
                         TextWrapping="Wrap" />
@@ -89,10 +89,10 @@
 
                     <TextBlock
                         Margin="0,0,0,4"
-                        FontSize="14"
+                        FontSize="{DynamicResource FontSize.Section}"
                         FontWeight="SemiBold"
                         Text="{DynamicResource Feedback.WebTitle}" />
-                    <TextBlock Margin="0,0,0,12" FontSize="12">
+                    <TextBlock Margin="0,0,0,12" FontSize="{DynamicResource FontSize.Metadata}">
                         <Hyperlink
                             Cursor="Hand"
                             Foreground="{DynamicResource AccentPrimaryBrush}"
@@ -104,10 +104,10 @@
 
                     <TextBlock
                         Margin="0,0,0,4"
-                        FontSize="14"
+                        FontSize="{DynamicResource FontSize.Section}"
                         FontWeight="SemiBold"
                         Text="{DynamicResource Feedback.GitHubTitle}" />
-                    <TextBlock FontSize="12">
+                    <TextBlock FontSize="{DynamicResource FontSize.Metadata}">
                         <Hyperlink
                             Cursor="Hand"
                             Foreground="{DynamicResource AccentPrimaryBrush}"

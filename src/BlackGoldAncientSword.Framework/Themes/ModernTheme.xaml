@@ -156,27 +156,27 @@
 
     <!-- 4c. 页面标题 -->
     <Style x:Key="PageTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Display}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
 
     <!-- 4d. 章节标题 -->
     <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Section}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
 
     <!-- 4e. 详情标签 -->
     <Style x:Key="DetailLabelStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Metadata}" />
         <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
     </Style>
 
     <!-- 4f. 详情数值 -->
     <Style x:Key="DetailValueStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Section}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
@@ -225,7 +225,7 @@
         <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
         <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="Template">
             <Setter.Value>
@@ -265,7 +265,7 @@
         <Setter Property="BorderBrush" Value="{StaticResource BorderMediumBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -346,7 +346,7 @@
         <Setter Property="CanUserAddRows" Value="False" />
         <Setter Property="CanUserDeleteRows" Value="False" />
         <Setter Property="AutoGenerateColumns" Value="False" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
 
@@ -355,7 +355,7 @@
         <Setter Property="Height" Value="32" />
         <Setter Property="Background" Value="{StaticResource SurfaceTertiaryBrush}" />
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Metadata}" />
         <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="Padding" Value="8,0" />
@@ -490,7 +490,7 @@
                                     Grid.Row="0"
                                     ContentSource="Header"
                                     Margin="0,0,0,8"
-                                    TextElement.FontSize="14"
+                                    TextElement.FontSize="{DynamicResource FontSize.Section}"
                                     TextElement.FontWeight="SemiBold"
                                     TextElement.Foreground="{StaticResource TextPrimaryBrush}" />
                                 <ContentPresenter
@@ -507,19 +507,19 @@
     <!-- ======================== 5. 额外实用样式 ======================== -->
 
     <Style x:Key="StatusTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Display}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
 
     <Style x:Key="StatValueStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Section}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
 
     <Style x:Key="StatLabelStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Metadata}" />
         <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
     </Style>
 
@@ -544,7 +544,7 @@
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSize.Body}" />
         <Setter Property="Padding" Value="0,8" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />

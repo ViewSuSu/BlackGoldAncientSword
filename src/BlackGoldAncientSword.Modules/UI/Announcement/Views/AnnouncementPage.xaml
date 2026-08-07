@@ -30,7 +30,7 @@
                 <StackPanel>
                     <TextBlock
                         Margin="0,0,0,12"
-                        FontSize="14"
+                        FontSize="{DynamicResource FontSize.Section}"
                         FontWeight="SemiBold"
                         Text="{DynamicResource Announcement.UpdateHistory}" />
                     <ItemsControl ItemsSource="{Binding UpdateHistory}">
@@ -48,14 +48,14 @@
                                         Background="{DynamicResource AccentLightBrush}"
                                         CornerRadius="3">
                                         <TextBlock
-                                            FontSize="11"
+                                            FontSize="{DynamicResource FontSize.Caption}"
                                             Foreground="{DynamicResource AccentPrimaryBrush}"
                                             Text="{Binding Version}" />
                                     </Border>
                                     <TextBlock
                                         Grid.Column="1"
                                         Margin="10,0,0,0"
-                                        FontSize="12"
+                                        FontSize="{DynamicResource FontSize.Metadata}"
                                         Foreground="{DynamicResource TextPrimaryBrush}"
                                         Text="{Binding Detail}"
                                         TextWrapping="Wrap" />

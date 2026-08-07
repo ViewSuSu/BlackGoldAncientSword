@@ -1,4 +1,4 @@
-<UserControl
+﻿<UserControl
     x:Class="BlackGoldAncientSword.Framework.UI.Controls.SeasonFilterBar"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -26,7 +26,7 @@
             <TextBlock
                 Margin="0,0,6,0"
                 VerticalAlignment="Center"
-                FontSize="13"
+                FontSize="{DynamicResource FontSize.Body}"
                 Text="{DynamicResource Stats.Season}"
                 TextTrimming="CharacterEllipsis" />
             <ComboBox

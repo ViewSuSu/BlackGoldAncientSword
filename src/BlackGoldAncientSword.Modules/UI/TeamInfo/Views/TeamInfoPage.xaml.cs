@@ -46,12 +46,15 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Views
 
         private void SyncColumnWidths(TeamInfoPageViewModel vm)
         {
+            // 5 列结构：卡 | diff列 | 卡 | diff列 | 卡。
+            // 卡片列 3*、diff 列 1*：diff 列随窗口变宽同步增长（数据展示不全时可拉伸窗口），
+            // 隐藏时收缩为 0。
             if (MainContentGrid.ColumnDefinitions.Count < 5) return;
-            MainContentGrid.ColumnDefinitions[0].Width = vm.HasMember0 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-            MainContentGrid.ColumnDefinitions[1].Width = vm.HasDiffLeft ? new GridLength(80) : new GridLength(0);
-            MainContentGrid.ColumnDefinitions[2].Width = vm.HasMember1 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-            MainContentGrid.ColumnDefinitions[3].Width = vm.HasDiffRight ? new GridLength(80) : new GridLength(0);
-            MainContentGrid.ColumnDefinitions[4].Width = vm.HasMember2 ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+            MainContentGrid.ColumnDefinitions[0].Width = vm.HasMember0 ? new GridLength(3, GridUnitType.Star) : new GridLength(0);
+            MainContentGrid.ColumnDefinitions[1].Width = vm.HasDiffLeft ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+            MainContentGrid.ColumnDefinitions[2].Width = vm.HasMember1 ? new GridLength(3, GridUnitType.Star) : new GridLength(0);
+            MainContentGrid.ColumnDefinitions[3].Width = vm.HasDiffRight ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+            MainContentGrid.ColumnDefinitions[4].Width = vm.HasMember2 ? new GridLength(3, GridUnitType.Star) : new GridLength(0);
         }
     }
 }

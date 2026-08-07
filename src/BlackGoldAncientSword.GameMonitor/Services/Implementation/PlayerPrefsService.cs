@@ -17,7 +17,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
     /// <para><b>权威判据是 Player.log 里的 "Login Success-->> aid=&lt;UID&gt;" 记录</b>：
     /// 无论 Steam 还是网易，游戏成功登录时都会往同目录的 <c>Player.log</c> 写一行登录成功日志，
     /// 里面的 <c>aid</c> 就是当前活跃账号的 UID。文件末尾最后一条 "Login Success" 就是"最新登录记录"。
-    /// player_prefs.txt 里的 <c>login_md5</c> 字段并不可靠——网易平台压根不写它——所以只当兜底。</para>
+    /// player_prefs.txt 里的 <c>login_md5</c> 字段并不可靠——跨平台都可能残留，只当兜底。</para>
     ///
     /// <para>"用户切账号后 Current 陈旧"的问题：调用方在需要最新值的时机（例如进入战绩页）主动
     /// <c>await LoadAsync()</c> 即可，不再挂 FileSystemWatcher。</para>
@@ -36,9 +36,6 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         private const string AccountPrefsPrefix = "account_prefs_";
         private const string GlobalPrefsKey = "global_prefs_key";
         private const string LoginSuccessMarker = "Login Success-->> aid=";
-
-        // Player.log 可能几十~几百 KB；只读末尾一段就够找最后一条 "Login Success"。
-        private const int PlayerLogTailBytes = 64 * 1024;
 
         public PlayerPrefsData Current { get; private set; } = new();
 
@@ -73,8 +70,13 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         }
 
         /// <summary>
-        /// 从 Player.log 末尾找最后一条 <c>Login Success--&gt;&gt; aid=&lt;UID&gt;</c> 记录，返回 aid。
+        /// 从 Player.log 末尾往前搜索最后一条 <c>Login Success--&gt;&gt; aid=&lt;UID&gt;</c> 记录，返回 aid。
         /// 找不到或读失败返回 null，让上层走 heuristic 兜底。
+        /// <para>
+        /// 登录记录可能出现在文件任意位置（多次启动后滚动、会话中途重连），所以从末尾
+        /// 按块向前翻：每块 64KB，下一块与上一块末尾重叠 <see cref="LoginSuccessMarker"/> 长度，
+        /// 保证跨块边界的匹配不被漏掉。找到的**第一块**里取 LastIndexOf 即最后一条登录记录。
+        /// </para>
         /// </summary>
         private static async Task<string?> TryReadActiveAidFromPlayerLogAsync()
         {
@@ -90,24 +92,39 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                     FileAccess.Read,
                     FileShare.ReadWrite);
 
-                var tailLen = (int)Math.Min(fs.Length, PlayerLogTailBytes);
-                if (tailLen == 0) return null;
+                var fileLen = fs.Length;
+                if (fileLen == 0) return null;
 
-                fs.Seek(-tailLen, SeekOrigin.End);
-                var buffer = new byte[tailLen];
-                var read = await fs.ReadAsync(buffer.AsMemory(0, tailLen)).ConfigureAwait(false);
-                var tail = Encoding.UTF8.GetString(buffer, 0, read);
+                const int chunkSize = 64 * 1024;
+                var overlap = LoginSuccessMarker.Length;
+                var buffer = new byte[chunkSize];
 
-                // 从后往前找最后一个匹配。日志里一次会话可能多次 Login Success（重连），取最新的。
-                var idx = tail.LastIndexOf(LoginSuccessMarker, StringComparison.Ordinal);
-                if (idx < 0) return null;
+                long end = fileLen;
+                while (end > 0)
+                {
+                    var start = Math.Max(0, end - chunkSize);
+                    fs.Seek(start, SeekOrigin.Begin);
+                    var read = await fs.ReadAsync(buffer.AsMemory(0, (int)(end - start))).ConfigureAwait(false);
+                    var text = Encoding.UTF8.GetString(buffer, 0, read);
 
-                var aidStart = idx + LoginSuccessMarker.Length;
-                var aidEnd = aidStart;
-                while (aidEnd < tail.Length && char.IsDigit(tail[aidEnd])) aidEnd++;
-                if (aidEnd == aidStart) return null;
+                    // 从后往前找本块内最后一条匹配；登录记录通常距当前位置较近。
+                    var idx = text.LastIndexOf(LoginSuccessMarker, StringComparison.Ordinal);
+                    if (idx >= 0)
+                    {
+                        var aidStart = idx + LoginSuccessMarker.Length;
+                        var aidEnd = aidStart;
+                        while (aidEnd < text.Length && char.IsDigit(text[aidEnd])) aidEnd++;
+                        if (aidEnd > aidStart)
+                            return text.Substring(aidStart, aidEnd - aidStart);
+                    }
 
-                return tail.Substring(aidStart, aidEnd - aidStart);
+                    if (start == 0) break; // 已翻到文件头
+
+                    // 下一块末尾 = 本块开头 + overlap，重叠覆盖可能跨边界的标记。
+                    end = start + overlap;
+                }
+
+                return null;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
@@ -120,9 +137,6 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         {
             var result = new PlayerPrefsData();
 
-            // 空 UID 段（account_prefs_=login_md5,XXX）里的 md5 = "会话 token"，不总是 = 当前账号
-            // login_md5，但保留以备兜底 tie-break。
-            string? activeLoginMd5 = null;
             var uidSections = new List<(string uid, Dictionary<string, string> kv)>();
 
             foreach (var line in lines)
@@ -137,15 +151,8 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                 {
                     var uid = sectionKey.Substring(AccountPrefsPrefix.Length);
                     var kv = ParseSemicolonPairs(sectionValue);
-                    if (uid.Length == 0)
-                    {
-                        if (kv.TryGetValue("login_md5", out var md5))
-                            activeLoginMd5 = md5;
-                    }
-                    else
-                    {
+                    if (uid.Length > 0)
                         uidSections.Add((uid, kv));
-                    }
                 }
                 else if (sectionKey == GlobalPrefsKey)
                 {
@@ -156,7 +163,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                 }
             }
 
-            var active = PickActiveAccount(uidSections, activeAid, activeLoginMd5);
+            var active = PickActiveAccount(uidSections, activeAid);
             if (active != null)
             {
                 if (active.Value.kv.TryGetValue("player_name", out var name))
@@ -184,13 +191,12 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         /// 挑当前活跃账号。层级：
         /// 1) <b>权威：Player.log 里 "Login Success-->> aid=X" 的 aid 与 UID 完全匹配</b> —— 直接返回。
         /// 2) 单段兜底：只有一段 UID，直接取它（单平台用户常态，与旧行为等价）。
-        /// 3) 兜底 heuristic（Player.log 缺失时）：优先取有 <c>login_md5</c> 字段的段；多段都有则用
-        ///    空 UID 段 md5 精确匹配；再不行取字段数最多的段。
+        /// 3) 多段兜底（Player.log 缺失时）：不偏好 login_md5（网易端不写此字段，偏好它会导致
+        ///    Steam 段总是胜出）。直接取键值对最多的段，通常就是最近活跃的账号。
         /// </summary>
         private static (string uid, Dictionary<string, string> kv)? PickActiveAccount(
             List<(string uid, Dictionary<string, string> kv)> uidSections,
-            string? activeAid,
-            string? activeLoginMd5)
+            string? activeAid)
         {
             if (uidSections.Count == 0) return null;
 
@@ -207,31 +213,9 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             // 2) 单段兜底。
             if (uidSections.Count == 1) return uidSections[0];
 
-            // 3) 兜底 heuristic：优先"含 login_md5"的段。
-            var loggedIn = new List<(string uid, Dictionary<string, string> kv)>();
-            foreach (var section in uidSections)
-            {
-                if (section.kv.ContainsKey("login_md5"))
-                    loggedIn.Add(section);
-            }
-
-            if (loggedIn.Count == 1) return loggedIn[0];
-
-            if (loggedIn.Count > 1)
-            {
-                if (!string.IsNullOrEmpty(activeLoginMd5))
-                {
-                    foreach (var section in loggedIn)
-                    {
-                        if (section.kv.TryGetValue("login_md5", out var md5) && md5 == activeLoginMd5)
-                            return section;
-                    }
-                }
-                return PickMostPopulated(loggedIn);
-            }
-
-            // 全部段都没 login_md5：无从判断当前账号，返回 null，UI 显示空。
-            return null;
+            // 3) 多段兜底：取 kv 数最多的段（字段越全通常就是最近活跃的账号）。
+            // 不偏好 login_md5：网易端不写此字段，偏好它会固定错选 Steam 段。
+            return PickMostPopulated(uidSections);
         }
 
         private static (string uid, Dictionary<string, string> kv) PickMostPopulated(

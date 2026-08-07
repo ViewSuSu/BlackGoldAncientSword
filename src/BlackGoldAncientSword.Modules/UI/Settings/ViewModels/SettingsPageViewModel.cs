@@ -21,6 +21,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
         private readonly IUpdateService _updateService;
         private readonly IClipboardService _clipboard;
         private readonly IUIDispatcher _uiDispatcher;
+        private readonly IUiScaleService _uiScale;
 
         /// <summary>立即异步落盘。设置项变更点必须实时持久化，避免"改完立即关闭/Kill 进程"
         /// 导致丢失。所有设置项均为单次用户动作（点击单选/勾选/选完文件夹），不存在高频
@@ -189,6 +190,35 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             }
         }
 
+        /// <summary>字体缩放档位（0=默认，每档 +1px，最大 5）。拖动滑块即时全应用生效。</summary>
+        public int FontScale
+        {
+            get => _settings.Current.FontScale;
+            set
+            {
+                var clamped = Math.Clamp(value, 0, IUiScaleService.MaxScale);
+                if (_settings.Current.FontScale == clamped) return;
+                _settings.Current.FontScale = clamped;
+                RaisePropertyChanged();
+                RaisePropertyChanged(nameof(FontSizeValueText));
+                _uiScale.Apply(clamped);
+                SaveImmediate();
+            }
+        }
+
+        /// <summary>滑块下方的当前数值说明，如「当前字号：13（默认）」「当前字号：18（放大 5）」。</summary>
+        public string FontSizeValueText
+        {
+            get
+            {
+                var scale = _settings.Current.FontScale;
+                var px = 13 + scale; // Body 基准 13，与 UiScaleService.FontTokens 保持一致
+                return scale == 0
+                    ? string.Format(L("Settings.FontSize.Value.Default", "Current size: {0} px (default)"), px)
+                    : string.Format(L("Settings.FontSize.Value.Scaled", "Current size: {0} px (+{1})"), px, scale);
+            }
+        }
+
         public SettingsPageViewModel(
             ISettingsService settings,
             ILocalizationService localization,
@@ -197,7 +227,8 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             IImageCacheService cacheService,
             IUpdateService updateService,
             IClipboardService clipboard,
-            IUIDispatcher uiDispatcher)
+            IUIDispatcher uiDispatcher,
+            IUiScaleService uiScale)
         {
             _settings = settings;
             _localization = localization;
@@ -207,6 +238,7 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             _updateService = updateService;
             _clipboard = clipboard;
             _uiDispatcher = uiDispatcher;
+            _uiScale = uiScale;
             Debug.WriteLine($"[{nameof(SettingsPageViewModel)}] UpdateService 注入成功，当前版本: {_updateService.CurrentVersion}");
 
             _dataPath = _settings.Current.DataSavePath;
@@ -253,6 +285,8 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             RaisePropertyChanged(nameof(RememberCloseBehavior));
             RaisePropertyChanged(nameof(SelectedLanguage));
             RaisePropertyChanged(nameof(ShowTeamOverlayDuringHeroSelection));
+            RaisePropertyChanged(nameof(FontScale));
+            RaisePropertyChanged(nameof(FontSizeValueText));
         }
 
         private bool _isDisposed;
@@ -282,6 +316,8 @@ namespace BlackGoldAncientSword.Modules.UI.Settings.ViewModels
             RaisePropertyChanged(nameof(RememberCloseBehavior));
             RaisePropertyChanged(nameof(SelectedLanguage));
             RaisePropertyChanged(nameof(ShowTeamOverlayDuringHeroSelection));
+            RaisePropertyChanged(nameof(FontScale));
+            RaisePropertyChanged(nameof(FontSizeValueText));
             RefreshLogSizeAsync().SafeFireAndForget($"{nameof(SettingsPageViewModel)}.{nameof(RefreshLogSizeAsync)}");
             base.OnNavigatedToExecute(navigationContext);
         }

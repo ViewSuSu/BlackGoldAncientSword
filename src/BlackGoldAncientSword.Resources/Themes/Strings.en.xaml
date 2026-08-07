@@ -108,7 +108,6 @@
     <system:String x:Key="Stats.RankName.Trio.4000">Cloud Warrior</system:String>
     <system:String x:Key="Stats.RankName.Trio.3500">Supreme Expert</system:String>
     <system:String x:Key="Stats.RankName.Trio.3000">Mortal Adept</system:String>
-    <system:String x:Key="Stats.Refresh">Refresh</system:String>
     <system:String x:Key="Stats.BackToMe">Back to me</system:String>
 
     <system:String x:Key="Search.Title">Search</system:String>
@@ -155,6 +154,7 @@
     <system:String x:Key="Nav.Personal">Personal</system:String>
     <system:String x:Key="Nav.Announcement">Announcement</system:String>
     <system:String x:Key="Nav.Feedback">Feedback</system:String>
+    <system:String x:Key="Nav.Sponsor">Sponsor</system:String>
     <system:String x:Key="Auth.User.Login">Sign in</system:String>
     <system:String x:Key="Auth.User.Logout">Sign out</system:String>
     <system:String x:Key="Auth.User.RoleNormal">User</system:String>
@@ -332,6 +332,29 @@
     <system:String x:Key="Feedback.WebTitle">Web</system:String>
     <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
     <system:String x:Key="Feedback.Close">Close</system:String>
+
+    <!--  Sponsor  -->
+    <system:String x:Key="Sponsor.AuthorTitle">App Author: 小窗同学</system:String>
+    <system:String x:Key="Sponsor.SelectPaymentMethod">Select Payment Method</system:String>
+    <system:String x:Key="Sponsor.WeChatPay">WeChat</system:String>
+    <system:String x:Key="Sponsor.Alipay">Alipay</system:String>
+    <system:String x:Key="Sponsor.ShowQRCode">Show QR Code</system:String>
+    <system:String x:Key="Sponsor.DataProviderTitle">Sponsor Data Provider</system:String>
+    <system:String x:Key="Sponsor.DataProviderDesc">Data is sourced from naraka.drivod.top. Your sponsorship helps sustain the service.</system:String>
+    <system:String x:Key="Sponsor.Close">Close</system:String>
+
+    <system:String x:Key="Settings.Category.Appearance">Appearance</system:String>
+    <system:String x:Key="Settings.FontSize.Description">Drag the slider to adjust the app-wide font size. Takes effect immediately.</system:String>
+    <system:String x:Key="Settings.FontSize.Standard">Standard</system:String>
+    <system:String x:Key="Settings.FontSize.Large">Larger</system:String>
+    <system:String x:Key="Settings.FontSize.Value.Default">Current size: {0} px (default)</system:String>
+    <system:String x:Key="Settings.FontSize.Value.Scaled">Current size: {0} px (+{1})</system:String>
+    <system:String x:Key="Settings.FontSize.Preview">Live preview</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewCaption">Caption text</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewBody">Body text content</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewSection">Section heading</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewTitle">Page title</system:String>
+    <system:String x:Key="Settings.FontSize.PreviewDisplay">Display number 12345</system:String>
 </ResourceDictionary>
 
 
