@@ -196,7 +196,55 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         /// </summary>
         private static string? ResolveCcMiniLogDir()
         {
-            // 1) 进程 exe 路径推导（最准，能覆盖自定义安装位置）。
+            // 1) 注册表解析 Steam/网易客户端安装路径（含 HKCU 游戏自记路径，最可靠），
+            //    选最近活跃（最后写入 m*.log）的客户端。Steam 与网易都装了时以"哪个日志最新"为准。
+            var candidates = GameInstallLocator.ResolveAllCcMiniLogDirs();
+            if (candidates.Count == 0)
+            {
+                AppLog.Warning(nameof(CcMiniTeammateMonitor), "无法从注册表解析到任何 CCMini 日志目录");
+            }
+            else
+            {
+                string? bestDir = null;
+                DateTime bestTime = DateTime.MinValue;
+                foreach (var dir in candidates)
+                {
+                    if (!Directory.Exists(dir))
+                    {
+                        AppLog.Info(nameof(CcMiniTeammateMonitor), $"候选日志目录不存在: {dir}");
+                        continue;
+                    }
+                    DateTime latest;
+                    try
+                    {
+                        latest = Directory.GetFiles(dir, "m*.log")
+                            .Where(f => !f.EndsWith("_cclib.log", StringComparison.OrdinalIgnoreCase))
+                            .Select(f => new FileInfo(f).LastWriteTime)
+                            .DefaultIfEmpty(DateTime.MinValue)
+                            .Max();
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLog.Error(ex, nameof(CcMiniTeammateMonitor), $"Scan log dir failed: {dir}");
+                        continue;
+                    }
+                    AppLog.Info(nameof(CcMiniTeammateMonitor), $"候选日志目录: {dir} (lastWrite={latest:yyyy-MM-dd HH:mm:ss})");
+                    if (latest > bestTime)
+                    {
+                        bestTime = latest;
+                        bestDir = dir;
+                    }
+                }
+
+                if (bestDir != null)
+                {
+                    AppLog.Info(nameof(CcMiniTeammateMonitor), $"ResolveCcMiniLogDir 选择活跃客户端日志: {bestDir} (lastWrite={bestTime:yyyy-MM-dd HH:mm:ss})");
+                    return bestDir;
+                }
+                AppLog.Warning(nameof(CcMiniTeammateMonitor), "所有候选日志目录均无 m*.log，回退进程 exe 推导");
+            }
+
+            // 2) 进程 exe 路径推导（能覆盖自定义安装位置，但非管理员权限下 MainModule 可能被拒）。
             try
             {
                 var procs = Process.GetProcessesByName("NarakaBladepoint");
@@ -211,7 +259,12 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                             var gameRoot = Path.GetDirectoryName(exe);
                             if (string.IsNullOrEmpty(gameRoot)) continue;
                             var dir = Path.Combine(gameRoot, "ccmini", "ccmini_new", "logs");
-                            if (Directory.Exists(dir)) return dir;
+                            if (Directory.Exists(dir))
+                            {
+                                AppLog.Info(nameof(CcMiniTeammateMonitor), $"进程 exe 推导命中: {dir}");
+                                return dir;
+                            }
+                            AppLog.Info(nameof(CcMiniTeammateMonitor), $"进程 exe 推导目录不存在: {dir} (exe={exe})");
                         }
                         catch (Exception ex) { AppLog.Error(ex, nameof(CcMiniTeammateMonitor), "MainModule read failed"); }
                     }
@@ -223,44 +276,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             }
             catch (Exception ex) { AppLog.Error(ex, nameof(CcMiniTeammateMonitor), "ResolveCcMiniLogDir process check failed"); }
 
-            // 2) 从注册表解析 Steam/网易客户端安装路径，选最近活跃（最后写入 m*.log 的）客户端。
-            // Steam 与网易都装了时，以"哪个日志最新"为准——刚登录的客户端必然在写日志。
-            var candidates = GameInstallLocator.ResolveAllCcMiniLogDirs();
-            if (candidates.Count == 0)
-            {
-                AppLog.Warning(nameof(CcMiniTeammateMonitor), "无法从注册表解析到任何 CCMini 日志目录");
-                return null;
-            }
-
-            string? bestDir = null;
-            DateTime bestTime = DateTime.MinValue;
-            foreach (var dir in candidates)
-            {
-                if (!Directory.Exists(dir)) continue;
-                DateTime latest;
-                try
-                {
-                    latest = Directory.GetFiles(dir, "m*.log")
-                        .Where(f => !f.EndsWith("_cclib.log", StringComparison.OrdinalIgnoreCase))
-                        .Select(f => new FileInfo(f).LastWriteTime)
-                        .DefaultIfEmpty(DateTime.MinValue)
-                        .Max();
-                }
-                catch (Exception ex)
-                {
-                    AppLog.Error(ex, nameof(CcMiniTeammateMonitor), $"Scan log dir failed: {dir}");
-                    continue;
-                }
-                if (latest > bestTime)
-                {
-                    bestTime = latest;
-                    bestDir = dir;
-                }
-            }
-
-            if (bestDir != null)
-                AppLog.Info(nameof(CcMiniTeammateMonitor), $"ResolveCcMiniLogDir 选择活跃客户端日志: {bestDir} (lastWrite={bestTime:yyyy-MM-dd HH:mm:ss})");
-            return bestDir;
+            return null;
         }
 
         /// <summary>
