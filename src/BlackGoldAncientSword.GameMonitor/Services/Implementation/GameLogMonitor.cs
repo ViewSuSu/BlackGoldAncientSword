@@ -13,7 +13,6 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
     [Component(ComponentLifetime.Singleton)]
     public class GameLogMonitor : IGameLogMonitor
     {
-        // 与 HomePageViewModel / ScreenCaptureServiceTests 等处硬编码保持一致。
         // 该字符串是永劫无间进程名（不含 .exe 扩展名），Process.GetProcessesByName 所需的格式。
         private const string GameProcessName = "NarakaBladepoint";
 

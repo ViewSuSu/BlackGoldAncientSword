@@ -14,12 +14,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="TestData\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2">
@@ -30,9 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BlackGoldAncientSword.ScreenCapture\BlackGoldAncientSword.ScreenCapture.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.GameMonitor\BlackGoldAncientSword.GameMonitor.csproj" />
-    <ProjectReference Include="..\BlackGoldAncientSword.Ocr\BlackGoldAncientSword.Ocr.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.Framework\BlackGoldAncientSword.Framework.csproj" />
     <ProjectReference Include="..\BlackGoldAncientSword.Modules\BlackGoldAncientSword.Modules.csproj" />
     <!-- 引入 SourceGenerator 作为 Analyzer，结合 BgaSourceGenMode=Tests 触发 HttpApiTestSourceGenerator -->
@@ -46,12 +38,5 @@
 
   <ItemGroup>
     <CompilerVisibleProperty Include="BgaSourceGenMode" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="..\BlackGoldAncientSword.ScreenCapture\runtimes\win-x64\native\wgc_capture.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>wgc_capture.dll</Link>
-    </Content>
   </ItemGroup>
 </Project>

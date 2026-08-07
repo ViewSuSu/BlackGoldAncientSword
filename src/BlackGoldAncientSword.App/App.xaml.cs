@@ -13,8 +13,6 @@ using BlackGoldAncientSword.Framework.Services;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.GameMonitor;
 using BlackGoldAncientSword.Modules;
-using BlackGoldAncientSword.Ocr;
-using BlackGoldAncientSword.ScreenCapture;
 using Mapster;
 
 namespace BlackGoldAncientSword.App
@@ -31,8 +29,6 @@ namespace BlackGoldAncientSword.App
             containerRegistry.RegisterAppLayer();
             containerRegistry.RegisterModuleLayer();
             containerRegistry.RegisterGameMonitorLayer();
-            containerRegistry.RegisterOcrLayer();
-            containerRegistry.RegisterScreenCaptureLayer();
         }
 
         private void ConfigureTypeAdapterConfig()
@@ -116,9 +112,10 @@ namespace BlackGoldAncientSword.App
             }
 
             // [2] Settings 加载。失败留默认值 + 日志。
+            BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService? settings = null;
             try
             {
-                var settings = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService>();
+                settings = Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService>();
                 await settings.LoadAsync();
                 // Settings 就绪后立即初始化本地日志（Release 才落盘），后续启动步骤的 catch 才有 sink 可写。
                 var logPath = settings.Current.LogPath;
@@ -131,6 +128,17 @@ namespace BlackGoldAncientSword.App
             catch (Exception ex)
             {
                 AppLog.Error(ex, $"{nameof(App)}.OnStartup", "Settings load failed");
+            }
+
+            // [2.5] 字号缩放应用。依赖 Settings；在首帧渲染前写入资源，保证默认字号即正确。
+            try
+            {
+                var uiScale = Container.Resolve<IUiScaleService>();
+                uiScale.Apply(settings?.Current.FontScale ?? 0);
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, nameof(App), "Font scale apply failed");
             }
 
             // [3] ImageCache init。依赖 Settings。
@@ -217,20 +225,6 @@ namespace BlackGoldAncientSword.App
             var navigation = Container.Resolve<IMainContentNavigationService>();
             navigation.NavigateTo(PageNames.TeamInfoPage);
             navigation.NavigateTo(PageNames.HomePage);
-
-            try
-            {
-                // OCR 预热：加载 PP-OCRv5 三段 ONNX 模型 + 字典约 200~500 ms，再跑一次最小推理触发
-                // ONNX session 内部 buffer / kernel JIT。Task.Run 推到 ThreadPool，避免阻塞 UI 线程；
-                // 业务首次 RecognizeAsync（英雄选择阶段队友识别）时模型已驻留内存，省掉冷启动等待。
-                var ocr = Container.Resolve<IOcrService>();
-                Task.Run(() => ocr.PrewarmAsync()).SafeFireAndForget("App.OcrPrewarm");
-            }
-            catch (Exception ex)
-            {
-                // 预热调度失败：业务首次 OCR 仍会自动加载模型，只是用户首次队伍识别会感受到冷启动延迟。
-                AppLog.Error(ex, nameof(App), "OCR prewarm schedule failed");
-            }
 
             // [7] 后台版本轮询：启动期若未发现新版，则每 30s 静默复查一次，发现新版即自动停表，
             // 由 MainWindowViewModel 订阅的 UpdateAvailabilityChanged 弹出提示卡片 + 点亮左下角"发现新版本"。
