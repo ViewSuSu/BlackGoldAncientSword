@@ -69,7 +69,7 @@ When entering hero selection, the app automatically parses teammate UIDs from th
   <small><u>Team Info Recognition 2</u></small>
 </p>
 
-> Click "Re-identify Team" anytime to trigger a manual refresh. If some names are recognized incorrectly, you can edit them directly and re-query.
+> Team data is auto-recognized and displayed from the voice log with no manual input; changing the season / team-size / mode filters re-queries automatically.
 
 ---
 
