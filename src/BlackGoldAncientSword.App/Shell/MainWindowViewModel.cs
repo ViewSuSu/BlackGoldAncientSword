@@ -195,6 +195,22 @@ namespace BlackGoldAncientSword.App.Shell
         private bool _updateCheckCompleted;
         private bool _updateNotificationShown;
         private bool _isCheckingForUpdate;
+
+        /// <summary>
+        /// true = 用户点击"发现新版本"后，正在强制重查远端版本，MainWindow 显示"正在检查更新"转圈浮层。
+        /// 检查完成（成功或失败）后由命令的 finally 复位，期间浮层拦截一切点击，防止重复触发。
+        /// </summary>
+        public bool IsCheckingForUpdate
+        {
+            get => _isCheckingForUpdate;
+            set
+            {
+                if (_isCheckingForUpdate == value) return;
+                _isCheckingForUpdate = value;
+                RaisePropertyChanged(nameof(IsCheckingForUpdate));
+            }
+        }
+
         private bool _isUpdateAvailable;
         public bool IsUpdateAvailable
         {
@@ -256,23 +272,23 @@ namespace BlackGoldAncientSword.App.Shell
         public DelegateCommand CheckForUpdatesCommand =>
             _checkForUpdatesCommand ??= new DelegateCommand(async () =>
             {
-                // 左下角"发现新版本"点击 → 先强制重查远端最新 tag 并刷新下载 URL，再弹更新卡片。
-                // 用户主动点击：忽略 _updateNotificationShown 守卫，以便关闭后还能再次打开。
+                // 左下角"发现新版本"点击 → 先弹"正在检查更新"转圈浮层，重查远端最新 tag 并刷新下载 URL，
+                // 检查完成后再弹更新卡片。用户主动点击：忽略 _updateNotificationShown 守卫，以便关闭后还能再次打开。
                 //
                 // 不能用会话内缓存：首次检出新版后后台轮询即停止（UpdateService.OnPollingTick → StopPolling），
                 // 若用户长时间登录而远端已发布多个新版本，LatestVersion / ZipDownloadUrl 仍停留在旧 tag；
                 // 而 Gitee 同步会清空历史 tag 附件，旧 tag 的 zip 直链 404，直接弹卡片会拿到失效的下载地址。
                 try
                 {
-                    if (_isCheckingForUpdate) return;
-                    _isCheckingForUpdate = true;
+                    if (IsCheckingForUpdate) return;
+                    IsCheckingForUpdate = true;
 
                     // 先置守卫：重查命中新版时 CheckForUpdatesAsync 内部会触发 UpdateAvailabilityChanged(true)，
                     // 事件驱动的 TryShowUpdateNotification 会再弹一次卡片，与下方显式导航重复。用户已主动点击
                     // 按钮，后续只走命令内的显式导航，抑制事件驱动弹卡。
                     _updateNotificationShown = true;
 
-                    await _updateService.CheckForUpdatesAsync(showNoUpdateMessage: false);
+                    await _updateService.CheckForUpdatesAsync(showNoUpdateMessage: false, UpdateCheckSource.UserManual);
                     // 重查成功且仍确认有新版才弹卡片。瞬时网络失败时 CheckForUpdatesAsync 保留原可用状态，
                     // 这里保持卡片关闭不打断用户；左下角"发现新版本"指示（IsUpdateAvailable）依然可见可重试。
                     if (!_updateService.IsUpdateAvailable)
@@ -289,7 +305,7 @@ namespace BlackGoldAncientSword.App.Shell
                 }
                 finally
                 {
-                    _isCheckingForUpdate = false;
+                    IsCheckingForUpdate = false;
                 }
             });
 
@@ -366,14 +382,18 @@ namespace BlackGoldAncientSword.App.Shell
             UpdateCanNavigateToPersonal();
         }
 
-        private void OnUpdateAvailabilityChanged(object? sender, bool isAvailable)
+        private void OnUpdateAvailabilityChanged(object? sender, UpdateAvailabilityChangedEventArgs args)
         {
             // fire-and-forget：UI 线程异步执行，避免在后台线程触发 PropertyChanged。
             _ = _uiDispatcher.InvokeAsync(() =>
             {
                 _updateCheckCompleted = true;
-                IsUpdateAvailable = isAvailable;
-                TryShowUpdateNotification(isAvailable);
+                IsUpdateAvailable = args.IsAvailable;
+                // 后台轮询命中新版：只点亮左下角"发现新版本"指示，不弹卡片打扰用户。
+                // 启动检测 / 用户主动点击才弹更新卡片（后者由命令内显式导航，此处守卫防重）。
+                if (args.Source == UpdateCheckSource.Background)
+                    return;
+                TryShowUpdateNotification(args.IsAvailable);
             });
         }
 
