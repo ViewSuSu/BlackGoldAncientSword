@@ -91,7 +91,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         public string ReleasePageUrl => GiteeReleaseLatestUrl;
 
-        public event EventHandler<bool>? UpdateAvailabilityChanged;
+        public event EventHandler<UpdateAvailabilityChangedEventArgs>? UpdateAvailabilityChanged;
 
         public UpdateService(
             IUIDispatcher uiDispatcher,
@@ -122,7 +122,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         /// "无法确认"（latest tag 解析失败 / 网络异常）时保留原状态不清空。这样用户主动点击
         /// "发现新版本"重查时，瞬时网络失败不会把指示按钮藏掉，下次仍可重试。
         /// </summary>
-        public async Task CheckForUpdatesAsync(bool showNoUpdateMessage = true)
+        public async Task CheckForUpdatesAsync(bool showNoUpdateMessage = true, UpdateCheckSource source = UpdateCheckSource.Startup)
         {
             Debug.WriteLine($"[{nameof(UpdateService)}.{nameof(CheckForUpdatesAsync)}] 开始检查");
 
@@ -142,7 +142,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
                 if (!available)
                 {
-                    await ClearAvailabilityAsync().ConfigureAwait(false);
+                    await ClearAvailabilityAsync(source).ConfigureAwait(false);
                     return;
                 }
 
@@ -167,7 +167,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                     SplitZipDownloadUrl = splitZipUrlFirst;
                     SplitDownloadUrls = splitUrls;
                     LatestReleaseNotes = releaseNotes;
-                    UpdateAvailabilityChanged?.Invoke(this, true);
+                    UpdateAvailabilityChanged?.Invoke(this, new UpdateAvailabilityChangedEventArgs(true, source));
                 }).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
@@ -210,7 +210,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
         {
             try
             {
-                await CheckForUpdatesAsync(showNoUpdateMessage: false).ConfigureAwait(false);
+                // 后台轮询来源：命中新版只点亮指示（由订阅方据此不弹卡片），仍照常触发可用性事件。
+                await CheckForUpdatesAsync(showNoUpdateMessage: false, UpdateCheckSource.Background).ConfigureAwait(false);
                 if (IsUpdateAvailable)
                     StopPolling();
             }
@@ -230,7 +231,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             _pollingTimer = null;
         }
 
-        private async Task ClearAvailabilityAsync()
+        private async Task ClearAvailabilityAsync(UpdateCheckSource source)
         {
             await SafeInvokeAsync(() =>
             {
@@ -241,7 +242,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 SplitZipDownloadUrl = null;
                 SplitDownloadUrls = null;
                 LatestReleaseNotes = null;
-                UpdateAvailabilityChanged?.Invoke(this, false);
+                UpdateAvailabilityChanged?.Invoke(this, new UpdateAvailabilityChangedEventArgs(false, source));
             }).ConfigureAwait(false);
         }
 

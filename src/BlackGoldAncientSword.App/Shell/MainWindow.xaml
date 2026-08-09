@@ -1077,6 +1077,45 @@
                     </Border>
                 </Border>
 
+                <!--  Checking-update overlay：左下角"发现新版本"点击后重查远端版本时的转圈浮层。
+                     与启动转圈同款视觉，覆盖更新卡片（ZIndex=10070），检查完成由 VM finally 复位隐藏。 -->
+                <Border
+                    Grid.Row="1"
+                    Grid.RowSpan="2"
+                    Panel.ZIndex="10070"
+                    Background="#A0000000"
+                    Focusable="True"
+                    IsHitTestVisible="True"
+                    Visibility="{Binding IsCheckingForUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Border x:Name="CheckingCard"
+                            Width="320" MinHeight="160"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Padding="24,22"
+                            Background="{DynamicResource SurfaceGradientBrush}"
+                            BorderBrush="{DynamicResource AccentPrimaryBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Effect="{DynamicResource ShadowElevatedEffect}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <hc:CircleProgressBar Width="52" Height="52"
+                                                  ArcThickness="4"
+                                                  Foreground="{DynamicResource AccentPrimaryBrush}"
+                                                  IsIndeterminate="True" />
+                            <TextBlock Margin="0,14,0,4"
+                                       HorizontalAlignment="Center"
+                                       FontSize="{DynamicResource FontSize.Section}" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       Text="{DynamicResource Startup.CheckingUpdates}" />
+                            <TextBlock HorizontalAlignment="Center"
+                                       FontSize="{DynamicResource FontSize.Caption}"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Text="{DynamicResource Startup.PleaseWait}"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </Border>
+
                 <!--  Online updating overlay (Updater 独立进程正在下载+解压+覆盖，主 App 全域锁死等被 kill 后重启) -->
                 <Border
                     Grid.Row="1"
