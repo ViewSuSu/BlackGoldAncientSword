@@ -227,7 +227,7 @@ namespace BlackGoldAncientSword.App
             navigation.NavigateTo(PageNames.HomePage);
 
             // [7] 后台版本轮询：启动期若未发现新版，则每 30s 静默复查一次，发现新版即自动停表，
-            // 由 MainWindowViewModel 订阅的 UpdateAvailabilityChanged 弹出提示卡片 + 点亮左下角"发现新版本"。
+            // 由 MainWindowViewModel 订阅的 UpdateAvailabilityChanged 点亮左下角"发现新版本"（后台来源不弹卡片）。
             try
             {
                 Container.Resolve<BlackGoldAncientSword.Framework.Services.Abstractions.IUpdateService>()

@@ -2,7 +2,9 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
 {
     public interface IUpdateService
     {
-        System.Threading.Tasks.Task CheckForUpdatesAsync(bool showNoUpdateMessage = true);
+        /// <param name="showNoUpdateMessage">检查结束确认无新版时是否提示"已是最新版本"。</param>
+        /// <param name="source">本次检查的发起来源，事件随 <see cref="UpdateAvailabilityChanged"/> 原样透传给订阅方。</param>
+        System.Threading.Tasks.Task CheckForUpdatesAsync(bool showNoUpdateMessage = true, UpdateCheckSource source = UpdateCheckSource.Startup);
 
         void SetAutoPopupEnabled(bool enabled);
 
@@ -49,6 +51,12 @@ namespace BlackGoldAncientSword.Framework.Services.Abstractions
         /// </summary>
         string ReleasePageUrl { get; }
 
-        event System.EventHandler<bool>? UpdateAvailabilityChanged;
+        /// <summary>
+        /// 版本可用性变化事件。
+        /// <paramref name="isAvailable"/> 表示是否有新版；
+        /// <paramref name="source"/> 表示触发该次检查的 <see cref="UpdateCheckSource"/>。
+        /// 订阅方据此决定 UI 呈现：后台来源只点亮指示不弹卡片，启动/手动来源才弹更新卡片。
+        /// </summary>
+        event System.EventHandler<UpdateAvailabilityChangedEventArgs>? UpdateAvailabilityChanged;
     }
 }
