@@ -369,7 +369,8 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
         /// <summary>
         /// 枚举 <paramref name="currentVersion"/> 到 <paramref name="latestVersion"/> 之间
-        /// 所有可能存在的 tag（不含 current，含 latest）。
+        /// 所有可能存在的 tag（不含 current，含 latest），最新版本在前、最旧版本在后，
+        /// 以便 release notes 合并后按时间从新到旧展示。
         /// 仅处理前三段相同、最后一段递增的简单场景；跨度超过 100 则退回单 latest。
         /// </summary>
         internal static List<string> EnumerateIntermediateTags(string currentVersion, string latestVersion)
@@ -392,7 +393,7 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             if (span <= 1 || span > 100) return result;
 
             result.Clear();
-            for (int d = current.Revision + 1; d <= latest.Revision; d++)
+            for (int d = latest.Revision; d >= current.Revision + 1; d--)
             {
                 result.Add(new Version(current.Major, current.Minor, current.Build, d).ToString());
             }
