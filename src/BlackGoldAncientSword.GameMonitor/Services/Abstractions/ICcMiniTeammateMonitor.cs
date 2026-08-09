@@ -30,5 +30,6 @@ public interface ICcMiniTeammateMonitor : IDisposable
     void Stop();
 
     /// <summary>重置识别状态（清空已识别 UID 与触发快照），用于进入新对局 / 重新回放当前日志。</summary>
-    void Reset();
+    /// <param name="matchStartTime">本局英雄选择开始时间；非空时只接受不早于该时间的 set-uid-vol（跨局复用 m*.log 时丢弃上一局旧记录）。</param>
+    void Reset(DateTime? matchStartTime = null);
 }

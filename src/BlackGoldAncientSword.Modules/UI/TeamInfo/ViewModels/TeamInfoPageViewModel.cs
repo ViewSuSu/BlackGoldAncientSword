@@ -266,8 +266,19 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     _overlayDismissedThisRound = false;
                     _teamDataLoadedSuccessfully = false;
                     StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
-                    // 新一局开始：清空 Monitor 上一局残留的 UID 与触发快照，从当前文件位置继续。
-                    _teammateMonitor.Reset();
+                    // 新一局开始：立即清掉上一局残留的卡片数据，避免在 Monitor 重新识别出当前队友前
+                    // 短暂展示上一局队友（异常退出无 BattleEnded 时 TeamMembers 会残留）。
+                    if (TeamMembers.Count > 0)
+                    {
+                        _hasEverHadData = false;
+                        TeamMembers.Clear();
+                        MergedStatRows.Clear();
+                        RaiseMemberProperties();
+                    }
+                    // 清空 Monitor 上一局残留的 UID 与触发快照；记录本局英雄选择开始时间，
+                    // CCM 只接受该时间之后的 set-uid-vol（m*.log 跨局复用时丢弃上一局旧记录），
+                    // 并保留读取位置，Start 只增量读新写入的 UID（见 CcMiniTeammateMonitor.Reset）。
+                    _teammateMonitor.Reset(DateTime.Now);
                     StartMonitor();
                     break;
                 case GameStatus.InGame:
