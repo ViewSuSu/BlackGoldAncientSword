@@ -28,8 +28,9 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         // [2026-08-07 16:40:08:115] [SERVICE] JsonControl {"type": "set-uid-vol", "percent" : 100, "uid" : "2a5d000045516500130163", "session-id" : 2 }
         // 队伍语音频道固定为 session-id : 2；队友 UID 全部出现在该频道的 set-uid-vol 里。
         // 按行匹配（(?m) 多行模式 + [^\r\n] 限制在同一行内），避免跨行贪婪吞掉多行。
+        // 捕获组：1=行首时间戳（yyyy-MM-dd HH:mm:ss:fff，冒号分隔毫秒），2=uid，3=session-id。
         private static readonly Regex SetUidVolRegex = new(
-            @"(?m)""type""\s*:\s*""set-uid-vol""[^\r\n]*?uid""\s*:\s*""([a-zA-Z0-9]+)""[^\r\n]*?session-id""\s*:\s*(\d+)",
+            @"(?m)^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}:\d{3})\][^\r\n]*?""type""\s*:\s*""set-uid-vol""[^\r\n]*?uid""\s*:\s*""([a-zA-Z0-9]+)""[^\r\n]*?session-id""\s*:\s*(\d+)",
             RegexOptions.Compiled);
 
         // 队友角色 ID：实测固定 22 位字母数字（前缀字母/数字混合 0~4 位 + 18~22 位数字），
@@ -58,6 +59,9 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         private string? _currentLogPath;
         private string? _activeLogDir;
         private long _lastPosition;
+        // 本轮英雄选择开始时间：m*.log 跨局复用时，早于该时间的 set-uid-vol 属于上一局，
+        // 即使增量读取误扫到也要丢弃，防止把旧局队友重新触发出来。null 表示未设（首次启动回放等）。
+        private DateTime? _matchStartTime;
         // 当前"最近活跃"的队友 UID 集合：按最近一次 set-uid-vol 出现时间排序（最新在前）。
         // 容量上限 MaxTeammates；队友退出/换人时新 UID 插入队首、最旧的被淘汰，从而反映当前队友。
         private readonly List<string> _recognizedUids = new();
@@ -160,7 +164,13 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             }
         }
 
-        public void Reset()
+        /// <summary>
+        /// 重置识别状态（清空已识别 UID 与触发快照），用于进入新对局 / 重新回放当前日志。
+        /// <paramref name="matchStartTime"/> 为本局英雄选择开始时间：m*.log 跨局复用时，
+        /// <see cref="ExtractUids"/> 只接受不早于该时间的 set-uid-vol，彻底丢弃上一局的旧记录，
+        /// 防止页面先显示旧局队友再被当前局覆盖。
+        /// </summary>
+        public void Reset(DateTime? matchStartTime = null)
         {
             lock (_stateLock)
             {
@@ -168,9 +178,13 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
                 _hasFiredOnce = false;
                 _lastFiredSignature = string.Empty;
                 _settleTaskStarted = false;
-                _lastPosition = 0;
-                _currentLogPath = null;
-                _activeLogDir = null;
+                _matchStartTime = matchStartTime;
+                // 保留读取位置与当前文件：m*.log 跨局复用（连续对局不重启游戏）时，
+                // 若归零 _lastPosition 并清 _currentLogPath，Start 会从头重读整个文件，
+                // 把上一局的 set-uid-vol 再次解析出来触发旧队友名单——页面先显示上一局队友、
+                // 等新局 set-uid-vol 落盘后才被当前队友覆盖。保留两者后 Start 只增量读新写入的 UID。
+                // 若新局确实新建了 m*.log（切客户端 / 重启游戏），AttachToLatestLog 检测到路径变化
+                // 仍会归零重读，不影响该场景。
             }
             DiagLog.Write("CCM", "Reset: 清空已识别 UID，等待新对局/重新回放");
         }
@@ -301,7 +315,8 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             bool switched;
             lock (_stateLock)
             {
-                switched = !string.Equals(_currentLogPath, latest, StringComparison.OrdinalIgnoreCase);
+                switched = !string.Equals(
+                    NormalizePath(_currentLogPath), NormalizePath(latest), StringComparison.OrdinalIgnoreCase);
                 if (switched)
                 {
                     _currentLogPath = latest;
@@ -342,7 +357,8 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             // 当前跟踪的文件被写入时才读增量；其它 m*.log（如旧会话）忽略。
             lock (_stateLock)
             {
-                if (!string.Equals(_currentLogPath, e.FullPath, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(
+                    NormalizePath(_currentLogPath), NormalizePath(e.FullPath), StringComparison.OrdinalIgnoreCase))
                     return;
             }
             Task.Run(async () =>
@@ -374,8 +390,12 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             bool dirSwitched;
             lock (_stateLock)
             {
+                // 规范化后比较：ResolveCcMiniLogDir 返回的目录含正斜杠（来自注册表）与反斜杠
+                // （Path.Combine）混合，_activeLogDir 可能来自其它路径来源，直接字符串比较会因
+                // 斜杠格式不同而误判目录切换，导致每次 Poll 都重建 watcher + 归零重读。
                 dirSwitched = activeDir != null &&
-                              !string.Equals(_activeLogDir, activeDir, StringComparison.OrdinalIgnoreCase);
+                              !string.Equals(
+                                  NormalizePath(_activeLogDir), NormalizePath(activeDir), StringComparison.OrdinalIgnoreCase);
                 if (dirSwitched)
                 {
                     _activeLogDir = activeDir;
@@ -423,7 +443,7 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             {
                 var oldPath = _watcher?.Path;
                 if (!string.IsNullOrEmpty(oldPath) &&
-                    string.Equals(oldPath, logDir, StringComparison.OrdinalIgnoreCase))
+                    string.Equals(NormalizePath(oldPath), NormalizePath(logDir), StringComparison.OrdinalIgnoreCase))
                     return;
             }
 
@@ -563,16 +583,26 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
         /// 从文本中提取队伍语音频道（session-id=2）的 set-uid-vol 队友 UID。
         /// 只认队伍频道：该频道的 set-uid-vol 即队友组（每局 2 个=三排 / 1 个=双排）。
         /// 过滤掉本地用户与非法格式，按出现顺序去重后**逆序**返回（最新出现的在前）。
+        /// 若设置了 <see cref="_matchStartTime"/>（本局英雄选择开始），早于它的记录视为上一局，
+        /// 直接丢弃——m*.log 跨局复用时增量读取可能扫到旧局 set-uid-vol，时间过滤是最后一道防线。
         /// </summary>
         private List<string> ExtractUids(string text)
         {
             var localUid = _playerPrefs.Current.PlayerId;
+            var matchStart = _matchStartTime;
             var result = new List<string>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Match m in SetUidVolRegex.Matches(text))
             {
-                var uid = m.Groups[1].Value;
-                var sessionId = m.Groups[2].Value;
+                // 时间戳为行首 [yyyy-MM-dd HH:mm:ss:fff]，用冒号分隔毫秒（非惯用小数点）。
+                if (matchStart.HasValue
+                    && TryParseLogTimestamp(m.Groups[1].Value, out var ts)
+                    && ts < matchStart.Value)
+                {
+                    continue;
+                }
+                var uid = m.Groups[2].Value;
+                var sessionId = m.Groups[3].Value;
                 // 只取队伍语音频道（session-id=2）。
                 if (!string.Equals(sessionId, TeamSessionId, StringComparison.Ordinal)) continue;
                 if (!UidPattern.IsMatch(uid)) continue;
@@ -584,6 +614,35 @@ namespace BlackGoldAncientSword.GameMonitor.Services.Implementation
             }
             result.Reverse();
             return result;
+        }
+
+        /// <summary>
+        /// 解析 m*.log 行首时间戳 <c>[yyyy-MM-dd HH:mm:ss:fff]</c>（毫秒以冒号分隔，非常规小数点）。
+        /// 解析失败返回 false。
+        /// </summary>
+        private static bool TryParseLogTimestamp(string s, out DateTime result)
+        {
+            result = default;
+            if (string.IsNullOrEmpty(s) || s.Length < 19) return false;
+            // 前 19 位为 yyyy-MM-dd HH:mm:ss，直接按标准格式解析，毫秒（:fff）只用于日志诊断。
+            return DateTime.TryParseExact(
+                s.Substring(0, 19),
+                "yyyy-MM-dd HH:mm:ss",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out result);
+        }
+
+        /// <summary>
+        /// 路径比较前统一分隔符：Windows 下 <c>C:/a/b</c> 与 <c>C:\a\b</c> 指向同一路径，
+        /// 但注册表解析的目录（GameInstallLocator）与 FileSystemWatcher 返回的 FullPath 斜杠格式不同，
+        /// 直接字符串比较会误判"文件/目录变化"导致每次 Start 都归零重读（读回旧局 set-uid-vol）。
+        /// 统一替换反斜杠为正斜杠，仅用于相等性判断，不改变实际存储路径。
+        /// </summary>
+        private static string NormalizePath(string? path)
+        {
+            if (string.IsNullOrEmpty(path)) return string.Empty;
+            return path.Replace('\\', '/');
         }
     }
 }
