@@ -7,6 +7,7 @@
     xmlns:ctrls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
     xmlns:ext="clr-namespace:BlackGoldAncientSword.Framework.Core.Extensions;assembly=BlackGoldAncientSword.Framework"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:hc="clr-namespace:HandyControl.Controls;assembly=HandyControl"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Background="Transparent"
     mc:Ignorable="d">
@@ -19,20 +20,39 @@
         CardMinWidth="450"
         CardPadding="10"
         RegionName="{x:Static consts:GlobalConstant.UpdateLogRegion}"
-        Title="{DynamicResource MainWindow.ViewUpdateLog}">
+        Title="{DynamicResource Announcement.UpdateHistory}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <ScrollViewer Grid.Row="0" Margin="0,0,0,16">
-                <StackPanel>
+            <Border
+                Grid.Row="0"
+                Margin="0,0,0,16"
+                Background="{DynamicResource SurfaceSecondaryBrush}"
+                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <hc:CircleProgressBar
+                        Width="56"
+                        Height="56"
+                        ArcThickness="4"
+                        Foreground="{DynamicResource AccentPrimaryBrush}"
+                        IsIndeterminate="True" />
                     <TextBlock
-                        Margin="0,0,0,12"
-                        FontSize="{DynamicResource FontSize.Section}"
-                        FontWeight="SemiBold"
-                        Text="{DynamicResource Announcement.UpdateHistory}" />
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Center"
+                        FontSize="{DynamicResource FontSize.Metadata}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        Text="{DynamicResource Announcement.Loading}" />
+                </StackPanel>
+            </Border>
+
+            <ScrollViewer
+                Grid.Row="0"
+                Margin="0,0,0,16"
+                Visibility="{Binding HasData, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
                     <ItemsControl ItemsSource="{Binding UpdateHistory}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>

@@ -26,6 +26,17 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateLog.ViewModels
             }
         }
 
+        private bool _hasData;
+        public bool HasData
+        {
+            get => _hasData;
+            set
+            {
+                _hasData = value;
+                RaisePropertyChanged();
+            }
+        }
+
         public UpdateLogPageViewModel(IGiteeReleaseService releaseService, IUIDispatcher uiDispatcher)
         {
             _releaseService = releaseService;
@@ -51,6 +62,7 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateLog.ViewModels
                         });
                     }
                     IsLoading = false;
+                    HasData = true;
                 });
             }
             catch (Exception)
