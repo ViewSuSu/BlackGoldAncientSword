@@ -10,13 +10,16 @@ namespace BlackGoldAncientSword.Modules.UI.Sponsor.ViewModels
     {
         private readonly IRegionManager _regionManager;
 
-        private const string WeChatQrPath = "/BlackGoldAncientSword.Resources;component/Images/wechat_sponsor_qrcode.jpg";
-        private const string AlipayQrPath = "/BlackGoldAncientSword.Resources;component/Images/alipay_sponsor_qrcode.jpg";
+        private const string WeChatQrPath = "/BlackGoldAncientSword.Resources;component/Images/wechat_sponsor_qrcode.png";
+        private const string AlipayQrPath = "/BlackGoldAncientSword.Resources;component/Images/alipay_sponsor_qrcode.png";
 
         public SponsorPageViewModel(IRegionManager regionManager)
         {
             _regionManager = regionManager;
         }
+
+        // 每次打开打赏页都强制新建实例，让打赏方式默认回到选中微信
+        protected override bool IsNavigationTargetExecute(NavigationContext navigationContext) => false;
 
         private bool _isWeChatSelected = true;
         public bool IsWeChatSelected
