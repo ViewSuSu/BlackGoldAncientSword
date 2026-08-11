@@ -327,6 +327,47 @@ jobs:
           Write-Host "Full zip created: $zipName ($zipSize bytes)"
 
 
+      - name: Build framework-dependent zip (versionless)
+        shell: powershell
+        run: |
+          # 非自包含（framework-dependent）编译产物 zip：App 与 Updater 均以
+          # 非自包含 Release 配置发布，两者 merge 到一个目录再打包。
+          # 不打入运行时，体积远小于自包含 single-file。
+          # 目标机需自行安装 .NET 10 运行时。版本无关命名，配合
+          # /releases/latest/download/ magic redirect 永久指向最新版。
+          $appProj   = "src/BlackGoldAncientSword.App/BlackGoldAncientSword.App.csproj"
+          $updProj   = "src/BlackGoldAncientSword.Update/BlackGoldAncientSword.Update.csproj"
+          $outDir    = "publish/FrameworkDependent"
+
+          # 1. App 非自包含多文件发布
+          dotnet publish $appProj `
+            -c Release `
+            -r win-x64 `
+            -o $outDir `
+            --self-contained false `
+            /p:PublishSingleFile=false `
+            /p:Version=${{ steps.version.outputs.new_version }}
+
+          # 2. Updater 非自包含多文件发布，输出到同一目录（与 App merge）
+          dotnet publish $updProj `
+            -c Release `
+            -r win-x64 `
+            -o $outDir `
+            --self-contained false `
+            /p:PublishSingleFile=false `
+            /p:Version=${{ steps.version.outputs.new_version }}
+
+          $updaterExe = Join-Path $outDir "BlackGoldAncientSword.Update.exe"
+          if (-not (Test-Path $updaterExe)) {
+            Write-Error "Updater exe not found after publish: $updaterExe"
+            exit 1
+          }
+
+          & "C:\Program Files\7-Zip\7z.exe" a -tzip "$pwd/output/BlackGoldAncientSword-win-x64.zip" "$pwd/$outDir/*"
+          $zipSize = (Get-Item "output/BlackGoldAncientSword-win-x64.zip").Length
+          Write-Host "Framework-dependent zip created: BlackGoldAncientSword-win-x64.zip ($zipSize bytes)"
+
+
       - name: List all output files
         shell: powershell
         run: |
