@@ -61,6 +61,10 @@ namespace BlackGoldAncientSword.App
 
             base.OnStartup(e);
 
+            // 版本号权威来源是 App 程序集，须在发起任何签名请求（[1] Auth pipeline）之前注入，
+            // 让 SignatureHandler 的 UA / X-Client-Version 头能取到正确版本。
+            ClientVersionProvider.Initialize(typeof(App).Assembly);
+
             // 启动流程契约（顺序不能乱）：
             //   1) Auth pipeline INIT（静默）：只搭 handler + 恢复本地 token + 启动过期监视，不弹任何 UI
             //   2) Settings 加载：后续 ImageCache / Update 可能读 settings.Current

@@ -15,6 +15,8 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.ApiSignature
     /// </summary>
     public sealed class SignatureHandler : DelegatingHandler
     {
+        private const string ClientVersionHeader = "X-Client-Version";
+
         private readonly ISignatureTicketProvider _ticketProvider;
         private readonly Func<long> _clockMs;
         private readonly Func<string> _nonceGenerator;
@@ -39,6 +41,10 @@ namespace BlackGoldAncientSword.Framework.Http.Auth.ApiSignature
             AppLog.Info(
                 nameof(SignatureHandler),
                 $"HTTP {request.Method} {request.RequestUri} tid={Environment.CurrentManagedThreadId} ts={DateTime.Now:HH:mm:ss.fff}");
+
+            var version = ClientVersionProvider.Version;
+            request.Headers.TryAddWithoutValidation("User-Agent", $"BlackGoldAncientSword/{version}");
+            request.Headers.TryAddWithoutValidation(ClientVersionHeader, version);
 
             var ticket = await _ticketProvider.GetAsync(cancellationToken).ConfigureAwait(false);
             var timestamp = _clockMs();
