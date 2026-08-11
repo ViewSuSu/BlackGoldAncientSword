@@ -120,9 +120,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         }
 
         /// <summary>
-        /// 先用本地 UID 搜索（若提供且命中直接返回），否则用用户名搜索。
-        /// UID 分支的 <see cref="NarakaApiException"/> 被吞掉走回退——本地用户查询绝不能因 UID
-        /// 路径异常整格失败，用户名兜底至少与旧行为等价。返回 (搜索结果, 用户名分支的 msg)。
+        /// 查询角色：有 UID（<paramref name="localUidOverride"/>）时只用 UID 查——UID 唯一可查、不重名，
+        /// 能精确命中，绝不再回退到用户名重查一遍。队友卡 userName 与 UID 是同一带前缀 ID，本地卡
+        /// userName 是昵称，统一原则都是"有 UID 只用 UID"，避免对同一目标重复发 HTTP。
+        /// 仅当没有 UID 时才用用户名查。返回 (搜索结果, msg)。
         /// </summary>
         private static async Task<(UnifiedSearchResult? search, string? msg)> SearchByUidThenNameAsync(
             string userName, string? localUidOverride, CancellationToken ct)
@@ -133,10 +134,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 {
                     var uidResp = await SearchPreferDaShenAsync(localUidOverride, ct).ConfigureAwait(false);
                     var uidSearch = UnifiedMapper.MapSearch(uidResp);
-                    if (uidSearch != null) return (uidSearch, uidResp?.Msg);
+                    return (uidSearch, uidResp?.Msg);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (NarakaApiException) { /* UID 路径失败 → 回退用户名 */ }
+                catch (NarakaApiException)
+                {
+                    // 后端业务/HTTP 错误（如 429/500）：不重试用户名，按查无交由上层展示失败。
+                    return (null, null);
+                }
             }
 
             var resp = await SearchPreferDaShenAsync(userName, ct).ConfigureAwait(false);
