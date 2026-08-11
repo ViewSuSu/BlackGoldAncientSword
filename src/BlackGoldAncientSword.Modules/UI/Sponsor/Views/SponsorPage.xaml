@@ -85,8 +85,8 @@
                         Foreground="{DynamicResource TextOnAccentBrush}"
                         Visibility="{Binding QrCodeVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
                     <Image
-                        Width="220"
-                        Height="220"
+                        Width="300"
+                        Height="340"
                         HorizontalAlignment="Left"
                         RenderOptions.BitmapScalingMode="HighQuality"
                         Source="{Binding QrCodeSource}"

@@ -5,6 +5,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Prism.Ioc;
 using Prism.Regions;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
@@ -129,6 +132,20 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             set => SetValue(EscapeDismissesProperty, value);
         }
 
+        /// <summary>亚克力模糊背景图源，由模板中的 PART_Backdrop 展示。</summary>
+        public static readonly DependencyProperty BackdropSourceProperty =
+            DependencyProperty.Register(
+                nameof(BackdropSource),
+                typeof(ImageSource),
+                typeof(OverlayHost),
+                new PropertyMetadata(null));
+
+        public ImageSource? BackdropSource
+        {
+            get => (ImageSource?)GetValue(BackdropSourceProperty);
+            set => SetValue(BackdropSourceProperty, value);
+        }
+
         public override void OnApplyTemplate()
         {
             base.OnApplyTemplate();
@@ -144,7 +161,35 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            CaptureBackdrop();
             Focus();
+        }
+
+        private void CaptureBackdrop()
+        {
+            try
+            {
+                var window = Window.GetWindow(this);
+                if (window == null)
+                    return;
+
+                // 抓图前隐藏自身，避免把浮层自身（含卡片）一起截进模糊背景里
+                var prev = Visibility;
+                Visibility = Visibility.Collapsed;
+                Dispatcher.Invoke(DispatcherPriority.Loaded, () =>
+                {
+                    var brush = BackdropBlurRenderer.CaptureBlurredBackdrop(window);
+                    Visibility = prev;
+                    if (brush == null)
+                        return;
+                    brush.Freeze();
+                    BackdropSource = brush.ImageSource;
+                });
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, nameof(OverlayHost), nameof(CaptureBackdrop));
+            }
         }
 
         private void OnKeyDown(object sender, KeyEventArgs e)

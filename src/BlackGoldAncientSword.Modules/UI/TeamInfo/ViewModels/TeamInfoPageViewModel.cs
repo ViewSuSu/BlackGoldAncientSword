@@ -840,11 +840,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     await _uiDispatcher.InvokeAsync(() =>
                     {
                         member.Level = loaded.Level;
-                        // 本地卡 UID 保持本地 PlayerId 不变（后端返回的 RoleIdSimple 是纯数字，
-                        // 与本地带前缀 ID 不同；覆盖会导致本地卡定位失效 + 下次匹配重复建卡）。
-                        // 队友卡才回写后端返回的 UID。
-                        if (!member.IsLocalUser)
-                            member.UID = loaded.UID;
+                        // UID 一律不写回：member.UID 是语音日志给出的原始 UID（本地卡为 PlayerId），
+                        // 是 UpdateTeamMembersAsync 里"按 recognizedSet 判定是否移除 / 已加载则跳过"的匹配 key。
+                        // 一旦覆盖成后端返回的纯数字 RoleIdSimple，下一次触发时该卡会被误判为"已退出"而移除重建，
+                        // 导致同一批队友反复走完整 search→player→season（重复 HTTP 根因）。后端纯数字仅供内部查询，
+                        // 已通过 PlayerSourceContext.RoleIdSimple 传入 loader，无需写回成员卡；且 UI 不展示 UID。
                         // 后端真实昵称只写到 DisplayName（头像下展示），不碰 UserName（搜索框）以免回填
                         if (!string.IsNullOrWhiteSpace(loaded.UserName))
                             member.DisplayName = loaded.UserName;
