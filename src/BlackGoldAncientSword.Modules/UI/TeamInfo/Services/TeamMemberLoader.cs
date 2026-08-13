@@ -53,6 +53,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 }
 
                 var ctx = new PlayerSourceContext(search.RoleIdSimple, search.DataSource);
+                result.SourceContext = ctx;
 
                 // 名字/头像统一优先 dashen 源查 profile：dashen 对隐藏昵称的玩家返回真实昵称，
                 // 而 heyBox 源会对这类玩家返回占位"匿名玩家"；search 返回的 source 不稳定
@@ -90,6 +91,22 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 result.FailMsg = ex.Msg;
                 return result;
             }
+        }
+
+        /// <summary>
+        /// 复用已解析的 <see cref="PlayerSourceContext"/> 只重查 season（stats）。
+        /// 筛选器（赛季/排数/大类）变更时调用：这些条件只影响 stats，搜索 identity（roleId/数据源）
+        /// 与玩家资料（名字/头像/等级）不变，无需重复 search/player。仅当首次加载已成功拿到 ctx 后使用。
+        /// </summary>
+        public async Task<PlayerStatsLoadResult?> LoadStatsOnlyAsync(
+            PlayerSourceContext ctx,
+            double? selectedSeasonCode,
+            GameModeCategory category,
+            TeamSize teamSize,
+            CancellationToken ct)
+        {
+            var gameMode = GameModeExtensions.FromCategoryAndTeamSize(category, teamSize);
+            return await _statsLoader.LoadAsync(ctx, selectedSeasonCode, gameMode, ct).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -177,6 +194,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         public double SoloRankScore { get; set; }
         public double DuoRankScore { get; set; }
         public double TrioRankScore { get; set; }
+        /// <summary>search+player 成功后锁定的玩家查询上下文（roleIdSimple + 数据源）。
+        /// 供后续筛选器变更时只重查 season 复用，避免对同一玩家重复 search/player。</summary>
+        public PlayerSourceContext? SourceContext { get; set; }
         /// <summary>stats 子查询；可能为 null（API 未返回有效数据）。</summary>
         public PlayerStatsLoadResult? Stats { get; set; }
     }

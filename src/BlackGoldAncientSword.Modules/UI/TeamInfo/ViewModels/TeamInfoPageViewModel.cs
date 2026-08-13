@@ -808,72 +808,90 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             try
             {
-                // 所有成员按 UID 查询：优先用 member.UID 作为 SearchRecord 的 keyword（UID 精确命中），
-                // 用户名（UserName）仅作兜底回退。本地用户格与队友格无差别——都走 UID 优先。
-                var uidOverride = string.IsNullOrWhiteSpace(member.UID) ? null : member.UID;
-
-                // Step 1-4: 调 Loader 在后台线程拉数据；返回 DTO 后回 UI 线程逐批写回属性。
-                var loaded = await _memberLoader.LoadAsync(
-                    userName,
-                    _selectedSeason?.Code,
-                    _selectedCategory,
-                    _selectedTeamSize,
-                    ct,
-                    uidOverride).ConfigureAwait(false);
-
-                if (loaded.Failed)
+                // 已有解析好的 ctx（首次 search+player 成功过）：筛选器变更重查时复用，
+                // 跳过 search/player（identity 与资料不变），只重查 season(stats)。
+                var ctx = member.SourceContext;
+                if (ctx != null)
                 {
-                    // 优先展示后端 msg 原文（如"未找到玩家"），msg 为空/null 时才回退到本地化的"查询失败"。
-                    // 卡片中心的错误文案由 XAML 绑定 member.StatusText 直接渲染。
-                    var failText = !string.IsNullOrWhiteSpace(loaded.FailMsg)
-                        ? loaded.FailMsg!
-                        : L("TeamInfo.QueryFailed", "查询失败");
-                    await _uiDispatcher.InvokeAsync(() =>
-                    {
-                        member.StatusText = failText;
-                    });
-                    // 不 return：让 final cleanup 块执行，确保 IsLoading 被重置
+                    var stats = await _memberLoader.LoadStatsOnlyAsync(
+                        ctx,
+                        _selectedSeason?.Code,
+                        _selectedCategory,
+                        _selectedTeamSize,
+                        ct).ConfigureAwait(false);
+                    await ApplyMemberStatsAsync(member, stats);
+                    DiagLog.Write("TeamVM", $"复用 ctx 只重查 season: uid={member.UID}");
                 }
                 else
                 {
-                    // Step 6: 合并所有属性更新为单一批，降低 UI 线程队列压力
-                    await _uiDispatcher.InvokeAsync(() =>
+                    // 所有成员按 UID 查询：优先用 member.UID 作为 SearchRecord 的 keyword（UID 精确命中），
+                    // 用户名（UserName）仅作兜底回退。本地用户格与队友格无差别——都走 UID 优先。
+                    var uidOverride = string.IsNullOrWhiteSpace(member.UID) ? null : member.UID;
+
+                    // Step 1-4: 调 Loader 在后台线程拉数据；返回 DTO 后回 UI 线程逐批写回属性。
+                    var loaded = await _memberLoader.LoadAsync(
+                        userName,
+                        _selectedSeason?.Code,
+                        _selectedCategory,
+                        _selectedTeamSize,
+                        ct,
+                        uidOverride).ConfigureAwait(false);
+
+                    if (loaded.Failed)
                     {
-                        member.Level = loaded.Level;
-                        // UID 一律不写回：member.UID 是语音日志给出的原始 UID（本地卡为 PlayerId），
-                        // 是 UpdateTeamMembersAsync 里"按 recognizedSet 判定是否移除 / 已加载则跳过"的匹配 key。
-                        // 一旦覆盖成后端返回的纯数字 RoleIdSimple，下一次触发时该卡会被误判为"已退出"而移除重建，
-                        // 导致同一批队友反复走完整 search→player→season（重复 HTTP 根因）。后端纯数字仅供内部查询，
-                        // 已通过 PlayerSourceContext.RoleIdSimple 传入 loader，无需写回成员卡；且 UI 不展示 UID。
-                        // 后端真实昵称只写到 DisplayName（头像下展示），不碰 UserName（搜索框）以免回填
-                        if (!string.IsNullOrWhiteSpace(loaded.UserName))
-                            member.DisplayName = loaded.UserName;
-                        member.AvatarUrl = loaded.AvatarUrl;
-                        member.SoloRankScore = loaded.SoloRankScore;
-                        member.DuoRankScore = loaded.DuoRankScore;
-                        member.TrioRankScore = loaded.TrioRankScore;
-                        member.KillCount = loaded.Stats?.AvgKill ?? member.KillCount;
-                        member.Top5Rate = loaded.Stats?.Top5Rate ?? member.Top5Rate;
-                        member.DamagePlayer = loaded.Stats?.AvgDamage ?? member.DamagePlayer;
-                        member.SurviveTime = loaded.Stats?.SurviveTime ?? member.SurviveTime;
-                        var s = loaded.Stats;
-                        member.RankName = s?.RankName ?? member.RankName;
-                        member.RankIcon = s?.RankIcon ?? member.RankIcon;
-                        member.RankScore = s?.RankScore ?? 0;
-                        member.PageRankName = s?.PageRankName ?? member.PageRankName;
-                        member.PageStarCount = s?.PageStarCount ?? 0;
-                        member.PageHasStars = s?.PageHasStars ?? false;
-                        member.RankTierScore = s?.RankTierScore ?? 0;
-                        member.Stats.Clear();
-                        member.Metrics.Clear();
-                        if (loaded.Stats != null)
+                        // 优先展示后端 msg 原文（如"未找到玩家"），msg 为空/null 时才回退到本地化的"查询失败"。
+                        // 卡片中心的错误文案由 XAML 绑定 member.StatusText 直接渲染。
+                        var failText = !string.IsNullOrWhiteSpace(loaded.FailMsg)
+                            ? loaded.FailMsg!
+                            : L("TeamInfo.QueryFailed", "查询失败");
+                        await _uiDispatcher.InvokeAsync(() =>
                         {
-                            foreach (var kv in loaded.Stats.Stats)
-                                member.Stats[kv.Key] = kv.Value;
-                            member.Metrics.AddRange(loaded.Stats.Metrics);
-                        }
-                        member.StatusText = "";
-                    });
+                            member.StatusText = failText;
+                        });
+                        // 不 return：让 final cleanup 块执行，确保 IsLoading 被重置
+                    }
+                    else
+                    {
+                        // 成功后缓存 ctx，供后续筛选器变更复用（避免重复 search/player）。
+                        member.SourceContext = loaded.SourceContext;
+                        // Step 6: 合并所有属性更新为单一批，降低 UI 线程队列压力
+                        await _uiDispatcher.InvokeAsync(() =>
+                        {
+                            member.Level = loaded.Level;
+                            // UID 一律不写回：member.UID 是语音日志给出的原始 UID（本地卡为 PlayerId），
+                            // 是 UpdateTeamMembersAsync 里"按 recognizedSet 判定是否移除 / 已加载则跳过"的匹配 key。
+                            // 一旦覆盖成后端返回的纯数字 RoleIdSimple，下一次触发时该卡会被误判为"已退出"而移除重建，
+                            // 导致同一批队友反复走完整 search→player→season（重复 HTTP 根因）。后端纯数字仅供内部查询，
+                            // 已通过 PlayerSourceContext.RoleIdSimple 传入 loader，无需写回成员卡；且 UI 不展示 UID。
+                            // 后端真实昵称只写到 DisplayName（头像下展示），不碰 UserName（搜索框）以免回填
+                            if (!string.IsNullOrWhiteSpace(loaded.UserName))
+                                member.DisplayName = loaded.UserName;
+                            member.AvatarUrl = loaded.AvatarUrl;
+                            member.SoloRankScore = loaded.SoloRankScore;
+                            member.DuoRankScore = loaded.DuoRankScore;
+                            member.TrioRankScore = loaded.TrioRankScore;
+                            member.KillCount = loaded.Stats?.AvgKill ?? member.KillCount;
+                            member.Top5Rate = loaded.Stats?.Top5Rate ?? member.Top5Rate;
+                            member.DamagePlayer = loaded.Stats?.AvgDamage ?? member.DamagePlayer;
+                            member.SurviveTime = loaded.Stats?.SurviveTime ?? member.SurviveTime;
+                            member.RankName = loaded.Stats?.RankName ?? member.RankName;
+                            member.RankIcon = loaded.Stats?.RankIcon ?? member.RankIcon;
+                            member.RankScore = loaded.Stats?.RankScore ?? 0;
+                            member.PageRankName = loaded.Stats?.PageRankName ?? member.PageRankName;
+                            member.PageStarCount = loaded.Stats?.PageStarCount ?? 0;
+                            member.PageHasStars = loaded.Stats?.PageHasStars ?? false;
+                            member.RankTierScore = loaded.Stats?.RankTierScore ?? 0;
+                            member.Stats.Clear();
+                            member.Metrics.Clear();
+                            if (loaded.Stats != null)
+                            {
+                                foreach (var kv in loaded.Stats.Stats)
+                                    member.Stats[kv.Key] = kv.Value;
+                                member.Metrics.AddRange(loaded.Stats.Metrics);
+                            }
+                            member.StatusText = "";
+                        });
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -936,6 +954,37 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 }
                 catch { }
             }
+        }
+
+        /// <summary>
+        /// 把只重查 season 得到的 stats 结果写回成员卡（不碰 identity/资料字段）。
+        /// 供 <see cref="LoadMemberDataAsync"/> 的"复用 ctx"分支复用，避免与全量加载的写回逻辑重复。
+        /// </summary>
+        private async Task ApplyMemberStatsAsync(TeamMemberInfo member, PlayerStatsLoadResult? stats)
+        {
+            await _uiDispatcher.InvokeAsync(() =>
+            {
+                member.KillCount = stats?.AvgKill ?? member.KillCount;
+                member.Top5Rate = stats?.Top5Rate ?? member.Top5Rate;
+                member.DamagePlayer = stats?.AvgDamage ?? member.DamagePlayer;
+                member.SurviveTime = stats?.SurviveTime ?? member.SurviveTime;
+                member.RankName = stats?.RankName ?? member.RankName;
+                member.RankIcon = stats?.RankIcon ?? member.RankIcon;
+                member.RankScore = stats?.RankScore ?? 0;
+                member.PageRankName = stats?.PageRankName ?? member.PageRankName;
+                member.PageStarCount = stats?.PageStarCount ?? 0;
+                member.PageHasStars = stats?.PageHasStars ?? false;
+                member.RankTierScore = stats?.RankTierScore ?? 0;
+                member.Stats.Clear();
+                member.Metrics.Clear();
+                if (stats != null)
+                {
+                    foreach (var kv in stats.Stats)
+                        member.Stats[kv.Key] = kv.Value;
+                    member.Metrics.AddRange(stats.Metrics);
+                }
+                member.StatusText = "";
+            });
         }
 
         private List<TeamOverlayMemberItem> BuildOverlayMembers()
@@ -1261,6 +1310,21 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 if (_displayName == value) return;
                 _displayName = value;
                 RaisePropertyChanged(nameof(DisplayName));
+            }
+        }
+
+        // 已解析出的玩家查询上下文（roleIdSimple + 数据源）。首次 search+player 成功后写入；
+        // 后续筛选器变更重查 season 时直接复用，避免对同一玩家重复 search/player。
+        // 未解析前为 null（对应"整卡未加载/失败"）。
+        private PlayerSourceContext? _sourceContext;
+        public PlayerSourceContext? SourceContext
+        {
+            get => _sourceContext;
+            set
+            {
+                if (_sourceContext == value) return;
+                _sourceContext = value;
+                RaisePropertyChanged(nameof(SourceContext));
             }
         }
 
