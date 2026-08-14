@@ -74,11 +74,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
         }
 
         /// <summary>
-        /// 查询玩家基础信息（昵称、头像、等级）。优先 dashen 源——dashen 对隐藏昵称的玩家返回真实昵称，
-        /// 其它源（尤其 heyBox）会返回占位"匿名玩家"。与队友卡的资料查询（TeamInfo 的
-        /// <c>TeamMemberLoader.FetchProfileAsync</c>）保持一致：统一用 dashen 拿名字和头像，
-        /// 保证战绩页头像下方的名字与队友卡片完全一致；dashen 无数据/上游异常时回退 search 返回的 source，
-        /// 避免整页失败。roleId 三源通用，优先 dashen 即可拿到与队友卡一致的真名。
+        /// 查询玩家基础信息（昵称、头像、等级）。直接用 search 返回的 source 查询：
+        /// search 不传 source 时后端默认优先 dashen，查无自动降级并在 source 字段回传实际源；
+        /// player 接口若无脑传 dashen，可能因降级源不同导致查无或占位昵称。与队友卡的资料查询
+        /// （TeamInfo 的 <c>TeamMemberLoader.FetchProfileAsync</c>）保持一致，roleId 三源通用。
         /// </summary>
         public Task<UnifiedUserInfo?> FetchUserInfoAsync(PlayerSourceContext ctx, CancellationToken ct)
         {
@@ -86,27 +85,14 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
         }
 
         /// <summary>
-        /// 资料查询：dashen 优先 + search 返回的 source 回退。与 <see cref="UnifiedMapper.MapPlayer"/> 配合，
-        /// 返回统一玩家资料。捕获 dashen 上游异常后回退，不抛给上层。
+        /// 资料查询：按 search 返回的 source 走，与 <see cref="UnifiedMapper.MapPlayer"/> 配合，
+        /// 返回统一玩家资料。source 异常时抛给上层统一处理。
         /// </summary>
         private static async Task<UnifiedUserInfo?> FetchProfileAsync(PlayerSourceContext ctx, CancellationToken ct)
         {
-            try
-            {
-                var daShenResp = await NarakaApiClient.GetPlayerProfileAsync(
-                    DataSource.DaShen.ToApiString(), ctx.RoleIdSimple, ct).ConfigureAwait(false);
-                var daShenInfo = UnifiedMapper.MapPlayer(daShenResp);
-                if (daShenInfo != null) return daShenInfo;
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (NarakaApiException)
-            {
-                // dashen 无数据/上游异常 → 回退 search 返回的 source
-            }
-
-            var fallbackResp = await NarakaApiClient.GetPlayerProfileAsync(
+            var resp = await NarakaApiClient.GetPlayerProfileAsync(
                 ctx.Source.ToApiString(), ctx.RoleIdSimple, ct).ConfigureAwait(false);
-            return UnifiedMapper.MapPlayer(fallbackResp);
+            return UnifiedMapper.MapPlayer(resp);
         }
 
         /// <summary>
