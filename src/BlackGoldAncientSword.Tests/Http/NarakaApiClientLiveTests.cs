@@ -137,7 +137,7 @@ namespace BlackGoldAncientSword.Tests.Http
         public async Task GetGameModes()
         {
             EnsureSignedAndAuthenticated();
-            var resp = await NarakaApiClient.GetGameModesAsync(DataSource.HeyBox.ToApiString(), CancellationToken.None);
+            var resp = await NarakaApiClient.GetGameModesAsync(null, CancellationToken.None);
             Assert.NotNull(resp);
             Assert.NotNull(resp.Data);
         }

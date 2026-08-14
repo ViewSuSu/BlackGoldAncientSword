@@ -18,10 +18,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
     public class PlayerStatsLoader
     {
         private readonly ILocalizedTextProvider _localizedText;
+        private readonly GameModeCatalog _gameModeCatalog;
 
-        public PlayerStatsLoader(ILocalizedTextProvider localizedText)
+        public PlayerStatsLoader(ILocalizedTextProvider localizedText, GameModeCatalog gameModeCatalog)
         {
             _localizedText = localizedText;
+            _gameModeCatalog = gameModeCatalog;
         }
 
         /// <summary>
@@ -34,8 +36,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             CancellationToken ct)
         {
             // unified 接口已归一化三源，不再按 DataSource 分派。
-            // modeCode 口径为 battleTidHeyBox；seasonCode 传 null 时后端用当前赛季。
-            var modeCode = gameMode.ToHeyBoxBattleTid().ToString(System.Globalization.CultureInfo.InvariantCulture);
+            // modeCode 优先从 modes 接口动态取（与网页端对齐）；seasonCode 传 null 时后端用当前赛季。
+            var modeCode = await _gameModeCatalog.GetModeCodeAsync(gameMode, ct).ConfigureAwait(false);
             var seasonCode = seasonId is null or 0
                 ? null
                 : seasonId.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);

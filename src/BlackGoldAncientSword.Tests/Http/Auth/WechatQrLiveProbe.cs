@@ -42,11 +42,9 @@ namespace BlackGoldAncientSword.Tests.Http.Auth
             _output.WriteLine($"[ticket] appId={ticket.AppId}  secretLen={ticket.AppSecret?.Length ?? 0}  expireInMs={ticket.ExpireTime - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             _output.WriteLine("");
 
-            var heyBox = DataSource.HeyBox.ToApiString();
-
-            await Probe("GetGameModes (公开)", async ct =>
+            await Probe("GetGameModes (公开, 不传 source 默认 dashen)", async ct =>
             {
-                var resp = await NarakaApiClient.GetGameModesAsync(heyBox, ct);
+                var resp = await NarakaApiClient.GetGameModesAsync(null, ct);
                 return $"code={resp.Code} msg=\"{resp.Msg}\" dataCount={resp.Data?.Count ?? 0}";
             });
             await Task.Delay(1200);
