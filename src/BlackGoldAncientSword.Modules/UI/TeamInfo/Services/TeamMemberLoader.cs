@@ -110,30 +110,17 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         }
 
         /// <summary>
-        /// 查玩家资料（名字/头像/等级/UID）。优先 dashen 源——dashen 对隐藏昵称的玩家返回真实昵称，
-        /// 其它源（尤其 heyBox）会返回占位"匿名玩家"；search 返回的 source 不稳定，若按它分派会出现
-        /// 卡片名字显示"匿名玩家"、点进战绩页却显示真名的不一致。roleId 三源通用，优先 dashen 拿真名；
-        /// dashen 无数据/上游异常时回退 search 返回的 source，避免整卡失败。返回 (资料, 失败 msg)。
+        /// 查玩家资料（名字/头像/等级/UID）。直接用 search 返回的 source 查询：
+        /// search 不传 source 时后端默认优先 dashen，查无自动降级并在 source 字段回传实际源；
+        /// player 接口若无脑传 dashen，可能因降级源不同导致查无或占位昵称。返回 (资料, 失败 msg)。
         /// </summary>
         private static async Task<(UnifiedUserInfo? userInfo, string? msg)> FetchProfileAsync(
             PlayerSourceContext ctx, CancellationToken ct)
         {
-            try
-            {
-                var daShenResp = await NarakaApiClient.GetPlayerProfileAsync(
-                    DataSource.DaShen.ToApiString(), ctx.RoleIdSimple, ct).ConfigureAwait(false);
-                var daShenInfo = UnifiedMapper.MapPlayer(daShenResp);
-                if (daShenInfo != null) return (daShenInfo, null);
-            }
-            catch (NarakaApiException)
-            {
-                // dashen 无数据/上游异常 → 回退 search 返回的 source
-            }
-
-            var fallbackResp = await NarakaApiClient.GetPlayerProfileAsync(
+            var resp = await NarakaApiClient.GetPlayerProfileAsync(
                 ctx.Source.ToApiString(), ctx.RoleIdSimple, ct).ConfigureAwait(false);
-            var fallbackInfo = UnifiedMapper.MapPlayer(fallbackResp);
-            return (fallbackInfo, fallbackResp?.Msg);
+            var info = UnifiedMapper.MapPlayer(resp);
+            return (info, resp?.Msg);
         }
 
         /// <summary>
