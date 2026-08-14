@@ -502,11 +502,15 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // 若本地 UID 不在名单中（极端：本地 UID 读取失败），则把首格视为本地用户兜底。
 
             // 队伍规模由队友 UID 数量决定（语音日志 set-uid-vol 只给队友设音量）：
-            // 1 名队友 = 双排，2 名队友 = 三排。同步 _selectedTeamSize 保证 stats 查询用对模式。
+            // 1 名队友 = 双排，2 名队友 = 三排。先直接写字段（不触发筛选器防抖重查），
+            // 再手动 RaisePropertyChanged 让排数 radiobutton 同步切换，最后按它查询 stats。
+            // 不能走 SelectedTeamSize setter：setter 会触发 _filterRefreshDebouncer，
+            // 200ms 后 CancelAndDispose 掉本方法刚建的发查询 token，整队重查一遍（重复 HTTP 根因）。
             if (uids.Count == 1)
                 _selectedTeamSize = TeamSize.Duo;
             else if (uids.Count >= 2)
                 _selectedTeamSize = TeamSize.Trio;
+            RaisePropertyChanged(nameof(SelectedTeamSize));
 
             // Mark that we have loaded data at least once
             _hasEverHadData = true;
