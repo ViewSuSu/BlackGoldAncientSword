@@ -20,6 +20,13 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
     [Component(ComponentLifetime.Singleton)]
     public sealed class PlayerStatsLoader
     {
+        private readonly GameModeCatalog _gameModeCatalog;
+
+        public PlayerStatsLoader(GameModeCatalog gameModeCatalog)
+        {
+            _gameModeCatalog = gameModeCatalog;
+        }
+
         /// <summary>根据角色昵称解析 roleIdSimple + dataSource（优先网易大神）。</summary>
         public async Task<UnifiedSearchResult?> SearchRoleByNameAsync(string playerName, CancellationToken ct)
         {
@@ -106,18 +113,18 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
 
         /// <summary>
         /// 查询指定赛季、指定模式的战绩明细（unified/season）。
-        /// modeCode 口径为 battleTidHeyBox；seasonId 为 0/占位时传 null（后端用当前赛季）。
+        /// modeCode 优先从 modes 接口动态取（与网页端对齐），seasonId 为 0/占位时传 null（后端用当前赛季）。
         /// </summary>
-        public Task<UnifiedPlayerStats?> FetchPlayerStatsAsync(
+        public async Task<UnifiedPlayerStats?> FetchPlayerStatsAsync(
             PlayerSourceContext ctx, double? seasonId, GameMode gameMode, CancellationToken ct)
         {
-            var modeCode = gameMode.ToHeyBoxBattleTid().ToString(CultureInfo.InvariantCulture);
+            var modeCode = await _gameModeCatalog.GetModeCodeAsync(gameMode, ct).ConfigureAwait(false);
             var seasonCode = seasonId is null or 0
                 ? null
                 : seasonId.Value.ToString(CultureInfo.InvariantCulture);
-            return InvokeAsync(async () => UnifiedMapper.MapSeasonSummary(
+            return await InvokeAsync(async () => UnifiedMapper.MapSeasonSummary(
                 await NarakaApiClient.GetSeasonSummaryAsync(
-                    ctx.Source.ToApiString(), ctx.RoleIdSimple, modeCode, seasonCode, ct).ConfigureAwait(false)));
+                    ctx.Source.ToApiString(), ctx.RoleIdSimple, modeCode, seasonCode, ct).ConfigureAwait(false))).ConfigureAwait(false);
         }
 
         /// <summary>

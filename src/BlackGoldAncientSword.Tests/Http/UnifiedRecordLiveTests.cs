@@ -102,8 +102,26 @@ namespace BlackGoldAncientSword.Tests.Http
                 await MatchTop5Async(source, roleId, detailKey, ct);
             }
 
-            // 5) modes：heyBox
-            await ModesAsync("heyBox", ct);
+            // 5) modes：不传 source，后端默认 dashen（与网页端对齐）。同时打印返回 source 与 dashen 两版对比双排 code。
+            await ModesAsync(ct);
+            await ModesAsync(null, source, ct);
+            await ModesAsync(null, "dashen", ct);
+
+            // 6) GameModeCatalog 动态 modeCode：必须与 modes 接口（网页端同源）一致，尤其双排=5000200。
+            var catalog = new BlackGoldAncientSword.Framework.Http.Unified.GameModeCatalog();
+            _output.WriteLine($"[catalog] RankSolo={await catalog.GetModeCodeAsync(GameMode.RankSolo, ct)} (期望 5000000)");
+            _output.WriteLine($"[catalog] RankDuo={await catalog.GetModeCodeAsync(GameMode.RankDuo, ct)} (期望 5000200)");
+            _output.WriteLine($"[catalog] RankTrio={await catalog.GetModeCodeAsync(GameMode.RankTrio, ct)} (期望 5000001)");
+            _output.WriteLine($"[catalog] MatchSolo={await catalog.GetModeCodeAsync(GameMode.MatchSolo, ct)} (期望 5000006)");
+            _output.WriteLine($"[catalog] MatchDuo={await catalog.GetModeCodeAsync(GameMode.MatchDuo, ct)} (期望 5000011)");
+            _output.WriteLine($"[catalog] MatchTrio={await catalog.GetModeCodeAsync(GameMode.MatchTrio, ct)} (期望 5000007)");
+            _output.WriteLine($"[catalog] TianrenSolo={await catalog.GetModeCodeAsync(GameMode.TianrenSolo, ct)} (期望 5000004)");
+            _output.WriteLine($"[catalog] TianrenDuo={await catalog.GetModeCodeAsync(GameMode.TianrenDuo, ct)} (期望 5000202)");
+            _output.WriteLine($"[catalog] TianrenTrio={await catalog.GetModeCodeAsync(GameMode.TianrenTrio, ct)} (期望 5000005)");
+            Assert.Equal("5000200", await catalog.GetModeCodeAsync(GameMode.RankDuo, ct));
+            Assert.Equal("5000001", await catalog.GetModeCodeAsync(GameMode.RankTrio, ct));
+            Assert.Equal("5000011", await catalog.GetModeCodeAsync(GameMode.MatchDuo, ct));
+            Assert.Equal("5000202", await catalog.GetModeCodeAsync(GameMode.TianrenDuo, ct));
         }
 
         private async Task<UnifiedSearchResult?> SearchAsync(string roleId, CancellationToken ct)
@@ -205,14 +223,24 @@ namespace BlackGoldAncientSword.Tests.Http
             catch (Exception ex) { _output.WriteLine($"[match/top5] ERR {ex.Message}"); }
         }
 
-        private async Task ModesAsync(string source, CancellationToken ct)
+        private async Task ModesAsync(CancellationToken ct)
+            => await ModesAsync(null, null, ct);
+
+        private async Task ModesAsync(string? label, string? source, CancellationToken ct)
         {
             try
             {
                 var resp = await NarakaApiClient.GetGameModesAsync(source, ct);
-                _output.WriteLine($"[modes(source={source})] code={resp.Code} msg=\"{resp.Msg}\" count={resp.Data?.Count}");
+                var modes = resp.Data;
+                var l = label ?? $"modes(source={(source ?? "默认")})";
+                _output.WriteLine($"[{l}] code={resp.Code} msg=\"{resp.Msg}\" count={modes?.Count}");
+                if (modes != null)
+                {
+                    foreach (var m in modes)
+                        _output.WriteLine($"[{l}] code={m.Code} name={m.Name} category={m.Category} teamSize={m.TeamSize}");
+                }
             }
-            catch (Exception ex) { _output.WriteLine($"[modes(source={source})] ERR {ex.Message}"); }
+            catch (Exception ex) { _output.WriteLine($"[{label ?? "modes"}] ERR {ex.Message}"); }
         }
     }
 }
