@@ -12,10 +12,7 @@ using Prism.Regions;
 
 namespace BlackGoldAncientSword.App.Services
 {
-    /// <summary>
-    /// 并发单飞的登录弹窗调度：任意个后台请求 401 只弹一次 Overlay，
-    /// AuthChallengePage 拿到 token 后调 <see cref="Complete"/> 让所有 await 者一并 resume。
-    /// </summary>
+
     [Component(ComponentLifetime.Singleton)]
     public sealed class AuthChallengeService : IAuthChallengeService
     {
@@ -38,9 +35,6 @@ namespace BlackGoldAncientSword.App.Services
 
         public async Task<bool> ShowAsync(CancellationToken ct = default)
         {
-            // 启动期约束：若正巧检测到新版本，"发现新版本"弹窗必须先让用户处理完，
-            // 登录 challenge 才能弹。App.OnStartup 保证无新版 / 异常 / 用户 Dismiss 三条路径
-            // 都会调 updateGate.Complete()，所以正常路径不会永挂。
             try { await _updateGate.WaitAsync(ct).ConfigureAwait(false); }
             catch (OperationCanceledException) { return false; }
 
@@ -100,7 +94,7 @@ namespace BlackGoldAncientSword.App.Services
             {
                 try
                 {
-                    try { _moduleManager.LoadModule("AuthChallengeModule"); } catch { /* already loaded */ }
+                    try { _moduleManager.LoadModule("AuthChallengeModule"); } catch {  }
                     _regionManager.RequestNavigate(GlobalConstant.AuthChallengeRegion, PageNames.AuthChallengePage);
                 }
                 catch (Exception ex)

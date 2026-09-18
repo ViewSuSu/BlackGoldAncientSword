@@ -1,12 +1,10 @@
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 
 namespace BlackGoldAncientSword.Framework.SourceGenerator
 {
-    /// <summary>
-    /// 共享的 api-definitions.json 解析与类型映射逻辑。
-    /// 由 HttpApiSourceGenerator 与 HttpApiTestSourceGenerator 共用，保证 DTO/Client 与测试代码一致。
-    /// </summary>
+
     internal static class ApiDefinitionsParser
     {
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -20,10 +18,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             return JsonSerializer.Deserialize<ApiDefinitionsRoot>(json, JsonOptions);
         }
 
-        /// <summary>
-        /// 定义文件中的逻辑类型 → C# 类型字符串。
-        /// 注意：项目约定 int 统一映射为 double（避免 JSON 数字精度边界问题）。
-        /// </summary>
         public static string ResolveType(string type) => type switch
         {
             "string" => "string",
@@ -50,7 +44,27 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
         public static string ToPascalCase(string name)
         {
             if (string.IsNullOrEmpty(name)) return name;
-            return char.ToUpperInvariant(name[0]) + name.Substring(1);
+
+            if (name.IndexOf('_') < 0)
+                return char.ToUpperInvariant(name[0]) + name.Substring(1);
+
+            var sb = new StringBuilder(name.Length);
+            var upperNext = true;
+            foreach (var ch in name)
+            {
+                if (ch == '_') { upperNext = true; continue; }
+                sb.Append(upperNext ? char.ToUpperInvariant(ch) : ch);
+                upperNext = false;
+            }
+
+            return sb.ToString();
+        }
+
+        public static string ToCamelCase(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return name;
+            var pascal = ToPascalCase(name);
+            return char.ToLowerInvariant(pascal[0]) + pascal.Substring(1);
         }
 
         public static string GetParamDescription(string paramName) => paramName switch
@@ -60,6 +74,15 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             "gameMode" => "游戏模式ID，见 GameMode 枚举定义",
             "battleId" => "对局ID，通过 GetRecentBattles 接口获取",
             "name" => "搜索关键词（玩家昵称或角色ID）",
+            "game_type" => "游戏标识，永劫无间固定 yjwj",
+            "q" => "搜索关键词（玩家昵称）",
+            "role_id" => "玩家角色 UID（取自玩家搜索的 game_id）",
+            "server" => "目标玩家所在服务器 id（取自玩家搜索的 ext，国服为 163）",
+            "season" => "赛季 key（取自主页数据的 seasons[].key）",
+            "battle_tid" => "模式 key（取自主页数据的 mode[].key）",
+            "match_id" => "对局 id（取自对局列表项的 match_id）",
+            "offset" => "分页偏移",
+            "limit" => "单页条数",
             _ => $"参数 {paramName}"
         };
     }
@@ -69,7 +92,20 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
         public string BaseUrl { get; set; } = string.Empty;
         public Dictionary<string, string> DefaultHeaders { get; set; } = new();
         public List<string> EnumTypeNames { get; set; } = new();
+        public ApiEnvelopeDefinition Envelope { get; set; } = new();
         public List<ApiEndpointDefinition> Apis { get; set; } = new();
+    }
+
+    internal class ApiEnvelopeDefinition
+    {
+        public string SuccessProperty { get; set; } = "code";
+
+        public List<string> SuccessValues { get; set; } = new() { "200", "0" };
+
+        public string MessageProperty { get; set; } = "msg";
+
+        public bool IsEnvelope(TypeDefinition type) =>
+            type.Properties.ContainsKey(SuccessProperty) && type.Properties.ContainsKey(MessageProperty);
     }
 
     internal class ApiEndpointDefinition

@@ -13,9 +13,9 @@ using BlackGoldAncientSword.Modules.UI.Stats.Services;
 namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
 {
     /// <summary>
-    /// 对局详情浮层：拉取归一化后的 <see cref="UnifiedBattleDetail"/>，
-    /// miniProgram 分支包含 personal/team/top5 三份数据；heyBox 分支仅包含 personal，
-    /// team/top5 集合置空，UI 侧对应 Tab 显示空状态。
+    /// 对局详情浮层：拉取归一化后的 <see cref="UnifiedBattleDetail"/>。
+    /// 小黑盒的详情响应实测只带个人数据（<c>result</c> 顶层），<c>all_team</c> 是空数组，
+    /// 因此 team/top5 集合为空、UI 侧对应 Tab 不显示（见 <see cref="ApplyTeam"/>）。
     /// </summary>
     public class BattleDetailPageViewModel : ViewModelBase
     {
@@ -40,7 +40,7 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
         public bool IsTeamTab => SelectedTab == "Team";
         public bool IsTop5Tab => SelectedTab == "Top5";
 
-        // === Tab 可见性（与网页一致：队伍/前五数据缺失时不显示对应 tab，dashen 源基本只剩个人表现） ===
+        // === Tab 可见性（与网页一致：队伍/前五数据缺失时不显示对应 tab） ===
         private bool _hasTeam;
         public bool HasTeam { get => _hasTeam; set { _hasTeam = value; RaisePropertyChanged(); } }
 
@@ -73,8 +73,28 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
         private string _battleTime = string.Empty;
         public string BattleTime { get => _battleTime; set { _battleTime = value; RaisePropertyChanged(); } }
 
+        /// <summary>本局地图名（详情 result.map_name，如 "龙隐洞天"）。</summary>
+        private string _mapName = string.Empty;
+        public string MapName
+        {
+            get => _mapName;
+            set { _mapName = value; RaisePropertyChanged(); RaisePropertyChanged(nameof(HasMapName)); }
+        }
+
+        public bool HasMapName => !string.IsNullOrEmpty(_mapName);
+
         private string _rankText = string.Empty;
         public string RankText { get => _rankText; set { _rankText = value; RaisePropertyChanged(); } }
+
+        /// <summary>结算段位图标（详情 result.level_img）。</summary>
+        private string _rankIcon = string.Empty;
+        public string RankIcon
+        {
+            get => _rankIcon;
+            set { _rankIcon = value; RaisePropertyChanged(); RaisePropertyChanged(nameof(HasRankIcon)); }
+        }
+
+        public bool HasRankIcon => !string.IsNullOrEmpty(_rankIcon);
 
         // 段位块（与战绩页 RankScore 列一致）
         private bool _isRankMode;
@@ -117,6 +137,10 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
         public ObservableCollection<WeaponDisplay> Weapons { get; } = new();
         public ObservableCollection<SoulItemDisplay> SoulItems { get; } = new();
 
+        /// <summary>本局有武器伤害明细时才显示"本局武器伤害"区。</summary>
+        private bool _hasWeapons;
+        public bool HasWeapons { get => _hasWeapons; set { _hasWeapons = value; RaisePropertyChanged(); } }
+
         // === Team Tab ===
         public ObservableCollection<TeammateDisplay> Teammates { get; } = new();
 
@@ -138,8 +162,7 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             var p = ctx.Parameters;
             var battleId = p.GetValue<string?>(PageNames.BattleDetailPage);
             var roleId = p.GetValue<string?>("RoleId");
-            var dataSourceCode = p.GetValue<int?>("DataSource") ?? (int)DataSource.MiniProgram;
-            var dataSource = (DataSource)dataSourceCode;
+            var server = p.GetValue<string?>("Server") ?? string.Empty;
 
             // 直接消费 StatsPage 已算好的段位/分数/模式文本，避免详情侧二次计算。
             ModeType = p.GetValue<string?>("ModeCategoryText") ?? string.Empty;
@@ -168,7 +191,7 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             SelectedTab = "Personal";
             ShowMoreStats = false;
 
-            var sourceContext = new PlayerSourceContext(roleId!, dataSource);
+            var sourceContext = new PlayerSourceContext(roleId!, server);
             LoadAsync(sourceContext, battleId!, _cts.Token).SafeFireAndForget("BattleDetail.Load");
         }
 
@@ -190,8 +213,11 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
                 HeroName = string.Empty;
                 RankText = string.Empty;
                 BattleTime = string.Empty;
+                MapName = string.Empty;
+                RankIcon = string.Empty;
                 RankDisplayText = string.Empty;
                 ScoreDiffDisplay = string.Empty;
+                HasWeapons = false;
             }).SafeFireAndForget("BattleDetail.ClearOnLeave");
         }
 
@@ -240,13 +266,40 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
         {
             if (p == null) return;
 
-            // 模式名优先用 match 接口自己返回的完整 mode.name（如"天选三排"），与网页一致；
-            // 后端未给（dashen 源 mode 为 null）时保留导航参数透传的大类文本作回退。
+            // 模式名优先用详情接口自己返回的完整 mode.name；小黑盒不返回它，
+            // 于是保留导航参数透传的大类文本作回退。
             if (!string.IsNullOrEmpty(p.ModeName))
                 ModeType = p.ModeName!;
 
             BattleTime = FormatShortTime(p.BattleEndTimeMs);
             RankText = FormatRank(p.Rank);
+            MapName = p.MapName;
+
+            // 段位名 / 段位图标优先用详情接口自带的结算值（result.level / level_img）：
+            // 服务端下发的段位名比本地"分数 → 段位名"映射更权威，缺失时才保留战绩页透传的导航参数。
+            if (!IsPlaceholderText(p.LevelName))
+            {
+                RankDisplayText = p.LevelName;
+                IsRankMode = true;
+            }
+            RankIcon = p.LevelIcon;
+
+            // rating / rating_delta 与导航参数同源（战绩页那两个值就是从它算出来的），
+            // 因此只在导航参数缺失（例如不带参数直接打开详情）时回填，
+            // 避免把天选模式本地换算出的"段位内分数 + 星数"覆盖成原始总分。
+            if (p.RoundRankScore > 0)
+            {
+                if (!ShowScoreNumber)
+                {
+                    ScoreNumber = p.RoundRankScore;
+                    ShowScoreNumber = true;
+                }
+                if (string.IsNullOrEmpty(ScoreDiffDisplay))
+                {
+                    ScoreDiff = p.ScoreDelta;
+                    ScoreDiffDisplay = FormatScoreDiff(p.ScoreDelta);
+                }
+            }
 
             PlayerAvatar = p.HeroIcon;
             PlayerName = p.RoleName;
@@ -277,6 +330,7 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             HasMoreStats = MoreStats.Count > 0;
             ShowMoreStats = false; // 每次打开详情默认折叠，与网页一致
 
+            // 详情 weapon_list：name / per(0..1) / img（"其他"这一项**没有 img 键**）/ kill_times / damage。
             Weapons.Clear();
             foreach (var w in p.Weapons)
                 Weapons.Add(new WeaponDisplay
@@ -288,6 +342,7 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
                     Damage = w.Damage,
                     Percent = w.Percent,
                 });
+            HasWeapons = Weapons.Count > 0;
 
             SoulItems.Clear();
             foreach (var s in p.SoulItems)
@@ -299,6 +354,13 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
                 });
         }
 
+        /// <summary>
+        /// 队伍 / Top5 在当前接口下**恒为空**：实测 <c>all_team</c> 是空数组、旧字段
+        /// <c>all_player_data</c> 已不再下发（见 <c>UnifiedMapper.MapMatchDetail</c>），
+        /// 所以 HasTeam / HasTop5 永远为 false，这两个 Tab 不会出现。
+        /// 这里保留整条渲染链路（而非删除），一旦服务端恢复队伍数据即可直接生效；
+        /// 队友的武器 / 魂玉明细在映射层就是硬编码的空数组，不作为展示依据。
+        /// </summary>
         private void ApplyTeam(System.Collections.Generic.IReadOnlyList<UnifiedTeammate>? teammates)
         {
             Teammates.Clear();
@@ -344,6 +406,7 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             }
         }
 
+        /// <summary>前五名队伍；与 <see cref="ApplyTeam"/> 同因（<c>all_team</c> 为空）实际恒无数据。</summary>
         private void ApplyTop5(System.Collections.Generic.IReadOnlyList<UnifiedTop5Entry>? top5)
         {
             Top5Entries.Clear();
@@ -369,6 +432,18 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
             if (rank <= 0) return string.Empty;
             return "#" + rank.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
+
+        /// <summary>
+        /// 小黑盒在文本位会用 "None" / "-" 占位（表示"本局没有这一项"），不能当有效文本展示。
+        /// </summary>
+        private static bool IsPlaceholderText(string? text)
+            => string.IsNullOrWhiteSpace(text)
+               || string.Equals(text, "None", StringComparison.OrdinalIgnoreCase)
+               || text == "-";
+
+        /// <summary>与战绩页 FormatScoreDiff 保持同一格式：+39 → "(+39)"，-12 → "(-12)"。</summary>
+        private static string FormatScoreDiff(double diff)
+            => "(" + (diff >= 0 ? "+" : string.Empty) + diff + ")";
 
         private static string FormatShortTime(long unixMs)
         {
@@ -405,6 +480,12 @@ namespace BlackGoldAncientSword.Modules.UI.BattleDetail.ViewModels
         public int Kill { get; set; }
         public int Damage { get; set; }
         public double Percent { get; set; }
+
+        /// <summary>
+        /// 详情 weapon_list 的最后一项"其他"**没有 img 键**（键缺失，不是空串），
+        /// 所以图标位要按"有没有图"分支，不能硬绑一个空来源的 Image。
+        /// </summary>
+        public bool HasIcon => !string.IsNullOrEmpty(Icon);
     }
 
     public class SoulItemDisplay

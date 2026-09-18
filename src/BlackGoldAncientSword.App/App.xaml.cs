@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using System.Windows.Threading;
 using System.Diagnostics;
@@ -6,9 +7,9 @@ using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Extensions;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
+using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
 using BlackGoldAncientSword.Framework.Http;
-using BlackGoldAncientSword.Framework.Http.Auth.ApiSignature;
-using BlackGoldAncientSword.Framework.Http.Auth.Token;
+using BlackGoldAncientSword.Framework.Http.Heybox;
 using BlackGoldAncientSword.Framework.Services;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.GameMonitor;
@@ -19,8 +20,6 @@ namespace BlackGoldAncientSword.App
 {
     public partial class App : Framework.Core.Bases.PrismApplicationBase
     {
-        private AuthTokenExpiryMonitor? _authTokenExpiryMonitor;
-
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
         {
             containerRegistry.Register<MainWindow>();
@@ -61,58 +60,58 @@ namespace BlackGoldAncientSword.App
 
             base.OnStartup(e);
 
-            // 版本号权威来源是 App 程序集，须在发起任何签名请求（[1] Auth pipeline）之前注入，
-            // 让 SignatureHandler 的 UA / X-Client-Version 头能取到正确版本。
+            // 版本号权威来源是 App 程序集，须在数据访问层初始化之前注入，
+            // 让请求头里的客户端版本取到正确值。
             ClientVersionProvider.Initialize(typeof(App).Assembly);
 
             // 启动流程契约（顺序不能乱）：
-            //   1) Auth pipeline INIT（静默）：只搭 handler + 恢复本地 token + 启动过期监视，不弹任何 UI
+            //   1) 数据访问层 INIT（静默）：只装请求链 + 恢复本机登录态，不弹任何 UI
             //   2) Settings 加载：后续 ImageCache / Update 可能读 settings.Current
             //   3) ImageCache init：CachePath 依赖 Settings
             //   4) 新版本检测 + 更新 gate：await CheckForUpdatesAsync，如有新版则阻塞在 IUpdateGateService.WaitAsync，
             //      直到用户点在线更新 / 打开浏览器 / 稍后再说，DismissOverlay 里 Complete()
-            //   5) 登录 gate：本地无有效 token 才弹扫码；用户取消 → Shutdown
+            //   5) 登录 gate：本地无有效登录态才弹扫码；用户取消 → Shutdown
             //   6) 主页导航 + OCR 预热
 
-            // [1] Auth pipeline INIT。任何构造失败都不能中断 App 启动，只是让客户端保持无签名/无 Bearer。
+            // [1] 数据访问层 INIT。任何构造失败都不能中断 App 启动，只是让客户端保持未登录态。
             IAuthChallengeService? challengeService = null;
-            IAuthTokenState? tokenStateForGate = null;
+            IHeyboxSessionState? sessionStateForGate = null;
             try
             {
-                var ticketProvider = Container.Resolve<ISignatureTicketProvider>();
-                var tokenState = Container.Resolve<IAuthTokenState>();
-                var tokenStore = Container.Resolve<IAuthTokenStore>();
-                var refresher = Container.Resolve<IAuthTokenRefresher>();
+                var sessionState = Container.Resolve<IHeyboxSessionState>();
+                var sessionStore = Container.Resolve<IHeyboxSessionStore>();
                 var challenge = Container.Resolve<IAuthChallengeService>();
                 challengeService = challenge;
-                tokenStateForGate = tokenState;
+                sessionStateForGate = sessionState;
 
-                var handlerChain = new SignatureHandler(ticketProvider)
+                NarakaApiClient.Configure(new HeyboxRequestPacingHandler
                 {
-                    InnerHandler = new AuthTokenHandler(tokenState, tokenStore, refresher, challenge)
+                    InnerHandler = new HeyboxSignatureHandler(sessionState)
                     {
-                        InnerHandler = new HttpClientHandler()
-                    }
-                };
-                NarakaApiClient.Configure(handlerChain);
+                        InnerHandler = new HttpClientHandler { UseCookies = false }
+                    },
+                });
 
-                var restored = tokenStore.Load();
-                if (restored != null && restored.ExpiresAtUnixMs > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-                {
-                    tokenState.Set(restored);
-                }
-                else if (restored != null)
-                {
-                    tokenStore.Clear();
-                }
+                var restored = sessionStore.Load();
+#if DEBUG
+                // Debug 下：本机开发用的会话优先（固定用测试账号调试），取不到时才沿用本地存档里登录后的会话。
+                var debugSession = await LoadDebugSessionAsync();
+                restored = debugSession ?? restored;
 
-                // 主动过期监视：token 到期前 30s 提前 refresh；失败自动弹登录。
-                _authTokenExpiryMonitor = new AuthTokenExpiryMonitor(tokenState, tokenStore, refresher, challenge);
-                _authTokenExpiryMonitor.Start();
+                // 只有"确实用了本机调试凭证"时才做一次有效性校验（失效就回登录页）；
+                // 正常登录来的会话不校验——否则启动就要多打一个接口。
+                if (debugSession != null && !await IsDebugSessionUsableAsync().ConfigureAwait(false))
+                {
+                    AppLog.Info(nameof(App), "debug session rejected by server, falling back to login challenge");
+                    restored = null;
+                }
+#endif
+                if (restored != null)
+                    sessionState.Set(HeyboxLoginState.FromSession(restored));
             }
             catch (Exception ex)
             {
-                AppLog.Error(ex, nameof(App), "Auth pipeline init failed");
+                AppLog.Error(ex, nameof(App), "Heybox pipeline init failed");
             }
 
             // [2] Settings 加载。失败留默认值 + 日志。
@@ -204,9 +203,9 @@ namespace BlackGoldAncientSword.App
             }
 
             // [5] 登录 gate：本地无有效 token 才弹扫码。登录失败 / 用户取消 → Shutdown。
-            if (challengeService != null && tokenStateForGate?.Current is null)
+            if (challengeService != null && sessionStateForGate?.Current is null)
             {
-                AppLog.Info(nameof(App), "no valid token, showing login challenge");
+                AppLog.Info(nameof(App), "no heybox session, showing login challenge");
                 bool loggedIn = false;
                 try
                 {
@@ -251,9 +250,6 @@ namespace BlackGoldAncientSword.App
             AppDomain.CurrentDomain.UnhandledException -= OnAppDomainUnhandledException;
             System.Threading.Tasks.TaskScheduler.UnobservedTaskException -= OnTaskSchedulerUnobservedTaskException;
 
-            _authTokenExpiryMonitor?.Dispose();
-            _authTokenExpiryMonitor = null;
-
             // 刷新 Async 日志队列并释放文件句柄，避免退出时丢失尾部日志。
             AppLog.Shutdown();
 
@@ -280,6 +276,78 @@ namespace BlackGoldAncientSword.App
             args.SetObserved();
             Current?.Dispatcher.BeginInvoke(() => PublishError(args.Exception));
         }
+
+#if DEBUG
+        private static async Task<HeyboxSession?> LoadDebugSessionAsync()
+        {
+            var raw = Environment.GetEnvironmentVariable("HEYBOX_SESSION");
+            if (string.IsNullOrWhiteSpace(raw))
+                raw = await ReadLocalSessionFileAsync().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                var heyboxId = root.TryGetProperty("heybox_id", out var id) ? id.GetString() : null;
+                var pkey = root.TryGetProperty("pkey", out var key) ? key.GetString() : null;
+                if (string.IsNullOrEmpty(heyboxId) || string.IsNullOrEmpty(pkey)) return null;
+
+                AppLog.Info(nameof(App), "debug session picked up from environment or local file");
+                return new HeyboxSession(heyboxId!, pkey!);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return null;
+            }
+        }
+
+        private static async Task<string?> ReadLocalSessionFileAsync()
+        {
+            var path = ResolveLocalSessionPath();
+            if (path is null || !File.Exists(path)) return null;
+
+            try
+            {
+                return await File.ReadAllTextAsync(path).ConfigureAwait(false);
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        private async Task<bool> IsDebugSessionUsableAsync()
+        {
+            try
+            {
+                var prefs = Container.Resolve<IPlayerPrefsService>();
+                if (!prefs.Current.IsLoaded) await prefs.LoadAsync().ConfigureAwait(false);
+
+                return await HeyboxSessionProbe
+                    .IsSessionAliveAsync(prefs.Current.PlayerId)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                return true;
+            }
+        }
+
+        private static string? ResolveLocalSessionPath()
+        {
+            for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+            {
+                if (Directory.Exists(Path.Combine(dir.FullName, ".git")))
+                    return Path.Combine(dir.FullName, ".claude", "local-session.json");
+            }
+            return null;
+        }
+#endif
 
         private void PublishError(Exception ex)
         {

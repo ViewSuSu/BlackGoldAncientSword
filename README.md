@@ -27,7 +27,7 @@
 
 ## 登录 🔐
 
-助手启动时会引导用户完成一次登录（滑块验证 → 微信扫码），登录 token 通过 **Windows DPAPI** 加密保存到本地，之后自动续期，无需重复扫码。任意后台请求返回 401 时会**并发单飞**地弹出登录 Overlay，一次扫码所有等待中的请求同时恢复。所有 API 请求走**自研 P7 签名协议**并带 Bearer token 访问 `desktop.naraka.drivod.top`。
+助手启动时会引导用户完成一次**微信扫码登录**，登录默认在应用内扫码完成，无需打开浏览器。登录态加密保存在本机，之后启动自动恢复，无需重复扫码。顶部头像按钮可随时重新登录或退出登录。
 
 ## 战绩查询
 
@@ -84,7 +84,7 @@
 - **语言**：支持 简体中文 / English / 繁體中文
 - **关闭行为**：点击关闭按钮时的默认行为，可选"最小化到任务栏 / 直接退出"，并支持记住选项
 - **英雄选择时的右下角队伍提示弹窗**：开关控制
-- **账号头像**：顶部头像点击弹出 Popup，展示昵称 / 会员信息，支持一键退出登录
+- **账号头像**：顶部头像点击弹出 Popup，展示头像 / 昵称，支持一键退出登录；未登录时该按钮显示为"登录"，点击即弹出扫码登录
 - **检查更新**：手动检查与下载新版本（调用独立的 Update 程序在线更新，详见下文）
 - **当前版本**：显示版本号
 
@@ -130,7 +130,7 @@
 
 **Q：为什么战绩查询不到 / 数据更新有延迟？**
 
-战绩数据来源于 https://naraka.drivod.top/ 提供的相同 API 接口，由大佬 craftwyrd 提供。程序只负责展示数据，如果遇到数据查询不到或更新延迟，原因基本出在 API 服务器本身，与本程序大概率没啥关系~ 数据相关问题可在数据问题反馈群中提问，或直接联系 API 作者 craftwyrd。
+战绩数据存在查询频率限制，短时间内频繁查询可能被暂时限制一段时间，稍后重试即可，与本程序大概率没啥关系~
 
 **Q：为什么安装包/程序这么大？**
 
@@ -175,14 +175,8 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 
 ## 反馈与交流
 
-- **客户端问题反馈QQ群**：
+- **问题反馈与交流QQ群**：
   - ①群：146088141
-- **数据问题反馈QQ群**（QQ 群机器人也可查战绩）：
-  - ①群：476074617
-  - ②群：649891198
-  - ③群：966720321
-  - QQ 等级超过 32（两个太阳）自动审核进群，小号不予通过
-- **网页端**：https://naraka.drivod.top/
 
 ---
 
@@ -220,22 +214,22 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
         ▼                     ▼                     ▼
 ┌────────────┐        ┌──────────────┐        ┌───────────┐
 │  Modules   │        │  Framework   │        │ Resources │
-│ (13 个 UI  │ ◄────► │ (Core + 18   │ ◄──────│ (多语言   │
+│ (12 个 UI  │ ◄────► │ (Core + 18   │ ◄──────│ (多语言   │
 │  页面模块) │        │ 个服务接口)  │        │  XAML+图) │
 └─────┬──────┘        └──────┬───────┘        └───────────┘
       │                      │
       │             ┌────────┴───────┐
       ▼             ▼                ▼
 ┌──────────────┐ ┌──────────────┐ ┌────────────────────┐
-│ GameMonitor  │ │  Http/Auth   │ │ Framework.         │
-│ (进程/日志/  │ │ (P7 签名 +   │ │ SourceGenerator    │
-│  状态机)     │ │  登录子系统) │ │ (编译期生成 HTTP)  │
+│ GameMonitor  │ │ DataAccess   │ │ Framework.         │
+│ (进程/日志/  │ │ (数据访问层) │ │ SourceGenerator    │
+│  状态机)     │ │ (会话管理)   │ │ (编译期代码生成)   │
 └──────┬───────┘ └──────┬───────┘ └────────────────────┘
        │                │
        ▼                ▼
 ┌──────────────┐ ┌──────────────────┐
 │ CCMini 语音  │ │ 战绩 / 队友      │
-│ 日志队友识别 │ │ HTTP 数据查询    │
+│ 日志队友识别 │ │ 数据查询         │
 └──────────────┘ └──────────────────┘
 ```
 
@@ -246,12 +240,12 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | **主程序** | `BlackGoldAncientSword.App` | WinExe | WPF 应用入口、主窗口、侧边栏导航、托盘、启动更新器、登录 / 启动 / 更新三闸门（AuthChallenge / StartupGate / UpdateGate）具体实现 |
 | **更新器** | `BlackGoldAncientSword.Update` | WinExe | 独立在线更新进程，零业务依赖（仅 HandyControl + Serilog） |
 | **离线下载器** | `BlackGoldAncientSword.Downloader` | WinExe | 独立单文件 exe，从 Gitee release 顺序流式下载分卷安装包 → 拉起 Setup.exe → 自身退出。零 API 依赖（走 302 + CDN） |
-| **UI 模块** | `BlackGoldAncientSword.Modules` | ClassLib | 13 个 Prism `IModule` 页面（含登录 Overlay / 打赏 / 更新日志），按需加载 |
-| **核心框架** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM 基类、Prism 基础设施、服务抽象与实现、HTTP API（含 P7 签名 / Auth Token / 滑块 / 微信扫码 / DTO 统一映射） |
+| **UI 模块** | `BlackGoldAncientSword.Modules` | ClassLib | 12 个 Prism `IModule` 页面（含登录 Overlay / 更新日志），按需加载 |
+| **核心框架** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM 基类、Prism 基础设施、服务抽象与实现、数据访问层 |
 | **游戏监控** | `BlackGoldAncientSword.GameMonitor` | ClassLib | 进程检测、Player.log 解析、CCMini 语音日志队友识别、战局状态机 |
 | **资源** | `BlackGoldAncientSword.Resources` | ClassLib | 多语言 XAML 资源字典、图标、图片 |
-| **源码生成** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | 编译期从 JSON 定义生成 HTTP 客户端与测试代码 |
-| **测试** | `BlackGoldAncientSword.Tests` | xUnit | 游戏监控、HTTP、设置、更新流程测试 |
+| **源码生成** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | 编译期代码生成（强类型客户端与测试） |
+| **测试** | `BlackGoldAncientSword.Tests` | xUnit | 游戏监控、数据访问、设置、更新流程测试 |
 
 ---
 
@@ -263,8 +257,8 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | **UI** | WPF + HandyControl 3.5 | 桌面界面与控件库 |
 | **主题** | 自定义 ModernTheme（青瓷竹青护眼配色） | 淡雅护眼浅绿底 + 竹青深绿点缀 + 深墨字，长时间阅读舒适 |
 | **MVVM 框架** | Prism 8.1 (`Prism.DryIoc`) | DI 容器、区域导航、模块化 |
-| **HTTP** | 编译期源码生成器 + `HttpClient` + `DelegatingHandler` | 从 `api-definitions.json` 自动生成强类型 API 客户端；请求链上挂 `SignatureHandler`（P7 协议签名）与 `AuthTokenHandler`（Bearer + 401 单飞刷新） |
-| **认证** | 自研滑块验证 + 微信扫码登录 + JWT + Windows DPAPI | 登录 token 加密落盘，过期前自动刷新，401 时并发单飞弹出登录 Overlay |
+| **数据访问** | 编译期源码生成器 + `HttpClient` | 客户端由编译期源码生成、不手写；所有查询统一经过一层数据访问层 |
+| **认证** | 应用内微信扫码登录 | 登录态加密保存在本机，下次启动自动恢复 |
 | **JSON** | `System.Text.Json`（含源码生成上下文） | 序列化 / 反序列化（已全量替换 Newtonsoft.Json） |
 | **日志** | Serilog（File / Async sink） | 全应用统一日志（App / Update / Downloader） |
 | **系统托盘** | Hardcodet.NotifyIcon.Wpf | 托盘图标与菜单 |
@@ -284,11 +278,11 @@ src/
 │   ├── Services/                           # App 层三闸门服务实现（依赖 IRegionManager / UI Dispatcher，无法放在 Framework）
 │   │   ├── StartupGateService.cs           # 启动遮罩 latch（true → false 单向）
 │   │   ├── UpdateGateService.cs            # 更新弹窗门槛（TCS 单飞 + completed latch 兜住 Complete 先于 WaitAsync 到达的竞态）
-│   │   └── AuthChallengeService.cs         # 401 并发单飞：任意个后台请求撞 401 只弹一次登录 Overlay
+│   │   └── AuthChallengeService.cs         # 登录 Overlay 并发单飞：多个并发调用只弹一次，扫码完成后一起 resume
 │   └── Shell/
 │       ├── MainWindow.xaml(.cs)            # 主窗口（侧边栏 + 导航 + 托盘 + 头像 Popup + 启动遮罩层）
 │       ├── MainWindowViewModel.cs          # 导航命令、游戏状态、更新检测、用户信息
-│       ├── UserProfileViewModel.cs         # 头像 Popup 的会员信息展示
+│       ├── UserProfileViewModel.cs         # 头像 Popup 的头像 / 昵称展示与退出登录
 │       ├── RegistrationExtensions.cs       # App 层类型注册扩展
 │       └── ToastQueueManager.cs            # Toast 消息队列管理
 │
@@ -320,20 +314,7 @@ src/
 │   │   ├── Events/                         # GameStatus、GameStatusChangedEventArgs、SettingsChangedEvent、TipMessageEvent、OnlineUpdatingStartedEvent、OnlineUpdatingCancelledEvent
 │   │   ├── Extensions/                     # 容器注册扩展、UrlToImageSourceConverter、数值转换器、PageTransitionBehavior 等
 │   │   └── Infrastructure/                 # IMainContentNavigationService / MainContentNavigator、AppLog / DiagLog、SearchDebounceGate / TrailingDebouncer
-│   ├── Http/
-│   │   ├── Definitions/
-│   │   │   ├── api-definitions.json        # API 端点 / 请求 / 响应定义（→ 源码生成）
-│   │   │   └── enums.json                  # 枚举定义
-│   │   ├── Auth/                           # 认证子系统（自研 P7 签名 + 滑块 + 微信扫码 + JWT + DPAPI）
-│   │   │   ├── ApiSignature/               # P7 请求签名：SignatureHandler / RequestSigner / ISignatureTicketProvider
-│   │   │   ├── Captcha/                    # AJ 滑块验证：AjCaptchaService + AesEcbCipher
-│   │   │   ├── WechatQr/                   # 微信扫码登录轮询：WechatQrLoginService
-│   │   │   ├── Token/                      # Bearer token 生命周期：AuthTokenHandler（DelegatingHandler + 401 单飞刷新）+ AuthTokenState + AuthTokenRefresher + JwtExpiryReader + AuthTokenExpiryMonitor + DpapiAuthTokenStore（Windows DPAPI CurrentUser 加密落盘）
-│   │   │   ├── MemberProfile/              # 会员信息查询（头像 Popup 用）
-│   │   │   └── SignedOnlyHttpClient.cs     # 只挂签名不挂 Bearer 的 HttpClient，专供登录期 API（避免 AuthTokenHandler 递归 401 拦截）
-│   │   ├── Unified/                        # DTO 统一映射层：把不同 API 的 PlayerStats / Season / RecentBattle / BattleDetail 归一化为 UnifiedXxx，供 UI 层无差别消费
-│   │   ├── JsonFlexibleStringConverter.cs  # System.Text.Json 容错转换器
-│   │   └── NarakaApiException.cs           # API 异常类型
+│   ├── Http/                               # 数据访问层
 │   ├── Services/
 │   │   ├── Abstractions/                   # 18 个服务接口（见下表）
 │   │   └── Implementation/                 # 服务实现（部分接口在 App 层实现）
@@ -343,29 +324,28 @@ src/
 │   └── UI/Controls/                        # 自定义 WPF 控件（DataGridWrapPanel、SeasonFilterBar、FontScaleSlider、OverlayHost、TeamOverlayWindow 等）
 │
 ├── BlackGoldAncientSword.Framework.SourceGenerator/  # Roslyn 源码生成器
-│   ├── ApiDefinitionsParser.cs             # 解析 api-definitions.json
+│   ├── ApiDefinitionsParser.cs             # 源码生成器：解析输入定义
 │   ├── EnumSourceGenerator.cs              # 生成枚举类型
-│   ├── HttpApiSourceGenerator.cs           # 生成 NarakaApiClient + DTO（Client 模式）
-│   └── HttpApiTestSourceGenerator.cs       # 生成 HTTP API 测试代码（Tests 模式）
+│   ├── HttpApiSourceGenerator.cs           # 生成强类型客户端 + DTO（Client 模式）
+│   └── HttpApiTestSourceGenerator.cs       # 生成接口测试代码（Tests 模式）
 │
-├── BlackGoldAncientSword.Modules/          # UI 页面模块（13 个 Prism IModule）
+├── BlackGoldAncientSword.Modules/          # UI 页面模块（12 个 Prism IModule）
 │   ├── Mappings/BattleMappingRegister.cs   # 战绩 DTO 映射注册
-│   ├── Module/                             # 13 个 IModule 注册
+│   ├── Module/                             # 12 个 IModule 注册
 │   │   ├── AnnouncementModule.cs           # 公告
-│   │   ├── AuthChallengeModule.cs          # 登录 Overlay（滑块 → 微信扫码状态机）
+│   │   ├── AuthChallengeModule.cs          # 登录 Overlay（微信扫码）
 │   │   ├── BattleDetailModule.cs           # 对局详情浮层（personal/team/top5 三 Tab）
 │   │   ├── ClosePromptModule.cs            # 关闭确认弹窗
 │   │   ├── FeedbackModule.cs               # 意见反馈
 │   │   ├── HomeModule.cs                   # 首页（游戏状态监控）
 │   │   ├── SearchModule.cs                 # 搜索历史
 │   │   ├── SettingsModule.cs               # 设置
-│   │   ├── SponsorModule.cs                # 打赏支持
-│   │   ├── StatsModule.cs                  # 战绩查询（含 350ms 搜索防抖）
+│   │   ├── StatsModule.cs                  # 战绩查询（搜索命令带 1s 点击闸门）
 │   │   ├── TeamInfoModule.cs               # 队伍信息（语音日志识别 + 对比）
 │   │   ├── UpdateLogModule.cs              # 更新记录
 │   │   └── UpdateNotificationModule.cs     # 新版本提示 / 启动更新器 / 拉取 release notes
 │   └── UI/                                 # 各模块的 ViewModels + Views
-│       ├── AuthChallenge/                  # 登录页：状态机 Loading→CaptchaPending→CaptchaVerifying→QrLoading→QrPolling→Success/Failed
+│       ├── AuthChallenge/                  # 登录页：状态机 QrLoading→QrPolling→Success / Failed
 │       ├── BattleDetail/                   # 对局详情：并行拉 personal/team/top5
 │       ├── Stats/Services/                 # 战绩聚合服务（PlayerStatsLoader / BattleListLoader）
 │       ├── TeamInfo/Services/              # TeamMemberLoader / PlayerStatsLoader / MockTeamData
@@ -396,7 +376,7 @@ src/
 │
 └── BlackGoldAncientSword.Tests/            # 测试项目（xUnit + Moq）
     ├── GameMonitor/                        # 游戏监控测试
-    ├── Http/                               # HTTP / JSON 容错测试（含 Auth 子目录）
+    ├── Http/                               # 数据访问层与 JSON 容错测试
     ├── Settings/                           # 设置同步测试
     ├── Update/                             # 更新流程测试
     └── TestData/                           # 测试数据
@@ -412,7 +392,7 @@ src/
 |---|---|---|---|
 | `IAppAssemblyMarker` | `AppAssemblyMarker` | App | 程序集定位标记（XAML 资源解析） |
 | `IApplicationLifetime` | `WpfApplicationLifetime` | Framework | 退出 / 重启应用 |
-| `IAuthChallengeService` | `AuthChallengeService` | App | 401 时并发单飞弹出登录 Overlay，等所有 await 者一同 resume（依赖 `IRegionManager` / `IModuleManager` / `IUpdateGateService`） |
+| `IAuthChallengeService` | `AuthChallengeService` | App | 登录 Overlay 并发单飞：任意个并发调用只弹一次，用户扫码完成后所有 await 者一同 resume（依赖 `IRegionManager` / `IModuleManager` / `IUpdateGateService`） |
 | `IClipboardService` | `WpfClipboardService` | Framework | 剪贴板读写 |
 | `IGiteeReleaseService` | `GiteeReleaseService` | Framework | 拉取 Gitee Releases 列表与资产（含 302 tag 探测 + CDN 分卷 HEAD 探测，零 API 依赖） |
 | `IImageCacheService` | `ImageCacheService` | Framework | 图片磁盘缓存 |
@@ -433,8 +413,6 @@ src/
 
 `GameMonitor` 暴露自身的接口（`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService` / `ICcMiniTeammateMonitor`），通过 `GameMonitorAutoRegister.cs` 注册到 DI 容器。
 
-`Framework/Http/Auth/` 与 `Framework/Http/Unified/` 另外暴露一批认证与 DTO 接口，例如 `ISignatureTicketProvider`、`ISignedOnlyHttpClient`、`IAjCaptchaService`、`IWechatQrLoginService`、`IAuthTokenStore`、`IAuthTokenState`、`IAuthTokenRefresher`、`IMemberProfileService` 等，通过 `[Component]` 特性自动注册到 DI 容器。
-
 ---
 
 ## 核心模块说明
@@ -449,7 +427,7 @@ src/
 
 ### 2. 模块化按需加载
 
-13 个 UI 页面分别是一个 Prism `IModule`，在 `ModuleCatalogConfigManager` 中通过反射扫描 `IModule` 类型注册为 `OnDemand`：首次导航到某页面时才加载对应模块，减少启动时间。
+12 个 UI 页面分别是一个 Prism `IModule`，在 `ModuleCatalogConfigManager` 中通过反射扫描 `IModule` 类型注册为 `OnDemand`：首次导航到某页面时才加载对应模块，减少启动时间。
 
 ```csharp
 // PageNames.cs
@@ -466,7 +444,6 @@ public static class PageNames
     public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
     public const string BattleDetailPage       = nameof(BattleDetailPage);
     public const string AuthChallengePage      = nameof(AuthChallengePage);
-    public const string SponsorPage            = nameof(SponsorPage);
     public const string UpdateLogPage          = nameof(UpdateLogPage);
     public const string TestTrioPage           = nameof(TestTrioPage);
     public const string TestDuoPage            = nameof(TestDuoPage);
@@ -502,15 +479,15 @@ public static class PageNames
 5. `TeamMemberLoader` 用 UID 精确命中查询每个队友（及本地用户）的战绩，按本地用户居中排列并排展示，含与本地玩家的差值 diff
 6. 进入对局后持续监听 `set-uid-vol` 增量，队友退出 / 换人时实时更新卡片；本局结束才停止
 
-### 5. HTTP API 源码生成
+### 5. 数据访问层
 
-API 客户端**不手写**，而是通过 `BlackGoldAncientSword.Framework.SourceGenerator` 在编译期从 `Http/Definitions/*.json` 自动生成：
+数据访问客户端**不手写**，而是通过 `BlackGoldAncientSword.Framework.SourceGenerator` 在编译期自动生成：
 
-- JSON 定义文件描述 API 的端点、请求 / 响应数据结构与枚举
+- 强类型客户端与 DTO 全部由生成器产出，接口调用不散落在手写代码里
 - 生成器以 **Roslyn Source Generator** 形式工作，被 Framework / Tests 两端以 Analyzer 引用
 - 通过 `BgaSourceGenMode` 属性切换产物：
-  - `Client` 模式（Framework）— 生成 `NarakaApiClient` + DTO
-  - `Tests` 模式（Tests）— 生成 HTTP API 测试代码
+  - `Client` 模式（Framework）— 生成强类型客户端 + DTO
+  - `Tests` 模式（Tests）— 生成接口测试代码
 
 ### 6. 多语言支持
 
@@ -554,43 +531,22 @@ if 有新版本 → 导航到 UpdateNotificationPage 弹窗
 AuthChallengeService.ShowAsync (await UpdateGate.WaitAsync 先)
    │
    ▼
-若本地无有效 token → 弹 AuthChallengePage
-     ├── Loading → 拉滑块题
-     ├── CaptchaPending / CaptchaVerifying → AjCaptchaService.SolveAsync（AES-ECB 加密提交轨迹）
-     ├── QrLoading → 拉取微信二维码
-     ├── QrPolling → 每 2s 轮询扫码状态
-     └── Success → AuthTokenStore 落盘（DPAPI CurrentUser 加密）
+若本地无登录态 → 弹 AuthChallengePage
+     ├── QrLoading → 展示登录二维码
+     ├── QrPolling → 等待扫码与确认
+     └── Success → 获取登录态 → 加密落盘
    │
    ▼
 导航到 HomePage / StatsPage 等业务页面
 ```
 
-**运行期 401 单飞**：任意 API 请求返回 401，`AuthTokenHandler` 会先尝试 `AuthTokenRefresher.RefreshAsync`（用 refresh_token 换新 access_token），失败则触发 `AuthChallengeService.ShowAsync`——**多个并发 401 只弹一次 Overlay**，用户完成登录后所有 await 者一同 resume 并重放原请求。
+**登录 Overlay 单飞**：`AuthChallengeService.ShowAsync` 只由三处触发——启动流程、顶部头像的"登录"按钮、以及"退出登录"；**多个并发调用只会弹一次 Overlay**，用户扫码完成后所有 await 者一同 resume。
 
-**Token 存储**：`DpapiAuthTokenStore` 用 `ProtectedData.Protect(scope=CurrentUser)` 加密后落盘到用户目录，只有同一 Windows 账户能解开；`AuthTokenExpiryMonitor` 通过 `JwtExpiryReader` 提前读到 `exp` 并在过期前 60s 主动刷新，避免请求打出去才 401。
+**登录态存储**：登录态加密保存在本机用户目录（`%APPDATA%` 下），只有同一 Windows 账户能解开。登录态是否仍有效由服务端在下一次请求时判定，失效时会重新引导扫码。
 
-### 9. HTTP 请求管线（P7 签名 + 401 单飞）
+### 9. Stats 搜索防抖
 
-除了登录期专用的 `SignedOnlyHttpClient`（只挂签名不挂 Bearer），业务 HttpClient 依次经过：
-
-```text
-业务 Request
-   │
-   ▼
-SignatureHandler        ← 从 ISignatureTicketProvider 取 ticket，按 P7 协议对 URL/Body/时间戳做签名，写入自定义 Header
-   │
-   ▼
-AuthTokenHandler        ← 挂 Bearer token；收到 401 时先 refresh，失败则调 AuthChallengeService.ShowAsync 并等用户登录后重放请求
-   │
-   ▼
-HttpClientHandler       ← 实际发出请求到 https://desktop.naraka.drivod.top
-```
-
-API 基地址已从 `naraka.drivod.top` 迁移到 `desktop.naraka.drivod.top`（P7 桌面端专属域名）。
-
-### 10. Stats 搜索防抖
-
-`StatsPageViewModel` 对搜索框输入做 350ms 防抖：用户连续敲字期间只保留最后一次触发，减少无效 API 调用（尤其是当前用户尚未登录、每次请求都要跑滑块 + 扫码时）。
+`StatsPageViewModel` 的搜索命令（含"回到我"）挂了 5s 的 `SearchDebounceGate`：5s 内的重复点击直接提示"点击过快请稍后重试"，不再发起请求。搜索框在输入停顿 500ms 后自动给出候选列表（输入框下方下拉）：列表按虚拟化渲染、每次取一页、滚到底再取下一页，点候选即直接查该玩家，不必再重复搜索一次。战绩页与队伍页的赛季 / 排数 / 模式筛选走 1s 尾沿防抖（`TrailingDebouncer`），把连续变更合并成一次查询。
 
 ---
 

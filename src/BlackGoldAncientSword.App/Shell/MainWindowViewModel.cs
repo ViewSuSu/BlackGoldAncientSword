@@ -4,6 +4,7 @@ using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
+using BlackGoldAncientSword.Framework.Http.Heybox;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.GameMonitor.Models;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
@@ -22,6 +23,7 @@ namespace BlackGoldAncientSword.App.Shell
         private readonly ILocalizedTextProvider _localizedText;
         private readonly IGameStatusMonitor _gameStatusMonitor;
         private readonly IGameLogMonitor _gameLogMonitor;
+        private readonly HeyboxRequestCache _requestCache;
         private readonly IUIDispatcher _uiDispatcher;
         private readonly ToastQueueManager _toastQueueManager;
         private readonly IStartupGateService _startupGate;
@@ -169,14 +171,6 @@ namespace BlackGoldAncientSword.App.Shell
                 _regionManager.RequestNavigate(GlobalConstant.FeedbackRegion, PageNames.FeedbackPage);
             });
 
-        private DelegateCommand? _openSponsorCommand;
-        public DelegateCommand OpenSponsorCommand =>
-            _openSponsorCommand ??= new DelegateCommand(() =>
-            {
-                EnsureModuleLoaded(PageNames.SponsorPage);
-                _regionManager.RequestNavigate(GlobalConstant.SponsorRegion, PageNames.SponsorPage);
-            });
-
         private DelegateCommand? _openUpdateLogCommand;
         public DelegateCommand OpenUpdateLogCommand =>
             _openUpdateLogCommand ??= new DelegateCommand(() =>
@@ -321,6 +315,7 @@ namespace BlackGoldAncientSword.App.Shell
             ILocalizedTextProvider localizedText,
             IGameStatusMonitor gameStatusMonitor,
             IGameLogMonitor gameLogMonitor,
+            HeyboxRequestCache requestCache,
             IUIDispatcher uiDispatcher,
             ToastQueueManager toastQueueManager,
             UserProfileViewModel userProfile,
@@ -337,6 +332,7 @@ namespace BlackGoldAncientSword.App.Shell
             _localizedText = localizedText;
             _gameStatusMonitor = gameStatusMonitor;
             _gameLogMonitor = gameLogMonitor;
+            _requestCache = requestCache;
             _uiDispatcher = uiDispatcher;
             _toastQueueManager = toastQueueManager;
             _startupGate = startupGate;
@@ -433,11 +429,15 @@ namespace BlackGoldAncientSword.App.Shell
         private void OnBattleStarted(object? sender, BattleEventArgs e)
         {
             _gameStatusMonitor.NotifyStatus(GameStatus.InGame);
+            // 上一局的数据此时可能刚落地，跟着清一次
+            _requestCache.Invalidate();
         }
 
         private void OnBattleEnded(object? sender, BattleEventArgs e)
         {
             _gameStatusMonitor.NotifyStatus(GameStatus.BattleEnded);
+            // 一局结束，战绩随时会变——清掉请求缓存，保证下次查询拿到的是最新数据
+            _requestCache.Invalidate();
         }
 
         /// <summary>

@@ -79,6 +79,13 @@
         <ns1:String ns2:Key="Stats.Header.Rank">排名</ns1:String>
     <ns1:String ns2:Key="Stats.Header.Mode">模式</ns1:String>
     <ns1:String ns2:Key="Stats.Header.ModeCategory">排位模式</ns1:String>
+    <ns1:String ns2:Key="Stats.Header.Map">地圖</ns1:String>
+    <ns1:String ns2:Key="Stats.RecentAvgRank">場均排名</ns1:String>
+    <ns1:String ns2:Key="Stats.RecentRanksScope">近 20 局（當前模式）</ns1:String>
+    <ns1:String ns2:Key="Stats.RankPosition">第 {0} 名 · 點擊定位對局</ns1:String>
+    <ns1:String ns2:Key="Stats.BattleNotInList">該對局不在下方列表中</ns1:String>
+    <ns1:String ns2:Key="Stats.NoLocalUser">未偵測到本機使用者資訊</ns1:String>
+    <ns1:String ns2:Key="Stats.SearchSuccess">搜尋成功</ns1:String>
     <ns1:String ns2:Key="Stats.Header.ModeType">對局模式</ns1:String>
     <ns1:String ns2:Key="Stats.Header.Kill">擊敗</ns1:String>
     <ns1:String ns2:Key="Stats.Header.Damage">傷害</ns1:String>
@@ -117,6 +124,9 @@
     <ns1:String ns2:Key="Search.Delete">刪除</ns1:String>
     <ns1:String ns2:Key="Search.CopySuccess">複製成功</ns1:String>
     <ns1:String ns2:Key="Search.TooFast">點擊過快請稍後重試</ns1:String>
+    <ns1:String ns2:Key="Search.SuggestionsLoading">正在搜尋…</ns1:String>
+    <ns1:String ns2:Key="Search.SuggestionsEmpty">沒有符合的玩家</ns1:String>
+    <ns1:String ns2:Key="Search.SuggestionsLoadingMore">正在載入更多…</ns1:String>
 
     <ns1:String ns2:Key="Startup.CheckingUpdates">正在檢查更新…</ns1:String>
     <ns1:String ns2:Key="Startup.PleaseWait">請稍候，檢測完成後即可操作</ns1:String>
@@ -152,10 +162,9 @@
     <ns1:String ns2:Key="Nav.Personal">個人</ns1:String>
     <ns1:String ns2:Key="Nav.Announcement">公告</ns1:String>
     <ns1:String ns2:Key="Nav.Feedback">反饋</ns1:String>
-    <ns1:String ns2:Key="Nav.Sponsor">打賞</ns1:String>
     <ns1:String ns2:Key="Auth.User.Login">登入</ns1:String>
+    <ns1:String ns2:Key="Auth.User.LoginSuccess">登入成功</ns1:String>
     <ns1:String ns2:Key="Auth.User.Logout">登出</ns1:String>
-    <ns1:String ns2:Key="Auth.User.RoleNormal">一般用戶</ns1:String>
     <ns1:String ns2:Key="Auth.User.Anonymous">未登入</ns1:String>
     <ns1:String ns2:Key="Home.NoLocalData">找不到本機玩家資料，請先啟動永劫無間</ns1:String>
     <ns1:String ns2:Key="Home.PlayerNotFound">伺服器上找不到該玩家</ns1:String>
@@ -283,9 +292,7 @@
     <ns1:String ns2:Key="TeamInfo.DiffBestHeal">最高治差</ns1:String>
     <ns1:String ns2:Key="TeamInfo.DiffBestAssist">最高助差</ns1:String>
     <ns1:String ns2:Key="TeamInfo.DiffRankScore">段位差</ns1:String>
-    <ns1:String ns2:Key="TeamInfo.RankScore">段位分</ns1:String>
-    <ns1:String ns2:Key="TeamInfo.SelfNoSearch">本人卡片，無需搜尋</ns1:String>
-    <ns1:String ns2:Key="TeamInfo.Title">隊伍資訊</ns1:String>
+    <ns1:String ns2:Key="TeamInfo.RankScore">段位分</ns1:String>    <ns1:String ns2:Key="TeamInfo.Title">隊伍資訊</ns1:String>
     <ns1:String ns2:Key="TeamInfo.WaitingForHeroSelect">等待遊戲進入英雄選擇...</ns1:String>
     <ns1:String ns2:Key="TeamInfo.HeroSelectRecognizing">英雄選擇中，正在識別隊友...</ns1:String>
     <ns1:String ns2:Key="TeamInfo.InGameLocked">進入對局，隊伍資訊已鎖定</ns1:String>
@@ -312,27 +319,11 @@
 
     <!--  Feedback  -->
     <ns1:String ns2:Key="Feedback.Title">問題反饋</ns1:String>
-    <ns1:String ns2:Key="Feedback.ClientGroupTitle">客戶端問題反饋群</ns1:String>
+    <ns1:String ns2:Key="Feedback.ClientGroupTitle">問題反饋與交流QQ群</ns1:String>
     <ns1:String ns2:Key="Feedback.ClientGroupQQ">①群：146088141</ns1:String>
-    <ns1:String ns2:Key="Feedback.DataGroupTitle">數據問題反饋群</ns1:String>
-    <ns1:String ns2:Key="Feedback.BotDescription">QQ群機器人也可以查戰績</ns1:String>
-    <ns1:String ns2:Key="Feedback.DataGroup1">①群：476074617</ns1:String>
-    <ns1:String ns2:Key="Feedback.DataGroup2">②群：649891198</ns1:String>
-    <ns1:String ns2:Key="Feedback.DataGroup3">③群：966720321</ns1:String>
-    <ns1:String ns2:Key="Feedback.QQEntryRequirement">QQ等級超過32（兩個太陽）的自動審核進群，小號不給進</ns1:String>
     <ns1:String ns2:Key="Feedback.WebTitle">網頁端</ns1:String>
     <ns1:String ns2:Key="Feedback.GitHubTitle">GitHub</ns1:String>
     <ns1:String ns2:Key="Feedback.Close">關閉</ns1:String>
-
-    <!--  Sponsor  -->
-    <ns1:String ns2:Key="Sponsor.AuthorTitle">黑金古刀作者：小窗同學</ns1:String>
-    <ns1:String ns2:Key="Sponsor.SelectPaymentMethod">選擇打賞方式</ns1:String>
-    <ns1:String ns2:Key="Sponsor.WeChatPay">微信</ns1:String>
-    <ns1:String ns2:Key="Sponsor.Alipay">支付寶</ns1:String>
-    <ns1:String ns2:Key="Sponsor.ShowQRCode">顯示收款碼</ns1:String>
-    <ns1:String ns2:Key="Sponsor.DataProviderTitle">贊助資料提供方</ns1:String>
-    <ns1:String ns2:Key="Sponsor.DataProviderDesc">資料來源於 naraka.drivod.top，贊助支持其持續提供服務。</ns1:String>
-    <ns1:String ns2:Key="Sponsor.Close">關閉</ns1:String>
 
     <ns1:String ns2:Key="Settings.Category.Appearance">外觀</ns1:String>
     <ns1:String ns2:Key="Settings.FontSize.Description">拖動滑桿可調整整個軟體的字體大小，即時生效。</ns1:String>

@@ -25,12 +25,10 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             new TeamSizeOption(TeamSize.Solo),
         });
 
-        /// <summary>模式大类选项：天选/匹配/天人。全局共用一份。</summary>
+        /// <summary>模式大类选项：只保留天选之人。全局共用一份。</summary>
         public static BindingList<GameModeCategoryOption> CategoryOptions { get; } = new(new[]
         {
             new GameModeCategoryOption(GameModeCategory.Rank),
-            new GameModeCategoryOption(GameModeCategory.Match),
-            new GameModeCategoryOption(GameModeCategory.Tianren),
         });
 
         private ILocalizationService? _localization;

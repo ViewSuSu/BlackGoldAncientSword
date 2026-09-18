@@ -31,13 +31,15 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private readonly object _monitorLock = new();
         private bool _isHeroSelectionPhase;
         private CancellationTokenSource? _refreshMembersCts;
-        private CancellationTokenSource? _refreshOcrCts;
         private CancellationTokenSource? _loadSeasonsCts;
-        private readonly SearchDebounceGate _refreshOcrDebounce = new();
         // 筛选器（赛季/排数/大类）变更合并防抖：连续改多个条件只在最后一次之后触发一次整队重查，
         // 避免每个 setter 各自发一批相同参数的 HTTP（实测重复请求根因）。
-        private const int FilterRefreshDebounceMs = 200;
+        private const int FilterRefreshDebounceMs = 1000;
         private readonly TrailingDebouncer _filterRefreshDebouncer;
+
+        // 详情按钮：2 秒内只认第一次点击。
+        private const int NavigateToStatsDebounceMs = 2000;
+        private readonly SearchDebounceGate _navigateToStatsDebounce = new(NavigateToStatsDebounceMs);
         // 已成功加载赛季后不再重复请求；后续切换页面也复用既有数据。
         private bool _seasonsLoaded;
         private bool _hasEverHadData;
@@ -133,19 +135,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 _filterRefreshDebouncer.Trigger();
             }
         }
-
-        private DelegateCommand? _refreshOcrCommand;
-        public DelegateCommand RefreshOcrCommand =>
-            _refreshOcrCommand ??= new DelegateCommand(async () =>
-            {
-                if (!_refreshOcrDebounce.TryEnter())
-                {
-                    _tipMessage.ShowError(L("Search.TooFast", "点击过快请稍后重试"));
-                    return;
-                }
-                await RefreshTeamMemberDataAsync();
-            });
-
 
         // === Members ===
         public ObservableCollection<TeamMemberInfo> TeamMembers { get; }
@@ -382,63 +371,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         }
 
         /// <summary>
-        /// 手动刷新：用 Monitor 最近一次识别到的 UID（含已加载/失败重试）重建队伍数据。
-        /// </summary>
-        private async Task RefreshTeamMemberDataAsync()
-        {
-            // 取消之前的刷新操作
-            CancelAndDispose(ref _refreshOcrCts);
-            _refreshOcrCts = new CancellationTokenSource();
-            var ct = _refreshOcrCts.Token;
-
-            _overlayShownForThisRound = false;
-            try
-            {
-                StatusText = L("TeamInfo.HeroSelectRecognizing", "英雄选择中，正在识别队友...");
-
-                var uids = _teammateMonitor.TeammateUids;
-                if (uids.Count == 0) return;
-
-                await ReloadLocalUserAsync();
-                await UpdateTeamMembersAsync(uids);
-                _teamDataLoadedSuccessfully = true;
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.WriteLine("[TeamInfo] Refresh team data cancelled");
-            }
-            catch (Exception ex)
-            {
-                AppLog.Error(ex, "TeamInfo", "Refresh team data error");
-            }
-        }
-
-
-        /// <summary>
-        /// 覆盖层弹窗请求刷新时的回调。重置覆盖层标志后走完整的刷新流程，
-        /// 刷新完成后覆盖层会自动重新显示。
-        /// <para>
-        /// **async void 安全契约**：本方法被 ITeamOverlayService.RefreshAction (Action 类型) 持有调用，
-        /// 必须保持 async void 签名。<see cref="RefreshTeamMemberDataAsync"/> 内部完整 try/catch 兜底所有 await 异常，
-        /// 修改时**不得把抛出语义移出该 try/catch**——否则异常会直接冲到 SynchronizationContext，
-        /// 由 App.xaml.cs 的 DispatcherUnhandledException 接管并向用户弹错。
-        /// 如需返回 Task，必须同步把 RefreshAction 类型改为 Func&lt;Task&gt; 并审计所有调用方。
-        /// </para>
-        /// </summary>
-        private async void RefreshFromOverlay()
-        {
-            try
-            {
-                _overlayShownForThisRound = false;
-                await RefreshTeamMemberDataAsync();
-            }
-            catch (Exception ex)
-            {
-                AppLog.Error(ex, $"{nameof(TeamInfoPageViewModel)}.{nameof(RefreshFromOverlay)}");
-            }
-        }
-
-        /// <summary>
         /// fire-and-forget 包装：捕获 <see cref="UpdateTeamMembersAsync"/> 异常以避免
         /// UnobservedTaskException（OperationCanceledException 视为正常取消）。
         /// </summary>
@@ -505,7 +437,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // 1 名队友 = 双排，2 名队友 = 三排。先直接写字段（不触发筛选器防抖重查），
             // 再手动 RaisePropertyChanged 让排数 radiobutton 同步切换，最后按它查询 stats。
             // 不能走 SelectedTeamSize setter：setter 会触发 _filterRefreshDebouncer，
-            // 200ms 后 CancelAndDispose 掉本方法刚建的发查询 token，整队重查一遍（重复 HTTP 根因）。
+            // 1s 后 CancelAndDispose 掉本方法刚建的发查询 token，整队重查一遍（重复 HTTP 根因）。
             if (uids.Count == 1)
                 _selectedTeamSize = TeamSize.Duo;
             else if (uids.Count >= 2)
@@ -541,6 +473,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             foreach (var r in removed)
                 TeamMembers.Remove(r);
 
+            var toLoad = new List<TeamMemberInfo>();
             foreach (var uid in recognizedUids)
             {
                 // 已存在且已成功加载（有 UID + stats + 无错误）：跳过，不重发 HTTP。
@@ -550,12 +483,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 {
                     var alreadyLoaded = !string.IsNullOrEmpty(existing.UID)
                                         && existing.Stats.Count > 0
-                                        && !existing.HasStatusError;
+                                        && !existing.HasStatusError
+                                        && TeamMemberLoader.HasRealName(existing.DisplayName);
                     if (alreadyLoaded) continue;
                     // 上次失败或未加载完：重置状态并重新请求。
                     existing.IsLoading = true;
                     existing.StatusText = string.Empty;
-                    _ = LoadWithIndependentToken(existing, loadCt);
+                    toLoad.Add(existing);
                     continue;
                 }
 
@@ -567,11 +501,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     UserName = isLocal && !string.IsNullOrWhiteSpace(localName) ? localName : uid,
                     IsLocalUser = isLocal,
                     IsLoading = true,
-                    RefreshAction = RefreshSingleMember,
                     NavigateToStatsAction = NavigateToMemberStats
                 };
                 TeamMembers.Add(member);
-                _ = LoadWithIndependentToken(member, loadCt);
+                toLoad.Add(member);
             }
 
             ReorderMembersForLocalUser();
@@ -583,15 +516,53 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             // 队友变化（有人退出/重进）时立即刷右下角弹窗，确保队员列表实时更新。
             UpdateOverlayMembers();
+
+            if (toLoad.Count > 0)
+                _ = LoadMembersSequentiallyAsync(toLoad, loadCt);
+        }
+
+        /// <summary>
+        /// 依次加载一批成员：同一时刻只有一个成员在打接口，每张卡拿到数据就立即上屏。
+        /// </summary>
+        private async Task LoadMembersSequentiallyAsync(IReadOnlyList<TeamMemberInfo> members, CancellationToken ct)
+        {
+            foreach (var member in members)
+            {
+                if (ct.IsCancellationRequested) return;
+                await LoadWithIndependentToken(member, ct).ConfigureAwait(false);
+            }
         }
 
         private void NavigateToMemberStats(TeamMemberInfo member)
         {
-            // 本地用户卡片：不带 TargetPlayerName 导航到战绩页，战绩页会 reload 本地用户
-            // 并展示本地 UID —— 等价于战绩页「回到我」的效果，而非用队友名去查自己。
+            if (!_navigateToStatsDebounce.TryEnter())
+            {
+                _tipMessage.ShowError(L("Search.TooFast", "点击过快请稍后重试"));
+                return;
+            }
+
+            // 每张卡都带上目标玩家名。本地卡用本地登录名——战绩页据此按 PlayerId 精确挑人，
+            // 等价于「回到我」；队友卡优先用真名，没有真名时退回 UID（战绩页会用 UID 反查昵称兜底）。
+            // 本地卡不能留空：战绩页把"没带任何目标信息"理解成「切页回来 / 底部导航」，那时它会
+            // 保持当前浏览对象不动——于是先看队友、再点本地卡详情时，页面仍停在队友的数据上。
             var parameters = new NavigationParameters();
-            if (!member.IsLocalUser)
-                parameters.Add(NavigationParameterKeys.TargetPlayerName, member.UserName);
+            parameters.Add(NavigationParameterKeys.TargetPlayerName,
+                member.IsLocalUser || !TeamMemberLoader.HasRealName(member.DisplayName)
+                    ? member.UserName
+                    : member.DisplayName);
+
+            // 卡片已经成功加载过（拿到 role_id + server）：把数据一起带过去，战绩页直接渲染，
+            // 不再搜索、也不再请求资料与赛季。本地卡同样适用。
+            if (member.SourceContext is { } ctx)
+            {
+                parameters.Add(NavigationParameterKeys.TargetRoleId, ctx.RoleId);
+                parameters.Add(NavigationParameterKeys.TargetServer, ctx.Server);
+                parameters.Add(NavigationParameterKeys.TargetAvatar, member.AvatarUrl);
+                parameters.Add(NavigationParameterKeys.TargetLevel, member.Level);
+                parameters.Add(NavigationParameterKeys.TargetSeasons, Seasons.ToList());
+                parameters.Add(NavigationParameterKeys.TargetSeasonKey, _selectedSeason?.SeasonKey);
+            }
+
             _navigation.NavigateTo(PageNames.StatsPage, parameters);
         }
 
@@ -614,7 +585,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
         /// <summary>
         /// 标记中间格（index 1）为本地用户：置 <see cref="TeamMemberInfo.IsLocalUser"/>，
-        /// 并把该格搜索框展示文本回写为本地登录名 OriginalPlayerName（本地名本地可知）。
+        /// 并把该格展示名回写为本地登录名 OriginalPlayerName（本地名本地可知）。
         /// 其余格清除标志。
         /// </summary>
         private void MarkLocalUserSlot()
@@ -710,7 +681,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             foreach (var metric in template)
             {
-                var def = (metric.Key, metric.Label, metric.IsPercent);
                 var row = new MergedStatRow
                 {
                     Label = metric.Label,
@@ -720,26 +690,25 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 };
 
                 if (diffLeftA != null && diffLeftB != null)
-                    FillDiff(row, isLeft: true, diffLeftA, diffLeftB, def);
+                    FillDiff(row, isLeft: true, diffLeftA, diffLeftB, metric.Key);
                 if (diffRightA != null && diffRightB != null)
-                    FillDiff(row, isLeft: false, diffRightA, diffRightB, def);
+                    FillDiff(row, isLeft: false, diffRightA, diffRightB, metric.Key);
 
                 MergedStatRows.Add(row);
             }
 
             // 段位分固定尾行：后端 metrics 不含，用 __rank__ 合成 key 取各成员 RankScore。
-            var rankDef = (RankRowKey, L("TeamInfo.RankScore", "段位分"), false);
             var rankRow = new MergedStatRow
             {
-                Label = rankDef.Item2,
+                Label = L("TeamInfo.RankScore", "段位分"),
                 Val0 = GetStatVal(m0, RankRowKey),
                 Val1 = GetStatVal(m1, RankRowKey),
                 Val2 = GetStatVal(m2, RankRowKey),
             };
             if (diffLeftA != null && diffLeftB != null)
-                FillDiff(rankRow, isLeft: true, diffLeftA, diffLeftB, rankDef);
+                FillDiff(rankRow, isLeft: true, diffLeftA, diffLeftB, RankRowKey);
             if (diffRightA != null && diffRightB != null)
-                FillDiff(rankRow, isLeft: false, diffRightA, diffRightB, rankDef);
+                FillDiff(rankRow, isLeft: false, diffRightA, diffRightB, RankRowKey);
             MergedStatRows.Add(rankRow);
 
             RaisePropertyChanged(nameof(HasDiffLeft));
@@ -753,45 +722,20 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             return m.Stats.TryGetValue(key, out var v) && !string.IsNullOrEmpty(v) ? v : "-";
         }
 
+        /// <summary>
+        /// 写一格差值。取值一律走 <see cref="StatDiffCalculator"/>：它会把服务端成品串里的单位剥开再相减，
+        /// 解析不出 / 单位对不齐的一侧返回"不可比"（文本留空），从而与真正的 0 分差区分开。
+        /// </summary>
         private static void FillDiff(MergedStatRow row, bool isLeft,
-            TeamMemberInfo a, TeamMemberInfo b,
-            (string Key, string Label, bool IsPercent) def)
+            TeamMemberInfo a, TeamMemberInfo b, string key)
         {
-            double av, bv;
-            if (def.Key == RankRowKey)
-            {
-                av = a.RankScore; bv = b.RankScore;
-            }
-            else
-            {
-                av = a.Stats.TryGetValue(def.Key, out var al) ? TryParseDouble(al) : 0;
-                bv = b.Stats.TryGetValue(def.Key, out var bl) ? TryParseDouble(bl) : 0;
-            }
-            var diff = av - bv;
-            const string fmt = "0.##";
-            string text, color;
-            if (Math.Abs(diff) < 0.001) { text = "0"; color = "#999999"; }
-            else if (diff > 0) { text = def.IsPercent ? $"+{diff:F1}%" : $"+{diff.ToString(fmt)}"; color = "#22AA22"; }
-            else { text = def.IsPercent ? $"{diff:F1}%" : $"{diff.ToString(fmt)}"; color = "#DD3333"; }
+            var diff = key == RankRowKey
+                ? StatDiffCalculator.FromScores(a.RankScore, b.RankScore)
+                : StatDiffCalculator.FromValues(
+                    a.Stats.TryGetValue(key, out var al) ? al : null,
+                    b.Stats.TryGetValue(key, out var bl) ? bl : null);
 
-            if (isLeft) { row.DiffLeftText = text; row.DiffLeftColor = color; }
-            else { row.DiffRightText = text; row.DiffRightColor = color; }
-        }
-
-        private static double TryParseDouble(string s)
-        {
-            if (double.TryParse(s?.Replace("%", ""), out var v)) return v;
-            return 0;
-        }
-
-        public void RefreshSingleMember(TeamMemberInfo member)
-        {
-            member.IsLoading = true;
-            member.StatusText = "";
-            // 不创建 CTS：原实现的 cts 从未调 Cancel，仅作为 token 来源然后 Dispose，等于 dead code。
-            // 单成员刷新场景目前无取消需求；如未来需要"刷新整个团队时取消正在进行的单成员刷新"，
-            // 应改为引入 member-scoped token 或复用 _refreshMembersCts，而非孤立的占位 CTS。
-            _ = LoadMemberDataAsync(member, CancellationToken.None);
+            row.ApplyDiff(isLeft, diff);
         }
 
         /// <summary>
@@ -812,14 +756,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             try
             {
-                // 已有解析好的 ctx（首次 search+player 成功过）：筛选器变更重查时复用，
-                // 跳过 search/player（identity 与资料不变），只重查 season(stats)。
+                // 已有解析好的 ctx 且**已经拿到真名**（首次加载成功过）：筛选器变更重查时复用，
+                // 只重查 season(stats)。名字还是空/匿名时不走捷径——否则名字永远不会被刷新。
                 var ctx = member.SourceContext;
-                if (ctx != null)
+                if (ctx != null && TeamMemberLoader.HasRealName(member.DisplayName))
                 {
                     var stats = await _memberLoader.LoadStatsOnlyAsync(
                         ctx,
-                        _selectedSeason?.Code,
+                        _selectedSeason?.SeasonKey,
                         _selectedCategory,
                         _selectedTeamSize,
                         ct).ConfigureAwait(false);
@@ -831,11 +775,16 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     // 所有成员按 UID 查询：优先用 member.UID 作为 SearchRecord 的 keyword（UID 精确命中），
                     // 用户名（UserName）仅作兜底回退。本地用户格与队友格无差别——都走 UID 优先。
                     var uidOverride = string.IsNullOrWhiteSpace(member.UID) ? null : member.UID;
+                    if (ctx != null)
+                        _memberLoader.InvalidateProfile(ctx, _selectedSeason?.SeasonKey, _selectedCategory, _selectedTeamSize);
+                    DiagLog.Write("TeamVM",
+                        $"发起加载: uid={member.UID} userName={userName} season={_selectedSeason?.SeasonKey ?? "(null)"} " +
+                        $"cat={_selectedCategory} size={_selectedTeamSize} uidOverride={uidOverride ?? "(null)"}");
 
                     // Step 1-4: 调 Loader 在后台线程拉数据；返回 DTO 后回 UI 线程逐批写回属性。
                     var loaded = await _memberLoader.LoadAsync(
                         userName,
-                        _selectedSeason?.Code,
+                        _selectedSeason?.SeasonKey,
                         _selectedCategory,
                         _selectedTeamSize,
                         ct,
@@ -848,6 +797,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         var failText = !string.IsNullOrWhiteSpace(loaded.FailMsg)
                             ? loaded.FailMsg!
                             : L("TeamInfo.QueryFailed", "查询失败");
+                        DiagLog.Write("TeamVM", $"加载失败: uid={member.UID} FailMsg=\"{loaded.FailMsg}\"");
                         await _uiDispatcher.InvokeAsync(() =>
                         {
                             member.StatusText = failText;
@@ -867,7 +817,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                             // 一旦覆盖成后端返回的纯数字 RoleIdSimple，下一次触发时该卡会被误判为"已退出"而移除重建，
                             // 导致同一批队友反复走完整 search→player→season（重复 HTTP 根因）。后端纯数字仅供内部查询，
                             // 已通过 PlayerSourceContext.RoleIdSimple 传入 loader，无需写回成员卡；且 UI 不展示 UID。
-                            // 后端真实昵称只写到 DisplayName（头像下展示），不碰 UserName（搜索框）以免回填
+                            // 后端真实昵称只写到 DisplayName（头像下展示），不碰 UserName（查询身份）以免覆盖
                             if (!string.IsNullOrWhiteSpace(loaded.UserName))
                                 member.DisplayName = loaded.UserName;
                             member.AvatarUrl = loaded.AvatarUrl;
@@ -884,7 +834,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                             member.PageRankName = loaded.Stats?.PageRankName ?? member.PageRankName;
                             member.PageStarCount = loaded.Stats?.PageStarCount ?? 0;
                             member.PageHasStars = loaded.Stats?.PageHasStars ?? false;
-                            member.RankTierScore = loaded.Stats?.RankTierScore ?? 0;
                             member.Stats.Clear();
                             member.Metrics.Clear();
                             if (loaded.Stats != null)
@@ -936,7 +885,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         _overlayShownForThisRound = true;
                         _teamDataLoadedSuccessfully = true;
                         _teamOverlayService.Show(BuildOverlayMembers());
-                        _teamOverlayService.RefreshAction = RefreshFromOverlay;
                     }
                     // 弹窗已显示后，每格数据加载完毕时刷新弹窗中队名/段位等最新数据。
                     else if (_overlayShownForThisRound)
@@ -978,7 +926,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 member.PageRankName = stats?.PageRankName ?? member.PageRankName;
                 member.PageStarCount = stats?.PageStarCount ?? 0;
                 member.PageHasStars = stats?.PageHasStars ?? false;
-                member.RankTierScore = stats?.RankTierScore ?? 0;
                 member.Stats.Clear();
                 member.Metrics.Clear();
                 if (stats != null)
@@ -1002,7 +949,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 PageRankName = m.PageRankName,
                 PageStarCount = m.PageStarCount,
                 PageHasStars = m.PageHasStars,
-                RankTierScore = m.RankTierScore,
                 IsLoading = m.IsLoading
             }).ToList();
         }
@@ -1016,21 +962,28 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             if (!_overlayShownForThisRound)
             {
                 _overlayShownForThisRound = true;
-                _teamOverlayService.RefreshAction = RefreshFromOverlay;
             }
 
             _teamOverlayService.Show(BuildOverlayMembers());
         }
 
         /// <summary>
-        /// 展示名：优先后端查得的真实昵称（DisplayName），未加载完成（队友卡初始 UserName=UID）时
-        /// 回退到 UserName。避免弹窗直接暴露队友 UID。
+        /// 展示名：队友**只**用后端查回的真实昵称，没查回来就留空（弹窗另有转圈提示）。
+        /// 本地卡可以用本地昵称兜底（那是真昵称，不是查询用的 role_id）。任何情况下都不显示 UID。
         /// </summary>
         private static string ResolveDisplayName(TeamMemberInfo m)
         {
             if (!string.IsNullOrWhiteSpace(m.DisplayName)) return m.DisplayName;
-            return m.UserName;
+            if (m.IsLocalUser && !LooksLikeUid(m.UserName)) return m.UserName;
+            return string.Empty;
         }
+
+        /// <summary>
+        /// 语音日志给的队友查询身份就是 22 位 role_id，昵称要等接口回来才知道。
+        /// 它只能当查询 key，不能当名字显示。
+        /// </summary>
+        private static bool LooksLikeUid(string value)
+            => value.Length == 22 && value.All(char.IsAsciiLetterOrDigit);
 
         /// <summary>
         /// 筛选器变更防抖到期后的实际重查回调。<paramref name="debounceCt"/> 仅代表"到期前是否被
@@ -1063,14 +1016,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 }
             });
 
-            var tasks = new List<Task>();
-            foreach (var member in members)
-            {
-                // 每个成员使用独立 linked token，互不干扰
-                tasks.Add(LoadWithIndependentToken(member, ct));
-            }
-            if (tasks.Count > 0)
-                await Task.WhenAll(tasks);
+            await LoadMembersSequentiallyAsync(members, ct).ConfigureAwait(false);
         }
 
         private void RaiseMemberProperties()
@@ -1189,16 +1135,28 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
             try
             {
-                // 与战绩页共用同一赛季目录（前端内嵌，后端无 seasons 接口）；索引 0 为当前赛季。
-                var seasons = SeasonCatalog.All();
+                // 赛季列表**取自服务端**（与战绩页同源：home/data 的 seasons[]），本地不再兜底静态表——
+                // 那套数字赛季码是已废弃老后端的编码，当 season 发出去会被小黑盒判「参数错误」，
+                // 整个赛季筛选等于坏的。服务端赛季挂在某个玩家的主页数据上，这里用本机活跃账号解析上下文再取。
+                var localCtx = await _memberLoader.ResolveLocalPlayerContextAsync(
+                    _playerPrefsService.Current.PlayerId,
+                    _playerPrefsService.Current.OriginalPlayerName,
+                    ct).ConfigureAwait(false);
+
+                var (seasons, currentSeasonKey) = localCtx is null
+                    ? (new List<UnifiedSeason>(), null)
+                    : await _memberLoader.FetchSeasonsAsync(localCtx, ct).ConfigureAwait(false);
+
                 await _uiDispatcher.InvokeAsync(() =>
                 {
                     if (ct.IsCancellationRequested) return;
                     Seasons.Clear();
                     foreach (var s in seasons)
                         Seasons.Add(s);
+                    // 默认落在服务端回显的当前赛季（与战绩页同一口径），拿不到时回退第一项。
+                    // 两页默认一致 → 同一批数据共用同一份缓存，切页不再重复请求。
                     if (Seasons.Count > 0 && _selectedSeason == null)
-                        _selectedSeason = Seasons[0];
+                        _selectedSeason = Seasons.FirstOrDefault(s => s.SeasonKey == currentSeasonKey) ?? Seasons[0];
                     RaisePropertyChanged(nameof(SelectedSeason));
                     _seasonsLoaded = true;
                 });
@@ -1218,13 +1176,9 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             // 离开页面时清理页面级操作和事件订阅。
             // _gameStatusMonitor.GameStatusRecognized / _teamOverlayService.Dismissed / _teammateMonitor.TeammatesReady
             // 是构造函数中永久订阅的，离开页面不解绑——后台监听和右下角弹窗在任意页面都需要正常工作。
-            // 但 _teamOverlayService.RefreshAction 持有 VM 的方法回调（RefreshFromOverlay），
-            // overlay service 是单例，必须在此清空，防止 VM 通过委托被外部单例长期持引用。
             // 注意：日志监听由游戏状态驱动，不在此处 Stop（否则离开 TeamInfo 页面后后台识别会中断）。
-            _teamOverlayService.RefreshAction = null;
 
             CancelAndDispose(ref _refreshMembersCts);
-            CancelAndDispose(ref _refreshOcrCts);
             // _loadSeasonsCts 也要在离开页面时取消：留它在 in-flight 不会立即崩，但下次再进页面
             // 会被新的 CancelAndDispose 替换，相当于多保留一个不必要的 HTTP/state machine 引用。
             CancelAndDispose(ref _loadSeasonsCts);
@@ -1247,6 +1201,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
     /// <summary>
     /// 队友卡片的单行合并数据：标签 + 3 个成员的值 + 左右 diff。
     /// MergedStatRows 绑定单个 ItemsControl，每行模板是 5 列 Grid，天然水平对齐。
+    /// <para>
+    /// diff 文本三种取值语义不同，界面上必须可区分：<c>"0"</c> / <c>"0%"</c> = 两侧数值真的相等；
+    /// <c>""</c>（空）= 不可比（任一侧缺值或单位对不齐）；其余为带符号差值。
+    /// </para>
     /// </summary>
     public class MergedStatRow
     {
@@ -1255,9 +1213,24 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         public string Val1 { get; set; } = "-";
         public string Val2 { get; set; } = "-";
         public string DiffLeftText { get; set; } = string.Empty;
-        public string DiffLeftColor { get; set; } = "#999999";
+        public string DiffLeftColor { get; set; } = Services.StatDiffCalculator.ColorNeutral;
         public string DiffRightText { get; set; } = string.Empty;
-        public string DiffRightColor { get; set; } = "#999999";
+        public string DiffRightColor { get; set; } = Services.StatDiffCalculator.ColorNeutral;
+
+        /// <summary>把计算好的差值写到指定一侧。</summary>
+        public void ApplyDiff(bool isLeft, Services.StatDiff diff)
+        {
+            if (isLeft)
+            {
+                DiffLeftText = diff.Text;
+                DiffLeftColor = diff.Color;
+            }
+            else
+            {
+                DiffRightText = diff.Text;
+                DiffRightColor = diff.Color;
+            }
+        }
     }
 
     public class TeamMemberInfo : ViewModelBase
@@ -1303,8 +1276,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        // 头像下方展示用的玩家名：与搜索框绑定的 UserName 解耦，
-        // 后端返回的真实昵称写到这里而不回填搜索框。
+        // 头像下方展示用的玩家名：与作为查询身份的 UserName 解耦，
+        // 后端返回的真实昵称只写到这里。
         private string _displayName = string.Empty;
         public string DisplayName
         {
@@ -1467,18 +1440,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             }
         }
 
-        private double _rankTierScore;
-        public double RankTierScore
-        {
-            get => _rankTierScore;
-            set
-            {
-                if (_rankTierScore == value) return;
-                _rankTierScore = value;
-                RaisePropertyChanged(nameof(RankTierScore));
-            }
-        }
-
         private double _soloRankScore;
         public double SoloRankScore
         {
@@ -1568,8 +1529,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 RaisePropertyChanged(nameof(SurviveTime));
             }
         }
-
-        public System.Action<TeamMemberInfo>? RefreshAction { get; set; }
 
         public System.Action<TeamMemberInfo>? NavigateToStatsAction { get; set; }
 

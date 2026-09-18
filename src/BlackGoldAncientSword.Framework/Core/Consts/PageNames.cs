@@ -13,7 +13,6 @@
         public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
         public const string BattleDetailPage = nameof(BattleDetailPage);
         public const string AuthChallengePage = nameof(AuthChallengePage);
-        public const string SponsorPage = nameof(SponsorPage);
         public const string UpdateLogPage = nameof(UpdateLogPage);
         public const string TestTrioPage = nameof(TestTrioPage);
         public const string TestDuoPage = nameof(TestDuoPage);

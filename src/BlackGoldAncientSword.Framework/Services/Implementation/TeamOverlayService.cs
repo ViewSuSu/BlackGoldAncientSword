@@ -96,7 +96,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
 
             _viewModel = new TeamOverlayViewModel();
             _viewModel.DontShowAgainChanged += OnDontShowAgainChanged;
-            _viewModel.RefreshRequested += OnRefreshRequested;
             _viewModel.CloseRequested += OnOverlayDismissed;
             _viewModel.NavigateToTeamInfoRequested += OnNavigateToTeamInfoRequested;
             _window = new TeamOverlayWindow(_viewModel);
@@ -109,11 +108,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
                 _settingsService.Current.ShowTeamOverlayDuringHeroSelection = false;
                 _settingsService.SaveAsync().SafeFireAndForget("TeamOverlayService.SaveDismissed");
             }
-        }
-
-        private void OnRefreshRequested(object? sender, EventArgs e)
-        {
-            RefreshAction?.Invoke();
         }
 
         private void OnOverlayDismissed(object? sender, EventArgs e)

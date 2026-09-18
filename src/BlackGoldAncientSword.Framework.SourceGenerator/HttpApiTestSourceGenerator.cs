@@ -1,21 +1,16 @@
-using System.Text;
+﻿using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
 namespace BlackGoldAncientSword.Framework.SourceGenerator
 {
-    /// <summary>
-    /// 基于 api-definitions.json 生成 Tests 项目下的 HTTP API 测试代码。
-    /// 仅在 MSBuild 属性 BgaSourceGenMode 为 "Tests" 时生成，避免在 Framework 项目误生成测试。
-    /// 与 HttpApiSourceGenerator 共享同一份 api-definitions.json，确保测试与生产代码始终对齐。
-    /// </summary>
+
     [Generator]
     internal class HttpApiTestSourceGenerator : IIncrementalGenerator
     {
         private const string ModeTests = "Tests";
         private const string ModeClient = "Client";
 
-        // Framework 项目命名空间（项目内部约定，硬编码以避免 Tests 项目额外配置）
         private const string FrameworkHttpNs = "BlackGoldAncientSword.Framework.Http";
         private const string FrameworkGeneratedNs = "BlackGoldAncientSword.Framework.Http.Generated";
         private const string FrameworkConstsNs = "BlackGoldAncientSword.Framework.Core.Consts";
@@ -54,7 +49,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             var (json, rootNs) = input.inner;
             var mode = input.mode;
 
-            // 仅在 Tests 模式下生成测试代码
             if (!string.Equals(mode, ModeTests, StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -78,8 +72,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             }
         }
 
-        // ==================== Client Tests ====================
-
         private void GenerateClientTests(SourceProductionContext context, ApiDefinitionsRoot root, string testNs)
         {
             var sb = new StringBuilder();
@@ -100,10 +92,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine();
             sb.AppendLine($"namespace {testNs}");
             sb.AppendLine("{");
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 自动生成：验证 NarakaApiClient 暴露的静态方法与 api-definitions.json 定义一致。");
-            sb.AppendLine("    /// 通过反射断言方法名、参数顺序与类型、返回类型，保护 SourceGenerator 契约不被破坏。");
-            sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public class GeneratedApiClientTests");
             sb.AppendLine("    {");
             sb.AppendLine("        private static readonly Type ClientType = typeof(NarakaApiClient);");
@@ -142,7 +130,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             var reqType = hasBody ? api.RequestBody!.Type : null;
             var resType = api.ResponseBody?.Type;
 
-            // 构造 (参数名, typeof 表达式) 列表
             var paramSpecs = new List<(string name, string typeOf)>();
             if (api.PathParameters != null)
             {
@@ -156,8 +143,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             {
                 foreach (var qp in api.QueryParameters)
                 {
-                    // queryParameters 在生成代码里恒为 nullable
-                    paramSpecs.Add((qp.Key, ToTypeOfExpr(qp.Value, true, enumTypeNames)));
+                    paramSpecs.Add((ApiDefinitionsParser.ToCamelCase(qp.Key), ToTypeOfExpr(qp.Value, true, enumTypeNames)));
                 }
             }
             if (hasBody)
@@ -173,7 +159,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine($"            Assert.NotNull(method);");
             sb.AppendLine($"            Assert.Equal({returnTypeExpr}, method!.ReturnType);");
             sb.AppendLine($"            var ps = method.GetParameters();");
-            // 单参数时使用 Assert.Single 以满足 xUnit2013 风格规范
             if (paramSpecs.Count == 1)
                 sb.AppendLine($"            Assert.Single(ps);");
             else
@@ -187,8 +172,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("        }");
             sb.AppendLine();
         }
-
-        // ==================== DTO Structure Tests ====================
 
         private void GenerateDtoStructureTests(SourceProductionContext context, ApiDefinitionsRoot root, string testNs)
         {
@@ -204,11 +187,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine();
             sb.AppendLine($"namespace {testNs}");
             sb.AppendLine("{");
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 自动生成：验证每个 DTO 类型存在、每个属性使用 [JsonPropertyName] 标注，");
-            sb.AppendLine("    /// 且标注的 JSON 字段名与 api-definitions.json 定义严格一致。");
-            sb.AppendLine("    /// 这是 Newtonsoft → System.Text.Json 迁移的关键回归保护。");
-            sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public class GeneratedApiDtoTests");
             sb.AppendLine("    {");
 
@@ -221,7 +199,7 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             }
 
             foreach (var type in collected)
-                GenerateDtoStructureTest(sb, type);
+                GenerateDtoStructureTest(sb, type, root.Envelope);
 
             sb.AppendLine("    }");
             sb.AppendLine("}");
@@ -229,9 +207,12 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             context.AddSource("GeneratedApiDtoTests.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
-        private void GenerateDtoStructureTest(StringBuilder sb, TypeDefinition type)
+        private void GenerateDtoStructureTest(StringBuilder sb, TypeDefinition type, ApiEnvelopeDefinition envelope)
         {
             var typeName = type.Type;
+
+            var isEnvelope = envelope.IsEnvelope(type);
+            var expectedPropCount = type.Properties.Count + (isEnvelope ? 1 : 0);
 
             sb.AppendLine("        [Fact]");
             sb.AppendLine($"        public void {typeName}_Should_Have_All_Properties_Annotated()");
@@ -239,7 +220,10 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine($"            var t = typeof({typeName});");
             sb.AppendLine($"            Assert.NotNull(t);");
             sb.AppendLine($"            var props = t.GetProperties(BindingFlags.Public | BindingFlags.Instance);");
-            sb.AppendLine($"            Assert.Equal({type.Properties.Count}, props.Length);");
+            if (expectedPropCount == 1)
+                sb.AppendLine("            Assert.Single(props);");
+            else
+                sb.AppendLine($"            Assert.Equal({expectedPropCount}, props.Length);");
 
             foreach (var prop in type.Properties)
             {
@@ -256,8 +240,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("        }");
             sb.AppendLine();
         }
-
-        // ==================== DTO Roundtrip Tests ====================
 
         private void GenerateDtoRoundtripTests(SourceProductionContext context, ApiDefinitionsRoot root, string testNs)
         {
@@ -276,11 +258,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine();
             sb.AppendLine($"namespace {testNs}");
             sb.AppendLine("{");
-            sb.AppendLine("    /// <summary>");
-            sb.AppendLine("    /// 自动生成：DTO 序列化往返测试。");
-            sb.AppendLine("    /// 对每个 DTO 构造示例实例 → 用 NarakaApiClient.JsonOptions 序列化 → 反序列化 → 再次序列化，");
-            sb.AppendLine("    /// 比较两次 JSON 是否一致，捕获 JsonPropertyName 错配、属性 setter 缺失等回归问题。");
-            sb.AppendLine("    /// </summary>");
             sb.AppendLine("    public class GeneratedApiDtoRoundtripTests");
             sb.AppendLine("    {");
 
@@ -310,10 +287,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 sb.AppendLine();
             }
 
-            // DtoSampleFactory 辅助类：基于反射为任意 DTO 生成示例值
-            sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// 反射构造 DTO 示例实例。对每个 public 属性按类型填充确定性示例值，避免依赖手写样例。");
-            sb.AppendLine("        /// </summary>");
             sb.AppendLine("        private static class DtoSampleFactory");
             sb.AppendLine("        {");
             sb.AppendLine("            public static object? Create(Type t)");
@@ -371,8 +344,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             context.AddSource("GeneratedApiDtoRoundtripTests.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
 
-        // ==================== Helpers ====================
-
         private static void CollectAllTypes(TypeDefinition type, HashSet<string> seen, List<TypeDefinition> ordered)
         {
             if (type.NestedTypes != null)
@@ -382,11 +353,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 ordered.Add(type);
         }
 
-        /// <summary>
-        /// 生成参数类型对应的 typeof(...) 表达式。
-        /// - string / List / 自定义类等引用类型：typeof(T)（无论是否 optional，nullable 引用类型在反射里与非 nullable 同一类型）
-        /// - 枚举与内置值类型：optional 时 typeof(T?)，否则 typeof(T)
-        /// </summary>
         private static string ToTypeOfExpr(string defType, bool isOptional, HashSet<string> enumTypes)
         {
             var resolved = ApiDefinitionsParser.ResolveType(defType);
@@ -394,11 +360,9 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             if (enumTypes.Contains(resolved))
                 return isOptional ? $"typeof({resolved}?)" : $"typeof({resolved})";
 
-            // string / List<> / Dictionary<> / 自定义类
             if (ApiDefinitionsParser.IsReferenceType(defType))
                 return $"typeof({resolved})";
 
-            // 内置值类型（double/long/float/bool/decimal/DateTime/Guid）
             return isOptional ? $"typeof({resolved}?)" : $"typeof({resolved})";
         }
     }

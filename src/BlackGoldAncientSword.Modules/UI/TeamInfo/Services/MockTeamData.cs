@@ -20,13 +20,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 UserName = "千面_御剑",
                 DisplayName = "千面_御剑",
                 UID = "100233445",
-                Level = "Lv.120",
+                Level = "LV.120",
                 AvatarUrl = string.Empty,
-                PageRankName = "蚀月2",
+                // 段位名用后端 player_info.level 原文口径（已含子段，如"蚀月Ⅳ"），与 RankScore 对得上。
+                PageRankName = "蚀月Ⅳ",
                 PageStarCount = 0,
                 PageHasStars = false,
-                RankScore = 3488,
-                RankTierScore = 88,
+                RankScore = 3629,
             };
             FillStats(m, round: 120, win: 38, avgKill: 4.2, top5Rate: 32.5, avgDamage: 12560, surviveMin: 18, avgCure: 3200, kd: 4.8);
             return m;
@@ -43,13 +43,12 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 UserName = "八荒·一粟",
                 DisplayName = "八荒·一粟",
                 UID = "100876512",
-                Level = "Lv.96",
+                Level = "LV.96",
                 AvatarUrl = string.Empty,
-                PageRankName = "铂金5",
+                PageRankName = "铂金Ⅴ",
                 PageStarCount = 0,
                 PageHasStars = false,
                 RankScore = 2550,
-                RankTierScore = 50,
             };
             FillStats(m, round: 88, win: 21, avgKill: 2.9, top5Rate: 24.0, avgDamage: 9850, surviveMin: 14, avgCure: 2100, kd: 3.1);
             return m;
@@ -71,7 +70,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             m.Stats["avg_damage"] = avgDamage.ToString("F0");
             m.Stats["avg_cure"] = avgCure.ToString("F0");
             m.Stats["kd"] = kd.ToString("F1");
-            m.Stats["avg_total_live_time"] = $"{surviveMin}分{0:D2}秒";
+            m.Stats["avg_total_live_time"] = $"{surviveMin}.0min";
         }
     }
 }

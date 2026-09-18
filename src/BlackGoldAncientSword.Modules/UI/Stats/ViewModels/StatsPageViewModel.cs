@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http;
+using BlackGoldAncientSword.Framework.Http.Heybox;
 using BlackGoldAncientSword.Framework.Http.Unified;
 using BlackGoldAncientSword.Framework.UI.Controls;
 using System.ComponentModel;
@@ -16,6 +18,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 {
     public class StatsPageViewModel : ViewModelBase
     {
+        private const int FilterRefreshDebounceMs = 1000;
+
         private readonly IPlayerPrefsService _playerPrefsService;
         private readonly ITipMessageService _tipMessage;
         private readonly ILocalizationService _localizationService;
@@ -24,9 +28,16 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         private readonly BattleListLoader _battleListLoader;
         private readonly IUIDispatcher _uiDispatcher;
         private readonly ILocalizedTextProvider _localizedText;
+        private readonly HeyboxRequestCache _requestCache;
         private readonly PropertyChangedEventHandler? _onLanguageChangedHandler;
+        private readonly TrailingDebouncer _filterRefreshDebouncer;
         private CancellationTokenSource? _loadAllCts;
         private CancellationTokenSource? _loadStatsCts;
+        private bool _lastLoadSucceeded;
+        private PrefetchedPlayer? _prefetchedPlayer;
+
+        /// <summary>最近一次拿到的近期场均名次，语言切换时据此重算展示文案。</summary>
+        private double _recentAvgRank;
 
         public StatsPageViewModel(
             IPlayerPrefsService playerPrefsService,
@@ -36,7 +47,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             PlayerStatsLoader playerStatsLoader,
             BattleListLoader battleListLoader,
             IUIDispatcher uiDispatcher,
-            ILocalizedTextProvider localizedText)
+            ILocalizedTextProvider localizedText,
+            HeyboxRequestCache requestCache,
+            PlayerSearchSuggester searchSuggester)
         {
             _playerPrefsService = playerPrefsService;
             _tipMessage = tipMessageService;
@@ -46,11 +59,16 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             _battleListLoader = battleListLoader;
             _uiDispatcher = uiDispatcher;
             _localizedText = localizedText;
+            _requestCache = requestCache;
             _onLanguageChangedHandler = OnLanguageChanged;
+            _filterRefreshDebouncer = new TrailingDebouncer(FilterRefreshDebounceMs, RunFilterRefreshAsync);
+            Suggestions = new PlayerSearchSuggestionsViewModel(uiDispatcher, searchSuggester.FetchAsync);
+            _suggestionDebouncer = new TrailingDebouncer(SuggestionDebounceMs, RunSuggestionSearchAsync);
             _localizationService.PropertyChanged += _onLanguageChangedHandler;
             Seasons = new ObservableCollection<UnifiedSeason>();
             DetailStats = new ObservableCollection<StatEntryItem>();
             RecentBattles = new RangeObservableCollection<RecentBattleDisplayItem>();
+            RefreshStaticLabels();
         }
 
         // === Player Info ===
@@ -121,15 +139,125 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 if (_searchText == value) return;
                 _searchText = value;
                 RaisePropertyChanged(nameof(SearchText));
+                if (_suppressSuggestionSearch) return;
+                _pendingSuggestionKeyword = value;
+                _suggestionDebouncer.Trigger();
             }
         }
 
-        private readonly SearchDebounceGate _searchDebounce = new();
+        /// <summary>
+        /// 程序回填输入框（回到我 / 队友卡跳转 / 选中候选）：只更新展示，不顺带弹出候选下拉。
+        /// 只有用户自己敲进来的内容才该触发候选搜索。
+        /// </summary>
+        private void SetSearchTextSilently(string value)
+        {
+            _suppressSuggestionSearch = true;
+            try
+            {
+                SearchText = value;
+            }
+            finally
+            {
+                _suppressSuggestionSearch = false;
+            }
+        }
+
+        private readonly SearchDebounceGate _searchDebounce = new(SearchDebounceGate.SearchBoxIntervalMilliseconds);
+
+        // 候选下拉：输入停顿 SuggestionDebounceMs 后才去拉第一页。尾沿防抖保证"连续打字只在停下时发一次"，
+        // 同一关键词再被搜到时由请求缓存兜住，不会重复打接口。
+        private const int SuggestionDebounceMs = 500;
+
+        private readonly TrailingDebouncer _suggestionDebouncer;
+        private string _pendingSuggestionKeyword = string.Empty;
+        // 确认候选时会回填输入框，那次回填不该再触发一轮候选搜索。
+        private bool _suppressSuggestionSearch;
+
+        /// <summary>搜索框候选列表：模糊匹配出的候选 + 滚动到底翻页。</summary>
+        public PlayerSearchSuggestionsViewModel Suggestions { get; }
+
+        private System.Threading.Tasks.Task RunSuggestionSearchAsync(CancellationToken debounceCt)
+            => Suggestions.RestartAsync(_pendingSuggestionKeyword);
+
+        /// <summary>当前该被确认的候选：优先高亮项，没有高亮时退到第一条。</summary>
+        public PlayerSearchSuggestionItem? CurrentSuggestion
+        {
+            get
+            {
+                if (!Suggestions.IsOpen) return null;
+                var items = Suggestions.Items;
+                if (items.Count == 0) return null;
+                var index = Suggestions.SelectedIndex;
+                if (index < 0 || index >= items.Count) index = 0;
+                return items[index];
+            }
+        }
+
+        /// <summary>输入框里按上下键时在候选里移动高亮（焦点留在输入框，方便接着打字）。</summary>
+        public void MoveSuggestionSelection(int delta)
+        {
+            if (!Suggestions.IsOpen || delta == 0) return;
+            var count = Suggestions.Items.Count;
+            if (count == 0) return;
+
+            var index = Suggestions.SelectedIndex + delta;
+            if (index < 0) index = 0;
+            if (index >= count) index = count - 1;
+            Suggestions.SelectedIndex = index;
+        }
+
+        public void CloseSuggestions() => Suggestions.Close();
+
+        /// <summary>候选列表滚到接近底部时追加下一页（由 View 的滚动事件调用）。</summary>
+        public System.Threading.Tasks.Task LoadMoreSuggestionsAsync() => Suggestions.LoadMoreAsync();
+
+        private DelegateCommand<PlayerSearchSuggestionItem>? _selectSuggestionCommand;
+        public DelegateCommand<PlayerSearchSuggestionItem> SelectSuggestionCommand =>
+            _selectSuggestionCommand ??= new DelegateCommand<PlayerSearchSuggestionItem>(
+                item => _ = SelectSuggestionAsync(item));
+
+        /// <summary>
+        /// 确认某个候选：候选自带角色 ID 与服务器，直接按它取数据，省掉"再按昵称搜一次"。
+        /// 资料取候选里已有的那份，赛季与对局照常拉取（与队伍卡片跳转同一条快照路径）。
+        /// </summary>
+        public async System.Threading.Tasks.Task SelectSuggestionAsync(PlayerSearchSuggestionItem? item)
+        {
+            if (item is null || string.IsNullOrEmpty(item.RoleId)) return;
+
+            // 取消还在等防抖的那次候选搜索（回填本身也不再触发新一轮）。
+            _suggestionDebouncer.Dispose();
+            var displayName = item.DisplayName;
+            if (!string.IsNullOrWhiteSpace(displayName))
+            {
+                SetSearchTextSilently(displayName);
+                _playerPrefsService.Current.PlayerName = displayName;
+            }
+            Suggestions.Close();
+
+            _prefetchedPlayer = new PrefetchedPlayer(
+                item.RoleId,
+                item.Server,
+                item.AvatarUrl,
+                // 候选里没有等级，只有段位；等级空着即可（段位由随后的统计查询回填）。
+                Level: null,
+                Seasons: null,
+                SeasonKey: null);
+
+            await RefreshAllAsync();
+        }
 
         private DelegateCommand? _searchCommand;
         public DelegateCommand SearchCommand =>
             _searchCommand ??= new DelegateCommand(async () =>
             {
+                // 候选下拉开着：回车 / 点放大镜就是确认当前候选，不再按昵称重复搜一次。
+                var suggestion = CurrentSuggestion;
+                if (suggestion is not null)
+                {
+                    await SelectSuggestionAsync(suggestion);
+                    return;
+                }
+
                 if (string.IsNullOrWhiteSpace(SearchText)) return;
                 if (!_searchDebounce.TryEnter())
                 {
@@ -137,6 +265,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     return;
                 }
                 _playerPrefsService.Current.PlayerName = SearchText.Trim();
+                _requestCache.Invalidate();
                 await RefreshAllAsync();
             });
 
@@ -161,12 +290,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     return;
                 }
                 // 查询身份仍用本地登录名（PlayerName == OriginalPlayerName 触发 LoadAllAsync 的
-                // UID 优先分支）；搜索框展示本地 UID（player_id）——UID 存在时显示 UID，否则回退显示名字。
+                // UID 优先分支），所以这里只改查询身份、不动 UID；搜索框回填的是给人看的昵称，
+                // 与队友页本地卡（MarkLocalUserSlot 回写 OriginalPlayerName）口径一致。
                 _playerPrefsService.Current.PlayerName = _playerPrefsService.Current.OriginalPlayerName;
-                var localUid = _playerPrefsService.Current.PlayerId;
-                SearchText = !string.IsNullOrEmpty(localUid)
-                    ? localUid
-                    : _playerPrefsService.Current.OriginalPlayerName;
+                SetSearchTextSilently(_playerPrefsService.Current.OriginalPlayerName);
                 await RefreshAllAsync();
             });
 
@@ -230,15 +357,18 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
         }
 
-        private double _rankTierScore;
-        public double RankTierScore
+        /// <summary>
+        /// 段位卡是否显示积分行。未定级（该模式无段位）时为 false——避免显示"0 分"这种假数据。
+        /// </summary>
+        private bool _showRankScore;
+        public bool ShowRankScore
         {
-            get => _rankTierScore;
+            get => _showRankScore;
             set
             {
-                if (_rankTierScore == value) return;
-                _rankTierScore = value;
-                RaisePropertyChanged(nameof(RankTierScore));
+                if (_showRankScore == value) return;
+                _showRankScore = value;
+                RaisePropertyChanged(nameof(ShowRankScore));
             }
         }
 
@@ -279,52 +409,75 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
 
-        // === Rank Stats ===
-        private string _totalGames = "0";
-        public string TotalGames
+        // === 近期名次（recent_ranks / recent_avg_rank）===
+
+        private bool _hasRecentRanks;
+        public bool HasRecentRanks
         {
-            get => _totalGames;
+            get => _hasRecentRanks;
             set
             {
-                if (_totalGames == value) return;
-                _totalGames = value;
-                RaisePropertyChanged(nameof(TotalGames));
+                if (_hasRecentRanks == value) return;
+                _hasRecentRanks = value;
+                RaisePropertyChanged(nameof(HasRecentRanks));
             }
         }
 
-        private string _topOneCount = "0";
-        public string TopOneCount
+        private string _recentAvgRankDisplay = string.Empty;
+        /// <summary>"场均排名 13.4"。服务端没给时为空串（整块隐藏）。</summary>
+        public string RecentAvgRankDisplay
         {
-            get => _topOneCount;
+            get => _recentAvgRankDisplay;
             set
             {
-                if (_topOneCount == value) return;
-                _topOneCount = value;
-                RaisePropertyChanged(nameof(TopOneCount));
+                if (_recentAvgRankDisplay == value) return;
+                _recentAvgRankDisplay = value;
+                RaisePropertyChanged(nameof(RecentAvgRankDisplay));
             }
         }
 
-        private string _topFiveCount = "0";
-        public string TopFiveCount
+        /// <summary>近期每局名次色块（rank==1 红、≤5 粉、其余灰，颜色由 XAML 触发器按 Rank 判定）。</summary>
+        public ObservableCollection<RecentRankDisplayItem> RecentRankBlocks { get; } = new();
+
+        /// <summary>
+        /// 点名次色块：定位到下方对局列表里的同一局，返回该行交给 View 滚动并选中；找不到返回 null。
+        /// 色块与对局列表是两套筛选口径，目标局不一定落在当前视图里：先按当前视图找，找不到就放开本地
+        /// 模式筛选再找一次，仍找不到就弹提示——静默无反应会被读成"点了没反应"。
+        /// </summary>
+        public RecentBattleDisplayItem? ResolveBattleForRankBlock(RecentRankDisplayItem? block)
         {
-            get => _topFiveCount;
-            set
+            var matchId = block?.MatchId ?? string.Empty;
+            var target = FindVisibleBattle(matchId);
+
+            // 只有确实带了标识、且当前挂着筛选时才放开筛选重找一次，免得白白清掉用户的筛选状态。
+            if (target == null && matchId.Length > 0 && HasBattleFilter)
             {
-                if (_topFiveCount == value) return;
-                _topFiveCount = value;
-                RaisePropertyChanged(nameof(TopFiveCount));
+                ResetBattleFilterCommand.Execute();
+                target = FindVisibleBattle(matchId);
             }
+
+            if (target == null)
+                _tipMessage.ShowInfo(L("Stats.BattleNotInList", "该对局不在下方列表中"));
+
+            return target;
         }
 
-        private string _avgDamage = "0";
-        public string AvgDamage
+        /// <summary>下方对局列表当前是否挂着模式/排数筛选。</summary>
+        private bool HasBattleFilter => _selectedBattleCategory != null || _selectedBattleTeamSize != null;
+
+        private RecentBattleDisplayItem? FindVisibleBattle(string battleId)
+            => RecentBattles.FirstOrDefault(b => b.BattleId == battleId);
+
+        private string _mapColumnHeader = string.Empty;
+        /// <summary>对局列表"地图"列表头文案（本地化）。</summary>
+        public string MapColumnHeader
         {
-            get => _avgDamage;
+            get => _mapColumnHeader;
             set
             {
-                if (_avgDamage == value) return;
-                _avgDamage = value;
-                RaisePropertyChanged(nameof(AvgDamage));
+                if (_mapColumnHeader == value) return;
+                _mapColumnHeader = value;
+                RaisePropertyChanged(nameof(MapColumnHeader));
             }
         }
 
@@ -338,7 +491,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 if (_selectedCategory == value) return;
                 _selectedCategory = value;
                 RaisePropertyChanged(nameof(SelectedCategory));
-                RefreshStats();
+                _filterRefreshDebouncer.Trigger();
             }
         }
 
@@ -351,7 +504,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 if (_selectedTeamSize == value) return;
                 _selectedTeamSize = value;
                 RaisePropertyChanged(nameof(SelectedTeamSize));
-                RefreshStats();
+                _filterRefreshDebouncer.Trigger();
             }
         }
 
@@ -387,7 +540,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 if (_selectedSeason == value) return;
                 _selectedSeason = value;
                 RaisePropertyChanged(nameof(SelectedSeason));
-                RefreshStats();
+                _filterRefreshDebouncer.Trigger();
             }
         }
 
@@ -576,7 +729,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 {
                     { nameof(PageNames.BattleDetailPage), row.BattleId },
                     { "RoleId", _roleId },
-                    { "DataSource", (int)(_sourceContext?.Source ?? DataSource.MiniProgram) },
+                    { "Server", _sourceContext?.Server ?? string.Empty },
+                    { "DataSource", (int)(_sourceContext?.Source ?? DataSource.HeyBox) },
                     { "GameMode", row.GameMode },
                     { "ModeCategoryText", row.GameModeCategoryText },
                     { "ModeTeamSizeText", row.GameModeTeamSizeText },
@@ -680,12 +834,17 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         private string _roleId = string.Empty;
         private PlayerSourceContext? _sourceContext;
 
+        /// <summary>上一次真正加载过的角色 ID：用来判断"换人了没有"，决定要不要先清掉旧结果块。</summary>
+        private string _loadedRoleId = string.Empty;
+
         private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(ILocalizationService.CurrentLanguage))
             {
                 // 排数/大类选项文案由 SeasonFilterBar 控件自行 ResetBindings；此处只刷新本页专有的对局筛选文案。
                 RaisePropertyChanged(nameof(BattleFilterDisplayText));
+                // 本页新增的静态标签（能力评分/地图表头/场均排名）随语言切换刷新。
+                RefreshStaticLabels();
             }
         }
 
@@ -698,10 +857,33 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             var targetPlayer = navigationContext.Parameters
                 .GetValue<string>(NavigationParameterKeys.TargetPlayerName);
 
+            // 队伍卡片还会把它已经拿到的数据一起带过来（role_id / server / 头像 / 等级 / 赛季列表）。
+            // 有这份快照就跳过搜索与资料请求，直接渲染。
+            var prefetchedRoleId = navigationContext.Parameters
+                .GetValue<string>(NavigationParameterKeys.TargetRoleId);
+            _prefetchedPlayer = string.IsNullOrWhiteSpace(prefetchedRoleId)
+                ? null
+                : new PrefetchedPlayer(
+                    prefetchedRoleId!,
+                    navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetServer) ?? string.Empty,
+                    navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetAvatar),
+                    navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetLevel),
+                    navigationContext.Parameters.GetValue<IReadOnlyList<UnifiedSeason>>(NavigationParameterKeys.TargetSeasons),
+                    navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetSeasonKey));
+
             // 基类签名为 void，无法 await——把"确定目标玩家 + 刷新 UI + 拉战绩"整块塞进
             // fire-and-forget async。RefreshAllAsync 内部已有 try/catch 兜底。
             _ = LoadForTargetAndRefreshAsync(targetPlayer);
         }
+
+        /// <summary>队伍卡片带过来的数据快照（用一次即丢）。</summary>
+        private sealed record PrefetchedPlayer(
+            string RoleId,
+            string Server,
+            string? Avatar,
+            string? Level,
+            IReadOnlyList<UnifiedSeason>? Seasons,
+            string? SeasonKey);
 
         /// <summary>
         /// 确定要查询的玩家并刷新战绩。
@@ -727,17 +909,59 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 {
                     AppLog.Error(ex, $"{nameof(StatsPageViewModel)}.{nameof(LoadForTargetAndRefreshAsync)}", "reload prefs failed");
                 }
+
+                // 页面上正看着别人（搜出来的、队友卡跳过来的）时，重新进入本页不该把浏览对象换回自己。
+                // 上面这次 reload 会把 Current.PlayerName 重读成本地账号，若照抄到视图状态并接着查询，
+                // 结果就是"搜了别人、切走再回来又变回自己的数据"。本地账号信息已经刷新过了（回到我可用），
+                // 这里只是保持页面不动。
+                if (IsShowingOtherPlayer())
+                {
+                    RaisePropertyChanged(nameof(IsLocalUser));
+                    return;
+                }
             }
 
             RaisePropertyChanged(nameof(IsLocalUser));
-            // 查本地用户（targetPlayer 为空，非队友卡片跳转）时搜索框展示本地 UID（player_id），
-            // 与「回到我」一致——UID 唯一可查、不重名；队友跳转仍显示队友名字。
-            var localUid = _playerPrefsService.Current.PlayerId;
-            SearchText = string.IsNullOrWhiteSpace(targetPlayer) && !string.IsNullOrEmpty(localUid)
-                ? localUid
-                : _playerPrefsService.Current.PlayerName;
+            // 搜索框回填本次查询者：本地用户（targetPlayer 为空）回填本地昵称，队友跳转回填队友名。
+            // 两条分支的 PlayerName 都已是目标值（上面刚赋值或刚 reload），直接用即可。
+            // 回填只影响展示——查本地用户时 LoadAllAsync 仍按 PlayerId 走 UID 优先分支。
+            SetSearchTextSilently(_playerPrefsService.Current.PlayerName);
+
+            // 页面上已经在展示这个玩家的数据 → 直接复用，不再请求。切页回来（同一个玩家）零请求，
+            // 只有点搜索图标、或者这一局打完（缓存由"对局结束"事件整体失效）才会重新查。
+            if (IsAlreadyShowingTarget(targetPlayer)) return;
+
             await RefreshAllAsync();
         }
+
+        /// <summary>
+        /// 当前页面上展示的是不是即将查询的这个玩家：本地用户按 role_id 精确比对，
+        /// 队友跳转按昵称比对。上一次加载失败时一律返回 false，让重进页面能重试。
+        /// </summary>
+        private bool IsAlreadyShowingTarget(string? targetPlayer)
+        {
+            if (!_lastLoadSucceeded || string.IsNullOrEmpty(_roleId)) return false;
+
+            if (string.IsNullOrWhiteSpace(targetPlayer))
+            {
+                return !string.IsNullOrEmpty(_playerPrefsService.Current.PlayerId)
+                       && string.Equals(_roleId, _playerPrefsService.Current.PlayerId, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return !string.IsNullOrEmpty(UserName)
+                   && string.Equals(UserName, targetPlayer.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// 页面上是不是正展示着一个非本地玩家。本地账号的 role_id 未知时一律返回 false——
+        /// 宁可走原来的"重查本地账号"路径，也不要凭猜测把页面钉死在一个不知道是谁的状态上。
+        /// </summary>
+        private bool IsShowingOtherPlayer()
+            => _lastLoadSucceeded
+               && !string.IsNullOrEmpty(UserName)
+               && !string.IsNullOrEmpty(_roleId)
+               && !string.IsNullOrEmpty(_playerPrefsService.Current.PlayerId)
+               && !string.Equals(_roleId, _playerPrefsService.Current.PlayerId, StringComparison.OrdinalIgnoreCase);
 
         protected override void OnNavigatedFromExecute(NavigationContext navigationContext)
         {
@@ -746,6 +970,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             CancelAndDispose(ref _loadAllCts);
             CancelAndDispose(ref _loadStatsCts);
             ClearImageBindings();
+            // 候选下拉是独立浮层，页面离开后不会自己消失，必须显式收起。
+            Suggestions.Close();
             base.OnNavigatedFromExecute(navigationContext);
         }
 
@@ -755,6 +981,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             {
                 if (_localizationService != null && _onLanguageChangedHandler != null)
                     _localizationService.PropertyChanged -= _onLanguageChangedHandler;
+                _filterRefreshDebouncer.Dispose();
+                _suggestionDebouncer.Dispose();
                 CancelAndDispose(ref _loadAllCts);
                 CancelAndDispose(ref _loadStatsCts);
             }
@@ -777,11 +1005,13 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 IsRankMode = IsTianxuanMode(modeCode),
                 Kill = b.Kill,
                 Damage = b.Damage,
-                ScoreNumber = GetRankTierScore(b.RoundRankScore, modeCode),
-                // 分差直接采用 unified 后端算好的 score.delta，不再客户端 end-begin 相减。
+                // 段位列直接展示官方 rating 原值（如 3629）。不再折算"段位内余数"——
+                // 那是客户端自造口径，与网页端显示的数对不上。
+                ScoreNumber = b.RoundRankScore,
+                // 分差直接采用小黑盒算好的 rating_delta，不再客户端 end-begin 相减。
                 ScoreDiff = b.ScoreDelta,
                 RankDisplayText = GetRankNameForScore(b.RoundRankScore, modeCode) + GetSubTierName(b.RoundRankScore, IsTianxuanMode(modeCode)),
-                ShowScoreNumber = ShouldShowTierScore(b.RoundRankScore, modeCode),
+                ShowScoreNumber = ShouldShowRankScore(b.RoundRankScore, modeCode),
                 StarCount = GetStarCount(b.RoundRankScore, modeCode),
                 HasStars = IsTianxuanMode(modeCode) && b.RoundRankScore >= 4500,
                 ScoreDiffDisplay = b.ScoreDelta == 0 && b.BeginRankScore == null
@@ -789,6 +1019,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     : FormatScoreDiff(b.ScoreDelta),
                 BattleTime = FormatUnixTime(b.BattleEndTimeMs),
                 Rating = b.Rating ?? string.Empty,
+                // 地图名取 map_name 原值；scene 是官方残缺映射，不能当地图名用。
+                MapName = string.IsNullOrEmpty(b.MapName)
+                    ? _localizedText.Get("GameMode.Unknown", "未知")
+                    : b.MapName,
+                // 注：play_num（自己队伍人数，三排=3）不单独展示——它与排数列由 mode.teamSize 得出的
+                // "三排/双排/单排"是同一个信息（实测 20 条三排对局 play_num 恒为 3），拼在一起只会重复。
             };
         }
 
@@ -797,6 +1033,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             CancelAndDispose(ref _loadStatsCts);
             _loadStatsCts = new CancellationTokenSource();
             await LoadStatsAsync(_loadStatsCts.Token);
+        }
+
+        private async System.Threading.Tasks.Task RunFilterRefreshAsync(CancellationToken debounceCt)
+        {
+            if (debounceCt.IsCancellationRequested) return;
+            await _uiDispatcher.InvokeAsync(() => RefreshStats()).ConfigureAwait(false);
         }
 
         private static void CancelAndDispose(ref CancellationTokenSource? cts)
@@ -826,11 +1068,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             PageRankName = string.Empty;
             PageStarCount = 0;
             PageHasStars = false;
-            RankTierScore = 0;
-            TotalGames = "0";
-            TopOneCount = "0";
-            TopFiveCount = "0";
-            AvgDamage = "0";
+            ShowRankScore = false;
+            ClearRecentRanks();
             DetailStats.Clear();
             RecentBattles.Clear();
             _allBattles.Clear();
@@ -841,6 +1080,39 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             RaisePropertyChanged(nameof(BattleFilterDisplayText));
             IsBattleFilterOpen = false;
             HasNoBattleResult = false;
+        }
+
+        /// <summary>
+        /// 换到另一个玩家时先清掉上一个玩家的结果块（赛季 / 段位卡 / 统计 / 名次色块 / 对局列表）。
+        /// <para>
+        /// 这几块是各自独立加载、各自吞异常的：任何一块被限流或超时没回来，它就不会被覆盖，
+        /// 旧玩家的数据会一直挂在页面上——表现就是"顶部已经是新玩家的昵称和 UID，下面还是上一个人的数据"。
+        /// 宁可空着（各自有 loading / 占位），也不能把别人的数据挂在这个人的名下。
+        /// </para>
+        /// <para>同一个玩家重复查询不动它：数据本来就是他的，清一遍只会白白闪一下。</para>
+        /// </summary>
+        private void ResetResultBlocksFor(string roleId)
+        {
+            if (string.Equals(_loadedRoleId, roleId, StringComparison.OrdinalIgnoreCase)) return;
+            _loadedRoleId = roleId;
+
+            Seasons.Clear();
+            _selectedSeason = null;
+            RaisePropertyChanged(nameof(SelectedSeason));
+
+            ClearRecentRanks();
+            DetailStats.Clear();
+            ResetRankCardToUnranked();
+
+            _selectedBattleCategory = null;
+            _selectedBattleTeamSize = null;
+            _allBattles.Clear();
+            RecentBattles.Clear();
+            HasNoBattleResult = false;
+            IsBattleFilterOpen = false;
+            RaisePropertyChanged(nameof(SelectedBattleCategory));
+            RaisePropertyChanged(nameof(SelectedBattleTeamSize));
+            RaisePropertyChanged(nameof(BattleFilterDisplayText));
         }
 
         /// <summary>
@@ -898,6 +1170,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             StatsProgress = 0;
 
             var success = await LoadAllAsync(ct);
+            _lastLoadSucceeded = success;
 
             if (!ct.IsCancellationRequested && success)
             {
@@ -935,15 +1208,53 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
             try
             {
-                // 查的是本地用户时优先用本地 UID（player_prefs 的 player_id）：UID 唯一、不重名，
-                // 用户名可能重名/查无。判断"是否本地用户"用 PlayerName == OriginalPlayerName。
-                var localUid =
+                // 队伍卡片带了快照：直接渲染，不搜索、也不请求资料与赛季。
+                // 只剩对局列表要取——那是卡片从来没有的数据。
+                if (_prefetchedPlayer is { } prefetched)
+                {
+                    _prefetchedPlayer = null;
+                    _roleId = prefetched.RoleId;
+                    _sourceContext = new PlayerSourceContext(prefetched.RoleId, prefetched.Server);
+                    ResetResultBlocksFor(prefetched.RoleId);
+                    var prefetchedCtx = _sourceContext;
+                    var prefetchedSeasons = prefetched.Seasons;
+
+                    await _uiDispatcher.InvokeAsync(() =>
+                    {
+                        UserName = localName;
+                        UID = prefetched.RoleId;
+                        AvatarUrl = prefetched.Avatar ?? string.Empty;
+                        Level = prefetched.Level ?? string.Empty;
+                        IsPlayerInfoLoading = false;
+
+                        if (prefetchedSeasons is not { Count: > 0 }) return;
+
+                        Seasons.Clear();
+                        foreach (var season in prefetchedSeasons) Seasons.Add(season);
+
+                        var target = Seasons.FirstOrDefault(s => s.SeasonKey == prefetched.SeasonKey) ?? Seasons[0];
+                        if (Equals(SelectedSeason, target)) RefreshStats();
+                        else SelectedSeason = target;
+                    }).ConfigureAwait(false);
+
+                    // 没带赛季列表（比如队伍页还没加载完）才退回原路径去取。
+                    if (prefetchedSeasons is not { Count: > 0 })
+                        await ApplySeasonsAsync(prefetchedCtx, ct).ConfigureAwait(false);
+
+                    await ApplyBattlesAsync(prefetchedCtx, ct).ConfigureAwait(false);
+                    return true;
+                }
+
+                // 查的是本地用户时，用本地 role_id（player_prefs 的 player_id）在搜索结果里**精确挑人**：
+                // role_id 唯一，昵称可能重名。判断"是否本地用户"用 PlayerName == OriginalPlayerName。
+                // 注意 role_id 不能当搜索关键词——搜索接口只吃昵称，传 role_id 会静默返回空列表。
+                var localRoleId =
                     !string.IsNullOrEmpty(_playerPrefsService.Current.OriginalPlayerName)
                     && string.Equals(localName, _playerPrefsService.Current.OriginalPlayerName, StringComparison.OrdinalIgnoreCase)
                         ? _playerPrefsService.Current.PlayerId
                         : null;
 
-                var search = await _playerStatsLoader.SearchRoleByUidThenNameAsync(localUid, localName, ct);
+                var search = await _playerStatsLoader.SearchLocalPlayerAsync(localRoleId, localName, ct);
                 if (search == null || string.IsNullOrEmpty(search.RoleIdSimple))
                 {
                     ShowNotFound = true;
@@ -952,7 +1263,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     return false;
                 }
                 _roleId = search.RoleIdSimple;
-                _sourceContext = new PlayerSourceContext(_roleId, search.DataSource);
+                _sourceContext = new PlayerSourceContext(_roleId, search.Server);
+                ResetResultBlocksFor(_roleId);
                 var ctx = _sourceContext;
 
                 // 三块数据（玩家信息 / 赛季 / 对局列表）彼此无依赖：并行发起，且各自完成即绑定自己的 UI，
@@ -960,7 +1272,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 // 把 userInfo（约 1s）也拖成 5s 才显示——用户整页转圈无法操作。拆开后玩家信息一秒即出，
                 // 对局列表区自己转圈，谁快谁先亮。三个 Apply* 各自 try/catch + 关自己的 loading，互不影响。
                 var userInfoApply = ApplyUserInfoAsync(ctx, localName, ct);
-                var seasonsApply = ApplySeasonsAsync(ct);
+                var seasonsApply = ApplySeasonsAsync(ctx, ct);
                 var battlesApply = ApplyBattlesAsync(ctx, ct);
 
                 // search 已成功即代表"找到玩家"，"搜索成功"提示不必等三块数据全部绑定完。
@@ -1004,9 +1316,20 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 if (userInfo != null)
                 {
                     UserName = string.IsNullOrEmpty(userInfo.RoleName) ? localName : userInfo.RoleName;
-                    Level = $"Lv.{(int)userInfo.RoleLevel}";
+                    // 官方口径是大写 "LV."。服务端没下发 lv 时解析成 0，此时不显示——
+                    // 显示「LV.0」比不显示更像故障。
+                    Level = userInfo.RoleLevel > 0 ? $"LV.{(int)userInfo.RoleLevel}" : string.Empty;
                     UID = userInfo.Uid;
                     AvatarUrl = userInfo.HeadIcon;
+                }
+                else
+                {
+                    // 资料没回来：昵称用本次查询的目标名（搜索阶段已经确认过是这个人），
+                    // 但 UID / 头像 / 等级必须清掉——留着就是上一个玩家的。
+                    UserName = localName;
+                    Level = string.Empty;
+                    UID = string.Empty;
+                    AvatarUrl = string.Empty;
                 }
                 PlayerInfoProgress = 100;
             }
@@ -1026,22 +1349,24 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
         /// <summary>赛季列表：绑定后选中当前赛季，触发 LoadStatsAsync 拉取该赛季统计。</summary>
-        private async System.Threading.Tasks.Task ApplySeasonsAsync(CancellationToken ct)
+        private async System.Threading.Tasks.Task ApplySeasonsAsync(PlayerSourceContext ctx, CancellationToken ct)
         {
             try
             {
-                var seasonsResult = await _playerStatsLoader.FetchSeasonsAsync(ct);
+                var (seasons, currentSeasonKey) = await _playerStatsLoader.FetchSeasonsAsync(ctx, ct);
                 ct.ThrowIfCancellationRequested();
                 Seasons.Clear();
-                if (seasonsResult != null)
-                    foreach (var s in seasonsResult) Seasons.Add(s);
+                foreach (var s in seasons) Seasons.Add(s);
 
                 if (Seasons.Count > 0)
                 {
+                    // 默认选中**服务端回显的当前赛季**，而不是写死第一项：第一项是「全部」（pre-01），
+                    // 而服务端在不传 season 时用的是当前赛季——选中项与真实数据对不上。
+                    var target = Seasons.FirstOrDefault(s => s.SeasonKey == currentSeasonKey) ?? Seasons[0];
+
                     // SelectedSeason 赋值会触发 RefreshStats → LoadStatsAsync，由其 finally 关闭 IsStatsLoading。
                     // 但重复查同一玩家时新旧值可能相等（setter 短路不触发 RefreshStats），会让 IsStatsLoading
                     // 悬空转圈——此时显式刷新一次统计。
-                    var target = Seasons[0];
                     if (Equals(SelectedSeason, target))
                         RefreshStats();
                     else
@@ -1161,7 +1486,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
        private async System.Threading.Tasks.Task LoadStatsAsync(CancellationToken ct)
         {
             if (_sourceContext == null || string.IsNullOrEmpty(_roleId) || SelectedSeason == null)
+            {
+                // 没有可查的目标（换玩家的空窗期、或没有赛季可选）。必须顺手关掉转圈：
+                // 上游 RefreshAllAsync / 筛选变更已经置过 IsStatsLoading=true，直接 return 会让统计区永久转圈。
+                IsStatsLoading = false;
                 return;
+            }
 
             IsStatsLoading = true;
             StatsProgress = 0;
@@ -1170,12 +1500,14 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 var gameMode = GameModeExtensions.FromCategoryAndTeamSize(_selectedCategory, _selectedTeamSize);
 
                 var stats = await _playerStatsLoader.FetchPlayerStatsAsync(
-                    _sourceContext, SelectedSeason.Code, gameMode, ct);
+                    _sourceContext, SelectedSeason.SeasonKey, gameMode, ct);
 
                 if (stats == null)
                 {
                     // stats 为 null 意味着 Loader 层已按静默契约吞掉未知底层异常（无 msg 可展示）；
                     // 若是后端业务错误，NarakaApiException 会冒泡到下面的 catch，那里才是弹 msg 的入口。
+                    // 清掉依赖本次响应的块，避免残留上一次模式的数据。
+                    ClearRecentRanks();
                     return;
                 }
 
@@ -1189,26 +1521,31 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     var grade = stats.Grade!;
                     RankName = grade.GradeName;
                     RankIcon = grade.GradeIcon;
+                    // RankScore 就是官方唯一的那个数（player_info.rating，如 3629），段位卡直接展示它。
                     RankScore = grade.GradeScore;
                     RankLevel = grade.GradeLevel;
-                    // 上行段位文字：段位名 + 折算的子段/星数。
+                    // 上行段位文字：服务端给的段位名（player_info.level）**已经含罗马数字子段**（"蚀月Ⅳ"），
+                    // 只有服务端没给名字时才回退到按分自算，避免拼成"蚀月Ⅳ4"。
                     // - 星阶段位（天玄 >=4500）：名称保持纯段位名，星数由右侧 ⭐图标 + PageStarCount 展示。
-                    // - 非星阶排位段：名称后直接拼子段数字（如“坠日4”）。
-                    // 段位名优先用后端 rank.name；后端未给（该模式无数据）时才按分数自算。
-                    var pageRankBase = !string.IsNullOrEmpty(grade.GradeName)
-                        ? grade.GradeName.Trim()
+                    // - 非星阶排位段且名字是自算的：名称后补子段数字（如"坠日4"）。
+                    var serverGradeName = grade.GradeName?.Trim() ?? string.Empty;
+                    var hasServerGradeName = !string.IsNullOrEmpty(serverGradeName);
+                    var pageRankBase = hasServerGradeName
+                        ? serverGradeName
                         : GetRankNameForScore(grade.GradeScore, (int)gameMode);
                     PageStarCount = GetStarCount(grade.GradeScore, (int)gameMode);
                     PageHasStars = IsTianxuanMode((int)gameMode) && grade.GradeScore >= 4500;
-                    PageRankName = PageHasStars
+                    PageRankName = hasServerGradeName || PageHasStars
                         ? pageRankBase
                         : pageRankBase + GetSubTierName(grade.GradeScore, IsTianxuanMode((int)gameMode));
-                    RankTierScore = GetRankTierScore(grade.GradeScore, (int)gameMode);
+                    ShowRankScore = grade.GradeScore > 0;
                 }
                 else
                 {
                     ResetRankCardToUnranked();
                 }
+
+                ApplyRecentRanks(stats);
 
                 DetailStats.Clear();
                 if (stats.Stats != null && stats.Stats.Count > 0)
@@ -1227,21 +1564,15 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         DetailStats.Add(new StatEntryItem
                         {
                             Label = label,
-                            Value = value
+                            Value = value,
+                            // overview[] 的 S/A 角标：空串=服务端没给评级，UI 不渲染。
+                            Grade = s.Grade,
+                            HasGrade = !string.IsNullOrEmpty(s.Grade),
                         });
                     }
-                    // Parse specific rank stats from the dynamic list
-                    TotalGames = FindStatValue(stats.Stats, "对局", "场次", "game", "battle", "round");
-                    TopOneCount = FindStatValue(stats.Stats, "第一", "冠军", "吃鸡", "champion", "top1", "win", "夺冠");
-                    TopFiveCount = FindStatValue(stats.Stats, "前五", "top5");
-                    AvgDamage = FindStatValue(stats.Stats, "场均伤害", "场均", "伤害", "damage", "avgDamage");
                 }
                 else
                 {
-                    TotalGames = "0";
-                    TopOneCount = "0";
-                    TopFiveCount = "0";
-                    AvgDamage = "0";
                     // 未定级/该模式无数据：与网页 core-stats 一致，仍显示固定指标标题、值用 "-" 占位，
                     // 而非整块空白。
                     AddPlaceholderStats();
@@ -1266,6 +1597,43 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
         
+        /// <summary>近期名次块：平均名次文案 + 每局名次色块（服务端未返回时整块隐藏）。</summary>
+        private void ApplyRecentRanks(UnifiedPlayerStats stats)
+        {
+            _recentAvgRank = stats.RecentAvgRank;
+            RecentRankBlocks.Clear();
+            foreach (var r in stats.RecentRanks)
+                RecentRankBlocks.Add(new RecentRankDisplayItem { MatchId = r.MatchId, Rank = r.Rank, Display = FormatRankPosition(r.Rank) });
+
+            HasRecentRanks = RecentRankBlocks.Count > 0 || _recentAvgRank > 0;
+            RecentAvgRankDisplay = _recentAvgRank > 0
+                ? $"{L("Stats.RecentAvgRank", "场均排名")} {FormatScoreValue(_recentAvgRank)}"
+                : string.Empty;
+        }
+
+        /// <summary>名次色块提示文案（"第 13 名 · 点击定位对局"）。</summary>
+        private string FormatRankPosition(int rank)
+            => string.Format(CultureInfo.InvariantCulture, L("Stats.RankPosition", "第 {0} 名 · 点击定位对局"), rank);
+
+        /// <summary>整数不带小数点，小数保留一位（"96.7"）。服务端下发的是展示用原文，不折算单位。</summary>
+        private static string FormatScoreValue(double value)
+            => value == Math.Floor(value)
+                ? ((long)value).ToString(CultureInfo.InvariantCulture)
+                : value.ToString("0.#", CultureInfo.InvariantCulture);
+
+        /// <summary>页面上的静态标签（表头/场均排名）——语言切换或初始化时刷新。</summary>
+        private void RefreshStaticLabels()
+        {
+            MapColumnHeader = L("Stats.Header.Map", "地图");
+            if (_recentAvgRank > 0)
+                // 名次色块与「场均排名」都来自 home/data 的 recent_ranks/recent_avg_rank，
+                // **随赛季/模式筛选变化**；而下面的对局列表来自 match/list（不传筛选参数）。
+                // 两块紧挨着竖排，必须把口径写出来，否则切筛选时"色块换了、列表没换"会被读成同一批。
+                RecentAvgRankDisplay =
+                    $"{L("Stats.RecentRanksScope", "近 20 局（当前模式）")} · " +
+                    $"{L("Stats.RecentAvgRank", "场均排名")} {FormatScoreValue(_recentAvgRank)}";
+        }
+
         private string FormatStatLabel(string? key, string? fallbackName)
         {
             if (!string.IsNullOrEmpty(key) && StatKeyToResourceKey.TryGetValue(key, out var resourceKey))
@@ -1289,7 +1657,16 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             PageRankName = _localizedText.Get("Stats.Unranked", "未定级");
             PageStarCount = 0;
             PageHasStars = false;
-            RankTierScore = 0;
+            // 未定级没有积分可言，隐藏积分行（保留 RankScore=0 供其它逻辑复用）。
+            ShowRankScore = false;
+        }
+
+        /// <summary>清空近期名次块（recent_ranks 缺席时整块隐藏）。</summary>
+        private void ClearRecentRanks()
+        {
+            HasRecentRanks = false;
+            RecentAvgRankDisplay = string.Empty;
+            RecentRankBlocks.Clear();
         }
 
         /// <summary>
@@ -1309,21 +1686,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 DetailStats.Add(new StatEntryItem { Label = label, Value = "-" });
         }
 
-        private static string FindStatValue(List<UnifiedStatEntry> stats, params string[] keyPatterns)
-        {
-            foreach (var s in stats)
-            {
-                var label = string.IsNullOrEmpty(s.Name) ? s.Key : s.Name;
-                label = label.ToLowerInvariant();
-                foreach (var pattern in keyPatterns)
-                {
-                    if (label.Contains(pattern.ToLowerInvariant()))
-                        return string.IsNullOrEmpty(s.Value) ? "0" : s.Value;
-                }
-            }
-            return "0";
-        }
-
         private string FormatSurvivalTime(string secondsStr)
         {
             if (double.TryParse(secondsStr, out double seconds))
@@ -1338,11 +1700,17 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
         /// <summary>
-        /// 模式名优先取后端 mode.name（与网页一致）；后端未给（dashen 源 mode 为 null）时显示"未知模式"。
+        /// 模式名。小黑盒的对局项不带模式名，但带 <c>battle_tid</c>；由它反查出 GameMode 再取本地化名。
+        /// 两者都没有（无法归类的对局）时显示"未知模式"。
         /// </summary>
         private string ResolveModeName(UnifiedRecentBattleItem b)
         {
             if (!string.IsNullOrEmpty(b.ModeName)) return b.ModeName!;
+
+            var gm = TryResolveGameMode(b.GameMode);
+            if (gm != null)
+                return _localizedText.Get("GameMode." + gm.Value, gm.Value.ToString());
+
             return _localizedText.Get("GameMode.Unknown", "未知");
         }
 
@@ -1444,6 +1812,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
         private static string FormatUnixTime(long unixMilliseconds)
         {
+            // 服务端漏发 time 时下游给的是 0；FromUnixTimeMilliseconds(0) 会格式化成
+            // "1970/01/01 08:00" 这种假时间，宁可留空也不要显示它。
+            if (unixMilliseconds <= 0) return string.Empty;
+
             try
             {
                 var dt = DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds).LocalDateTime;
@@ -1520,25 +1892,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             return "(" + sign + diff + ")";
         }
 
-        private static double GetRankTierScore(double score, int gameMode = 0)
-        {
-            var isTianxuan = IsTianxuanMode(gameMode);
-            if (!isTianxuan) return score;
-
-            if (score >= 4500)
-                return (score - 4500) % 100; // 星阶段位内分数
-
-            if (score >= 1000)
-            {
-                var tierBase = GetTierBase(score, true);
-                return (score - tierBase) % 100; // 子段内分数
-            }
-
-            return score;
-        }
-
         /// <summary>
-        /// 获取段位的起始分数线（该大段的最低分）
+        /// 获取段位的起始分数线（该大段的最低分）。段位名/子段名的客户端兜底计算用。
         /// </summary>
         private static double GetTierBase(double score, bool isTianxuan)
         {
@@ -1584,20 +1939,24 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             var tierBase = GetTierBase(score, isTianxuan);
             var offset = score - tierBase;
             var subTierIndex = (int)(offset / 100);
-            var names = new[] { "5", "4", "3", "2", "1" };
+            // 用罗马数字：小黑盒 player_info.level 就是「蚀月Ⅳ」这种形态（子段用罗马数字）。
+            // 自算路径只有在服务端没下发 level 时才会走到，但两处必须同一口径，
+            // 否则同一分段位卡显示「蚀月Ⅳ」、对局列表显示「蚀月4」，用户会以为是两个不同的分。
+            var names = new[] { "Ⅴ", "Ⅳ", "Ⅲ", "Ⅱ", "Ⅰ" };
             if (subTierIndex >= 0 && subTierIndex < names.Length)
                 return names[subTierIndex];
             return string.Empty;
         }
 
         /// <summary>
-        /// 判断是否应该在 DataGrid 行中显示段位分数
+        /// 判断是否应该在 DataGrid 行中显示段位分。
+        /// 现在展示的是官方 rating 原值，所以门槛就是"该模式有段位分"（&gt; 0），
+        /// 不再需要原先为折算余数而设的 1500 分门槛。
         /// </summary>
-        private static bool ShouldShowTierScore(double score, int gameMode)
+        private static bool ShouldShowRankScore(double score, int gameMode)
         {
-            if (IsTianxuanMode(gameMode))
-                return score >= 1500;
-            return false;
+            if (!IsTianxuanMode(gameMode)) return false;
+            return score > 0;
         }
     }
 
@@ -1605,6 +1964,20 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
     {
         public string Label { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
+        /// <summary>服务端下发的指标评级角标（S/A/B/C/D）。空串=没给评级。</summary>
+        public string Grade { get; set; } = string.Empty;
+        /// <summary>是否有评级角标。空串不渲染占位。</summary>
+        public bool HasGrade { get; set; }
+    }
+
+    /// <summary>近期单局名次色块（rank==1 红、≤5 粉、其余灰，由 XAML 触发器按 Rank 判定）。</summary>
+    public class RecentRankDisplayItem
+    {
+        /// <summary>该局在对局列表里的唯一标识，供点击色块时定位到对应行。</summary>
+        public string MatchId { get; set; } = string.Empty;
+        public int Rank { get; set; }
+        /// <summary>提示文案（"第 13 名 · 点击定位对局"）。</summary>
+        public string Display { get; set; } = string.Empty;
     }
 
     public class RecentBattleDisplayItem
@@ -1619,7 +1992,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string GameModeTeamSizeText { get; set; } = string.Empty;
         public int Kill { get; set; }
         public int Damage { get; set; }
-        /// <summary>本局获得的成就（荣誉徽章）。来自 unified matches 接口 honorTitles 字段。
+        /// <summary>本局获得的成就（荣誉徽章）。来自小黑盒对局详情的 tags 字段——列表接口不下发称号。
         /// 用 ObservableCollection 以便行先渲染、成就图标分批填充后自动通知 UI。</summary>
         public ObservableCollection<HonorTitleDisplayItem> HonorTitles { get; } = new();
         public double ScoreNumber { get; set; }
@@ -1632,6 +2005,8 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         public string BattleTime { get; set; } = string.Empty;
         public bool IsRankMode { get; set; }
         public string Rating { get; set; } = string.Empty;
+        /// <summary>本局地图名（小黑盒 map_name 原值，如"龙隐洞天"）。</summary>
+        public string MapName { get; set; } = string.Empty;
    }
 
     public class HonorTitleDisplayItem
