@@ -12,6 +12,9 @@ namespace BlackGoldAncientSword.Framework.Core.Infrastructure
     {
         public const int DefaultIntervalMilliseconds = 1000;
 
+        /// <summary>搜索框两次查询之间的最小间隔。</summary>
+        public const int SearchBoxIntervalMilliseconds = 5000;
+
         public int IntervalMilliseconds { get; }
 
         private long _lastFireTicks;

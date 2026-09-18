@@ -81,6 +81,13 @@
         <system:String x:Key="Stats.Header.Rank">Rank</system:String>
     <system:String x:Key="Stats.Header.Mode">Mode</system:String>
     <system:String x:Key="Stats.Header.ModeCategory">Rank Mode</system:String>
+    <system:String x:Key="Stats.Header.Map">Map</system:String>
+    <system:String x:Key="Stats.RecentAvgRank">Avg. Rank</system:String>
+    <system:String x:Key="Stats.RecentRanksScope">Last 20 matches (current mode)</system:String>
+    <system:String x:Key="Stats.RankPosition">#{0} · click to locate</system:String>
+    <system:String x:Key="Stats.BattleNotInList">That match isn't in the list below</system:String>
+    <system:String x:Key="Stats.NoLocalUser">No local player info detected</system:String>
+    <system:String x:Key="Stats.SearchSuccess">Search succeeded</system:String>
     <system:String x:Key="Stats.Header.ModeType">Match Type</system:String>
     <system:String x:Key="Stats.Header.Kill">Kills</system:String>
     <system:String x:Key="Stats.Header.Damage">Damage</system:String>
@@ -119,6 +126,9 @@
     <system:String x:Key="Search.Delete">Delete</system:String>
     <system:String x:Key="Search.CopySuccess">Copied!</system:String>
     <system:String x:Key="Search.TooFast">Clicking too fast, please try again later</system:String>
+    <system:String x:Key="Search.SuggestionsLoading">Searching…</system:String>
+    <system:String x:Key="Search.SuggestionsEmpty">No matching players</system:String>
+    <system:String x:Key="Search.SuggestionsLoadingMore">Loading more…</system:String>
 
     <system:String x:Key="Startup.CheckingUpdates">Checking for updates…</system:String>
     <system:String x:Key="Startup.PleaseWait">Please wait until the check completes</system:String>
@@ -154,10 +164,9 @@
     <system:String x:Key="Nav.Personal">Personal</system:String>
     <system:String x:Key="Nav.Announcement">Announcement</system:String>
     <system:String x:Key="Nav.Feedback">Feedback</system:String>
-    <system:String x:Key="Nav.Sponsor">Sponsor</system:String>
     <system:String x:Key="Auth.User.Login">Sign in</system:String>
+    <system:String x:Key="Auth.User.LoginSuccess">Signed in</system:String>
     <system:String x:Key="Auth.User.Logout">Sign out</system:String>
-    <system:String x:Key="Auth.User.RoleNormal">User</system:String>
     <system:String x:Key="Auth.User.Anonymous">Not signed in</system:String>
     <system:String x:Key="Home.NoLocalData">No local player data found. Launch NarakaBladepoint first.</system:String>
     <system:String x:Key="Home.PlayerNotFound">Player not found on server.</system:String>
@@ -292,9 +301,7 @@
     <system:String x:Key="TeamInfo.DiffBestHeal">Best Heal Diff</system:String>
     <system:String x:Key="TeamInfo.DiffBestAssist">Best Assist Diff</system:String>
     <system:String x:Key="TeamInfo.DiffRankScore">Rank Diff</system:String>
-    <system:String x:Key="TeamInfo.RankScore">Rank Score</system:String>
-    <system:String x:Key="TeamInfo.SelfNoSearch">Your own card — no search needed</system:String>
-    <system:String x:Key="TeamInfo.Title">Team Info</system:String>
+    <system:String x:Key="TeamInfo.RankScore">Rank Score</system:String>    <system:String x:Key="TeamInfo.Title">Team Info</system:String>
     <system:String x:Key="TeamInfo.WaitingForHeroSelect">Waiting to enter hero selection...</system:String>
     <system:String x:Key="TeamInfo.HeroSelectRecognizing">Hero selection, identifying teammates...</system:String>
     <system:String x:Key="TeamInfo.InGameLocked">Match started, team info locked</system:String>
@@ -321,27 +328,11 @@
 
     <!--  Feedback  -->
     <system:String x:Key="Feedback.Title">Feedback</system:String>
-    <system:String x:Key="Feedback.ClientGroupTitle">Client Feedback Group</system:String>
+    <system:String x:Key="Feedback.ClientGroupTitle">Feedback &amp; Community QQ Group</system:String>
     <system:String x:Key="Feedback.ClientGroupQQ">Group 1: 146088141</system:String>
-    <system:String x:Key="Feedback.DataGroupTitle">Data Feedback Group</system:String>
-    <system:String x:Key="Feedback.BotDescription">QQ bot can also query stats</system:String>
-    <system:String x:Key="Feedback.DataGroup1">Group 1: 476074617</system:String>
-    <system:String x:Key="Feedback.DataGroup2">Group 2: 649891198</system:String>
-    <system:String x:Key="Feedback.DataGroup3">Group 3: 966720321</system:String>
-    <system:String x:Key="Feedback.QQEntryRequirement">QQ level 32+ (two suns) auto-approve, alt accounts not allowed</system:String>
     <system:String x:Key="Feedback.WebTitle">Web</system:String>
     <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
     <system:String x:Key="Feedback.Close">Close</system:String>
-
-    <!--  Sponsor  -->
-    <system:String x:Key="Sponsor.AuthorTitle">App Author: 小窗同学</system:String>
-    <system:String x:Key="Sponsor.SelectPaymentMethod">Select Payment Method</system:String>
-    <system:String x:Key="Sponsor.WeChatPay">WeChat</system:String>
-    <system:String x:Key="Sponsor.Alipay">Alipay</system:String>
-    <system:String x:Key="Sponsor.ShowQRCode">Show QR Code</system:String>
-    <system:String x:Key="Sponsor.DataProviderTitle">Sponsor Data Provider</system:String>
-    <system:String x:Key="Sponsor.DataProviderDesc">Data is sourced from naraka.drivod.top. Your sponsorship helps sustain the service.</system:String>
-    <system:String x:Key="Sponsor.Close">Close</system:String>
 
     <system:String x:Key="Settings.Category.Appearance">Appearance</system:String>
     <system:String x:Key="Settings.FontSize.Description">Drag the slider to adjust the app-wide font size. Takes effect immediately.</system:String>

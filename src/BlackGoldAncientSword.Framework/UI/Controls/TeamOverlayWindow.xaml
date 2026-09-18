@@ -207,15 +207,6 @@
                                                Text="{Binding PageStarCount}"
                                                Visibility="{Binding PageHasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 </StackPanel>
-                                <!-- 分段分数 -->
-                                <TextBlock Margin="0,2,0,0"
-                                           HorizontalAlignment="Center"
-                                           FontFamily="Segoe UI, Consolas"
-                                           FontSize="{DynamicResource FontSize.Caption}"
-                                           Foreground="{StaticResource OverlayTextMuted}"
-                                           TextTrimming="CharacterEllipsis">
-                                    <Run Text="{Binding RankTierScore, StringFormat='{}{0}'}" /><Run Text="{DynamicResource Stats.Points}" />
-                                </TextBlock>
                             </StackPanel>
                         </StackPanel>
                     </DataTemplate>

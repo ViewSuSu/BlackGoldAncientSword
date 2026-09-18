@@ -27,7 +27,7 @@ Click the button above to directly download the latest .exe installer.
 
 ## Sign-in 🔐
 
-On startup, the app guides you through a one-time sign-in (slider CAPTCHA → WeChat QR scan). The resulting token is encrypted with **Windows DPAPI** and stored locally, then silently refreshed — no repeated scans needed. When any background request returns 401, a **concurrent single-flight** overlay pops up: a single scan resumes every pending request. All API calls go through the **in-house P7 signature protocol** with a Bearer token, targeting `desktop.naraka.drivod.top`.
+On startup, the app guides you through a one-time **WeChat QR sign-in**, done in-app by default — no browser is opened. The session is encrypted and kept on this machine, then restored automatically on the next launch, so no repeated scans are needed. The avatar button in the title bar lets you sign in again or sign out at any time.
 
 ## Player Stats
 
@@ -82,7 +82,7 @@ When entering hero selection, the app automatically parses teammate UIDs from th
 - **Language**: 简体中文 / English / 繁體中文
 - **Close behavior**: Default action when clicking the close button — *Minimize to taskbar / Exit directly*, with a "remember choice" option
 - **Team overlay during hero selection**: Toggle the bottom-right teammate popup
-- **Account avatar**: Click the top-right avatar to open a popup showing nickname / membership info, with a one-click sign-out button
+- **Account avatar**: Click the top-right avatar to open a popup showing the avatar / nickname, with a one-click sign-out button; when signed out the button reads "Sign in" and opens the QR sign-in overlay
 - **Check for updates**: Manually check and download new releases (delegates to the standalone Updater process, see below)
 - **Current version**
 
@@ -128,7 +128,7 @@ This app only reads game log files (Player.log / CCMini voice log). It does not 
 
 **Q: Why can't I query stats / why is data delayed?**
 
-All stats data comes from the same API powering https://naraka.drivod.top/ , provided by craftwyrd. The app only displays the data. If data is unavailable or delayed, the issue is almost certainly on the API server side. Ask in the data feedback QQ group or contact the API author craftwyrd directly.
+Stats queries are rate-limited, so a burst of queries can be temporarily blocked for a while — retrying later usually helps, and this is very unlikely to be caused by the app itself.
 
 **Q: Why is the installer / program so large?**
 
@@ -173,14 +173,8 @@ Before using this program, please ensure you have read, understood, and agreed t
 
 ## Feedback & Community
 
-- **App Feedback QQ Group**:
+- **Feedback &amp; Community QQ Group**:
   - Group ①: 146088141
-- **Data Feedback QQ Groups** (QQ group bot also available for stats queries):
-  - Group ①: 476074617
-  - Group ②: 649891198
-  - Group ③: 966720321
-  - QQ level 32+ (two suns) required for auto-approval; low-level accounts will be rejected
-- **Web Version**: https://naraka.drivod.top/
 
 ---
 
@@ -218,22 +212,22 @@ Before using this program, please ensure you have read, understood, and agreed t
         ▼                     ▼                     ▼
 ┌────────────┐        ┌──────────────┐        ┌───────────┐
 │  Modules   │        │  Framework   │        │ Resources │
-│ (13 UI page│ ◄────► │ (Core + 18   │ ◄──────│ (i18n XAML│
+│ (12 UI page│ ◄────► │ (Core + 18   │ ◄──────│ (i18n XAML│
 │  modules)  │        │  service IF) │        │  + icons) │
 └─────┬──────┘        └──────┬───────┘        └───────────┘
       │                      │
       │             ┌────────┴───────┐
       ▼             ▼                ▼
 ┌──────────────┐ ┌──────────────┐ ┌────────────────────┐
-│ GameMonitor  │ │  Http/Auth   │ │ Framework.         │
-│ (process/log │ │ (P7 signing +│ │ SourceGenerator    │
-│ state machine│ │ auth subsystem│ │ (compile-time HTTP)│
+│ GameMonitor  │ │ DataAccess   │ │ Framework.         │
+│ (process/log │ │ (data access │ │ SourceGenerator    │
+│ state machine│ │ + session)   │ │ (compile-time code)│
 └──────┬───────┘ └──────┬───────┘ └────────────────────┘
        │                │
        ▼                ▼
 ┌──────────────┐ ┌──────────────────┐
 │ CCMini voice│ │ Stats / teammate │
-│ teammate UID │ │ HTTP data queries│
+│ teammate UID │ │ data queries     │
 └──────────────┘ └──────────────────┘
 ```
 
@@ -244,12 +238,12 @@ Before using this program, please ensure you have read, understood, and agreed t
 | **Main App** | `BlackGoldAncientSword.App` | WinExe | App entry, main window, sidebar nav, tray, launches Updater, concrete implementations of the three sign-in / startup / update gates (AuthChallenge / StartupGate / UpdateGate) |
 | **Updater** | `BlackGoldAncientSword.Update` | WinExe | Standalone online-update process, zero business deps (HandyControl + Serilog only) |
 | **Offline Downloader** | `BlackGoldAncientSword.Downloader` | WinExe | Standalone single-file exe. Streams split installer from Gitee release → launches Setup.exe → self-exits. Zero API deps (uses 302 + CDN) |
-| **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 13 Prism `IModule` pages (including sign-in overlay / sponsor / update log), on-demand loading |
-| **Core Framework** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM base, Prism infra, service abstractions/implementations, HTTP API (with P7 signature / Auth Token / slider CAPTCHA / WeChat QR / unified DTO mapping) |
+| **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 12 Prism `IModule` pages (including sign-in overlay / update log), on-demand loading |
+| **Core Framework** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM base, Prism infra, service abstractions/implementations, data-access layer |
 | **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | ClassLib | Process detection, Player.log parsing, CCMini voice-log teammate recognition, battle state machine |
 | **Resources** | `BlackGoldAncientSword.Resources` | ClassLib | Multi-language XAML resource dictionaries, icons, images |
-| **Source Gen** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | Compile-time HTTP client + test code generation from JSON |
-| **Tests** | `BlackGoldAncientSword.Tests` | xUnit | Game monitor, HTTP, settings, update tests |
+| **Source Gen** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | Compile-time code generation (strongly-typed clients and tests) |
+| **Tests** | `BlackGoldAncientSword.Tests` | xUnit | Game monitor, data access, settings, update tests |
 
 ---
 
@@ -261,8 +255,8 @@ Before using this program, please ensure you have read, understood, and agreed t
 | **UI** | WPF + HandyControl 3.5 | Desktop UI and control library |
 | **Theme** | Custom ModernTheme (celadon / bamboo-green eye-friendly palette) | Soft pale-green surface + deep-green accent + ink text, comfortable for long reading sessions |
 | **MVVM** | Prism 8.1 (`Prism.DryIoc`) | DI container, region navigation, modularization |
-| **HTTP** | Compile-time source generator + `HttpClient` + `DelegatingHandler` | Generate strongly-typed API clients from `api-definitions.json`; request pipeline chains `SignatureHandler` (P7 protocol signing) and `AuthTokenHandler` (Bearer + 401 single-flight refresh) |
-| **Auth** | In-house slider CAPTCHA + WeChat QR sign-in + JWT + Windows DPAPI | Sign-in token encrypted at rest, refreshed before expiry, 401 triggers a single-flight sign-in overlay |
+| **Data access** | Compile-time source generator + `HttpClient` | Clients are generated at compile time rather than hand-written; every query goes through a single data-access layer |
+| **Auth** | In-app WeChat QR sign-in | Session encrypted and kept on this machine, restored automatically on the next launch |
 | **JSON** | `System.Text.Json` (with source-generated context) | Serialization / deserialization (fully replaced Newtonsoft.Json) |
 | **Logging** | Serilog (File / Async sinks) | Unified logging across the whole app (App / Update / Downloader) |
 | **System Tray** | Hardcodet.NotifyIcon.Wpf | Tray icon and context menu |
@@ -282,11 +276,11 @@ src/
 │   ├── Services/                           # App-layer implementations of the three gates (depend on IRegionManager / UI Dispatcher, cannot live in Framework)
 │   │   ├── StartupGateService.cs           # Startup overlay latch (one-way true → false)
 │   │   ├── UpdateGateService.cs            # Update prompt gate (TCS single-flight + completed latch to cover the race where Complete arrives before WaitAsync)
-│   │   └── AuthChallengeService.cs         # 401 single-flight: any number of concurrent 401s only pop the sign-in overlay once
+│   │   └── AuthChallengeService.cs         # Sign-in overlay single-flight: concurrent calls pop it once, all resume together
 │   └── Shell/
 │       ├── MainWindow.xaml(.cs)            # Shell (sidebar + nav + tray + avatar popup + startup overlay layer)
 │       ├── MainWindowViewModel.cs          # Nav commands, game status, update detection, user info
-│       ├── UserProfileViewModel.cs         # Membership info for the avatar popup
+│       ├── UserProfileViewModel.cs         # Avatar / nickname for the avatar popup + sign-out
 │       ├── RegistrationExtensions.cs       # App-layer type registration extensions
 │       └── ToastQueueManager.cs            # Toast message queue management
 │
@@ -318,20 +312,7 @@ src/
 │   │   ├── Events/                         # GameStatus, GameStatusChangedEventArgs, SettingsChangedEvent, TipMessageEvent, OnlineUpdatingStartedEvent, OnlineUpdatingCancelledEvent
 │   │   ├── Extensions/                     # Container registration ext, UrlToImageSourceConverter, value converters, PageTransitionBehavior, etc.
 │   │   └── Infrastructure/                 # IMainContentNavigationService / MainContentNavigator, AppLog / DiagLog, SearchDebounceGate / TrailingDebouncer
-│   ├── Http/
-│   │   ├── Definitions/
-│   │   │   ├── api-definitions.json        # API endpoints / requests / responses (→ source gen)
-│   │   │   └── enums.json                  # Enum definitions
-│   │   ├── Auth/                           # Authentication subsystem (in-house P7 signature + slider CAPTCHA + WeChat QR + JWT + DPAPI)
-│   │   │   ├── ApiSignature/               # P7 request signing: SignatureHandler / RequestSigner / ISignatureTicketProvider
-│   │   │   ├── Captcha/                    # AJ slider CAPTCHA: AjCaptchaService + AesEcbCipher
-│   │   │   ├── WechatQr/                   # WeChat QR sign-in polling: WechatQrLoginService
-│   │   │   ├── Token/                      # Bearer token lifecycle: AuthTokenHandler (DelegatingHandler + 401 single-flight refresh) + AuthTokenState + AuthTokenRefresher + JwtExpiryReader + AuthTokenExpiryMonitor + DpapiAuthTokenStore (Windows DPAPI CurrentUser encrypted at rest)
-│   │   │   ├── MemberProfile/              # Membership info lookup (used by the avatar popup)
-│   │   │   └── SignedOnlyHttpClient.cs     # HttpClient that only mounts the signature handler, not Bearer — for sign-in-time APIs (avoids AuthTokenHandler's recursive 401 interception)
-│   │   ├── Unified/                        # DTO normalization layer: maps different APIs' PlayerStats / Season / RecentBattle / BattleDetail into UnifiedXxx so the UI layer consumes them uniformly
-│   │   ├── JsonFlexibleStringConverter.cs  # Fault-tolerant System.Text.Json converter
-│   │   └── NarakaApiException.cs           # API exception type
+│   ├── Http/                               # Data-access layer
 │   ├── Services/
 │   │   ├── Abstractions/                   # 18 service interfaces (see table below)
 │   │   └── Implementation/                 # Service implementations (some interfaces are implemented in the App layer)
@@ -341,29 +322,28 @@ src/
 │   └── UI/Controls/                        # Custom WPF controls (DataGridWrapPanel, SeasonFilterBar, FontScaleSlider, OverlayHost, TeamOverlayWindow, etc.)
 │
 ├── BlackGoldAncientSword.Framework.SourceGenerator/  # Roslyn source generator
-│   ├── ApiDefinitionsParser.cs             # Parses api-definitions.json
+│   ├── ApiDefinitionsParser.cs             # Source generator: parses the input definitions
 │   ├── EnumSourceGenerator.cs              # Generates enum types
-│   ├── HttpApiSourceGenerator.cs           # Generates NarakaApiClient + DTOs (Client mode)
-│   └── HttpApiTestSourceGenerator.cs       # Generates HTTP API test code (Tests mode)
+│   ├── HttpApiSourceGenerator.cs           # Generates the strongly-typed client + DTOs (Client mode)
+│   └── HttpApiTestSourceGenerator.cs       # Generates interface test code (Tests mode)
 │
-├── BlackGoldAncientSword.Modules/          # UI page modules (13 Prism IModule)
+├── BlackGoldAncientSword.Modules/          # UI page modules (12 Prism IModule)
 │   ├── Mappings/BattleMappingRegister.cs   # Battle DTO mapping registration
-│   ├── Module/                             # 13 IModule registrations
+│   ├── Module/                             # 12 IModule registrations
 │   │   ├── AnnouncementModule.cs           # Announcements
-│   │   ├── AuthChallengeModule.cs          # Sign-in overlay (slider → WeChat QR state machine)
+│   │   ├── AuthChallengeModule.cs          # Sign-in overlay (WeChat QR)
 │   │   ├── BattleDetailModule.cs           # Battle detail overlay (personal / team / top5 tabs)
 │   │   ├── ClosePromptModule.cs            # Close confirmation dialog
 │   │   ├── FeedbackModule.cs               # Feedback
 │   │   ├── HomeModule.cs                   # Home (game status monitor)
 │   │   ├── SearchModule.cs                 # Search history
 │   │   ├── SettingsModule.cs               # Settings
-│   │   ├── SponsorModule.cs                # Sponsor / donate
-│   │   ├── StatsModule.cs                  # Player stats (with 350ms search debounce)
+│   │   ├── StatsModule.cs                  # Player stats (search command behind a 1s click gate)
 │   │   ├── TeamInfoModule.cs               # Team info (voice-log recognition + comparison)
 │   │   ├── UpdateLogModule.cs              # Update log
 │   │   └── UpdateNotificationModule.cs     # New version prompt / launch Updater / release notes fetch
 │   └── UI/                                 # ViewModels + Views per module
-│       ├── AuthChallenge/                  # Sign-in page: Loading→CaptchaPending→CaptchaVerifying→QrLoading→QrPolling→Success/Failed
+│       ├── AuthChallenge/                  # Sign-in page: QrLoading→QrPolling→Success / Failed
 │       ├── BattleDetail/                   # Battle detail: parallel fetch personal / team / top5
 │       ├── Stats/Services/                 # Stats aggregation services (PlayerStatsLoader / BattleListLoader)
 │       ├── TeamInfo/Services/              # TeamMemberLoader / PlayerStatsLoader / MockTeamData
@@ -394,7 +374,7 @@ src/
 │
 └── BlackGoldAncientSword.Tests/            # Test project (xUnit + Moq)
     ├── GameMonitor/                        # Game monitor tests
-    ├── Http/                               # HTTP / JSON fault-tolerance tests (incl. Auth subdirectory)
+    ├── Http/                               # Data-access and JSON fault-tolerance tests
     ├── Settings/                           # Settings sync tests
     ├── Update/                             # Update flow tests
     └── TestData/                           # Test data
@@ -410,7 +390,7 @@ src/
 |---|---|---|---|
 | `IAppAssemblyMarker` | `AppAssemblyMarker` | App | Assembly locator marker (for XAML resource resolution) |
 | `IApplicationLifetime` | `WpfApplicationLifetime` | Framework | Exit / restart application |
-| `IAuthChallengeService` | `AuthChallengeService` | App | Concurrent single-flight sign-in overlay on 401; all awaiters resume together (depends on `IRegionManager` / `IModuleManager` / `IUpdateGateService`) |
+| `IAuthChallengeService` | `AuthChallengeService` | App | Single-flight sign-in overlay: any number of concurrent calls pop it only once, and every awaiter resumes together after the user scans (depends on `IRegionManager` / `IModuleManager` / `IUpdateGateService`) |
 | `IClipboardService` | `WpfClipboardService` | Framework | Clipboard read/write |
 | `IGiteeReleaseService` | `GiteeReleaseService` | Framework | Fetch Gitee releases list and assets (uses 302 tag probe + CDN HEAD probing, zero API deps) |
 | `IImageCacheService` | `ImageCacheService` | Framework | On-disk image cache |
@@ -431,8 +411,6 @@ The three `*Gate*` / `AuthChallenge` interfaces are implemented under `App/Servi
 
 `GameMonitor` exposes its own interfaces (`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService` / `ICcMiniTeammateMonitor`), registered into the DI container via `GameMonitorAutoRegister.cs`.
 
-`Framework/Http/Auth/` and `Framework/Http/Unified/` also expose a family of authentication and DTO interfaces such as `ISignatureTicketProvider`, `ISignedOnlyHttpClient`, `IAjCaptchaService`, `IWechatQrLoginService`, `IAuthTokenStore`, `IAuthTokenState`, `IAuthTokenRefresher`, `IMemberProfileService`, all wired into the DI container via `[Component]` attributes.
-
 ---
 
 ## Core Module Details
@@ -447,7 +425,7 @@ The three `*Gate*` / `AuthChallenge` interfaces are implemented under `App/Servi
 
 ### 2. On-Demand Module Loading
 
-Each of the 13 UI pages is a Prism `IModule`. `ModuleCatalogConfigManager` scans `IModule` types via reflection and registers them as `OnDemand` — modules are only loaded on first navigation, reducing startup time.
+Each of the 12 UI pages is a Prism `IModule`. `ModuleCatalogConfigManager` scans `IModule` types via reflection and registers them as `OnDemand` — modules are only loaded on first navigation, reducing startup time.
 
 ```csharp
 // PageNames.cs
@@ -464,7 +442,6 @@ public static class PageNames
     public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
     public const string BattleDetailPage       = nameof(BattleDetailPage);
     public const string AuthChallengePage      = nameof(AuthChallengePage);
-    public const string SponsorPage            = nameof(SponsorPage);
     public const string UpdateLogPage          = nameof(UpdateLogPage);
     public const string TestTrioPage           = nameof(TestTrioPage);
     public const string TestDuoPage            = nameof(TestDuoPage);
@@ -500,15 +477,15 @@ Recognition flow:
 5. `TeamMemberLoader` queries each teammate (and the local user) by exact UID, arranged with the local user centered, side-by-side with diff vs. the local player
 6. After the match starts it keeps watching `set-uid-vol` increments so teammates leaving / swapping update the cards live; it stops only when the battle ends
 
-### 5. Source-Generated HTTP Client
+### 5. Data-Access Layer
 
-API clients are **not hand-written**. `BlackGoldAncientSword.Framework.SourceGenerator` reads JSON definitions from `Http/Definitions/*.json` at compile time and generates strongly-typed code:
+Data-access clients are **not hand-written**. `BlackGoldAncientSword.Framework.SourceGenerator` generates the strongly-typed code at compile time:
 
-- JSON files describe endpoints, request/response data structures, and enums
+- The strongly-typed clients and DTOs are all emitted by the generator, so interface calls do not sprawl across hand-written code
 - The generator is a **Roslyn Source Generator**, referenced by both Framework and Tests as an Analyzer
 - The `BgaSourceGenMode` MSBuild property switches output:
-  - `Client` mode (Framework) — generates `NarakaApiClient` + DTOs
-  - `Tests` mode (Tests) — generates HTTP API test code
+  - `Client` mode (Framework) — generates the strongly-typed client + DTOs
+  - `Tests` mode (Tests) — generates interface test code
 
 ### 6. Localization
 
@@ -552,43 +529,22 @@ if a new version exists → navigate to UpdateNotificationPage prompt
 AuthChallengeService.ShowAsync (await UpdateGate.WaitAsync first)
    │
    ▼
-if no valid local token → show AuthChallengePage
-     ├── Loading → fetch slider CAPTCHA
-     ├── CaptchaPending / CaptchaVerifying → AjCaptchaService.SolveAsync (AES-ECB-encrypted trajectory)
-     ├── QrLoading → fetch WeChat QR code
-     ├── QrPolling → poll scan status every 2s
-     └── Success → AuthTokenStore persists (DPAPI CurrentUser encrypted)
+if no valid local session → show AuthChallengePage
+     ├── QrLoading → show the sign-in QR code
+     ├── QrPolling → wait for the scan and confirmation
+     └── Success → obtain the session → persist it encrypted
    │
    ▼
 Navigate to HomePage / StatsPage / …
 ```
 
-**Runtime 401 single-flight**: when any API returns 401, `AuthTokenHandler` first tries `AuthTokenRefresher.RefreshAsync` (exchange refresh_token for a new access_token); on failure it invokes `AuthChallengeService.ShowAsync`. **Any number of concurrent 401s only pop the overlay once** — after the user signs in, every awaiter resumes and the original requests are replayed.
+**Sign-in overlay single-flight**: `AuthChallengeService.ShowAsync` is triggered from exactly three places — the startup flow, the "Sign in" button on the title-bar avatar, and "Sign out"; **the overlay pops only once no matter how many calls arrive concurrently**, and every awaiter resumes together after the user scans.
 
-**Token storage**: `DpapiAuthTokenStore` calls `ProtectedData.Protect(scope=CurrentUser)` and writes the ciphertext under the user profile directory; only the same Windows account can decrypt it. `AuthTokenExpiryMonitor` reads `exp` via `JwtExpiryReader` and proactively refreshes 60s before expiry, so real requests don't have to hit 401 first.
+**Session storage**: The session is encrypted and kept under the local user profile (`%APPDATA%`); only the same Windows account can decrypt it. Whether the session is still valid is decided by the server on the next request, and the app re-prompts for a scan once it expires.
 
-### 9. HTTP Request Pipeline (P7 Signing + 401 Single-Flight)
+### 9. Stats Search Debounce
 
-Aside from the sign-in-only `SignedOnlyHttpClient` (signature but no Bearer), the business `HttpClient` chains:
-
-```text
-Business request
-   │
-   ▼
-SignatureHandler        ← pulls a ticket from ISignatureTicketProvider, signs URL/body/timestamp per the P7 protocol, writes custom headers
-   │
-   ▼
-AuthTokenHandler        ← attaches the Bearer token; on 401 refreshes first, and if refresh fails calls AuthChallengeService.ShowAsync and replays the request after the user signs in
-   │
-   ▼
-HttpClientHandler       ← actually sends to https://desktop.naraka.drivod.top
-```
-
-The API base address has migrated from `naraka.drivod.top` to `desktop.naraka.drivod.top` (the dedicated P7 desktop-client domain).
-
-### 10. Stats Search Debounce
-
-`StatsPageViewModel` debounces the search box by 350ms — while the user is typing, only the last input is honored, cutting wasted API calls (especially valuable when the user isn't signed in yet and every request would otherwise trigger a CAPTCHA + QR round-trip).
+The search commands in `StatsPageViewModel` (including "back to me") sit behind a 5s `SearchDebounceGate`: a repeat click within five seconds just shows "clicking too fast, please retry" and sends no request. The search box also offers suggestions after a 500ms typing pause, in a dropdown below the box: the list is virtualized, loads one page at a time and pulls the next page on scroll, and picking a suggestion queries that player directly instead of searching again. The season / team-size / mode filters on both Stats and Team Info use a 1s trailing debounce (`TrailingDebouncer`), collapsing a burst of changes into one query.
 
 ---
 

@@ -3,37 +3,38 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
-using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http;
+using BlackGoldAncientSword.Framework.Http.Generated;
+using BlackGoldAncientSword.Framework.Http.Heybox;
 using BlackGoldAncientSword.Framework.Http.Unified;
 
 namespace BlackGoldAncientSword.Modules.UI.Stats.Services
 {
-    /// <summary>
-    /// Stats 页专用：拉取近期对局列表（归一化到 <see cref="UnifiedRecentBattleItem"/>），
-    /// 并为列表项串行拉取 HonorTitles。业务从 StatsPageViewModel 剥离，
-    /// VM 仅负责将结果映射到 UI 绑定属性。
-    /// </summary>
+
     [Component(ComponentLifetime.Singleton)]
     public sealed class BattleListLoader
     {
-        private readonly PlayerStatsLoader _playerStatsLoader;
 
-        public BattleListLoader(PlayerStatsLoader playerStatsLoader)
+        private const int PageSize = 20;
+
+        private readonly HeyboxRequestCache _cache;
+
+        public BattleListLoader(HeyboxRequestCache cache)
         {
-            _playerStatsLoader = playerStatsLoader;
+            _cache = cache;
         }
 
-        /// <summary>拉取玩家最近对局列表。miniProgram 默认最多 10 条，heyBox 支持 pageSize。</summary>
         public async Task<List<UnifiedRecentBattleItem>?> FetchBattleListAsync(PlayerSourceContext ctx, CancellationToken ct)
         {
             try
             {
-                // unified/matches 已归一化三源；modeCode 传 null 查全部模式，pageNo 从 1 开始。
-                var resp = await NarakaApiClient.GetRecentMatchesAsync(
-                    ctx.Source.ToApiString(), ctx.RoleIdSimple, modeCode: null, pageNo: 1, ct: ct).ConfigureAwait(false);
-                return UnifiedMapper.MapRecentMatches(resp);
+                var resp = await _cache.RunAsync(
+                    $"matchlist|{ctx.Server}|{ctx.RoleId}|{PageSize}|0",
+                    () => NarakaApiClient.GetMatchListAsync(
+                        server: ctx.Server, roleId: ctx.RoleId, limit: PageSize, offset: 0, ct: CancellationToken.None),
+                    ct).ConfigureAwait(false);
+                return UnifiedMapper.MapRecentMatches(resp?.Result?.MatchList);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
@@ -42,6 +43,5 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
                 return null;
             }
         }
-
-   }
+    }
 }

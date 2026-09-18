@@ -48,7 +48,6 @@ namespace BlackGoldAncientSword.App.Shell
                 || FeedbackOverlay.Content != null
                 || ClosePromptOverlay.Content != null
                 || UpdateNotificationOverlay.Content != null
-                || SponsorOverlay.Content != null
                 || UpdateLogOverlay.Content != null;
         }
 

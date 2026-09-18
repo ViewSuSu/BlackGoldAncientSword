@@ -61,7 +61,7 @@
                 <ColumnDefinition Width="3*" />
             </Grid.ColumnDefinitions>
 
-            <!--  三张自包含卡片（搜索框+头像段位+统计行）+ 卡片之间 diff 对比列；
+            <!--  三张自包含卡片（详情入口+头像段位+统计行）+ 卡片之间 diff 对比列；
                  SharedSizeScope 使 diff 列与卡片内统计行逐行对齐  -->
             <views:TeamMemberCard
                 Grid.Column="0"

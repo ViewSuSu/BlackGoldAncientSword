@@ -1,49 +1,38 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Http;
+using BlackGoldAncientSword.Framework.Http.Heybox;
 using BlackGoldAncientSword.Framework.Http.Unified;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
 {
-    /// <summary>
-    /// 拉取单个玩家在指定赛季/游戏模式下的 stats，并把响应解析成 ViewModel 友好的 DTO。
-    /// 与 Stats 模块的同名 Loader 完全独立：此 Loader 仅服务于 TeamInfo 页面的成员对比。
-    /// SearchRecord 后由 VM 构造 <see cref="PlayerSourceContext"/> 分派 miniProgram / heyBox。
-    /// </summary>
+
     [Component(ComponentLifetime.Singleton)]
     public class PlayerStatsLoader
     {
         private readonly ILocalizedTextProvider _localizedText;
-        private readonly GameModeCatalog _gameModeCatalog;
+        private readonly HeyboxHomeDataProvider _homeData;
 
-        public PlayerStatsLoader(ILocalizedTextProvider localizedText, GameModeCatalog gameModeCatalog)
+        public PlayerStatsLoader(ILocalizedTextProvider localizedText, HeyboxHomeDataProvider homeData)
         {
             _localizedText = localizedText;
-            _gameModeCatalog = gameModeCatalog;
+            _homeData = homeData;
         }
 
-        /// <summary>
-        /// 拉取 stats。任何异常向上抛出由调用方处理；返回 null 表示 API 未返回有效数据。
-        /// </summary>
         public async Task<PlayerStatsLoadResult?> LoadAsync(
             PlayerSourceContext ctx,
-            double? seasonId,
+            string? seasonKey,
             GameMode gameMode,
             CancellationToken ct)
         {
-            // unified 接口已归一化三源，不再按 DataSource 分派。
-            // modeCode 优先从 modes 接口动态取（与网页端对齐）；seasonCode 传 null 时后端用当前赛季。
-            var modeCode = await _gameModeCatalog.GetModeCodeAsync(gameMode, ct).ConfigureAwait(false);
-            var seasonCode = seasonId is null or 0
-                ? null
-                : seasonId.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            var resp = await NarakaApiClient.GetSeasonSummaryAsync(
-                ctx.Source.ToApiString(), ctx.RoleIdSimple, modeCode, seasonCode, ct).ConfigureAwait(false);
-            var stats = UnifiedMapper.MapSeasonSummary(resp);
+            var battleTid = gameMode.ToHeyBoxBattleTid().ToString(CultureInfo.InvariantCulture);
+            var home = await _homeData.GetAsync(ctx.RoleId, ctx.Server, seasonKey, battleTid, ct).ConfigureAwait(false);
+            var stats = UnifiedMapper.MapSeasonSummary(home?.Result);
 
             if (stats?.Stats == null) return null;
 
@@ -53,24 +42,17 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 if (string.IsNullOrEmpty(stat.Key)) continue;
                 var val = string.IsNullOrEmpty(stat.Value) ? "-" : stat.Value;
 
-                // unified 的 metric.code 已是统一英文编码，直接入字典；仍走 NormalizeStatKey
-                // 兜底历史中文 key（后端个别源可能回中文 label 当 code）。
                 var normalizedKey = NormalizeStatKey(stat.Key);
 
-                // 存活时间后端返回原始秒数，与战绩页数据详情一致地格式化为 "X分XX秒" 再展示。
                 var displayVal = normalizedKey.Contains("live_time", System.StringComparison.OrdinalIgnoreCase)
                     ? FormatSurvivalTime(val)
                     : val;
                 result.Stats[normalizedKey] = displayVal;
 
-                // 保留后端返回的 metric 顺序 + 显示标签，供队友页动态生成数据行（与战绩页数据详情一致）。
-                // 标签优先用后端 Name，缺失回退 code；百分率行以 value 是否含 '%' 判定，用于 diff 格式化。
                 result.Metrics.Add(new PlayerStatMetric(
                     normalizedKey,
-                    string.IsNullOrEmpty(stat.Name) ? stat.Key : stat.Name,
-                    val.Contains('%')));
+                    string.IsNullOrEmpty(stat.Name) ? stat.Key : stat.Name));
 
-                // 专有属性用归一化后的英文 key 命中，中英文数据源一致。
                 switch (normalizedKey)
                 {
                     case "avg_kill": result.AvgKill = val; break;
@@ -86,28 +68,25 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 result.RankIcon = stats.Grade.GradeIcon;
                 result.RankScore = stats.Grade.GradeScore;
                 var gm = (int)gameMode;
-                // 与战绩页段位卡片保持一致的展示口径（见 StatsPageViewModel）：
-                // 上行段位名 = 优先后端 rank.name，缺失时按分数自算；星阶（>=4500）不拼子段（星由右侧 ⭐+PageStarCount 展示），
-                // 非星阶排位段才在名称后拼子段数字（如“坠日4”）。下行为段位内分数 RankTierScore。
                 result.PageStarCount = GetStarCount(result.RankScore, gm);
                 result.PageHasStars = ((GameMode)gm).IsRankMode() && result.RankScore >= 4500;
-                var pageRankBase = !string.IsNullOrEmpty(stats.Grade.GradeName)
-                    ? stats.Grade.GradeName.Trim()
-                    : GetRankNameForScore(result.RankScore, gm);
-                result.PageRankName = result.PageHasStars
-                    ? pageRankBase
-                    : pageRankBase + GetSubTierName(result.RankScore, gm);
-                result.RankTierScore = GetRankTierScore(result.RankScore, gm);
+                var gradeName = stats.Grade.GradeName == null ? string.Empty : stats.Grade.GradeName.Trim();
+                if (gradeName.Length > 0)
+                {
+                    result.PageRankName = gradeName;
+                }
+                else
+                {
+                    var pageRankBase = GetRankNameForScore(result.RankScore, gm);
+                    result.PageRankName = result.PageHasStars
+                        ? pageRankBase
+                        : pageRankBase + GetSubTierName(result.RankScore, gm);
+                }
             }
 
             return result;
         }
 
-        /// <summary>
-        /// heyBox 数据源的 stat key 是中文 desc，归一化成英文 key，与队友卡片动态行的 key 对齐。
-        /// miniProgram 传入的已是英文 key，未命中中文表则原样返回。
-        /// 映射依据 heyBox 玩家页概览接口（/record/heybox/user/info）overview[].desc 实测全集。
-        /// </summary>
         private static string NormalizeStatKey(string key)
         {
             return key switch
@@ -132,6 +111,13 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             };
         }
 
+        public async Task<(List<UnifiedSeason> Seasons, string? CurrentSeasonKey)> FetchSeasonsAsync(
+            PlayerSourceContext ctx, CancellationToken ct)
+        {
+            var home = await _homeData.GetAsync(ctx.RoleId, ctx.Server, season: null, battleTid: null, ct).ConfigureAwait(false);
+            return (UnifiedMapper.MapSeasons(home?.Result?.Seasons), home?.Result?.Season);
+        }
+
         public static string FormatSurvivalTime(string secondsStr)
         {
             if (double.TryParse(secondsStr, out double seconds))
@@ -143,7 +129,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             return secondsStr;
         }
 
-        // 资源键命名约定：Rank.<拼音>。fallback 为中文原文，防止资源未配置时回退到键名或空串。
         public string GetRankNameForScore(double score, int gameMode = 0)
         {
             if (((GameMode)gameMode).IsRankMode())
@@ -192,24 +177,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             return 0;
         }
 
-        public static double GetRankTierScore(double score, int gameMode = 0)
-        {
-            if (!((GameMode)gameMode).IsRankMode()) return score;
-            if (score >= 4500) return (score - 4500) % 100;
-            if (score >= 4000) return (score - 4000) % 100;
-            if (score >= 3500) return (score - 3500) % 100;
-            if (score >= 3000) return (score - 3000) % 100;
-            if (score >= 2500) return (score - 2500) % 100;
-            if (score >= 2000) return (score - 2000) % 100;
-            if (score >= 1500) return (score - 1500) % 100;
-            if (score >= 1000) return (score - 1000) % 100;
-            return 0;
-        }
-
-        /// <summary>
-        /// 获取子段位名称（五、四、三、二、一），每小段 100 分
-        /// 仅对排位模式 1000~4499 分有效
-        /// </summary>
         private static string GetSubTierName(double score, int gameMode)
         {
             if (!((GameMode)gameMode).IsRankMode()) return string.Empty;
@@ -224,9 +191,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             return string.Empty;
         }
 
-        /// <summary>
-        /// 获取段位的起始分数线（该大段的最低分），仅用于子段计算
-        /// </summary>
         private static double GetTierBaseForSubTier(double score)
         {
             if (score >= 4500) return 4500;
@@ -242,17 +206,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
 
     }
 
-    /// <summary>
-    /// PlayerStatsLoader 的纯数据返回值。VM 把这些字段填回 TeamMemberInfo。
-    /// </summary>
     public class PlayerStatsLoadResult
     {
         public Dictionary<string, string> Stats { get; } = new();
 
-        /// <summary>
-        /// 后端返回的 metric 有序列表（含显示标签），保留原始顺序。
-        /// 队友页以本地用户这份列表作为三栏统一的行模板，实现与战绩页数据详情一致的动态数据项。
-        /// </summary>
         public List<PlayerStatMetric> Metrics { get; } = new();
 
         public string? AvgKill { get; set; }
@@ -265,11 +222,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         public string PageRankName { get; set; } = string.Empty;
         public int PageStarCount { get; set; }
         public bool PageHasStars { get; set; }
-        public double RankTierScore { get; set; }
     }
 
-    /// <summary>
-    /// 单个 metric 的行模板信息：归一化后的 code（跨成员对齐用）、显示标签、是否百分率（diff 格式化用）。
-    /// </summary>
-    public readonly record struct PlayerStatMetric(string Key, string Label, bool IsPercent);
+    public readonly record struct PlayerStatMetric(string Key, string Label);
 }

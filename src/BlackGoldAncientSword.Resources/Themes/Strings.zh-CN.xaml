@@ -81,6 +81,13 @@
     <system:String x:Key="Stats.Header.Rank">排名</system:String>
     <system:String x:Key="Stats.Header.Mode">模式</system:String>
     <system:String x:Key="Stats.Header.ModeCategory">排位模式</system:String>
+    <system:String x:Key="Stats.Header.Map">地图</system:String>
+    <system:String x:Key="Stats.RecentAvgRank">场均排名</system:String>
+    <system:String x:Key="Stats.RecentRanksScope">近 20 局（当前模式）</system:String>
+    <system:String x:Key="Stats.RankPosition">第 {0} 名 · 点击定位对局</system:String>
+    <system:String x:Key="Stats.BattleNotInList">该对局不在下方列表中</system:String>
+    <system:String x:Key="Stats.NoLocalUser">未检测到本地用户信息</system:String>
+    <system:String x:Key="Stats.SearchSuccess">搜索成功</system:String>
     <system:String x:Key="Stats.Header.ModeType">对局模式</system:String>
     <system:String x:Key="Stats.Header.Kill">击败</system:String>
     <system:String x:Key="Stats.Header.Damage">伤害</system:String>
@@ -119,6 +126,9 @@
     <system:String x:Key="Search.Delete">删除</system:String>
     <system:String x:Key="Search.CopySuccess">复制成功</system:String>
     <system:String x:Key="Search.TooFast">点击过快请稍后重试</system:String>
+    <system:String x:Key="Search.SuggestionsLoading">正在搜索…</system:String>
+    <system:String x:Key="Search.SuggestionsEmpty">没有匹配的玩家</system:String>
+    <system:String x:Key="Search.SuggestionsLoadingMore">正在加载更多…</system:String>
 
     <system:String x:Key="Startup.CheckingUpdates">正在检查更新…</system:String>
     <system:String x:Key="Startup.PleaseWait">请稍候，检测完成后即可操作</system:String>
@@ -154,10 +164,9 @@
     <system:String x:Key="Nav.Personal">个人</system:String>
     <system:String x:Key="Nav.Announcement">公告</system:String>
     <system:String x:Key="Nav.Feedback">反馈</system:String>
-    <system:String x:Key="Nav.Sponsor">打赏</system:String>
     <system:String x:Key="Auth.User.Login">登录</system:String>
+    <system:String x:Key="Auth.User.LoginSuccess">登录成功</system:String>
     <system:String x:Key="Auth.User.Logout">退出登录</system:String>
-    <system:String x:Key="Auth.User.RoleNormal">普通用户</system:String>
     <system:String x:Key="Auth.User.Anonymous">未登录</system:String>
     <system:String x:Key="Home.NoLocalData">未找到本地玩家数据，请先启动永劫无间</system:String>
     <system:String x:Key="Home.PlayerNotFound">服务器上未找到该玩家</system:String>
@@ -291,9 +300,7 @@
     <system:String x:Key="TeamInfo.DiffBestHeal">最高治差</system:String>
     <system:String x:Key="TeamInfo.DiffBestAssist">最高助差</system:String>
     <system:String x:Key="TeamInfo.DiffRankScore">段位差</system:String>
-    <system:String x:Key="TeamInfo.RankScore">段位分</system:String>
-    <system:String x:Key="TeamInfo.SelfNoSearch">本人卡片，无需搜索</system:String>
-    <system:String x:Key="TeamInfo.Title">队伍信息</system:String>
+    <system:String x:Key="TeamInfo.RankScore">段位分</system:String>    <system:String x:Key="TeamInfo.Title">队伍信息</system:String>
     <system:String x:Key="TeamInfo.WaitingForHeroSelect">等待游戏进入英雄选择...</system:String>
     <system:String x:Key="TeamInfo.HeroSelectRecognizing">英雄选择中，正在识别队友...</system:String>
     <system:String x:Key="TeamInfo.InGameLocked">进入对局，队伍信息已锁定</system:String>
@@ -320,27 +327,11 @@
 
     <!--  Feedback  -->
     <system:String x:Key="Feedback.Title">问题反馈</system:String>
-    <system:String x:Key="Feedback.ClientGroupTitle">客户端问题反馈群</system:String>
+    <system:String x:Key="Feedback.ClientGroupTitle">问题反馈与交流QQ群</system:String>
     <system:String x:Key="Feedback.ClientGroupQQ">①群：146088141</system:String>
-    <system:String x:Key="Feedback.DataGroupTitle">数据问题反馈群</system:String>
-    <system:String x:Key="Feedback.BotDescription">QQ群机器人也可以查战绩</system:String>
-    <system:String x:Key="Feedback.DataGroup1">①群：476074617</system:String>
-    <system:String x:Key="Feedback.DataGroup2">②群：649891198</system:String>
-    <system:String x:Key="Feedback.DataGroup3">③群：966720321</system:String>
-    <system:String x:Key="Feedback.QQEntryRequirement">QQ等级超过32（两个太阳）的自动审核进群，小号不给进</system:String>
     <system:String x:Key="Feedback.WebTitle">网页端</system:String>
     <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
     <system:String x:Key="Feedback.Close">关闭</system:String>
-
-    <!--  Sponsor  -->
-    <system:String x:Key="Sponsor.AuthorTitle">打赏黑金古刀作者</system:String>
-    <system:String x:Key="Sponsor.SelectPaymentMethod">选择打赏方式</system:String>
-    <system:String x:Key="Sponsor.WeChatPay">微信</system:String>
-    <system:String x:Key="Sponsor.Alipay">支付宝</system:String>
-    <system:String x:Key="Sponsor.ShowQRCode">显示收款码</system:String>
-    <system:String x:Key="Sponsor.DataProviderTitle">打赏数据提供方</system:String>
-    <system:String x:Key="Sponsor.DataProviderDesc">数据来源于 naraka.drivod.top，打赏支持其持续提供服务。</system:String>
-    <system:String x:Key="Sponsor.Close">关闭</system:String>
 
     <system:String x:Key="Settings.Category.Appearance">外观</system:String>
     <system:String x:Key="Settings.FontSize.Description">拖动滑块可调整整个软件的字体大小，实时生效。</system:String>

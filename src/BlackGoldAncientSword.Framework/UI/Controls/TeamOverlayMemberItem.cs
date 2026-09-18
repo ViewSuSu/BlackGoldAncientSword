@@ -88,18 +88,6 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
             }
         }
 
-        private double _rankTierScore;
-        public double RankTierScore
-        {
-            get => _rankTierScore;
-            set
-            {
-                if (_rankTierScore == value) return;
-                _rankTierScore = value;
-                RaisePropertyChanged(nameof(RankTierScore));
-            }
-        }
-
         private bool _isLoading;
         public bool IsLoading
         {

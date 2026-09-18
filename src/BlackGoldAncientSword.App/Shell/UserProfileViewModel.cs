@@ -1,10 +1,9 @@
 using System;
 using System.Diagnostics;
-using System.Text.Json;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
-using BlackGoldAncientSword.Framework.Http.Auth.Token;
+using BlackGoldAncientSword.Framework.Http.Heybox;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 
 namespace BlackGoldAncientSword.App.Shell
@@ -12,8 +11,9 @@ namespace BlackGoldAncientSword.App.Shell
     /// <summary>
     /// 标题栏用户头像按钮 + 停靠 Popup 的 VM。与网页版右上角 <c>user-menu-trigger</c> 行为一致：
     /// 未登录 → 按钮显示"登录" icon + 文本，点击弹 QR 扫码；
-    /// 已登录 → 按钮显示 32×32 圆形头像，点击弹 Popup（头像 + 昵称 + 角色 + 退出登录）。
-    /// 单例：跟随 <see cref="IAuthTokenState.Changed"/> 事件在整个 App 生命周期内反应用户登录状态。
+    /// 已登录 → 按钮显示圆形头像 + "登录成功"文案（不显示昵称，昵称放 ToolTip 与 Popup 里），
+    /// 点击弹 Popup（头像 + 昵称 + 退出登录）。
+    /// 单例：跟随 <see cref="IHeyboxSessionState.Changed"/> 事件在整个 App 生命周期内反应用户登录状态。
     /// </summary>
     [Component(ComponentLifetime.Singleton)]
     public sealed class UserProfileViewModel : ViewModelBase
@@ -21,8 +21,8 @@ namespace BlackGoldAncientSword.App.Shell
         private const string DefaultAvatarPackUri =
             "pack://application:,,,/BlackGoldAncientSword.Resources;component/Images/Avatar/avatar_default.png";
 
-        private readonly IAuthTokenState _tokenState;
-        private readonly IAuthTokenStore _tokenStore;
+        private readonly IHeyboxSessionState _sessionState;
+        private readonly IHeyboxSessionStore _sessionStore;
         private readonly IAuthChallengeService _challenge;
         private readonly IUIDispatcher _uiDispatcher;
 
@@ -79,18 +79,18 @@ namespace BlackGoldAncientSword.App.Shell
         }
 
         public UserProfileViewModel(
-            IAuthTokenState tokenState,
-            IAuthTokenStore tokenStore,
+            IHeyboxSessionState sessionState,
+            IHeyboxSessionStore sessionStore,
             IAuthChallengeService challenge,
             IUIDispatcher uiDispatcher)
         {
-            _tokenState = tokenState;
-            _tokenStore = tokenStore;
+            _sessionState = sessionState;
+            _sessionStore = sessionStore;
             _challenge = challenge;
             _uiDispatcher = uiDispatcher;
 
-            _tokenState.Changed += OnTokenChanged;
-            ApplyToken(_tokenState.Current);
+            _sessionState.Changed += OnSessionChanged;
+            ApplySession(_sessionState.Current);
         }
 
         private DelegateCommand? _openLoginCommand;
@@ -123,8 +123,8 @@ namespace BlackGoldAncientSword.App.Shell
             {
                 try
                 {
-                    _tokenStore.Clear();
-                    _tokenState.Set(null);
+                    _sessionStore.Clear();
+                    _sessionState.Set(null);
                     IsPopupOpen = false;
                     await _challenge.ShowAsync();
                 }
@@ -134,14 +134,14 @@ namespace BlackGoldAncientSword.App.Shell
                 }
             });
 
-        private void OnTokenChanged(object? sender, AuthToken? token)
+        private void OnSessionChanged(object? sender, HeyboxLoginState? state)
         {
-            _uiDispatcher.InvokeAsync(() => ApplyToken(token));
+            _uiDispatcher.InvokeAsync(() => ApplySession(state));
         }
 
-        private void ApplyToken(AuthToken? token)
+        private void ApplySession(HeyboxLoginState? state)
         {
-            if (token is null || string.IsNullOrEmpty(token.AccessToken))
+            if (state is null || string.IsNullOrEmpty(state.Session.Pkey))
             {
                 IsLoggedIn = false;
                 Nickname = string.Empty;
@@ -151,48 +151,16 @@ namespace BlackGoldAncientSword.App.Shell
             }
 
             IsLoggedIn = true;
-            var (nickname, avatar) = ParseUser(token.UserJson);
-            Nickname = nickname;
-            AvatarUrl = string.IsNullOrEmpty(avatar) ? DefaultAvatarPackUri : avatar;
-        }
-
-        /// <summary>
-        /// yudao <c>AuthLoginRespVO.userInfo</c> 序列化后的 JSON：
-        /// <c>{ userId, username, nickname, avatar, ... }</c>。缺字段 → 空字符串，避免 UI 空引用。
-        /// </summary>
-        private static (string nickname, string avatar) ParseUser(string? userJson)
-        {
-            if (string.IsNullOrEmpty(userJson)) return (string.Empty, string.Empty);
-            try
-            {
-                using var doc = JsonDocument.Parse(userJson);
-                var root = doc.RootElement;
-                var nickname = TryGetString(root, "nickname")
-                    ?? TryGetString(root, "username")
-                    ?? string.Empty;
-                var avatar = TryGetString(root, "avatar") ?? string.Empty;
-                return (nickname, avatar);
-            }
-            catch (Exception ex)
-            {
-                AppLog.Error(ex, $"{nameof(UserProfileViewModel)}.{nameof(ParseUser)}");
-                return (string.Empty, string.Empty);
-            }
-        }
-
-        private static string? TryGetString(JsonElement root, string name)
-        {
-            if (!root.TryGetProperty(name, out var el)) return null;
-            if (el.ValueKind != JsonValueKind.String) return null;
-            var v = el.GetString();
-            return string.IsNullOrEmpty(v) ? null : v;
+            // 昵称/头像要另查一次才有，拿不到时留空 → 退回默认头像，不影响"已登录"状态。
+            Nickname = state.Nickname;
+            AvatarUrl = string.IsNullOrEmpty(state.Avatar) ? DefaultAvatarPackUri : state.Avatar;
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                _tokenState.Changed -= OnTokenChanged;
+                _sessionState.Changed -= OnSessionChanged;
             }
             base.Dispose(disposing);
         }
