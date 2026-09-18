@@ -40,51 +40,6 @@
                         IsReadOnly="True"
                         Text="{DynamicResource Feedback.ClientGroupQQ}" />
 
-                    <TextBlock
-                        Margin="0,0,0,8"
-                        FontSize="{DynamicResource FontSize.Section}"
-                        FontWeight="SemiBold"
-                        Text="{DynamicResource Feedback.DataGroupTitle}" />
-                    <TextBlock
-                        Margin="0,0,0,4"
-                        FontSize="{DynamicResource FontSize.Metadata}"
-                        Foreground="{DynamicResource TextMutedBrush}"
-                        Text="{DynamicResource Feedback.BotDescription}"
-                        TextWrapping="Wrap" />
-                    <TextBox
-                        Margin="0,0,0,4"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        FontSize="{DynamicResource FontSize.Metadata}"
-                        Foreground="{DynamicResource TextMutedBrush}"
-                        IsReadOnly="True"
-                        Text="{DynamicResource Feedback.DataGroup1}" />
-                    <TextBox
-                        Margin="0,0,0,4"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        FontSize="{DynamicResource FontSize.Metadata}"
-                        Foreground="{DynamicResource TextMutedBrush}"
-                        IsReadOnly="True"
-                        Text="{DynamicResource Feedback.DataGroup2}" />
-                    <TextBox
-                        Margin="0,0,0,4"
-                        Padding="0"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        FontSize="{DynamicResource FontSize.Metadata}"
-                        Foreground="{DynamicResource TextMutedBrush}"
-                        IsReadOnly="True"
-                        Text="{DynamicResource Feedback.DataGroup3}" />
-                    <TextBlock
-                        Margin="0,0,0,16"
-                        FontSize="{DynamicResource FontSize.Caption}"
-                        Foreground="{DynamicResource TextMutedBrush}"
-                        Text="{DynamicResource Feedback.QQEntryRequirement}"
-                        TextWrapping="Wrap" />
-
                     <Separator Margin="0,8" />
 
                     <TextBlock
