@@ -12,7 +12,7 @@ namespace BlackGoldAncientSword.Modules.UI.Search.ViewModels
         private readonly IClipboardService _clipboard;
         private readonly ILocalizedTextProvider _localizedText;
         private readonly ITipMessageService _tipMessage;
-        private readonly SearchDebounceGate _searchDebounce = new();
+        private readonly SearchDebounceGate _searchDebounce = new(SearchDebounceGate.SearchBoxIntervalMilliseconds);
 
         private string _searchText = string.Empty;
         public string SearchText

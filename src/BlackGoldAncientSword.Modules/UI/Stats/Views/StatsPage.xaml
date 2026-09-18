@@ -17,13 +17,15 @@
     mc:Ignorable="d">
 
     <Grid>
+        <!--  整页竖向滚动：战绩区内容较高，窗口放不下时下方的对局列表会被裁掉看不见  -->
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <Grid Margin="5">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
 
@@ -34,15 +36,199 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <hc:SearchBar
-                    Height="25"
-                    VerticalAlignment="Center"
-                    hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
-                    hc:TitleElement.Title="{DynamicResource Search.Title}"
-                    hc:TitleElement.TitlePlacement="Left"
-                    Command="{Binding SearchCommand}"
-                    Style="{StaticResource SearchBarExtend}"
-                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                <Grid Grid.Column="0">
+                    <hc:SearchBar
+                        x:Name="SearchInput"
+                        Height="25"
+                        VerticalAlignment="Center"
+                        hc:InfoElement.Placeholder="{DynamicResource Search.Input}"
+                        hc:TitleElement.Title="{DynamicResource Search.Title}"
+                        hc:TitleElement.TitlePlacement="Left"
+                        Command="{Binding SearchCommand}"
+                        PreviewKeyDown="OnSearchInputPreviewKeyDown"
+                        Style="{StaticResource SearchBarExtend}"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <!--
+                        候选下拉：输入停顿 500ms 后自动出现（仿网页端的模糊搜索）。
+                        列表开了虚拟化 + 像素滚动回收，只会为可见的几行生成容器；
+                        往下滚接近底部时由 code-behind 的滚动事件追加下一页，不一次拉全量。
+                    -->
+                    <Popup
+                        AllowsTransparency="True"
+                        IsOpen="{Binding Suggestions.IsOpen, Mode=TwoWay}"
+                        Placement="Bottom"
+                        PlacementTarget="{Binding ElementName=SearchInput}"
+                        StaysOpen="False">
+                        <Border
+                            Width="{Binding ActualWidth, ElementName=SearchInput}"
+                            MaxHeight="360"
+                            Margin="0,4,0,0"
+                            Background="{DynamicResource SurfaceSecondaryBrush}"
+                            BorderBrush="{DynamicResource BorderLightBrush}"
+                            BorderThickness="1"
+                            CornerRadius="5">
+                            <Grid>
+                                <ListBox
+                                    x:Name="SuggestionList"
+                                    Padding="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    ItemsSource="{Binding Suggestions.Items}"
+                                    ScrollViewer.CanContentScroll="True"
+                                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                    ScrollViewer.ScrollChanged="OnSuggestionListScrollChanged"
+                                    SelectedIndex="{Binding Suggestions.SelectedIndex, Mode=TwoWay}"
+                                    VirtualizingPanel.IsVirtualizing="True"
+                                    VirtualizingPanel.ScrollUnit="Pixel"
+                                    VirtualizingPanel.VirtualizationMode="Recycling">
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Padding" Value="0" />
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <!--
+                                                点击走 Button 的 Command；项目禁用 MouseBinding（与 HandyControl 抢依赖属性）。
+                                                Button 只负责铺满整行的点击区与背景，行内布局另起一层：HandyControl 的按钮模板
+                                                把内容裹在横向 StackPanel 里，内容宽度是按文字量算的，右列起点会跟着左侧文字长度
+                                                左右跑，段位图标对不齐。拆成两层后布局层铺满整行，右列位置才固定。
+                                                Height / HorizontalAlignment 必须写成按钮上的本地值：HandyControl 给 Button
+                                                的默认样式把高度固定成 28、并把它按内容宽度居中，不覆盖整行会被压成一条。
+                                            -->
+                                            <Grid>
+                                                <Button
+                                                    Height="Auto"
+                                                    VerticalAlignment="Stretch"
+                                                    HorizontalAlignment="Stretch"
+                                                    Padding="0"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Command="{Binding DataContext.SelectSuggestionCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                    CommandParameter="{Binding}"
+                                                    Cursor="Hand" />
+
+                                                <Grid Margin="10,8" IsHitTestVisible="False">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Border
+                                                        Grid.Column="0"
+                                                        Width="36"
+                                                        Height="36"
+                                                        VerticalAlignment="Center"
+                                                        Background="{DynamicResource SurfaceTertiaryBrush}"
+                                                        BorderBrush="{DynamicResource BorderLightBrush}"
+                                                        BorderThickness="1"
+                                                        ClipToBounds="True"
+                                                        CornerRadius="18">
+                                                        <Border.Clip>
+                                                            <EllipseGeometry Center="18,18" RadiusX="18" RadiusY="18" />
+                                                        </Border.Clip>
+                                                        <Image
+                                                            Width="36"
+                                                            Height="36"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            RenderOptions.BitmapScalingMode="HighQuality"
+                                                            Source="{Binding AvatarUrl, Mode=OneWay, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}, ConverterParameter=72}"
+                                                            Stretch="UniformToFill" />
+                                                    </Border>
+
+                                                    <!--
+                                                        中间一列两行贴左排布：昵称一行，其余字段一行。
+                                                        第二行用 Wrap 而不是裁剪，接口多给的字段不会被吃掉。
+                                                    -->
+                                                    <StackPanel
+                                                        Grid.Column="1"
+                                                        Margin="10,0,10,0"
+                                                        VerticalAlignment="Center">
+                                                        <TextBlock
+                                                            FontSize="{DynamicResource FontSize.Section}"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{DynamicResource TextPrimaryBrush}"
+                                                            Text="{Binding DisplayName, Mode=OneWay}"
+                                                            TextTrimming="CharacterEllipsis" />
+
+                                                        <TextBlock
+                                                            Margin="0,4,0,0"
+                                                            FontSize="{DynamicResource FontSize.Caption}"
+                                                            Foreground="{DynamicResource TextMutedBrush}"
+                                                            Text="{Binding MetaText, Mode=OneWay}"
+                                                            TextWrapping="Wrap" />
+                                                    </StackPanel>
+
+                                                    <!--
+                                                        右侧段位块：图标与左侧头像同尺寸；接口没给段位就整块不占位。
+                                                        定宽是为了让图标左缘在每行都落在同一竖线上——宽度由文字撑的话，
+                                                        段位名长短不同，图标就会左右跑。字号档位拉满时最长的一档也放得下，
+                                                        名字再长就省略号收尾。
+                                                    -->
+                                                    <StackPanel
+                                                        Grid.Column="2"
+                                                        Width="130"
+                                                        VerticalAlignment="Center"
+                                                        Orientation="Horizontal"
+                                                        Visibility="{Binding HasRank, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <Image
+                                                            Width="36"
+                                                            Height="36"
+                                                            Margin="0,0,8,0"
+                                                            VerticalAlignment="Center"
+                                                            RenderOptions.BitmapScalingMode="HighQuality"
+                                                            Source="{Binding RankIconUrl, Mode=OneWay, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}, ConverterParameter=72}" />
+
+                                                        <TextBlock
+                                                            VerticalAlignment="Center"
+                                                            FontSize="{DynamicResource FontSize.Caption}"
+                                                            Foreground="{DynamicResource TextMutedBrush}"
+                                                            Text="{Binding RankName, Mode=OneWay}"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <TextBlock
+                                    Margin="12"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="{DynamicResource FontSize.Caption}"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    Text="{DynamicResource Search.SuggestionsLoading}"
+                                    Visibility="{Binding Suggestions.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                <TextBlock
+                                    Margin="12"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="{DynamicResource FontSize.Caption}"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    Text="{DynamicResource Search.SuggestionsEmpty}"
+                                    Visibility="{Binding Suggestions.HasNoResult, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                <Border
+                                    Padding="0,3"
+                                    VerticalAlignment="Bottom"
+                                    Background="{DynamicResource SurfaceSecondaryBrush}"
+                                    Visibility="{Binding Suggestions.IsLoadingMore, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        FontSize="{DynamicResource FontSize.Caption}"
+                                        Foreground="{DynamicResource TextMutedBrush}"
+                                        Text="{DynamicResource Search.SuggestionsLoadingMore}" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Popup>
+                </Grid>
 
                 <!--  Action buttons (right)  -->
                 <StackPanel
@@ -160,7 +346,7 @@
 
                 </StackPanel>
 
-                <!--  unified loading overlay (on top)  -->
+                <!--  玩家信息加载遮罩（盖在最上层）  -->
                 <Border
                     d:Visibility="Hidden"
                     Background="{DynamicResource SurfaceSecondaryBrush}"
@@ -211,6 +397,10 @@
                             <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
                         <!--  Rank (left column)  -->
                         <StackPanel Grid.Column="0" HorizontalAlignment="Center">
@@ -252,13 +442,14 @@
                                     Text="{Binding PageStarCount}"
                                     Visibility="{Binding PageHasStars, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             </StackPanel>
-                            <!--  下行：段位内分数  -->
+                            <!--  下行：官方积分原值（player_info.rating，如 3629）。未定级时整行隐藏  -->
                             <TextBlock
                                 Margin="0,2,0,0"
                                 HorizontalAlignment="Center"
                                 FontSize="{DynamicResource FontSize.Body}"
-                                Foreground="{DynamicResource TextMutedBrush}">
-                                <Run Text="{Binding RankTierScore, StringFormat='{}{0}'}" /><Run Text="{DynamicResource Stats.Points}" />
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                Visibility="{Binding ShowRankScore, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Run Text="{Binding RankScore, Mode=OneWay, StringFormat='{}{0}'}" /><Run Text="{DynamicResource Stats.Points}" />
                             </TextBlock>
                         </StackPanel>
 
@@ -278,17 +469,35 @@
                                         BorderThickness="0.2"
                                         CornerRadius="5">
                                         <DockPanel>
-                                            <TextBlock
+                                            <StackPanel
                                                 VerticalAlignment="Center"
                                                 DockPanel.Dock="Right"
-                                                FontSize="{DynamicResource FontSize.Section}"
-                                                FontWeight="Bold"
-                                                Text="{Binding Value}" />
+                                                Orientation="Horizontal">
+                                                <TextBlock
+                                                    VerticalAlignment="Center"
+                                                    FontSize="{DynamicResource FontSize.Section}"
+                                                    FontWeight="Bold"
+                                                    Text="{Binding Value, Mode=OneWay}" />
+                                                <!--  overview 的 S/A 角标：服务端没给评级（空串）时不渲染占位  -->
+                                                <Border
+                                                    Margin="4,0,0,0"
+                                                    Padding="3,0"
+                                                    VerticalAlignment="Center"
+                                                    Background="{DynamicResource AccentLightBrush}"
+                                                    CornerRadius="3"
+                                                    Visibility="{Binding HasGrade, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock
+                                                        FontSize="{DynamicResource FontSize.Caption}"
+                                                        FontWeight="Bold"
+                                                        Foreground="{DynamicResource AccentPrimaryBrush}"
+                                                        Text="{Binding Grade, Mode=OneWay}" />
+                                                </Border>
+                                            </StackPanel>
                                             <TextBlock
                                                 VerticalAlignment="Center"
                                                 FontSize="{DynamicResource FontSize.Caption}"
                                                 Foreground="{DynamicResource TextMutedBrush}"
-                                                Text="{Binding Label}" />
+                                                Text="{Binding Label, Mode=OneWay}" />
                                         </DockPanel>
                                     </Border>
                                 </DataTemplate>
@@ -297,6 +506,7 @@
 
                         <!--  Stats loading overlay  -->
                         <Border
+                            Grid.RowSpan="2"
                             Grid.ColumnSpan="2"
                             d:Visibility="Hidden"
                             Background="{DynamicResource SurfaceSecondaryBrush}"
@@ -322,6 +532,10 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Border Grid.Column="0" Style="{DynamicResource AccentBarStyle}" />
 
                 <!--  最近对局：模式筛选级联下拉（仿网页端）。默认按钮文字=当前筛选（无筛选时=“最近对局”）  -->
@@ -436,70 +650,6 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button
-                                            Padding="12,6"
-                                            HorizontalContentAlignment="Stretch"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Command="{Binding SelectBattleCategoryCommand}"
-                                            CommandParameter="{x:Static consts:GameModeCategory.Match}"
-                                            Cursor="Hand">
-                                            <i:Interaction.Triggers>
-                                                <i:EventTrigger EventName="MouseEnter">
-                                                    <i:InvokeCommandAction Command="{Binding HoverBattleCategoryCommand}" CommandParameter="{x:Static consts:GameModeCategory.Match}" />
-                                                </i:EventTrigger>
-                                            </i:Interaction.Triggers>
-                                            <DockPanel LastChildFill="False">
-                                                <TextBlock DockPanel.Dock="Left" Text="{DynamicResource GameMode.Match}" />
-                                                <TextBlock DockPanel.Dock="Right" Margin="10,0,0,0" Foreground="{DynamicResource TextMutedBrush}" Text="›" />
-                                            </DockPanel>
-                                            <Button.Style>
-                                                <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
-                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Value="Match" Binding="{Binding SelectedBattleCategory}">
-                                                            <Setter Property="Foreground" Value="{DynamicResource AccentPrimaryBrush}" />
-                                                            <Setter Property="FontWeight" Value="Bold" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Value="Match" Binding="{Binding HoveredBattleCategory}">
-                                                            <Setter Property="Background" Value="{DynamicResource SurfaceTertiaryBrush}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Button.Style>
-                                        </Button>
-                                        <Button
-                                            Padding="12,6"
-                                            HorizontalContentAlignment="Stretch"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Command="{Binding SelectBattleCategoryCommand}"
-                                            CommandParameter="{x:Static consts:GameModeCategory.Tianren}"
-                                            Cursor="Hand">
-                                            <i:Interaction.Triggers>
-                                                <i:EventTrigger EventName="MouseEnter">
-                                                    <i:InvokeCommandAction Command="{Binding HoverBattleCategoryCommand}" CommandParameter="{x:Static consts:GameModeCategory.Tianren}" />
-                                                </i:EventTrigger>
-                                            </i:Interaction.Triggers>
-                                            <DockPanel LastChildFill="False">
-                                                <TextBlock DockPanel.Dock="Left" Text="{DynamicResource GameMode.Tianren}" />
-                                                <TextBlock DockPanel.Dock="Right" Margin="10,0,0,0" Foreground="{DynamicResource TextMutedBrush}" Text="›" />
-                                            </DockPanel>
-                                            <Button.Style>
-                                                <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
-                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Value="Tianren" Binding="{Binding SelectedBattleCategory}">
-                                                            <Setter Property="Foreground" Value="{DynamicResource AccentPrimaryBrush}" />
-                                                            <Setter Property="FontWeight" Value="Bold" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Value="Tianren" Binding="{Binding HoveredBattleCategory}">
-                                                            <Setter Property="Background" Value="{DynamicResource SurfaceTertiaryBrush}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Button.Style>
-                                        </Button>
                                     </StackPanel>
 
                                     <!--  二级：排数（三排/双排/单排）。仅当悬停到某一级大类时出现；点击=设排数/再点取消。  -->
@@ -582,11 +732,87 @@
                         </Border>
                     </Popup>
                 </Grid>
+
+                <!--  近期场均名次（recent_avg_rank）  -->
+                <TextBlock
+                    Grid.Row="0"
+                    Grid.Column="2"
+                    Margin="0,0,4,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    FontSize="{DynamicResource FontSize.Metadata}"
+                    Foreground="{DynamicResource TextMutedBrush}"
+                    Text="{Binding RecentAvgRankDisplay, Mode=OneWay}" />
+
+                <!--  近期每局名次色块（recent_ranks）：第 1 名红、前五粉、其余灰  -->
+                <ItemsControl
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Grid.ColumnSpan="2"
+                    Margin="10,4,0,0"
+                    HorizontalAlignment="Left"
+                    ItemsSource="{Binding RecentRankBlocks}"
+                    Visibility="{Binding HasRecentRanks, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border
+                                Width="14"
+                                Height="14"
+                                Margin="1"
+                                CornerRadius="2"
+                                Cursor="Hand"
+                                MouseLeftButtonDown="OnRankBlockClick"
+                                ToolTip="{Binding Display, Mode=OneWay}">
+                                <!--  点击走 code-behind 事件，不要换成 Border.InputBindings + MouseBinding：
+                                     HandyControl 的 SimpleMouseBinding 会把名为 MouseAction 的依赖属性
+                                     注册到 WPF 的 MouseBinding 类型上，两者只能存其一。一旦本程序里有任何
+                                     地方用到 MouseBinding，HandyControl 主题里的 ToggleBlock 会在加载时抛
+                                     XamlParseException，波及所有用到它的界面。  -->
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#4D4D4D" />
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentPrimaryBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Rank}" Value="1">
+                                                <Setter Property="Background" Value="#E53935" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Rank}" Value="2">
+                                                <Setter Property="Background" Value="#F06292" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Rank}" Value="3">
+                                                <Setter Property="Background" Value="#F06292" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Rank}" Value="4">
+                                                <Setter Property="Background" Value="#F06292" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Rank}" Value="5">
+                                                <Setter Property="Background" Value="#F06292" />
+                                            </DataTrigger>
+                                            <!--  悬停加一圈描边表示可点：方框外径固定 14，只在内部让出 1px，不影响排版  -->
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="BorderThickness" Value="1" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </Grid>
-            <Grid Grid.Row="4">
+            <!--  MinHeight：数据未到位时列表只有表头高，加载动画和空态提示会被压扁  -->
+            <Grid Grid.Row="4" MinHeight="240">
                 <DataGrid
+                    x:Name="BattleGrid"
                     d:ItemsSource="{d:SampleData}"
                     AutoGenerateColumns="False"
+                    PreviewMouseWheel="OnBattleGridPreviewMouseWheel"
                     CanUserSortColumns="False"
                     GridLinesVisibility="None"
                     HeadersVisibility="Column"
@@ -842,6 +1068,29 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
+                        <!--  地图列：取 map_name 原值（scene 是官方残缺映射，不当地图名用）  -->
+                        <DataGridTemplateColumn Width="1*">
+                            <DataGridTemplateColumn.Header>
+                                <TextBlock Text="{Binding DataContext.MapColumnHeader, Mode=OneWay, RelativeSource={RelativeSource AncestorType=DataGrid}}" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <TextBlock Text="{Binding DataContext.MapColumnHeader, Mode=OneWay, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
+                            </DataGridTemplateColumn.Header>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Foreground="{DynamicResource TextMutedBrush}"
+                                        Text="{Binding MapName, Mode=OneWay}"
+                                        TextAlignment="Center"
+                                        TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTemplateColumn Width="0.6*">
                             <DataGridTemplateColumn.Header>
                                 <TextBlock Text="{DynamicResource Stats.Header.Kill}" TextTrimming="CharacterEllipsis">
@@ -989,30 +1238,6 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <!--  详情按钮列 (空标题, 固定宽)  -->
-                        <DataGridTemplateColumn Width="50" CanUserResize="False">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Button
-                                        Height="22"
-                                        Padding="0"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Cursor="Hand"
-                                        Command="{Binding DataContext.OpenBattleDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip="查看对局详情">
-                                        <TextBlock
-                                            FontSize="{DynamicResource FontSize.Metadata}"
-                                            Foreground="{DynamicResource AccentPrimaryBrush}"
-                                            TextDecorations="Underline"
-                                            Text="详情" />
-                                    </Button>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
 
@@ -1042,6 +1267,7 @@
                 </Border>
             </Grid>
         </Grid>
+        </ScrollViewer>
     </Grid>
 </bases:UserControlBase>
 
