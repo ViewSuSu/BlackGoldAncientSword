@@ -24,7 +24,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!--  搜索框区 + 头像段位区：占位（与卡片同高的上两行），diff 只对齐统计行区  -->
+            <!--  详情入口 + 头像段位区：占位（与卡片同高的上两行），diff 只对齐统计行区  -->
             <Grid Grid.Row="0" Grid.RowSpan="2" />
 
             <ItemsControl Grid.Row="2" ItemsSource="{Binding StatItemsSource, ElementName=Root}">

@@ -7,7 +7,7 @@ using BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels;
 namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Views
 {
     /// <summary>
-    /// 单张队友卡片（完全自包含）：顶部搜索框 + 中部头像/段位/UID + 下部统计行。
+    /// 单张队友卡片（完全自包含）：顶部详情入口 + 中部头像/段位 + 下部统计行。
     /// 统计行在卡片内部，被卡片背景包裹；卡片之间的 diff 对比由 <see cref="TeamDiffColumn"/>
     /// 独立承载。
     /// <para>
@@ -22,7 +22,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Views
     /// <para>
     /// 数据契约（通过 ElementName=Root 绑定，不依赖宿主 DataContext）：
     /// <list type="bullet">
-    ///   <item><see cref="Member"/> — 卡片主体数据（TeamMemberInfo：头像/段位/UID/搜索命令等）。</item>
+    ///   <item><see cref="Member"/> — 卡片主体数据（TeamMemberInfo：头像/段位/等级等）。</item>
     ///   <item><see cref="StatItemsSource"/> — 统计行集合，正式页绑 MergedStatRows，测试页绑 mock 行。</item>
     ///   <item><see cref="MemberIndex"/> — 本卡在三栏中的位置（0/1/2），统计行模板据此取对应列值。</item>
     /// </list>

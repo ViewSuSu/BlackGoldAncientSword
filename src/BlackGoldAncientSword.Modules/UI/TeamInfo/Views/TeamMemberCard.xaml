@@ -39,7 +39,7 @@
 
         <Grid>
             <Grid.RowDefinitions>
-                <!--  搜索框区 / 头像段位区与宿主 Grid 的 diff 列共享行高，保证统计区垂直起始位置一致；
+                <!--  详情入口 / 头像段位区与宿主 Grid 的 diff 列共享行高，保证统计区垂直起始位置一致；
                      统计区（Row2）为 *，同宿主行内各控件自动等高  -->
                 <RowDefinition Height="Auto" SharedSizeGroup="CardH0" />
                 <RowDefinition Height="Auto" SharedSizeGroup="CardH1" />
@@ -166,12 +166,6 @@
                             TextTrimming="CharacterEllipsis"
                             Visibility="{Binding Member.PageHasStars, ElementName=Root, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     </StackPanel>
-                    <TextBlock
-                        Margin="0,2,0,0"
-                        HorizontalAlignment="Center"
-                        FontSize="{DynamicResource FontSize.Metadata}"
-                        Foreground="{DynamicResource TextMutedBrush}"
-                        TextTrimming="CharacterEllipsis"><Run Text="{Binding Member.RankTierScore, ElementName=Root, StringFormat={}{0}}" /><Run Text="{DynamicResource Stats.Points}" /></TextBlock>
                 </StackPanel>
             </Grid>
 

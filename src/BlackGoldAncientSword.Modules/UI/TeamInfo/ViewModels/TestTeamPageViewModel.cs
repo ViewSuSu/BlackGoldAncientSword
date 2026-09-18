@@ -131,7 +131,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         {
             try
             {
-                var season = SeasonCatalog.All().FirstOrDefault()?.Code;
+                // 传 null = 让服务端用当前赛季。测试页没有服务端赛季列表，不要用已废弃的数字赛季码。
+                string? season = null;
                 var loaded = await _memberLoader.LoadAsync(name, season, GameModeCategory.Rank, TeamSize.Trio, ct, uid)
                     .ConfigureAwait(false);
                 if (ct.IsCancellationRequested) return;
@@ -157,7 +158,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         member.PageRankName = loaded.Stats?.PageRankName ?? member.PageRankName;
                         member.PageStarCount = loaded.Stats?.PageStarCount ?? 0;
                         member.PageHasStars = loaded.Stats?.PageHasStars ?? false;
-                        member.RankTierScore = loaded.Stats?.RankTierScore ?? 0;
                         member.Stats.Clear();
                         member.Metrics.Clear();
                         if (loaded.Stats != null)
@@ -205,8 +205,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                     Val1 = GetStatVal(1, metric.Key),
                     Val2 = GetStatVal(2, metric.Key),
                 };
-                FillDiff(row, isLeft: true, 0, 1, (metric.Key, metric.Label, metric.IsPercent));
-                FillDiff(row, isLeft: false, 1, 2, (metric.Key, metric.Label, metric.IsPercent));
+                FillDiff(row, isLeft: true, 0, 1, metric.Key);
+                FillDiff(row, isLeft: false, 1, 2, metric.Key);
                 StatRows.Add(row);
             }
 
@@ -217,8 +217,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                 Val1 = GetRankVal(1),
                 Val2 = GetRankVal(2),
             };
-            FillDiff(rankRow, isLeft: true, 0, 1, (RankRowKey, "段位分", false));
-            FillDiff(rankRow, isLeft: false, 1, 2, (RankRowKey, "段位分", false));
+            FillDiff(rankRow, isLeft: true, 0, 1, RankRowKey);
+            FillDiff(rankRow, isLeft: false, 1, 2, RankRowKey);
             StatRows.Add(rankRow);
         }
 
@@ -236,36 +236,17 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             return Members[idx].RankScore > 0 ? Members[idx].RankScore.ToString("F0") : "-";
         }
 
-        private void FillDiff(MergedStatRow row, bool isLeft, int aIdx, int bIdx,
-            (string Key, string Label, bool IsPercent) def)
+        private void FillDiff(MergedStatRow row, bool isLeft, int aIdx, int bIdx, string key)
         {
             if (aIdx >= Members.Count || bIdx >= Members.Count) return;
-            double av, bv;
-            if (def.Key == RankRowKey)
-            {
-                av = Members[aIdx].RankScore;
-                bv = Members[bIdx].RankScore;
-            }
-            else
-            {
-                av = Members[aIdx].Stats.TryGetValue(def.Key, out var al) ? TryParseDouble(al) : 0;
-                bv = Members[bIdx].Stats.TryGetValue(def.Key, out var bl) ? TryParseDouble(bl) : 0;
-            }
-            var diff = av - bv;
-            const string fmt = "0.##";
-            string text, color;
-            if (System.Math.Abs(diff) < 0.001) { text = "0"; color = "#999999"; }
-            else if (diff > 0) { text = def.IsPercent ? $"+{diff:F1}%" : $"+{diff.ToString(fmt)}"; color = "#22AA22"; }
-            else { text = def.IsPercent ? $"{diff:F1}%" : $"{diff.ToString(fmt)}"; color = "#DD3333"; }
 
-            if (isLeft) { row.DiffLeftText = text; row.DiffLeftColor = color; }
-            else { row.DiffRightText = text; row.DiffRightColor = color; }
-        }
+            var diff = key == RankRowKey
+                ? StatDiffCalculator.FromScores(Members[aIdx].RankScore, Members[bIdx].RankScore)
+                : StatDiffCalculator.FromValues(
+                    Members[aIdx].Stats.TryGetValue(key, out var al) ? al : null,
+                    Members[bIdx].Stats.TryGetValue(key, out var bl) ? bl : null);
 
-        private static double TryParseDouble(string s)
-        {
-            if (double.TryParse(s?.Replace("%", ""), out var v)) return v;
-            return 0;
+            row.ApplyDiff(isLeft, diff);
         }
 
         private void SetLocalUserStatus(string text)

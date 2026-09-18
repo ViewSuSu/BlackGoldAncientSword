@@ -41,17 +41,14 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
 
         public DelegateCommand CloseCommand { get; }
         public DelegateCommand NavigateToTeamInfoCommand { get; }
-        public DelegateCommand RefreshCommand { get; }
 
         public event EventHandler? CloseRequested;
         public event EventHandler? NavigateToTeamInfoRequested;
         public event EventHandler<bool>? DontShowAgainChanged;
-        public event EventHandler? RefreshRequested;
 
         public TeamOverlayViewModel()
         {
             CloseCommand = new DelegateCommand(() => CloseRequested?.Invoke(this, EventArgs.Empty));
-            RefreshCommand = new DelegateCommand(() => RefreshRequested?.Invoke(this, EventArgs.Empty));
             NavigateToTeamInfoCommand = new DelegateCommand(() =>
             {
                 NavigateToTeamInfoRequested?.Invoke(this, EventArgs.Empty);
@@ -61,9 +58,16 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
         }
 
         /// <summary>
-        /// 更新队伍成员列表。与旧实现不同，本方法对已存在的成员（按 UserName 匹配）
-        /// 原地更新属性而非清空重建，避免 WPF ItemsControl 每次重建可视化树触发 Image 控件
-        /// 创建新的 BitmapImage，从而减少 WPF 非托管 MIL 内存积累。
+        /// 用下发的完整队员名单刷新集合：成员数量与顺序一律以传入列表为准。
+        /// <para>
+        /// 传入列表是本局队伍的完整快照，因此按下标复用已有成员对象原位更新属性
+        /// （而非清空重建），既保持顺序正确，也让 WPF 可视化树稳定，
+        /// 避免 ItemsControl 每次重建时 Image 控件创建新的 BitmapImage 积累非托管 MIL 内存。
+        /// </para>
+        /// <para>
+        /// 不能按 UserName 匹配已有成员：成员昵称不保证已有（可能始终为空），空名字的成员
+        /// 既匹配不上旧项（每次刷新都被当成新成员插入）、又不会被移除，弹窗会越刷越多空位。
+        /// </para>
         /// </summary>
         public void UpdateMembers(IList<TeamOverlayMemberItem> members)
         {
@@ -78,68 +82,20 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
                 return;
             }
 
-            var incomingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var m in members)
+            // 超出的尾部项已不在本局名单中（队友退出/换人后名单变短）：直接移除。
+            for (int i = Members.Count - 1; i >= members.Count; i--)
             {
-                if (!string.IsNullOrEmpty(m.UserName))
-                    incomingNames.Add(m.UserName);
+                ReleaseImageBindings(Members[i]);
+                Members.RemoveAt(i);
             }
 
-            // 移除不在新名单中的成员
-            for (int i = Members.Count - 1; i >= 0; i--)
+            for (int i = 0; i < members.Count; i++)
             {
-                var existing = Members[i];
-                if (!string.IsNullOrEmpty(existing.UserName) && !incomingNames.Contains(existing.UserName))
-                {
-                    existing.AvatarUrl = string.Empty;
-                    existing.RankIcon = string.Empty;
-                    Members.RemoveAt(i);
-                }
-            }
-
-            // 建立现有成员索引（移除后进行，保证只包含保留的成员）
-            var existingByName = new Dictionary<string, TeamOverlayMemberItem>(StringComparer.OrdinalIgnoreCase);
-            foreach (var m in Members)
-            {
-                if (!string.IsNullOrEmpty(m.UserName))
-                    existingByName[m.UserName] = m;
-            }
-
-            // 按传入顺序重建集合，复用已有成员对象以保持 WPF 可视化树稳定
-            for (int targetIdx = 0; targetIdx < members.Count; targetIdx++)
-            {
-                var m = members[targetIdx];
-                var userName = m.UserName ?? string.Empty;
-                if (existingByName.TryGetValue(userName, out var existing))
-                {
-                    existing.AvatarUrl = m.AvatarUrl;
-                    existing.RankName = m.RankName;
-                    existing.RankIcon = m.RankIcon;
-                    existing.PageRankName = m.PageRankName;
-                    existing.PageStarCount = m.PageStarCount;
-                    existing.PageHasStars = m.PageHasStars;
-                    existing.RankTierScore = m.RankTierScore;
-                    existing.IsLoading = m.IsLoading;
-
-                    var currentIdx = Members.IndexOf(existing);
-                    if (currentIdx >= 0 && currentIdx != targetIdx)
-                        Members.Move(currentIdx, targetIdx);
-                }
+                var incoming = members[i];
+                if (i < Members.Count)
+                    CopyMember(Members[i], incoming);
                 else
-                {
-                    Members.Insert(targetIdx, new TeamOverlayMemberItem
-                    {
-                        UserName = userName,
-                        AvatarUrl = m.AvatarUrl,
-                        RankName = m.RankName,
-                        RankIcon = m.RankIcon,
-                        PageRankName = m.PageRankName,
-                        PageStarCount = m.PageStarCount,
-                        PageHasStars = m.PageHasStars,
-                        RankTierScore = m.RankTierScore,
-                        IsLoading = m.IsLoading
-                    });
-                }
+                    Members.Add(CopyOf(incoming));
             }
 
             RaisePropertyChanged(nameof(HasMembers));
@@ -151,10 +107,32 @@ namespace BlackGoldAncientSword.Framework.UI.Controls
         public void ClearImageBindings()
         {
             foreach (var m in Members)
-            {
-                m.AvatarUrl = string.Empty;
-                m.RankIcon = string.Empty;
-            }
+                ReleaseImageBindings(m);
+        }
+
+        private static void ReleaseImageBindings(TeamOverlayMemberItem member)
+        {
+            member.AvatarUrl = string.Empty;
+            member.RankIcon = string.Empty;
+        }
+
+        private static void CopyMember(TeamOverlayMemberItem target, TeamOverlayMemberItem source)
+        {
+            target.UserName = source.UserName;
+            target.AvatarUrl = source.AvatarUrl;
+            target.RankName = source.RankName;
+            target.RankIcon = source.RankIcon;
+            target.PageRankName = source.PageRankName;
+            target.PageStarCount = source.PageStarCount;
+            target.PageHasStars = source.PageHasStars;
+            target.IsLoading = source.IsLoading;
+        }
+
+        private static TeamOverlayMemberItem CopyOf(TeamOverlayMemberItem source)
+        {
+            var copy = new TeamOverlayMemberItem();
+            CopyMember(copy, source);
+            return copy;
         }
     }
 }
