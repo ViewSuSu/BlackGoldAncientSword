@@ -1,14 +1,11 @@
-using System.Text;
+﻿using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 
 namespace BlackGoldAncientSword.Framework.SourceGenerator
 {
-    /// <summary>
-    /// 基于 api-definitions.json 生成 HTTP DTO 与静态客户端 NarakaApiClient。
-    /// 仅在 MSBuild 属性 BgaSourceGenMode 为 "Client"（默认）时生成。
-    /// </summary>
+
     [Generator]
     internal class HttpApiSourceGenerator : IIncrementalGenerator
     {
@@ -16,14 +13,12 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // 读取 RootNamespace
             var rootNsProvider = context.AnalyzerConfigOptionsProvider
                 .Select(static (options, _) =>
                     options.GlobalOptions.TryGetValue("build_property.RootNamespace", out var ns)
                         ? ns
                         : "RootNamespace");
 
-            // 读取 BgaSourceGenMode（默认 Client）
             var modeProvider = context.AnalyzerConfigOptionsProvider
                 .Select(static (options, _) =>
                     options.GlobalOptions.TryGetValue("build_property.BgaSourceGenMode", out var mode) && !string.IsNullOrWhiteSpace(mode)
@@ -51,7 +46,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             var (json, rootNs) = input.inner;
             var mode = input.mode;
 
-            // 仅在 Client 模式下生成 DTO/Client；Tests 模式跳过避免与 Framework 重复定义
             if (!string.Equals(mode, ModeClient, StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -76,8 +70,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             }
         }
 
-        // ==================== DTOs ====================
-
         private void GenerateDtos(SourceProductionContext context, ApiDefinitionsRoot root, string ns)
         {
             var sb = new StringBuilder();
@@ -86,10 +78,9 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine();
             sb.AppendLine($"namespace {ns}");
             sb.AppendLine("{");
-            sb.AppendLine("    /// <summary>API response interface for extracting error messages</summary>");
             sb.AppendLine("    public interface IApiResponse");
             sb.AppendLine("    {");
-            sb.AppendLine("        double? Code { get; }");
+            sb.AppendLine("        bool IsSuccess { get; }");
             sb.AppendLine("        string? Msg { get; }");
             sb.AppendLine("    }");
             sb.AppendLine();
@@ -98,16 +89,14 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             foreach (var api in root.Apis)
             {
                 if (api.RequestBody != null)
-                    GenerateType(sb, api.RequestBody, allTypes, "    ");
+                    GenerateType(sb, api.RequestBody, allTypes, "    ", root.Envelope);
                 if (api.ResponseBody != null)
-                    GenerateTypeWithNested(sb, api.ResponseBody, allTypes, "    ");
+                    GenerateTypeWithNested(sb, api.ResponseBody, allTypes, "    ", root.Envelope);
             }
 
             sb.AppendLine("}");
             context.AddSource("HttpDtos.Generated.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
         }
-
-        // ==================== Static Client ====================
 
         private void GenerateStaticClient(SourceProductionContext context, ApiDefinitionsRoot root, string httpNs, string generatedNs)
         {
@@ -133,13 +122,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("{");
             sb.AppendLine("    public static class NarakaApiClient");
             sb.AppendLine("    {");
-            sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// 全局 JSON 序列化选项（与 Newtonsoft 默认宽松行为对齐）：");
-            sb.AppendLine("        /// - PropertyNameCaseInsensitive：忽略字段名大小写差异");
-            sb.AppendLine("        /// - NumberHandling.AllowReadingFromString：兼容后端把数字写成字符串的响应（如 \"code\": \"200\"）");
-            sb.AppendLine("        /// - JsonFlexibleStringConverter：兼容后端 string 字段返回 number/bool（如 stats[].value 既可能是 247 也可能是 \"4.9%\"）");
-            sb.AppendLine("        /// - DTO 已通过 [JsonPropertyName] 显式标注 camelCase，无需设置全局 PropertyNamingPolicy");
-            sb.AppendLine("        /// </summary>");
             sb.AppendLine("        public static readonly JsonSerializerOptions JsonOptions = new()");
             sb.AppendLine("        {");
             sb.AppendLine("            PropertyNameCaseInsensitive = true,");
@@ -153,16 +135,8 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine();
             sb.AppendLine("        private static HttpClient _http = CreateDefaultClient();");
             sb.AppendLine();
-            sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// 暴露内部 HttpClient 给需要手写调用非 code-gen 路径的 auth 场景（滑块验证 / 微信扫码 / refresh 等）。");
-            sb.AppendLine("        /// 与生成的方法共享同一条 handler 链（Signature + AuthToken），所以调用时会自动签名 + 加 Bearer。");
-            sb.AppendLine("        /// </summary>");
             sb.AppendLine("        public static HttpClient Http => _http;");
             sb.AppendLine();
-            sb.AppendLine("        /// <summary>");
-            sb.AppendLine("        /// 注入自定义 <see cref=\"HttpMessageHandler\"/>（例如 SignatureHandler + AuthTokenHandler 链）。");
-            sb.AppendLine("        /// App 启动装配阶段调用一次；调用后旧的 HttpClient 会被释放。");
-            sb.AppendLine("        /// </summary>");
             sb.AppendLine("        public static void Configure(HttpMessageHandler handler)");
             sb.AppendLine("        {");
             sb.AppendLine("            if (handler is null) throw new ArgumentNullException(nameof(handler));");
@@ -247,10 +221,10 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine("                throw new NarakaApiException(-(int)r.StatusCode, TryExtractApiError(body));");
             sb.AppendLine("            }");
             sb.AppendLine("            var result = JsonSerializer.Deserialize<T>(body, JsonOptions)!;");
-            sb.AppendLine("            // 后端历史契约：code=200 表示成功；升级后契约：code=0 表示成功。");
-            sb.AppendLine("            // 两套并存期为兼容旧数据/旧网关（如仍返回 200）都放行。");
-            sb.AppendLine("            if (result is IApiResponse apiResp && apiResp.Code != 200 && apiResp.Code != 0)");
-            sb.AppendLine("                throw new NarakaApiException((int)(apiResp.Code ?? 0), apiResp.Msg);");
+            sb.AppendLine("            // 成功口径由信封字段决定（旧后端 code=200/0，小黑盒 status=ok），见 api-definitions.json 的 envelope。");
+            sb.AppendLine("            // 业务失败一律用 0 当 code：上层只展示 Msg，不依赖数值码。");
+            sb.AppendLine("            if (result is IApiResponse apiResp && !apiResp.IsSuccess)");
+            sb.AppendLine("                throw new NarakaApiException(0, apiResp.Msg);");
             sb.AppendLine("            return result;");
             sb.AppendLine("        }");
             sb.AppendLine();
@@ -307,30 +281,15 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             if (api.QueryParameters != null && api.QueryParameters.Count > 0)
             {
                 foreach (var qp in api.QueryParameters)
-                    parameters.Add($"{ApiDefinitionsParser.ResolveType(qp.Value)}? {qp.Key} = null");
+                    parameters.Add($"{ApiDefinitionsParser.ResolveType(qp.Value)}? {ApiDefinitionsParser.ToCamelCase(qp.Key)} = null");
             }
             if (hasBody)
                 parameters.Add($"{reqType}? body = null");
             parameters.Add("CancellationToken ct = default");
 
-            // XML documentation
-            if (!string.IsNullOrEmpty(api.Description))
-                sb.AppendLine($"        /// <summary>{api.Description}</summary>");
 
-            // Parameters
-            if (api.PathParameters != null)
-                foreach (var pp in api.PathParameters)
-                    sb.AppendLine($"        /// <param name=\"{pp.Key}\">{ApiDefinitionsParser.GetParamDescription(pp.Key)}</param>");
-            if (api.QueryParameters != null)
-                foreach (var qp in api.QueryParameters)
-                    sb.AppendLine($"        /// <param name=\"{qp.Key}\">{ApiDefinitionsParser.GetParamDescription(qp.Key)}</param>");
-            if (hasBody)
-                sb.AppendLine($"        /// <param name=\"body\">请求体</param>");
-            sb.AppendLine($"        /// <param name=\"ct\">取消令牌</param>");
 
-            // Returns
             var returnsDesc = resType != null ? $"API 响应，包含 {api.Id} 的返回数据" : "无返回值";
-            sb.AppendLine($"        /// <returns>{returnsDesc}</returns>");
 
             sb.AppendLine($"        public static async {returnType} {methodName}(");
             sb.AppendLine($"            {string.Join(",\n            ", parameters)})");
@@ -347,10 +306,11 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                     var t = ApiDefinitionsParser.ResolveType(qp.Value);
                     var isEnum = enumTypeNames.Contains(t);
                     var ns = t != "string" && !isEnum;
+                    var arg = ApiDefinitionsParser.ToCamelCase(qp.Key);
                     if (isEnum)
-                        sb.AppendLine($"            if ({qp.Key} != null) qp[\"{qp.Key}\"] = ((int){qp.Key}).ToString();");
+                        sb.AppendLine($"            if ({arg} != null) qp[\"{qp.Key}\"] = ((int){arg}).ToString();");
                     else
-                        sb.AppendLine($"            if ({qp.Key} != null) qp[\"{qp.Key}\"] = {qp.Key}{(ns ? "?.ToString()" : "")};");
+                        sb.AppendLine($"            if ({arg} != null) qp[\"{qp.Key}\"] = {arg}{(ns ? "?.ToString()" : "")};");
                 }
                 sb.AppendLine($"            url += BuildQuery(qp);");
             }
@@ -388,21 +348,21 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             sb.AppendLine();
         }
 
-        private void GenerateTypeWithNested(StringBuilder sb, TypeDefinition type, HashSet<string> allTypes, string indent)
+        private void GenerateTypeWithNested(StringBuilder sb, TypeDefinition type, HashSet<string> allTypes, string indent, ApiEnvelopeDefinition envelope)
         {
             if (type.NestedTypes != null)
                 foreach (var nested in type.NestedTypes.Values)
-                    GenerateTypeWithNested(sb, nested, allTypes, indent);
-            GenerateType(sb, type, allTypes, indent);
+                    GenerateTypeWithNested(sb, nested, allTypes, indent, envelope);
+            GenerateType(sb, type, allTypes, indent, envelope);
         }
 
-        private void GenerateType(StringBuilder sb, TypeDefinition type, HashSet<string> allTypes, string indent)
+        private void GenerateType(StringBuilder sb, TypeDefinition type, HashSet<string> allTypes, string indent, ApiEnvelopeDefinition envelope)
         {
             var typeName = type.Type;
             if (string.IsNullOrEmpty(typeName) || !allTypes.Add(typeName)) return;
 
-            var hasCodeMsg = type.Properties.ContainsKey("code") && type.Properties.ContainsKey("msg");
-            var baseTypes = hasCodeMsg ? " : IApiResponse" : "";
+            var isEnvelope = envelope.IsEnvelope(type);
+            var baseTypes = isEnvelope ? " : IApiResponse" : "";
             sb.AppendLine($"{indent}public class {typeName}{baseTypes}");
             sb.AppendLine($"{indent}{{");
             foreach (var prop in type.Properties)
@@ -416,8 +376,35 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 sb.AppendLine($"{indent}    [System.Text.Json.Serialization.JsonPropertyName(\"{jsonAttrName}\")]");
                 sb.AppendLine($"{indent}    public {propType}{(nullable ? "?" : "")} {propName} {{ get; set; }}");
             }
+
+            if (isEnvelope)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"{indent}    [System.Text.Json.Serialization.JsonIgnore]");
+                sb.AppendLine($"{indent}    public bool IsSuccess => {BuildSuccessExpression(type, envelope)};");
+            }
+
             sb.AppendLine($"{indent}}}");
             sb.AppendLine();
+        }
+
+        private static string BuildSuccessExpression(TypeDefinition type, ApiEnvelopeDefinition envelope)
+        {
+            var propName = ApiDefinitionsParser.ToPascalCase(envelope.SuccessProperty);
+            var propType = type.Properties.TryGetValue(envelope.SuccessProperty, out var def)
+                ? ApiDefinitionsParser.ResolveType(def.Type)
+                : "string";
+
+            var comparisons = envelope.SuccessValues.Select(value =>
+            {
+                if (propType is "double" or "long" or "float" or "decimal" or "int")
+                    return $"{propName} == {value}";
+
+                var escaped = value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+                return $"string.Equals({propName}, \"{escaped}\", StringComparison.OrdinalIgnoreCase)";
+            });
+
+            return string.Join(" || ", comparisons);
         }
     }
 }

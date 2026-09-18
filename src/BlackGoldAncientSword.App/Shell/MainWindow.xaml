@@ -489,7 +489,7 @@
                                 <!--  ==================== User avatar button + dock Popup ====================  -->
                                 <!--  与网页版 .user-menu-trigger / .user-login-button 行为对齐：  -->
                                 <!--  未登录 → 显示"登录"图标 + 文字 + 箭头，点击弹 QR Overlay  -->
-                                <!--  已登录 → 显示 32×32 圆形头像，点击弹 Popup（头像 + 昵称 + 普通用户 + 退出登录）  -->
+                                <!--  已登录 → 圆形头像 + "登录成功"文案，点击弹 Popup（头像 + 昵称 + 退出登录）  -->
                                 <Grid Margin="0,0,0,6">
                                     <!--  Logged-out login button  -->
                                     <Button
@@ -549,7 +549,7 @@
                                         </Grid>
                                     </Button>
 
-                                    <!--  Logged-in avatar button (32×32 圆形，用 Ellipse 做遮罩)  -->
+                                    <!--  Logged-in avatar button（只显示圆形头像，昵称放 Popup；Ellipse 的 ImageBrush 天然做圆形 clip）  -->
                                     <Button
                                         x:Name="UserAvatarButton"
                                         Height="30"
@@ -572,12 +572,13 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Button.Style>
+                                        <!--  头像 + 固定文案"登录成功"：不显示昵称，避免长昵称把侧栏撑开截断（昵称在悬停 ToolTip 与 Popup 里）  -->
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="24" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <!--  32×32 圆形头像（在 24-wide 列中居中；Ellipse Fill 用 ImageBrush 天然做圆形 clip）  -->
+                                            <!--  圆形头像（在 24-wide 列中居中；Ellipse Fill 用 ImageBrush 天然做圆形 clip）  -->
                                             <Ellipse
                                                 Grid.Column="0"
                                                 Width="20"
@@ -595,7 +596,7 @@
                                                 VerticalAlignment="Center"
                                                 FontSize="{DynamicResource FontSize.Body}"
                                                 Foreground="{DynamicResource TextPrimaryBrush}"
-                                                Text="{Binding UserProfile.Nickname}"
+                                                Text="{DynamicResource Auth.User.LoginSuccess}"
                                                 TextTrimming="CharacterEllipsis" />
                                         </Grid>
                                     </Button>
@@ -637,29 +638,15 @@
                                                             <ImageBrush ImageSource="{Binding UserProfile.AvatarUrl}" Stretch="UniformToFill" />
                                                         </Ellipse.Fill>
                                                     </Ellipse>
-                                                    <StackPanel
+                                                    <TextBlock
                                                         Grid.Column="1"
                                                         Margin="10,0,0,0"
                                                         VerticalAlignment="Center"
-                                                        Orientation="Vertical">
-                                                        <TextBlock
-                                                            FontSize="{DynamicResource FontSize.Body}"
-                                                            FontWeight="SemiBold"
-                                                            Foreground="{DynamicResource TextPrimaryBrush}"
-                                                            Text="{Binding UserProfile.Nickname}"
-                                                            TextTrimming="CharacterEllipsis" />
-                                                        <Border
-                                                            Margin="0,4,0,0"
-                                                            Padding="6,2"
-                                                            HorizontalAlignment="Left"
-                                                            Background="{DynamicResource AccentSoftGradientBrush}"
-                                                            CornerRadius="3">
-                                                            <TextBlock
-                                                                FontSize="{DynamicResource FontSize.Caption}"
-                                                                Foreground="{DynamicResource AccentPrimaryBrush}"
-                                                                Text="{DynamicResource Auth.User.RoleNormal}" />
-                                                        </Border>
-                                                    </StackPanel>
+                                                        FontSize="{DynamicResource FontSize.Body}"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="{DynamicResource TextPrimaryBrush}"
+                                                        Text="{Binding UserProfile.Nickname}"
+                                                        TextTrimming="CharacterEllipsis" />
                                                 </Grid>
 
                                                 <!--  Divider  -->
@@ -740,48 +727,6 @@
                                             VerticalAlignment="Center"
                                             FontSize="{DynamicResource FontSize.Body}"
                                             Text="{DynamicResource Nav.Settings}"
-                                            TextTrimming="CharacterEllipsis" />
-                                    </Grid>
-                                </Button>
-
-                                <Button ToolTip="{DynamicResource Nav.Sponsor}">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Height" Value="30" />
-                                            <Setter Property="Margin" Value="0,0,0,0" />
-                                            <Setter Property="Padding" Value="0" />
-                                            <Setter Property="HorizontalAlignment" Value="Stretch" />
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                            <Setter Property="Background" Value="Transparent" />
-                                            <Setter Property="BorderThickness" Value="3,0,0,0" />
-                                            <Setter Property="BorderBrush" Value="Transparent" />
-                                            <Setter Property="Cursor" Value="Hand" />
-                                        </Style>
-                                    </Button.Style>
-                                    <i:Interaction.Triggers>
-                                        <i:EventTrigger EventName="Click">
-                                            <i:InvokeCommandAction Command="{Binding OpenSponsorCommand}" />
-                                        </i:EventTrigger>
-                                    </i:Interaction.Triggers>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="24" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <Image
-                                            Grid.Column="0"
-                                            Width="14"
-                                            Height="14"
-                                            Margin="0,0,0,0"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Source="/BlackGoldAncientSword.Resources;component/Images/sponsor.png"
-                                            Stretch="Uniform" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            FontSize="{DynamicResource FontSize.Body}"
-                                            Text="{DynamicResource Nav.Sponsor}"
                                             TextTrimming="CharacterEllipsis" />
                                     </Grid>
                                 </Button>
@@ -1174,17 +1119,6 @@
                     Panel.ZIndex="10005"
                     x:Name="BattleDetailOverlay"
                     prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.BattleDetailRegion}" />
-
-                <!--  Sponsor overlay (below close prompt, above announcement)  -->
-                <ContentControl
-                    Grid.RowSpan="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    HorizontalContentAlignment="Stretch"
-                    VerticalContentAlignment="Stretch"
-                    Panel.ZIndex="10000"
-                    x:Name="SponsorOverlay"
-                    prism:RegionManager.RegionName="{x:Static consts:GlobalConstant.SponsorRegion}" />
 
                 <!--  Update log overlay (below close prompt, above announcement)  -->
                 <ContentControl

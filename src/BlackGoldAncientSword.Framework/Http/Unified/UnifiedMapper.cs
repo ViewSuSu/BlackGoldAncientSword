@@ -7,38 +7,105 @@ using BlackGoldAncientSword.Framework.Http.Generated;
 
 namespace BlackGoldAncientSword.Framework.Http.Unified
 {
-    /// <summary>
-    /// unified 接口响应 → Unified 域模型的集中转换。
-    /// 后端已在 /app-api/record/unified/* 做完三源（miniProgram/heyBox/dashen）归一化，
-    /// 客户端不再按数据源分派；本类仅吸收传输层差异（ISO-8601 时间、字符串 modeCode、number 统计值）。
-    /// </summary>
+
     public static class UnifiedMapper
     {
-        // === Search ===
 
-        public static UnifiedSearchResult? MapSearch(SearchRecordResponse? resp)
+        public static UnifiedSearchResult? MapSearch(HeyboxSearchResponse? resp) => MapSearch(resp, preferredRoleId: null);
+
+        public static UnifiedSearchResult? MapSearch(HeyboxSearchResponse? resp, string? preferredRoleId)
         {
-            var d = resp?.Data;
-            if (d == null || string.IsNullOrEmpty(d.RoleIdSimple)) return null;
+            var players = resp?.Result?.PlayerList;
+            if (players is null || players.Count == 0) return null;
+
+            var player =
+                (!string.IsNullOrEmpty(preferredRoleId)
+                    ? players.FirstOrDefault(p => string.Equals(p.GameId, preferredRoleId, StringComparison.OrdinalIgnoreCase))
+                    : null)
+                ?? players[0];
+            if (string.IsNullOrEmpty(player.GameId)) return null;
+
+            return MapSearchPlayer(player, resp?.Result?.Header);
+        }
+
+        public static List<UnifiedSearchResult> MapSearchList(HeyboxSearchResponse? resp)
+        {
+            var players = resp?.Result?.PlayerList;
+            if (players is null || players.Count == 0) return new List<UnifiedSearchResult>();
+
+            var results = new List<UnifiedSearchResult>(players.Count);
+            foreach (var player in players)
+            {
+                if (string.IsNullOrEmpty(player.GameId)) continue;
+                results.Add(MapSearchPlayer(player, resp?.Result?.Header));
+            }
+            return results;
+        }
+
+        private static UnifiedSearchResult MapSearchPlayer(
+            HeyboxSearchPlayer player, List<HeyboxSearchColumn>? header)
+        {
+            var cells = player.ColumnList ?? new List<HeyboxSearchCell>();
+            var info = cells.FirstOrDefault(c => string.Equals(c.Type, "user_info", StringComparison.Ordinal));
+            var rank = cells.FirstOrDefault(c => string.Equals(c.Type, "icon_text", StringComparison.Ordinal));
+
             return new UnifiedSearchResult
             {
-                RoleIdSimple = d.RoleIdSimple ?? string.Empty,
-                DataSource = DataSourceExtensions.FromApiString(d.Source),
+                RoleIdSimple = player.GameId!,
+                Server = player.Ext ?? string.Empty,
+                RoleName = info?.Text ?? string.Empty,
+                Avatar = info?.Img ?? string.Empty,
+                LevelName = rank?.Text ?? string.Empty,
+                LevelImg = rank?.Img ?? string.Empty,
+                DataSource = DataSource.HeyBox,
+                Fields = MapSearchFields(cells, header),
             };
         }
 
-        // === Player profile ===
-
-        public static UnifiedUserInfo? MapPlayer(PlayerProfile? p)
+        private static List<UnifiedSearchField> MapSearchFields(
+            List<HeyboxSearchCell> cells, List<HeyboxSearchColumn>? header)
         {
-            if (p == null) return null;
+            var fields = new List<UnifiedSearchField>(cells.Count);
+            for (var i = 0; i < cells.Count; i++)
+            {
+                var cell = cells[i];
+                if (cell is null) continue;
+                if (string.Equals(cell.Type, "user_info", StringComparison.Ordinal)) continue;
+                if (string.Equals(cell.Type, "icon_text", StringComparison.Ordinal)) continue;
+
+                var text = JoinCellText(cell);
+                if (text.Length == 0) continue;
+
+                fields.Add(new UnifiedSearchField
+                {
+                    Title = header is not null && i < header.Count ? header[i]?.Text ?? string.Empty : string.Empty,
+                    Text = text,
+                });
+            }
+            return fields;
+        }
+
+        private static string JoinCellText(HeyboxSearchCell cell)
+        {
+            var parts = new[] { cell.Text, cell.SubText, cell.Value, cell.ArtText }
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(p => p!.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            return parts.Count == 0 ? string.Empty : string.Join(" ", parts);
+        }
+
+        public static UnifiedUserInfo? MapPlayerInfo(HeyboxHomeData? d)
+        {
+            if (d?.PlayerInfo == null) return null;
+
             return new UnifiedUserInfo
             {
-                RoleName = p.DisplayName ?? string.Empty,
-                RoleLevel = p.Level ?? 0,
-                Uid = p.RoleIdSimple ?? string.Empty,
-                HeadIcon = p.AvatarUrl ?? string.Empty,
-                // unified/player 不返回赛季/各模式段位分；段位数据改由 GetSeasonSummary 提供。
+                RoleName = d.PlayerInfo.Name ?? string.Empty,
+                RoleLevel = UnifiedValueParser.ParseLooseNumber(d.PlayerInfo.Lv),
+                Uid = d.RoleId ?? string.Empty,
+                HeadIcon = d.PlayerInfo.Avatar ?? string.Empty,
                 CurrentSeasonId = null,
                 SoloRankScore = null,
                 DuoRankScore = null,
@@ -46,224 +113,252 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
             };
         }
 
-        public static UnifiedUserInfo? MapPlayer(GetPlayerProfileResponse? resp) => MapPlayer(resp?.Data);
-
-        // === Season summary (段位 + 统计指标) ===
-
-        public static UnifiedPlayerStats? MapSeasonSummary(GetSeasonSummaryResponse? resp)
+        public static UnifiedPlayerStats? MapSeasonSummary(HeyboxHomeData? d)
         {
-            var d = resp?.Data;
             if (d == null) return null;
 
-            var r = d.Rank;
-            var grade = r == null ? null : new UnifiedGradeInfo
+            var info = d.PlayerInfo;
+            var grade = info == null ? null : new UnifiedGradeInfo
             {
-                GradeName = r.Name ?? string.Empty,
-                GradeIcon = r.IconUrl ?? string.Empty,
-                GradeScore = r.Score ?? 0,
-                GradeLevel = r.Level ?? string.Empty,
+                GradeName = info.Level ?? string.Empty,
+                GradeIcon = info.LevelImg ?? string.Empty,
+                GradeScore = UnifiedValueParser.ParseLooseNumber(info.Rating),
+                GradeLevel = string.Empty,
             };
 
-            var stats = d.Metrics?.Select(m => new UnifiedStatEntry
-            {
-                Key = m.Code ?? string.Empty,
-                Name = m.Label ?? m.Code ?? string.Empty,
-                // 直接用后端 value 原文，与网页一致：该带的单位（如百分率的 "12.5%"）后端已放进 value；
-                // unit 是语义标签（count/damage/heal/seconds/%），不可拼接展示（拼了会出现 "12.5%%"、"8count"）。
-                Value = m.Value ?? string.Empty,
-            }).ToList() ?? new List<UnifiedStatEntry>();
+            var stats = (d.Overview ?? new List<HeyboxOverviewEntry>())
+                .Select(o => ToStatEntry(o.Desc, o.Value, o.Grade))
+                .ToList();
 
-            return new UnifiedPlayerStats { Grade = grade, Stats = stats };
+            var scoreInfo = d.ScoreInfo;
+
+            return new UnifiedPlayerStats
+            {
+                Grade = grade,
+                Stats = stats,
+                CompositeScore = string.IsNullOrEmpty(scoreInfo?.CompositeScore)
+                    ? null
+                    : UnifiedValueParser.ParseLooseNumber(scoreInfo!.CompositeScore),
+                ScoreGrade = scoreInfo?.ScoreGrade ?? string.Empty,
+                ScoreList = (scoreInfo?.ScoreList ?? new List<HeyboxScoreItem>())
+                    .Select(i => new UnifiedScoreItem
+                    {
+                        Name = i.Name ?? string.Empty,
+                        Score = UnifiedValueParser.ParseLooseNumber(i.Score),
+                    })
+                    .ToList(),
+                ScoreStats = (scoreInfo?.Stats ?? new List<HeyboxScoreStat>())
+                    .Select(s => ToStatEntry(s.Desc, s.Value, s.Grade))
+                    .ToList(),
+                RecentAvgRank = UnifiedValueParser.ParseLooseNumber(d.RecentAvgRank),
+                RecentRanks = MapRecentRanks(d.RecentRanks),
+                Heroes = UnifiedRosterMapper.MapHeroes(d.Heroes),
+                Weapons = UnifiedRosterMapper.MapWeapons(d.Weapons),
+            };
         }
 
-        // === Recent matches ===
-
-        public static List<UnifiedRecentBattleItem> MapRecentMatches(GetRecentMatchesResponse? resp)
+        private static UnifiedStatEntry ToStatEntry(string? desc, string? value, string? grade) => new()
         {
-            var list = resp?.Data?.Records;
-            if (list == null) return new List<UnifiedRecentBattleItem>();
-            return list.Select(m =>
-            {
-                var end = m.Score?.End ?? 0;
-                var begin = m.Score?.Begin;
-                var delta = m.Score?.Delta ?? 0;
-                return new UnifiedRecentBattleItem
+            Key = desc ?? string.Empty,
+            Name = desc ?? string.Empty,
+            Value = value ?? string.Empty,
+            Grade = grade ?? string.Empty,
+        };
+
+        private static IReadOnlyList<UnifiedRecentRank> MapRecentRanks(IEnumerable<HeyboxRecentRank>? ranks)
+            => (ranks ?? Enumerable.Empty<HeyboxRecentRank>())
+                .Select(r => new UnifiedRecentRank
                 {
-                    BattleId = m.DetailKey ?? string.Empty,
-                    Rank = (int)(m.Rank ?? 0),
-                    HeroIcon = m.Hero?.IconUrl ?? string.Empty,
-                    HeroName = m.Hero?.Name ?? string.Empty,
-                    GameMode = ModeCodeToBattleApiCode(m.Mode?.Code),
-                    // 直接承载后端 mode，供 VM 与网页一致地显示模式名；dashen 源 mode 为 null 时字段留空。
-                    ModeName = m.Mode?.Name,
-                    ModeCategory = m.Mode?.Category,
-                    ModeTeamSize = (int)(m.Mode?.TeamSize ?? 0),
-                    Kill = (int)(m.Kills ?? 0),
-                    Damage = (int)(m.Damage ?? 0),
-                    RoundRankScore = end,
-                    BeginRankScore = begin,
-                    ScoreDelta = delta,
-                    BattleEndTimeMs = ParseIso8601ToMs(m.OccurredAt),
-                    Rating = m.Evaluation?.Level ?? string.Empty,
-                    RankName = m.Evaluation?.Level ?? string.Empty,
-                    HonorTitles = m.HonorTitles?.Select(MapHonor).ToArray()
-                        ?? Array.Empty<UnifiedHonorTitle>(),
-                };
-            }).ToList();
+                    MatchId = r.MatchId ?? string.Empty,
+                    Rank = (int)UnifiedValueParser.ParseLooseNumber(r.Rank),
+                })
+                .ToList();
+
+        public static List<UnifiedSeason> MapSeasons(IEnumerable<HeyboxKeyValue>? seasons)
+        {
+            if (seasons == null) return new List<UnifiedSeason>();
+
+            return seasons
+                .Select(s => new UnifiedSeason
+                {
+                    SeasonKey = s.Key ?? string.Empty,
+                    Name = s.Value ?? string.Empty,
+                })
+                .Where(s => !string.IsNullOrEmpty(s.SeasonKey) && !string.IsNullOrEmpty(s.Name))
+                .ToList();
         }
 
-        // === Game modes ===
-
-        public static List<UnifiedMode> MapModes(GetGameModesResponse? resp)
+        public static List<UnifiedRecentBattleItem> MapRecentMatches(IEnumerable<HeyboxMatchItem>? items)
         {
-            var list = resp?.Data;
-            if (list == null) return new List<UnifiedMode>();
-            return list.Select(m => new UnifiedMode
-            {
-                Code = m.Code ?? string.Empty,
-                Name = m.Name ?? string.Empty,
-                Category = m.Category ?? string.Empty,
-                TeamSize = (int)(m.TeamSize ?? 0),
-            }).ToList();
+            if (items == null) return new List<UnifiedRecentBattleItem>();
+            return items.Select(MapRecentBattle).ToList();
         }
 
-        // === Match detail (personal + team + top5) ===
-
-        public static UnifiedBattleDetail? MapMatchDetail(
-            GetMatchDetailResponse? personal,
-            GetMatchTeamResponse? team,
-            GetMatchTop5Response? top5)
+        private static UnifiedRecentBattleItem MapRecentBattle(HeyboxMatchItem m)
         {
-            var p = personal?.Data;
-            if (p == null) return null;
+            var mode = ResolveMode(m.BattleTid);
 
-            var personalView = new UnifiedPersonalDetail
+            return new UnifiedRecentBattleItem
             {
-                HeroName = p.Hero?.Name ?? string.Empty,
-                HeroIcon = p.Hero?.IconUrl ?? string.Empty,
-                RoleName = p.Player?.DisplayName ?? string.Empty,
-                ModeName = p.Mode?.Name,
-                Rank = (int)(p.Rank ?? 0),
-                BattleEndTimeMs = ParseIso8601ToMs(p.OccurredAt),
-                HonorTitles = p.HonorTitles?.Select(MapHonor).ToArray()
-                    ?? Array.Empty<UnifiedHonorTitle>(),
-                DataList = p.Stats?.Select(MapStat).ToArray()
-                    ?? Array.Empty<UnifiedStatEntry>(),
-                Weapons = p.Weapons?.Select(MapWeapon).ToArray()
-                    ?? Array.Empty<UnifiedWeapon>(),
-                SoulItems = p.SoulItems?.Select(MapSoul).ToArray()
-                    ?? Array.Empty<UnifiedSoulItem>(),
-                Armor = null, // 个人详情无护甲字段（护甲仅在队伍成员上）
+                BattleId = m.MatchId ?? string.Empty,
+                Rank = (int)UnifiedValueParser.ParseLooseNumber(m.Rank),
+                HeroIcon = m.HeroAvatar ?? string.Empty,
+                HeroId = m.HeroId ?? string.Empty,
+                HeroName = string.Empty,
+                MapName = m.MapName ?? string.Empty,
+                PlayNum = (int)UnifiedValueParser.ParseLooseNumber(m.PlayNum),
+                GameMode = mode.BattleApiCode,
+                ModeCategory = mode.Category,
+                ModeTeamSize = mode.TeamSize,
+                ModeName = null,
+                Kill = (int)UnifiedValueParser.ParseLooseNumber(m.KillTimes),
+                Damage = (int)UnifiedValueParser.ParseLooseNumber(m.Damage),
+                RoundRankScore = UnifiedValueParser.ParseLooseNumber(m.Rating),
+                BeginRankScore = null,
+                ScoreDelta = UnifiedValueParser.ParseLooseNumber(m.RatingDelta),
+                BattleEndTimeMs = UnifiedValueParser.ToUnixMs(m.Time),
+                Rating = m.Grade ?? string.Empty,
+                RankName = m.Grade ?? string.Empty,
+                HonorTitles = Array.Empty<UnifiedHonorTitle>(),
+            };
+        }
+
+        public static UnifiedBattleDetail? MapMatchDetail(HeyboxMatchDetailResponse? resp)
+        {
+            var d = resp?.Result;
+            if (d == null) return null;
+
+            var personal = new UnifiedPersonalDetail
+            {
+                HeroName = string.Empty,
+                HeroIcon = d.Avatar ?? string.Empty,
+                RoleName = d.Name ?? string.Empty,
+                ModeName = null,
+                Rank = (int)UnifiedValueParser.ParseLooseNumber(d.Rank),
+                BattleEndTimeMs = UnifiedValueParser.ToUnixMs(d.Time),
+                MapName = d.MapName ?? string.Empty,
+                BackgroundImage = d.BgImg ?? string.Empty,
+                RoundRankScore = UnifiedValueParser.ParseLooseNumber(d.Rating),
+                ScoreDelta = UnifiedValueParser.ParseLooseNumber(d.RatingDelta),
+                LevelName = d.Level ?? string.Empty,
+                LevelIcon = d.LevelImg ?? string.Empty,
+                HonorTitles = (d.Tags ?? new List<HeyboxDetailTag>())
+                    .Select(t => new UnifiedHonorTitle
+                    {
+                        Icon = t.Img ?? string.Empty,
+                        Name = t.Name ?? string.Empty,
+                        Desc = t.Desc ?? string.Empty,
+                    }).ToArray(),
+                DataList = (d.Data ?? new List<HeyboxDetailStat>())
+                    .Select(s => ToStatEntry(s.Desc, s.Value, s.Grade))
+                    .ToArray(),
+                Weapons = (d.WeaponList ?? new List<HeyboxDetailWeapon>())
+                    .Select(w => new UnifiedWeapon
+                    {
+                        Icon = w.Img ?? string.Empty,
+                        Name = w.Name ?? string.Empty,
+                        Level = 0,
+                        Kill = (int)UnifiedValueParser.ParseLooseNumber(w.KillTimes),
+                        Damage = (int)UnifiedValueParser.ParseLooseNumber(w.Damage),
+                        Percent = w.Per ?? 0,
+                    }).ToArray(),
+                SoulItems = (d.SoulItemList ?? new List<HeyboxDetailSoulItem>())
+                    .Select(s => new UnifiedSoulItem
+                    {
+                        Icon = s.Img ?? string.Empty,
+                        Name = s.Name ?? string.Empty,
+                        Level = 0,
+                    }).ToArray(),
+                Armor = null,
             };
 
-            var teamView = team?.Data?.Select(t => new UnifiedTeammate
-            {
-                HeroIcon = t.Hero?.IconUrl ?? string.Empty,
-                HeroName = t.Hero?.Name ?? string.Empty,
-                RoleName = t.Player?.DisplayName ?? string.Empty,
-                IsMe = t.Me ?? false,
-                Armor = t.Armor == null ? null : new UnifiedArmor
-                {
-                    Icon = t.Armor.IconUrl ?? string.Empty,
-                    Level = t.Armor.Level ?? 0,
-                },
-                Weapons = t.Weapons?.Select(MapWeapon).ToArray() ?? Array.Empty<UnifiedWeapon>(),
-                SoulItems = t.SoulItems?.Select(MapSoul).ToArray() ?? Array.Empty<UnifiedSoulItem>(),
-                DataList = t.Stats?.Select(MapStat).ToArray() ?? Array.Empty<UnifiedStatEntry>(),
-            }).ToArray();
+            var teams = d.AllTeam is { Count: > 0 } ? d.AllTeam : d.AllPlayerData;
+            var teamList = teams ?? new List<HeyboxTeamEntry>();
+            var mine = teamList.FirstOrDefault();
 
-            var top5View = top5?.Data?.Select(e => new UnifiedTop5Entry
-            {
-                Rank = (int)(e.Rank ?? 0),
-                Members = e.Members?.Select(m => new UnifiedTop5Member
+            var teamView = mine?.Players?
+                .Select(p => new UnifiedTeammate
                 {
-                    HeroIcon = m.Hero?.IconUrl ?? string.Empty,
-                    HeroName = m.Hero?.Name ?? string.Empty,
-                    RoleName = m.DisplayName ?? string.Empty,
-                    IsMe = m.Me ?? false,
-                }).ToArray() ?? Array.Empty<UnifiedTop5Member>(),
-            }).ToArray();
+                    HeroIcon = string.Empty,
+                    HeroName = string.Empty,
+                    RoleName = p.RoleName ?? string.Empty,
+                    IsMe = p.Self ?? false,
+                    Armor = null,
+                    Weapons = Array.Empty<UnifiedWeapon>(),
+                    SoulItems = Array.Empty<UnifiedSoulItem>(),
+                    DataList = MapTeamPlayerStats(p),
+                }).ToArray() ?? Array.Empty<UnifiedTeammate>();
+
+            var top5View = teamList
+                .Where(t => ((int)UnifiedValueParser.ParseLooseNumber(t.Rank)) is > 0 and <= 5)
+                .Select(t => new UnifiedTop5Entry
+                {
+                    Rank = (int)UnifiedValueParser.ParseLooseNumber(t.Rank),
+                    Members = (t.Players ?? new List<HeyboxTeamPlayer>())
+                        .Select(p => new UnifiedTop5Member
+                        {
+                            HeroIcon = string.Empty,
+                            HeroName = string.Empty,
+                            RoleName = p.RoleName ?? string.Empty,
+                            IsMe = p.Self ?? false,
+                        }).ToArray(),
+                }).ToArray();
 
             return new UnifiedBattleDetail
             {
-                Personal = personalView,
+                Personal = personal,
                 Team = teamView,
                 Top5 = top5View,
             };
         }
 
-        // === Shared helpers ===
-
-        private static UnifiedHonorTitle MapHonor(HonorTitle h) => new()
+        private static UnifiedStatEntry[] MapTeamPlayerStats(HeyboxTeamPlayer p)
         {
-            Icon = h.IconUrl ?? string.Empty,
-            Name = h.Name ?? string.Empty,
-            Desc = h.Description ?? string.Empty,
-        };
+            var entries = new List<UnifiedStatEntry>(5);
+            Add("伤害", p.Damage);
+            Add("击杀", p.Kill);
+            Add("振刀", p.Shock);
+            Add("治疗", p.Cure);
+            Add("伤害占比", p.Per);
+            return entries.ToArray();
 
-        private static UnifiedStatEntry MapStat(BattleStat s) => new()
-        {
-            Key = s.Code ?? string.Empty,
-            Name = s.Name ?? s.Code ?? string.Empty,
-            Value = FormatStatValue(s.Value),
-        };
-
-        private static UnifiedWeapon MapWeapon(Weapon w) => new()
-        {
-            Icon = w.IconUrl ?? string.Empty,
-            Name = w.Name ?? string.Empty,
-            Level = w.Level ?? 0,
-            Kill = (int)(w.Kills ?? 0),
-            Damage = (int)(w.Damage ?? 0),
-            Percent = w.Percent ?? 0,
-        };
-
-        private static UnifiedSoulItem MapSoul(SoulItem s) => new()
-        {
-            Icon = s.IconUrl ?? string.Empty,
-            Name = s.Name ?? string.Empty,
-            Level = s.Level ?? 0,
-        };
-
-        private static string FormatStatValue(double? value)
-        {
-            if (value == null) return string.Empty;
-            var v = value.Value;
-            // 整数值不带小数点显示，与网页一致。unit 是语义标签（count/damage/seconds），不拼接。
-            return v == Math.Floor(v)
-                ? ((long)v).ToString(CultureInfo.InvariantCulture)
-                : v.ToString(CultureInfo.InvariantCulture);
+            void Add(string label, double? value)
+            {
+                if (value == null) return;
+                entries.Add(new UnifiedStatEntry
+                {
+                    Key = label,
+                    Name = label,
+                    Value = UnifiedValueParser.FormatStatValue(value.Value),
+                });
+            }
         }
 
-        /// <summary>
-        /// 把 unified 的字符串 modeCode（口径为 battleTidHeyBox，如 "5000000"）归一化为
-        /// miniProgram 对局历史 battleApiCode，供 VM 层 FormatGameMode/FromBattleApiCode 统一消费。
-        /// 无法识别时返回原始整数值，VM 侧走 Unknown(x) 兜底。
-        /// </summary>
-        private static int ModeCodeToBattleApiCode(string? modeCode)
+        private static (int BattleApiCode, string? Category, int TeamSize) ResolveMode(string? battleTid)
         {
-            var raw = ParseInt(modeCode);
-            if (raw == 0) return 0;
+            if (string.IsNullOrEmpty(battleTid)) return (0, null, 0);
+
+            if (!int.TryParse(battleTid, NumberStyles.Integer, CultureInfo.InvariantCulture, out var tid))
+                return (0, null, 0);
+
             try
             {
-                return GameModeExtensions.FromHeyBoxBattleTid(raw).ToBattleApiCode();
+                var mode = GameModeExtensions.FromHeyBoxBattleTid(tid);
+                return (mode.ToBattleApiCode(), ToCategoryString(mode.GetCategory()), (int)mode.GetTeamSize());
             }
             catch (ArgumentOutOfRangeException)
             {
-                return raw;
+                return (0, null, 0);
             }
         }
 
-        private static long ParseIso8601ToMs(string? iso)
+        private static string ToCategoryString(GameModeCategory category) => category switch
         {
-            if (string.IsNullOrEmpty(iso)) return 0;
-            return DateTimeOffset.TryParse(iso, CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal, out var dto)
-                ? dto.ToUnixTimeMilliseconds()
-                : 0;
-        }
-
-        private static int ParseInt(string? s)
-            => int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : 0;
+            GameModeCategory.Rank => "rank",
+            GameModeCategory.Match => "match",
+            GameModeCategory.Tianren => "tianren",
+            GameModeCategory.Fun => "fun",
+            _ => string.Empty,
+        };
     }
 }

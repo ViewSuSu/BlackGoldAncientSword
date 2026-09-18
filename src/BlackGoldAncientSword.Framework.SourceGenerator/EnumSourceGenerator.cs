@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Linq;
 using System.Text.Json;
 using Microsoft.CodeAnalysis;
@@ -17,7 +17,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // 与 HttpApiSourceGenerator 一致：仅在 Client 模式下生成枚举，避免在 Tests 项目重复生成与 Framework 同名枚举冲突
             var modeProvider = context.AnalyzerConfigOptionsProvider
                 .Select(static (options, _) =>
                     options.GlobalOptions.TryGetValue("build_property.BgaSourceGenMode", out var mode) && !string.IsNullOrWhiteSpace(mode)
@@ -67,7 +66,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
 
         private void GenerateEnumFile(SourceProductionContext context, EnumDefinition def)
         {
-            // Check for BattleApiCode values and generate FromBattleApiCode method
             var hasBattleApiCodes = def.Values.Any(v => v.BattleApiCode.HasValue);
             if (hasBattleApiCodes)
             {
@@ -80,11 +78,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 methodBuilder.AppendLine("{");
                 methodBuilder.AppendLine($"    public static partial class {def.Name}Extensions");
                 methodBuilder.AppendLine("    {");
-                methodBuilder.AppendLine("        /// <summary>");
-                methodBuilder.AppendLine("        /// 将对局历史 API 返回的游戏模式编码转换为 GameMode 枚举值");
-                methodBuilder.AppendLine("        /// </summary>");
-                methodBuilder.AppendLine("        /// <param name=\"code\">对局历史 API 返回的游戏模式编码（如 1、2、6 等）</param>");
-                methodBuilder.AppendLine("        /// <returns>对应的 GameMode 枚举值</returns>");
                 methodBuilder.AppendLine($"        public static {def.Name} FromBattleApiCode(int code)");
                 methodBuilder.AppendLine("        {");
                 methodBuilder.AppendLine("            return code switch");
@@ -118,9 +111,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
 
             if (!string.IsNullOrEmpty(def.Description))
             {
-                sb.AppendLine($"    /// <summary>");
-                sb.AppendLine($"    /// {def.Description}");
-                sb.AppendLine($"    /// </summary>");
             }
 
             var underlying = def.UnderlyingType ?? "int";
@@ -131,9 +121,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             {
                 var val = def.Values[i];
                 var isLast = i == def.Values.Count - 1;
-                sb.AppendLine($"        /// <summary>");
-                sb.AppendLine($"        /// {val.Description}");
-                sb.AppendLine($"        /// </summary>");
                 sb.AppendLine($"        [Description(\"{val.Description}\")]");
                 sb.Append($"        {val.Name} = {EnumValueLiteral(val.GetValueString(), underlying)}");
                 sb.AppendLine(isLast ? "" : ",");
@@ -166,9 +153,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 var enumName = kvp.Key; var methods = kvp.Value;
                 if (!enumLookup.ContainsKey(enumName)) continue;
 
-                sb.AppendLine($"    /// <summary>");
-                sb.AppendLine($"    /// {enumName} 枚举的扩展方法");
-                sb.AppendLine($"    /// </summary>");
                 sb.AppendLine($"    public static partial class {enumName}Extensions");
                 sb.AppendLine("    {");
 
@@ -176,16 +160,8 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                 {
                     var returnTypeCs = method.ReturnType ?? "void";
 
-                    // === XML doc ===
-                    sb.AppendLine($"        /// <summary>");
-                    sb.AppendLine($"        /// {method.Description}");
-                    sb.AppendLine($"        /// </summary>");
 
-                    // Extension method: <param name="value">
-                    if (!method.IsStatic)
-                        sb.AppendLine($"        /// <param name=\"value\">当前 {enumName} 枚举值</param>");
 
-                    // Parameters
                     if (method.Parameters != null)
                     {
                         foreach (var p in method.Parameters)
@@ -193,15 +169,10 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
                             var paramDesc = !string.IsNullOrEmpty(p.Description)
                                 ? p.Description
                                 : $"参数 {p.Name}";
-                            sb.AppendLine($"        /// <param name=\"{p.Name}\">{paramDesc}</param>");
                         }
                     }
 
-                    // Returns
-                    if (!string.IsNullOrEmpty(method.Returns))
-                        sb.AppendLine($"        /// <returns>{method.Returns}</returns>");
 
-                    // === Method signature ===
                     var paramList = method.IsStatic
                         ? string.Join(", ", method.Parameters?.Select(p => $"{p.Type} {p.Name}")
                             ?? Array.Empty<string>())
@@ -245,8 +216,6 @@ namespace BlackGoldAncientSword.Framework.SourceGenerator
             "string" => $"\"{value}\"",
             _ => value
         };
-
-        // ======== JSON Model ========
 
         private class EnumDefinitionsRoot
         {

@@ -1,11 +1,11 @@
-{
+﻿{
   "$schema": "./enums.schema.json",
   "description": "语义枚举定义，面向开发者；数值对应 API 请求参数，Description 对应 UI 展示文本",
   "enums": [
     {
       "name": "GameMode",
       "namespace": "BlackGoldAncientSword.Framework.Core.Consts",
-      "description": "游戏模式（天选/匹配/天人 × 单双三排 + 娱乐），值对应 /api/record/mini-program/stats 的 gameMode 参数",
+      "description": "游戏模式（天选/匹配/天人 × 单双三排 + 娱乐）",
       "underlyingType": "int",
       "values": [
         {
@@ -138,8 +138,7 @@
         },
         {
           "name": "HeyBox",
-          "value": 2,
-          "description": "小黑盒数据源"
+          "value": 2
         },
         {
           "name": "DaShen",
@@ -159,7 +158,7 @@
           {
             "name": "apiValue",
             "type": "string?",
-            "description": "API 返回的 dataSource 字符串，如 \"miniProgram\" / \"heyBox\""
+            "description": "接口返回的数据源标识字符串"
           }
         ],
         "description": "把 API 返回的 dataSource 字符串映射为 DataSource 枚举值，未识别时回退到 MiniProgram",
@@ -170,7 +169,7 @@
         "name": "ToApiString",
         "returnType": "string",
         "description": "把 DataSource 枚举值转为 unified 接口的 source query 参数字符串",
-        "returns": "API 识别的 source 字符串（miniProgram / heyBox / dashen）",
+        "returns": "接口识别的 source 字符串（miniProgram / dashen）",
         "body": "return value switch { DataSource.HeyBox => \"heyBox\", DataSource.DaShen => \"dashen\", _ => \"miniProgram\" };"
       }
     ],
@@ -224,24 +223,24 @@
           {
             "name": "battleTid",
             "type": "int",
-            "description": "heyBox 数据源对局的 battleTid（来自 /record/game-modes?dataSource=heyBox 的权威映射，值域与 miniProgram 的 battleApiCode 不同：天选单排=5000000、天选三排=5000001）"
+            "description": "数据源对局的 battleTid（来自权威映射，值域与 battleApiCode 不同：天选单排=5000000、天选三排=5000001）"
           }
         ],
-        "description": "把 heyBox 数据源的 battleTid 映射为 GameMode 枚举值。heyBox 的 battleTid 与 miniProgram 的 battleApiCode 仅在天选单排/三排上不同，其余相同。",
+        "description": "把数据源的 battleTid 映射为 GameMode 枚举值；两套编码仅在天选单排/三排上不同，其余相同。",
         "returns": "对应的 GameMode 枚举值",
-        "body": "return battleTid switch { 5000000 => GameMode.RankSolo, 12 => GameMode.RankDuo, 5000001 => GameMode.RankTrio, 6 => GameMode.MatchSolo, 9 => GameMode.MatchDuo, 7 => GameMode.MatchTrio, 4 => GameMode.TianrenSolo, 13 => GameMode.TianrenDuo, 5 => GameMode.TianrenTrio, 5000010 => GameMode.EndlessTrial, _ => throw new ArgumentOutOfRangeException(nameof(battleTid), $\"未知 heyBox battleTid: {battleTid}\") };"
+        "body": "return battleTid switch { 5000000 => GameMode.RankSolo, 12 => GameMode.RankDuo, 5000001 => GameMode.RankTrio, 6 => GameMode.MatchSolo, 9 => GameMode.MatchDuo, 7 => GameMode.MatchTrio, 4 => GameMode.TianrenSolo, 13 => GameMode.TianrenDuo, 5 => GameMode.TianrenTrio, 5000010 => GameMode.EndlessTrial, _ => throw new ArgumentOutOfRangeException(nameof(battleTid), $\"未知 battleTid: {battleTid}\") };"
       },
       {
         "name": "ToHeyBoxBattleTid",
         "returnType": "int",
-        "description": "把 GameMode 映射回 heyBox 数据源的 battleTid，用于查询 heybox/user/info 指定模式的段位与统计。",
-        "returns": "对应的 heyBox battleTid",
+        "description": "把 GameMode 映射回数据源的 battleTid，用于按模式查询段位与统计。",
+        "returns": "对应的 battleTid",
         "body": "return value switch { GameMode.RankSolo => 5000000, GameMode.RankDuo => 12, GameMode.RankTrio => 5000001, GameMode.MatchSolo => 6, GameMode.MatchDuo => 9, GameMode.MatchTrio => 7, GameMode.TianrenSolo => 4, GameMode.TianrenDuo => 13, GameMode.TianrenTrio => 5, GameMode.EndlessTrial => 5000010, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
       },
       {
         "name": "ToBattleApiCode",
         "returnType": "int",
-        "description": "把 GameMode 映射为 miniProgram 对局历史 API 编码（battleApiCode）。用于把 heyBox 归一化到与 miniProgram 一致的编码，供 VM 层统一消费。",
+        "description": "把 GameMode 映射为对局历史编码（battleApiCode），供 VM 层统一消费。",
         "returns": "对应的 battleApiCode，无对应时抛异常",
         "body": "return value switch { GameMode.RankSolo => 1, GameMode.RankDuo => 12, GameMode.RankTrio => 2, GameMode.MatchSolo => 6, GameMode.MatchDuo => 9, GameMode.MatchTrio => 7, GameMode.TianrenSolo => 4, GameMode.TianrenDuo => 13, GameMode.TianrenTrio => 5, _ => throw new ArgumentOutOfRangeException(nameof(value)) };"
       }

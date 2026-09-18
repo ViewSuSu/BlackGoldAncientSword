@@ -1,9 +1,16 @@
-{
+﻿{
   "$schema": "./api-definitions.schema.json",
-  "baseUrl": "https://desktop.naraka.drivod.top",
+  "baseUrl": "https://api.xiaoheihe.cn",
   "defaultHeaders": {
-    "Accept": "application/json",
-    "X-Requested-With": "XMLHttpRequest"
+    "Accept": "application/json, text/plain, */*",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Referer": "https://web.xiaoheihe.cn/",
+    "Origin": "https://web.xiaoheihe.cn"
+  },
+  "envelope": {
+    "successProperty": "status",
+    "successValues": ["ok"],
+    "messageProperty": "msg"
   },
   "enumTypeNames": [
     "GameMode",
@@ -13,118 +20,57 @@
   ],
   "apis": [
     {
-      "id": "SearchRecord",
-      "description": "搜索统一战绩用户：根据玩家名称或角色 ID 选择默认统一战绩数据源",
+      "id": "SearchPlayers",
       "method": "GET",
-      "path": "/app-api/record/unified/search",
+      "path": "/game/player_search/do",
       "queryParameters": {
-        "name": "string",
-        "source": "string"
+        "game_type": "string",
+        "q": "string",
+        "offset": "int",
+        "limit": "int"
       },
       "responseBody": {
-        "type": "SearchRecordResponse",
+        "type": "HeyboxSearchResponse",
         "properties": {
-          "code": { "type": "int" },
+          "status": { "type": "string" },
           "msg": { "type": "string" },
-          "data": { "type": "UnifiedRecordSearchRes" }
+          "result": { "type": "HeyboxSearchResult" }
         },
         "nestedTypes": {
-          "UnifiedRecordSearchRes": {
-            "type": "UnifiedRecordSearchRes",
+          "HeyboxSearchResult": {
+            "type": "HeyboxSearchResult",
             "properties": {
-              "roleIdSimple": { "type": "string" },
-              "source": { "type": "string" }
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "GetPlayerProfile",
-      "description": "查询统一玩家资料（昵称、头像、等级）",
-      "method": "GET",
-      "path": "/app-api/record/unified/player",
-      "queryParameters": {
-        "source": "string",
-        "roleIdSimple": "string"
-      },
-      "responseBody": {
-        "type": "GetPlayerProfileResponse",
-        "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "PlayerProfile" }
-        },
-        "nestedTypes": {
-          "PlayerProfile": {
-            "type": "PlayerProfile",
-            "properties": {
-              "source": { "type": "string" },
-              "roleIdSimple": { "type": "string" },
-              "roleId": { "type": "string" },
-              "roleIdMiniprogram": { "type": "string" },
-              "roleIdDaShen": { "type": "string" },
-              "displayName": { "type": "string" },
-              "avatarUrl": { "type": "string" },
-              "level": { "type": "int" }
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "GetSeasonSummary",
-      "description": "查询统一赛季概览（段位 + 赛季统计指标列表）",
-      "method": "GET",
-      "path": "/app-api/record/unified/season",
-      "queryParameters": {
-        "source": "string",
-        "roleIdSimple": "string",
-        "modeCode": "string",
-        "seasonCode": "string"
-      },
-      "responseBody": {
-        "type": "GetSeasonSummaryResponse",
-        "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "SeasonSummary" }
-        },
-        "nestedTypes": {
-          "SeasonSummary": {
-            "type": "SeasonSummary",
-            "properties": {
-              "seasonCode": { "type": "string" },
-              "mode": { "type": "Mode" },
-              "rank": { "type": "Rank" },
-              "metrics": { "type": "List<Metric>" }
+              "header": { "type": "List<HeyboxSearchColumn>" },
+              "player_list": { "type": "List<HeyboxSearchPlayer>" },
+              "match_list": { "type": "List<string>" }
             },
             "nestedTypes": {
-              "Mode": {
-                "type": "Mode",
+              "HeyboxSearchColumn": {
+                "type": "HeyboxSearchColumn",
                 "properties": {
-                  "code": { "type": "string" },
-                  "name": { "type": "string" },
-                  "category": { "type": "string" },
-                  "teamSize": { "type": "int" }
+                  "text": { "type": "string" },
+                  "type": { "type": "string" },
+                  "dw": { "type": "int" }
                 }
               },
-              "Rank": {
-                "type": "Rank",
+              "HeyboxSearchPlayer": {
+                "type": "HeyboxSearchPlayer",
                 "properties": {
-                  "name": { "type": "string" },
-                  "iconUrl": { "type": "string" },
-                  "score": { "type": "int" },
-                  "level": { "type": "string" }
+                  "game_id": { "type": "string" },
+                  "ext": { "type": "string" },
+                  "column_list": { "type": "List<HeyboxSearchCell>" }
                 }
               },
-              "Metric": {
-                "type": "Metric",
+              "HeyboxSearchCell": {
+                "type": "HeyboxSearchCell",
                 "properties": {
-                  "code": { "type": "string" },
-                  "label": { "type": "string" },
+                  "type": { "type": "string" },
+                  "text": { "type": "string" },
+                  "img": { "type": "string" },
+                  "icon": { "type": "string" },
+                  "sub_text": { "type": "string" },
                   "value": { "type": "string" },
-                  "unit": { "type": "string" }
+                  "art_text": { "type": "string" }
                 }
               }
             }
@@ -133,128 +79,202 @@
       }
     },
     {
-      "id": "GetGameModes",
-      "description": "获取统一游戏模式列表（统一模式编码为 battleTidHeyBox）",
+      "id": "GetPlayerHome",
       "method": "GET",
-      "path": "/app-api/record/unified/modes",
+      "path": "/game/yjwj/home/data",
       "queryParameters": {
-        "source": "string"
+        "server": "string",
+        "role_id": "string",
+        "season": "string",
+        "battle_tid": "string"
       },
       "responseBody": {
-        "type": "GetGameModesResponse",
+        "type": "HeyboxHomeResponse",
         "properties": {
-          "code": { "type": "int" },
+          "status": { "type": "string" },
           "msg": { "type": "string" },
-          "data": { "type": "List<Mode>" }
+          "result": { "type": "HeyboxHomeData" }
         },
         "nestedTypes": {
-          "Mode": {
-            "type": "Mode",
+          "HeyboxHomeData": {
+            "type": "HeyboxHomeData",
             "properties": {
-              "code": { "type": "string" },
-              "name": { "type": "string" },
-              "category": { "type": "string" },
-              "teamSize": { "type": "int" }
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "GetRecentMatches",
-      "description": "查询统一最近战绩（对局摘要列表，分页）",
-      "method": "GET",
-      "path": "/app-api/record/unified/matches",
-      "queryParameters": {
-        "source": "string",
-        "roleIdSimple": "string",
-        "modeCode": "string",
-        "pageNo": "int"
-      },
-      "responseBody": {
-        "type": "GetRecentMatchesResponse",
-        "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "MatchPage" }
-        },
-        "nestedTypes": {
-          "MatchPage": {
-            "type": "MatchPage",
-            "properties": {
-              "records": { "type": "List<MatchSummary>" },
-              "hasMore": { "type": "bool" }
+              "role_id": { "type": "string" },
+              "server": { "type": "string" },
+              "server_desc": { "type": "string" },
+              "bind_account": { "type": "int" },
+              "certified": { "type": "int" },
+              "wait_update": { "type": "bool" },
+              "message": { "type": "string" },
+              "season": { "type": "string" },
+              "battle_tid": { "type": "string" },
+              "recent_avg_rank": { "type": "string" },
+              "player_info": { "type": "HeyboxPlayerInfo" },
+              "seasons": { "type": "List<HeyboxKeyValue>" },
+              "mode": { "type": "List<HeyboxKeyValue>" },
+              "overview": { "type": "List<HeyboxOverviewEntry>" },
+              "score_info": { "type": "HeyboxScoreInfo" },
+              "score_line": { "type": "List<HeyboxScoreLine>" },
+              "recent_ranks": { "type": "List<HeyboxRecentRank>" },
+              "matches": { "type": "List<HeyboxMatchItem>" },
+              "heroes": { "type": "List<HeyboxHeroEntry>" },
+              "weapons": { "type": "List<HeyboxWeaponEntry>" }
             },
             "nestedTypes": {
-              "MatchSummary": {
-                "type": "MatchSummary",
+              "HeyboxPlayerInfo": {
+                "type": "HeyboxPlayerInfo",
                 "properties": {
-                  "detailKey": { "type": "string" },
-                  "occurredAt": { "type": "string" },
-                  "mode": { "type": "Mode" },
-                  "hero": { "type": "Hero" },
+                  "avatar": { "type": "string" },
+                  "name": { "type": "string" },
+                  "lv": { "type": "string" },
+                  "level": { "type": "string" },
+                  "level_img": { "type": "string" },
+                  "rating": { "type": "string" }
+                }
+              },
+              "HeyboxKeyValue": {
+                "type": "HeyboxKeyValue",
+                "properties": {
+                  "key": { "type": "string" },
+                  "value": { "type": "string" }
+                }
+              },
+              "HeyboxOverviewEntry": {
+                "type": "HeyboxOverviewEntry",
+                "properties": {
+                  "value": { "type": "string" },
+                  "desc": { "type": "string" },
+                  "grade": { "type": "string" },
+                  "img": { "type": "string" }
+                }
+              },
+              "HeyboxScoreInfo": {
+                "type": "HeyboxScoreInfo",
+                "properties": {
+                  "composite_score": { "type": "string" },
+                  "score_grade": { "type": "string" },
+                  "score_list": { "type": "List<HeyboxScoreItem>" },
+                  "stats": { "type": "List<HeyboxScoreStat>" }
+                }
+              },
+              "HeyboxScoreItem": {
+                "type": "HeyboxScoreItem",
+                "properties": {
+                  "name": { "type": "string" },
+                  "score": { "type": "string" }
+                }
+              },
+              "HeyboxScoreStat": {
+                "type": "HeyboxScoreStat",
+                "properties": {
+                  "desc": { "type": "string" },
+                  "value": { "type": "string" },
+                  "grade": { "type": "string" }
+                }
+              },
+              "HeyboxScoreLine": {
+                "type": "HeyboxScoreLine",
+                "properties": {
+                  "day": { "type": "string" },
+                  "value": { "type": "string" },
+                  "level": { "type": "string" },
+                  "level_img": { "type": "string" }
+                }
+              },
+              "HeyboxRecentRank": {
+                "type": "HeyboxRecentRank",
+                "properties": {
                   "rank": { "type": "int" },
-                  "score": { "type": "Score" },
-                  "evaluation": { "type": "Evaluation" },
-                  "kills": { "type": "int" },
+                  "match_id": { "type": "string" }
+                }
+              },
+              "HeyboxMatchItem": {
+                "type": "HeyboxMatchItem",
+                "properties": {
+                  "match_id": { "type": "string" },
+                  "rank": { "type": "int" },
+                  "time": { "type": "long" },
+                  "play_mode": { "type": "string" },
+                  "battle_tid": { "type": "string" },
+                  "hero_avatar": { "type": "string" },
+                  "hero_id": { "type": "string" },
+                  "scene": { "type": "string" },
+                  "map_name": { "type": "string" },
+                  "play_num": { "type": "int" },
+                  "rating": { "type": "string" },
+                  "rating_delta": { "type": "string" },
+                  "kill_times": { "type": "int" },
                   "damage": { "type": "long" },
-                  "shockCount": { "type": "int" },
-                  "stats": { "type": "List<BattleStat>" },
-                  "honorTitles": { "type": "List<HonorTitle>" }
-                },
-                "nestedTypes": {
-                  "Mode": {
-                    "type": "Mode",
-                    "properties": {
-                      "code": { "type": "string" },
-                      "name": { "type": "string" },
-                      "category": { "type": "string" },
-                      "teamSize": { "type": "int" }
-                    }
-                  },
-                  "Hero": {
-                    "type": "Hero",
-                    "properties": {
-                      "id": { "type": "string" },
-                      "name": { "type": "string" },
-                      "iconUrl": { "type": "string" }
-                    }
-                  },
-                  "Score": {
-                    "type": "Score",
-                    "properties": {
-                      "begin": { "type": "int" },
-                      "end": { "type": "int" },
-                      "delta": { "type": "int" }
-                    }
-                  },
-                  "Evaluation": {
-                    "type": "Evaluation",
-                    "properties": {
-                      "score": { "type": "int" },
-                      "level": { "type": "string" }
-                    }
-                  },
-                  "BattleStat": {
-                    "type": "BattleStat",
-                    "properties": {
-                      "code": { "type": "string" },
-                      "name": { "type": "string" },
-                      "value": { "type": "double" },
-                      "unit": { "type": "string" }
-                    }
-                  },
-                  "HonorTitle": {
-                    "type": "HonorTitle",
-                    "properties": {
-                      "id": { "type": "string" },
-                      "name": { "type": "string" },
-                      "iconUrl": { "type": "string" },
-                      "description": { "type": "string" }
-                    }
-                  }
+                  "grade": { "type": "string" }
+                }
+              },
+              "HeyboxHeroEntry": {
+                "type": "HeyboxHeroEntry",
+                "properties": {
+                  "hero_id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "img": { "type": "string" },
+                  "data": { "type": "HeyboxHeroStats" }
+                }
+              },
+              "HeyboxHeroStats": {
+                "type": "HeyboxHeroStats",
+                "properties": {
+                  "game_count": { "type": "int" },
+                  "avg_damage": { "type": "int" },
+                  "rank_1_rate": { "type": "string" },
+                  "use_percent": { "type": "string" },
+                  "kd": { "type": "string" },
+                  "percent": { "type": "string" }
+                }
+              },
+              "HeyboxWeaponEntry": {
+                "type": "HeyboxWeaponEntry",
+                "properties": {
+                  "name": { "type": "string" },
+                  "img": { "type": "string" },
+                  "data": { "type": "HeyboxWeaponStats" }
+                }
+              },
+              "HeyboxWeaponStats": {
+                "type": "HeyboxWeaponStats",
+                "properties": {
+                  "game_count": { "type": "string" },
+                  "round": { "type": "int" },
+                  "percent": { "type": "string" },
+                  "avg_damage": { "type": "string" },
+                  "kill_times": { "type": "string" },
+                  "max_weapon_damage": { "type": "string" },
+                  "max_kill": { "type": "string" }
                 }
               }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "GetMatchList",
+      "method": "GET",
+      "path": "/game/yjwj/match/list",
+      "queryParameters": {
+        "server": "string",
+        "role_id": "string",
+        "limit": "int",
+        "offset": "int"
+      },
+      "responseBody": {
+        "type": "HeyboxMatchListResponse",
+        "properties": {
+          "status": { "type": "string" },
+          "msg": { "type": "string" },
+          "result": { "type": "HeyboxMatchListResult" }
+        },
+        "nestedTypes": {
+          "HeyboxMatchListResult": {
+            "type": "HeyboxMatchListResult",
+            "properties": {
+              "match_list": { "type": "List<HeyboxMatchItem>" }
             }
           }
         }
@@ -262,300 +282,100 @@
     },
     {
       "id": "GetMatchDetail",
-      "description": "查询统一对局详情（个人数据 + 武器 + 魂玉 + 称号）",
       "method": "GET",
-      "path": "/app-api/record/unified/match",
+      "path": "/game/yjwj/match/detail",
       "queryParameters": {
-        "source": "string",
-        "roleIdSimple": "string",
-        "detailKey": "string"
+        "match_id": "string"
       },
       "responseBody": {
-        "type": "GetMatchDetailResponse",
+        "type": "HeyboxMatchDetailResponse",
         "properties": {
-          "code": { "type": "int" },
+          "status": { "type": "string" },
           "msg": { "type": "string" },
-          "data": { "type": "MatchDetail" }
+          "result": { "type": "HeyboxMatchDetail" }
         },
         "nestedTypes": {
-          "MatchDetail": {
-            "type": "MatchDetail",
+          "HeyboxMatchDetail": {
+            "type": "HeyboxMatchDetail",
             "properties": {
-              "detailKey": { "type": "string" },
-              "occurredAt": { "type": "string" },
-              "mode": { "type": "Mode" },
-              "hero": { "type": "Hero" },
+              "match_id": { "type": "string" },
+              "name": { "type": "string" },
+              "avatar": { "type": "string" },
+              "level": { "type": "string" },
+              "level_img": { "type": "string" },
+              "grade": { "type": "string" },
+              "play_mode": { "type": "string" },
+              "scene": { "type": "string" },
+              "time": { "type": "long" },
               "rank": { "type": "int" },
-              "score": { "type": "Score" },
-              "evaluation": { "type": "Evaluation" },
-              "kills": { "type": "int" },
+              "map_name": { "type": "string" },
+              "rating": { "type": "string" },
+              "rating_delta": { "type": "string" },
               "damage": { "type": "long" },
-              "shockCount": { "type": "int" },
-              "stats": { "type": "List<BattleStat>" },
-              "player": { "type": "PlayerProfile" },
-              "weapons": { "type": "List<Weapon>" },
-              "soulItems": { "type": "List<SoulItem>" },
-              "honorTitles": { "type": "List<HonorTitle>" }
+              "shock_count": { "type": "int" },
+              "bg_img": { "type": "string" },
+              "tags": { "type": "List<HeyboxDetailTag>" },
+              "data": { "type": "List<HeyboxDetailStat>" },
+              "weapon_list": { "type": "List<HeyboxDetailWeapon>" },
+              "soul_item_list": { "type": "List<HeyboxDetailSoulItem>" },
+              "all_team": { "type": "List<HeyboxTeamEntry>" },
+              "all_player_data": { "type": "List<HeyboxTeamEntry>" }
             },
             "nestedTypes": {
-              "Mode": {
-                "type": "Mode",
+              "HeyboxDetailTag": {
+                "type": "HeyboxDetailTag",
                 "properties": {
-                  "code": { "type": "string" },
+                  "img": { "type": "string" },
                   "name": { "type": "string" },
-                  "category": { "type": "string" },
-                  "teamSize": { "type": "int" }
+                  "desc": { "type": "string" }
                 }
               },
-              "Hero": {
-                "type": "Hero",
+              "HeyboxDetailStat": {
+                "type": "HeyboxDetailStat",
                 "properties": {
-                  "id": { "type": "string" },
+                  "value": { "type": "string" },
+                  "desc": { "type": "string" },
+                  "grade": { "type": "string" }
+                }
+              },
+              "HeyboxDetailWeapon": {
+                "type": "HeyboxDetailWeapon",
+                "properties": {
                   "name": { "type": "string" },
-                  "iconUrl": { "type": "string" }
+                  "per": { "type": "double" },
+                  "img": { "type": "string" },
+                  "kill_times": { "type": "int" },
+                  "damage": { "type": "long" }
                 }
               },
-              "Score": {
-                "type": "Score",
+              "HeyboxDetailSoulItem": {
+                "type": "HeyboxDetailSoulItem",
                 "properties": {
-                  "begin": { "type": "int" },
-                  "end": { "type": "int" },
-                  "delta": { "type": "int" }
+                  "bg": { "type": "string" },
+                  "img": { "type": "string" },
+                  "name": { "type": "string" }
                 }
               },
-              "Evaluation": {
-                "type": "Evaluation",
+              "HeyboxTeamEntry": {
+                "type": "HeyboxTeamEntry",
                 "properties": {
-                  "score": { "type": "int" },
-                  "level": { "type": "string" }
+                  "rank": { "type": "int" },
+                  "players": { "type": "List<HeyboxTeamPlayer>" }
                 }
               },
-              "BattleStat": {
-                "type": "BattleStat",
+              "HeyboxTeamPlayer": {
+                "type": "HeyboxTeamPlayer",
                 "properties": {
-                  "code": { "type": "string" },
-                  "name": { "type": "string" },
-                  "value": { "type": "double" },
-                  "unit": { "type": "string" }
-                }
-              },
-              "PlayerProfile": {
-                "type": "PlayerProfile",
-                "properties": {
-                  "source": { "type": "string" },
-                  "roleIdSimple": { "type": "string" },
-                  "roleId": { "type": "string" },
-                  "roleIdMiniprogram": { "type": "string" },
-                  "roleIdDaShen": { "type": "string" },
-                  "displayName": { "type": "string" },
-                  "avatarUrl": { "type": "string" },
-                  "level": { "type": "int" }
-                }
-              },
-              "Weapon": {
-                "type": "Weapon",
-                "properties": {
-                  "id": { "type": "string" },
-                  "name": { "type": "string" },
-                  "iconUrl": { "type": "string" },
-                  "level": { "type": "int" },
-                  "kills": { "type": "int" },
+                  "role_name": { "type": "string" },
+                  "role_id": { "type": "string" },
+                  "server_id": { "type": "string" },
+                  "self": { "type": "bool" },
                   "damage": { "type": "long" },
-                  "percent": { "type": "double" }
-                }
-              },
-              "SoulItem": {
-                "type": "SoulItem",
-                "properties": {
-                  "id": { "type": "string" },
-                  "name": { "type": "string" },
-                  "iconUrl": { "type": "string" },
-                  "level": { "type": "int" }
-                }
-              },
-              "HonorTitle": {
-                "type": "HonorTitle",
-                "properties": {
-                  "id": { "type": "string" },
-                  "name": { "type": "string" },
-                  "iconUrl": { "type": "string" },
-                  "description": { "type": "string" }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "GetMatchTop5",
-      "description": "查询统一对局 Top5 队伍",
-      "method": "GET",
-      "path": "/app-api/record/unified/match/top5",
-      "queryParameters": {
-        "source": "string",
-        "roleIdSimple": "string",
-        "detailKey": "string"
-      },
-      "responseBody": {
-        "type": "GetMatchTop5Response",
-        "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "List<TopTeam>" }
-        },
-        "nestedTypes": {
-          "TopTeam": {
-            "type": "TopTeam",
-            "properties": {
-              "rank": { "type": "int" },
-              "members": { "type": "List<TopMember>" }
-            },
-            "nestedTypes": {
-              "TopMember": {
-                "type": "TopMember",
-                "properties": {
-                  "displayName": { "type": "string" },
-                  "hero": { "type": "Hero" },
-                  "me": { "type": "bool" },
-                  "kills": { "type": "int" },
-                  "damage": { "type": "long" },
-                  "healing": { "type": "long" },
-                  "survivalSeconds": { "type": "long" }
-                },
-                "nestedTypes": {
-                  "Hero": {
-                    "type": "Hero",
-                    "properties": {
-                      "id": { "type": "string" },
-                      "name": { "type": "string" },
-                      "iconUrl": { "type": "string" }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "GetMatchTeam",
-      "description": "查询统一对局队伍（队友详细数据）",
-      "method": "GET",
-      "path": "/app-api/record/unified/match/team",
-      "queryParameters": {
-        "source": "string",
-        "roleIdSimple": "string",
-        "detailKey": "string"
-      },
-      "responseBody": {
-        "type": "GetMatchTeamResponse",
-        "properties": {
-          "code": { "type": "int" },
-          "msg": { "type": "string" },
-          "data": { "type": "List<TeamMember>" }
-        },
-        "nestedTypes": {
-          "TeamMember": {
-            "type": "TeamMember",
-            "properties": {
-              "player": { "type": "PlayerProfile" },
-              "hero": { "type": "Hero" },
-              "me": { "type": "bool" },
-              "score": { "type": "Score" },
-              "evaluation": { "type": "Evaluation" },
-              "kills": { "type": "int" },
-              "damage": { "type": "long" },
-              "shockCount": { "type": "int" },
-              "stats": { "type": "List<BattleStat>" },
-              "armor": { "type": "Armor" },
-              "weapons": { "type": "List<Weapon>" },
-              "soulItems": { "type": "List<SoulItem>" },
-              "honorTitles": { "type": "List<HonorTitle>" }
-            },
-            "nestedTypes": {
-              "PlayerProfile": {
-                "type": "PlayerProfile",
-                "properties": {
-                  "source": { "type": "string" },
-                  "roleIdSimple": { "type": "string" },
-                  "roleId": { "type": "string" },
-                  "roleIdMiniprogram": { "type": "string" },
-                  "roleIdDaShen": { "type": "string" },
-                  "displayName": { "type": "string" },
-                  "avatarUrl": { "type": "string" },
-                  "level": { "type": "int" }
-                }
-              },
-              "Hero": {
-                "type": "Hero",
-                "properties": {
-                  "id": { "type": "string" },
-                  "name": { "type": "string" },
-                  "iconUrl": { "type": "string" }
-                }
-              },
-              "Score": {
-                "type": "Score",
-                "properties": {
-                  "begin": { "type": "int" },
-                  "end": { "type": "int" },
-                  "delta": { "type": "int" }
-                }
-              },
-              "Evaluation": {
-                "type": "Evaluation",
-                "properties": {
-                  "score": { "type": "int" },
-                  "level": { "type": "string" }
-                }
-              },
-              "BattleStat": {
-                "type": "BattleStat",
-                "properties": {
-                  "code": { "type": "string" },
-                  "name": { "type": "string" },
-                  "value": { "type": "double" },
-                  "unit": { "type": "string" }
-                }
-              },
-              "Armor": {
-                "type": "Armor",
-                "properties": {
-                  "id": { "type": "string" },
-                  "level": { "type": "int" },
-                  "iconUrl": { "type": "string" }
-                }
-              },
-              "Weapon": {
-                "type": "Weapon",
-                "properties": {
-                  "id": { "type": "string" },
-                  "name": { "type": "string" },
-                  "iconUrl": { "type": "string" },
-                  "level": { "type": "int" },
-                  "kills": { "type": "int" },
-                  "damage": { "type": "long" },
-                  "percent": { "type": "double" }
-                }
-              },
-              "SoulItem": {
-                "type": "SoulItem",
-                "properties": {
-                  "id": { "type": "string" },
-                  "name": { "type": "string" },
-                  "iconUrl": { "type": "string" },
-                  "level": { "type": "int" }
-                }
-              },
-              "HonorTitle": {
-                "type": "HonorTitle",
-                "properties": {
-                  "id": { "type": "string" },
-                  "name": { "type": "string" },
-                  "iconUrl": { "type": "string" },
-                  "description": { "type": "string" }
+                  "per": { "type": "double" },
+                  "cure": { "type": "long" },
+                  "kill": { "type": "int" },
+                  "shock": { "type": "int" },
+                  "win_count": { "type": "int" }
                 }
               }
             }
