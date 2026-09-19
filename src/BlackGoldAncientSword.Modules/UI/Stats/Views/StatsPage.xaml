@@ -453,16 +453,22 @@
                             </TextBlock>
                         </StackPanel>
 
-                        <!--  Detail stats (right column)  -->
+                        <!--  Detail stats (right column)：
+                              列数固定 3 列，行数由后端 overview[] 决定（有 N 项就渲染 N 格，后端加字段无需改这里）；
+                              最后一行不足 3 项时留空，不做拉伸。后端没给数据时网格自然为空，不隐藏整块。
+                              整块高度不固定：每行 25px，行数一变整块跟着长（UniformGrid 自己量算，无需写 Height）。  -->
                         <ItemsControl Grid.Column="1" ItemsSource="{Binding DetailStats}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <UniformGrid Columns="4" />
+                                    <UniformGrid Columns="3" Rows="0" />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
+                                    <!--  行高固定 25：Width/Height 写在外层 Border 上（Grid 单元格里的元素只有显式
+                                          尺寸才不会被 UniformGrid 均分拉伸）。Margin 会把描边一起缩进，故高度含上下边距。  -->
                                     <Border
+                                        Height="25"
                                         Margin="3,0,3,6"
                                         Padding="10,0"
                                         BorderBrush="Gray"

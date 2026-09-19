@@ -38,6 +38,16 @@
         </StackPanel>
 
         <!--  排数（三排/双排/单排）  -->
+        <!--
+            IsChecked 只做 OneWay 展示，选中值（SelectedTeamSize）是唯一真源：
+            转换器按"选项值 == 当前选中值"驱动勾选，互斥天然成立，**不要**给 RadioButton 设 GroupName。
+            注意两个实测事实（2026-09-19，最小 WPF 探针验证）：
+            ① 无 GroupName 时 WPF 不会自动互斥同 ItemsControl 里的兄弟按钮（兄弟绑定保持 Active），
+               互斥完全靠 DP 变化后绑定重新求值，这是预期行为；
+            ② RadioButton.OnClick 会用 SetValue(IsChecked=true) 勾选自己，把这条 OneWay 绑定顶掉
+               （绑定表达式变 null）——因此 Click 处理器写完 DP 后必须重建绑定（见 xaml.cs 的
+               RestoreIsCheckedBinding），否则该按钮从此不跟随程序改值，界面出现"双勾"。
+        -->
         <ItemsControl
             Grid.Column="1"
             Margin="20,0,0,0"
@@ -52,8 +62,7 @@
                     <RadioButton
                         Margin="0,0,12,0"
                         Click="OnTeamSizeClick"
-                        Content="{Binding DisplayName}"
-                        GroupName="TeamSize">
+                        Content="{Binding DisplayName}">
                         <RadioButton.IsChecked>
                             <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
                                 <Binding Path="Value" />
@@ -77,8 +86,7 @@
                     <RadioButton
                         Margin="0,0,12,0"
                         Click="OnCategoryClick"
-                        Content="{Binding DisplayName}"
-                        GroupName="Category">
+                        Content="{Binding DisplayName}">
                         <RadioButton.IsChecked>
                             <MultiBinding Converter="{StaticResource EnumEqualityConverter}" Mode="OneWay">
                                 <Binding Path="Value" />

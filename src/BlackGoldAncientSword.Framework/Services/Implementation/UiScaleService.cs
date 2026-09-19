@@ -27,8 +27,26 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             scale = Math.Clamp(scale, 0, IUiScaleService.MaxScale);
             var app = Application.Current;
             if (app?.Resources == null) return;
-            app.Dispatcher?.VerifyAccess();
 
+            // 调用方可能在后台线程（App.OnStartup 里 await 之后的续接不在 UI 线程上），
+            // 而 ResourceDictionary 有线程亲和性，直接写会抛"另一个线程拥有该对象"，
+            // 结果就是启动时用户选的字号档位根本没生效（要等设置页再改一次才写进去）。
+            var dispatcher = app.Dispatcher;
+            if (dispatcher is null)
+                return;
+            if (!dispatcher.CheckAccess())
+            {
+                if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+                    return;
+                dispatcher.Invoke(() => WriteFontTokens(app, scale));
+                return;
+            }
+
+            WriteFontTokens(app, scale);
+        }
+
+        private static void WriteFontTokens(Application app, int scale)
+        {
             foreach (var (key, baseSize) in FontTokens)
             {
                 app.Resources[key] = baseSize + scale;

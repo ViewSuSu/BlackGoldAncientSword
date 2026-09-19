@@ -63,8 +63,6 @@
     <ns1:String ns2:Key="Stats.CopySuccess">複製成功</ns1:String>
     <ns1:String ns2:Key="Stats.UserNotFound">未查詢到用戶</ns1:String>
     <ns1:String ns2:Key="Stats.Unknown">未知</ns1:String>
-    <ns1:String ns2:Key="Stats.Minute">分</ns1:String>
-    <ns1:String ns2:Key="Stats.Second">秒</ns1:String>
     <ns1:String ns2:Key="Stats.KD">K/D</ns1:String>
     <ns1:String ns2:Key="Stats.FirstRate">第一率</ns1:String>
     <ns1:String ns2:Key="Stats.TopFiveRate">前五率</ns1:String>
@@ -89,6 +87,7 @@
     <ns1:String ns2:Key="Stats.Header.ModeType">對局模式</ns1:String>
     <ns1:String ns2:Key="Stats.Header.Kill">擊敗</ns1:String>
     <ns1:String ns2:Key="Stats.Header.Damage">傷害</ns1:String>
+    <!--  數據詳情：行標題與值都由後端 overview 原文提供，此處不再維護任何標題/單位本地化。  -->
     <ns1:String ns2:Key="Stats.Header.RankScore">段位</ns1:String>
     <ns1:String ns2:Key="Stats.Header.Rating">評級</ns1:String>
     <ns1:String ns2:Key="Stats.Header.Time">時間</ns1:String>

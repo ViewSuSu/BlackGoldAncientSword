@@ -65,8 +65,6 @@
     <system:String x:Key="Stats.CopySuccess">复制成功</system:String>
     <system:String x:Key="Stats.UserNotFound">未查询到用户</system:String>
     <system:String x:Key="Stats.Unknown">未知</system:String>
-    <system:String x:Key="Stats.Minute">分</system:String>
-    <system:String x:Key="Stats.Second">秒</system:String>
     <system:String x:Key="Stats.KD">K/D</system:String>
     <system:String x:Key="Stats.FirstRate">第一率</system:String>
     <system:String x:Key="Stats.TopFiveRate">前五率</system:String>
@@ -91,6 +89,7 @@
     <system:String x:Key="Stats.Header.ModeType">对局模式</system:String>
     <system:String x:Key="Stats.Header.Kill">击败</system:String>
     <system:String x:Key="Stats.Header.Damage">伤害</system:String>
+    <!--  数据详情：行标题与值都由后端 overview 原文提供，此处不再维护任何标题/单位本地化。  -->
     <system:String x:Key="Stats.Header.RankScore">段位</system:String>
     <system:String x:Key="Stats.Header.Rating">评级</system:String>
     <system:String x:Key="Stats.Header.Time">时间</system:String>
