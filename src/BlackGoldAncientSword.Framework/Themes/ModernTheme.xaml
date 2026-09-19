@@ -356,7 +356,8 @@
         <Setter Property="Background" Value="{StaticResource SurfaceTertiaryBrush}" />
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
         <Setter Property="FontSize" Value="{DynamicResource FontSize.Metadata}" />
-        <Setter Property="FontWeight" Value="Medium" />
+        <!--  显式 Bold：Medium(500) 在中文字体下无真实字重，回退渲染会粗细不一（战绩页列头实测）  -->
+        <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="Padding" Value="8,0" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}" />

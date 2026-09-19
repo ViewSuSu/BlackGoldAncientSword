@@ -118,7 +118,7 @@
     <system:String x:Key="Stats.BackToMe">回到我</system:String>
 
     <system:String x:Key="Search.Title">搜索</system:String>
-    <system:String x:Key="Search.Input">输入昵称或者ID</system:String>
+    <system:String x:Key="Search.Input">输入昵称</system:String>
     <system:String x:Key="Search.Button">搜索</system:String>
     <system:String x:Key="Search.Placeholder">输入玩家名称或ID搜索</system:String>
     <system:String x:Key="Search.History">搜索历史</system:String>
@@ -329,7 +329,6 @@
     <system:String x:Key="Feedback.Title">问题反馈</system:String>
     <system:String x:Key="Feedback.ClientGroupTitle">问题反馈与交流QQ群</system:String>
     <system:String x:Key="Feedback.ClientGroupQQ">①群：146088141</system:String>
-    <system:String x:Key="Feedback.WebTitle">网页端</system:String>
     <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
     <system:String x:Key="Feedback.Close">关闭</system:String>
 

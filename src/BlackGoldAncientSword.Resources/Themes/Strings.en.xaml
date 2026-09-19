@@ -118,7 +118,7 @@
     <system:String x:Key="Stats.BackToMe">Back to me</system:String>
 
     <system:String x:Key="Search.Title">Search</system:String>
-    <system:String x:Key="Search.Input">Enter nickname or ID</system:String>
+    <system:String x:Key="Search.Input">Enter nickname</system:String>
     <system:String x:Key="Search.Button">Search</system:String>
     <system:String x:Key="Search.Placeholder">Enter player name or ID to search</system:String>
     <system:String x:Key="Search.History">Search History</system:String>
@@ -330,7 +330,6 @@
     <system:String x:Key="Feedback.Title">Feedback</system:String>
     <system:String x:Key="Feedback.ClientGroupTitle">Feedback &amp; Community QQ Group</system:String>
     <system:String x:Key="Feedback.ClientGroupQQ">Group 1: 146088141</system:String>
-    <system:String x:Key="Feedback.WebTitle">Web</system:String>
     <system:String x:Key="Feedback.GitHubTitle">GitHub</system:String>
     <system:String x:Key="Feedback.Close">Close</system:String>
 
