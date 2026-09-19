@@ -46,7 +46,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         private static readonly Regex ValuePattern =
             new(@"^([-+]?[0-9]*\.?[0-9]+)\s*([^\d\s]*)$", RegexOptions.Compiled);
 
-        /// <summary>存活时间的本地格式（<see cref="PlayerStatsLoader.FormatSurvivalTime"/> 产出）。</summary>
+        /// <summary>
+        /// 后端自身可能下发的中文时长格式（<c>"18分30秒"</c>）。前端不再自己产出这种格式，
+        /// 但若服务端给了，仍要归一到分钟，才能与 <c>"7.5min"</c> 同量纲互相比较。
+        /// </summary>
         private static readonly Regex SurvivalTimePattern =
             new(@"^(\d+)分(\d+)秒$", RegexOptions.Compiled);
 
@@ -69,7 +72,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             var text = raw.Trim();
             if (IsPlaceholder(text)) return false;
 
-            // 存活时间：Loader 会把后端原始秒数格式化成 "X分XX秒"，归一到分钟，
+            // 中文时长：服务端偶尔直接给 "X分XX秒"，归一到分钟，
             // 与小黑盒原生的 "7.5min" 同一口径、可互相比较。
             var survival = SurvivalTimePattern.Match(text);
             if (survival.Success
