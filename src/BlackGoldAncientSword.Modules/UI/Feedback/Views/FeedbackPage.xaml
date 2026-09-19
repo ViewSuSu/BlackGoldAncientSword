@@ -46,21 +46,6 @@
                         Margin="0,0,0,4"
                         FontSize="{DynamicResource FontSize.Section}"
                         FontWeight="SemiBold"
-                        Text="{DynamicResource Feedback.WebTitle}" />
-                    <TextBlock Margin="0,0,0,12" FontSize="{DynamicResource FontSize.Metadata}">
-                        <Hyperlink
-                            Cursor="Hand"
-                            Foreground="{DynamicResource AccentPrimaryBrush}"
-                            NavigateUri="https://naraka.drivod.top/"
-                            RequestNavigate="Hyperlink_RequestNavigate">
-                            https://naraka.drivod.top/
-                        </Hyperlink>
-                    </TextBlock>
-
-                    <TextBlock
-                        Margin="0,0,0,4"
-                        FontSize="{DynamicResource FontSize.Section}"
-                        FontWeight="SemiBold"
                         Text="{DynamicResource Feedback.GitHubTitle}" />
                     <TextBlock FontSize="{DynamicResource FontSize.Metadata}">
                         <Hyperlink

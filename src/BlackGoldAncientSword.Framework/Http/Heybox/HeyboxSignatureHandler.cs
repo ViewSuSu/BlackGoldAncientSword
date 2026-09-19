@@ -9,6 +9,11 @@ namespace BlackGoldAncientSword.Framework.Http.Heybox
 
     public sealed class HeyboxSignatureHandler : DelegatingHandler
     {
+        private static readonly HashSet<string> AnonymousPaths = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "/game/player_search/do",
+        };
+
         private readonly IHeyboxSessionState _session;
         private readonly Func<long> _unixSeconds;
         private readonly Func<string> _newNonce;
@@ -27,7 +32,7 @@ namespace BlackGoldAncientSword.Framework.Http.Heybox
         {
             ArgumentNullException.ThrowIfNull(request);
 
-            if (request.RequestUri is { } uri)
+            if (request.RequestUri is { } uri && !AnonymousPaths.Contains(uri.AbsolutePath))
             {
                 var query = ParseQuery(uri.Query);
 

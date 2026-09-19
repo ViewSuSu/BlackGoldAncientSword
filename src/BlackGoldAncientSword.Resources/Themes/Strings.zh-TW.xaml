@@ -116,7 +116,7 @@
     <ns1:String ns2:Key="Stats.BackToMe">回到我</ns1:String>
 
     <ns1:String ns2:Key="Search.Title">搜尋</ns1:String>
-    <ns1:String ns2:Key="Search.Input">輸入暱稱或者ID</ns1:String>
+    <ns1:String ns2:Key="Search.Input">輸入暱稱</ns1:String>
     <ns1:String ns2:Key="Search.Button">搜尋</ns1:String>
     <ns1:String ns2:Key="Search.Placeholder">輸入玩家名稱或ID搜尋</ns1:String>
     <ns1:String ns2:Key="Search.History">搜尋歷史</ns1:String>
@@ -321,7 +321,6 @@
     <ns1:String ns2:Key="Feedback.Title">問題反饋</ns1:String>
     <ns1:String ns2:Key="Feedback.ClientGroupTitle">問題反饋與交流QQ群</ns1:String>
     <ns1:String ns2:Key="Feedback.ClientGroupQQ">①群：146088141</ns1:String>
-    <ns1:String ns2:Key="Feedback.WebTitle">網頁端</ns1:String>
     <ns1:String ns2:Key="Feedback.GitHubTitle">GitHub</ns1:String>
     <ns1:String ns2:Key="Feedback.Close">關閉</ns1:String>
 

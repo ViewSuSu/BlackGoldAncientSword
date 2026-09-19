@@ -93,19 +93,34 @@ namespace BlackGoldAncientSword.App
                 });
 
                 var restored = sessionStore.Load();
+                var restoredAlreadyChecked = false;
 #if DEBUG
                 // Debug 下：本机开发用的会话优先（固定用测试账号调试），取不到时才沿用本地存档里登录后的会话。
                 var debugSession = await LoadDebugSessionAsync();
                 restored = debugSession ?? restored;
+                restoredAlreadyChecked = debugSession != null;
 
-                // 只有"确实用了本机调试凭证"时才做一次有效性校验（失效就回登录页）；
-                // 正常登录来的会话不校验——否则启动就要多打一个接口。
-                if (debugSession != null && !await IsDebugSessionUsableAsync().ConfigureAwait(false))
+                // 用了本机调试凭证才单独校验一次（失效就回登录页），避免和下面存档校验重复打接口。
+                if (debugSession != null && !await IsSessionAliveAsync().ConfigureAwait(false))
                 {
                     AppLog.Info(nameof(App), "debug session rejected by server, falling back to login challenge");
                     restored = null;
                 }
 #endif
+                // 本地存档恢复的登录态也要校验（Debug / Release 都做）：服务端返回的
+                // token/pkey 可能已过期或被踢，不校验的话启动照样当已登录，要等查战绩时
+                // 接口回 status:login 才暴露，且不会自动重新登录。代价是启动多打一个接口。
+                if (restored != null && !restoredAlreadyChecked)
+                {
+                    var alive = await IsSessionAliveAsync().ConfigureAwait(false);
+                    if (!alive)
+                    {
+                        AppLog.Info(nameof(App), "stored heybox session rejected by server, clearing local store");
+                        sessionStore.Clear();
+                        restored = null;
+                    }
+                }
+
                 if (restored != null)
                     sessionState.Set(HeyboxLoginState.FromSession(restored));
             }
@@ -277,6 +292,27 @@ namespace BlackGoldAncientSword.App
             Current?.Dispatcher.BeginInvoke(() => PublishError(args.Exception));
         }
 
+        /// <summary>
+        /// 本地登录态是否还活着：打一次玩家主页接口，被服务端判定为 login/relogin 就当失效。
+        /// 没有本地角色 ID 或请求异常时不拦截（按"活着"处理），避免误伤正常登录用户。
+        /// </summary>
+        private async Task<bool> IsSessionAliveAsync()
+        {
+            try
+            {
+                var prefs = Container.Resolve<IPlayerPrefsService>();
+                if (!prefs.Current.IsLoaded) await prefs.LoadAsync().ConfigureAwait(false);
+
+                return await HeyboxSessionProbe
+                    .IsSessionAliveAsync(prefs.Current.PlayerId)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                return true;
+            }
+        }
+
 #if DEBUG
         private static async Task<HeyboxSession?> LoadDebugSessionAsync()
         {
@@ -318,23 +354,6 @@ namespace BlackGoldAncientSword.App
             catch (UnauthorizedAccessException)
             {
                 return null;
-            }
-        }
-
-        private async Task<bool> IsDebugSessionUsableAsync()
-        {
-            try
-            {
-                var prefs = Container.Resolve<IPlayerPrefsService>();
-                if (!prefs.Current.IsLoaded) await prefs.LoadAsync().ConfigureAwait(false);
-
-                return await HeyboxSessionProbe
-                    .IsSessionAliveAsync(prefs.Current.PlayerId)
-                    .ConfigureAwait(false);
-            }
-            catch (Exception)
-            {
-                return true;
             }
         }
 

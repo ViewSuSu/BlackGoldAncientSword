@@ -25,6 +25,7 @@ CLAUDE.md
 GEMINI.md
 .claude/
 .codex/
+.workbuddy/
 .cursor/
 .cursorrules
 .cursorignore
