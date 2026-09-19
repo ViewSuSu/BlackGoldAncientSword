@@ -516,12 +516,27 @@ namespace BlackGoldAncientSword.Tests.Http.Heybox
         [Fact]
         public async Task Send_Should_Not_Send_Identity_Or_Cookie_When_Logged_Out()
         {
-            var (query, cookie) = await SendAsync(new HeyboxSessionState(), "/game/player_search/do?q=x");
+            var (query, cookie) = await SendAsync(new HeyboxSessionState(), "/game/yjwj/home/data?role_id=abc");
 
             Assert.False(query.ContainsKey("heybox_id"));
             Assert.False(query.ContainsKey("user_id"));
             Assert.Null(cookie);
             Assert.Equal("163", query["server"]);
+        }
+
+        [Fact]
+        public async Task Send_Should_Pass_Search_Through_Untouched_Even_When_Logged_In()
+        {
+            // player_search 是公开接口：即使已登录也不注入公共参数 / 身份 / 签名，原样放行。
+            var state = new HeyboxSessionState();
+            state.Set(HeyboxLoginState.FromSession(new HeyboxSession("99365688", "secret-pkey")));
+
+            var (query, cookie) = await SendAsync(state, "/game/player_search/do?game_type=yjwj&q=12&offset=0&limit=8");
+
+            Assert.Equal(
+                new[] { "game_type", "limit", "offset", "q" },
+                query.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray());
+            Assert.Null(cookie);
         }
 
         private static async Task<(Dictionary<string, string> Query, string? Cookie)> SendAsync(
