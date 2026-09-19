@@ -63,7 +63,7 @@ namespace BlackGoldAncientSword.Tests.UI.TeamInfo
         [Fact]
         public void FromValues_Chinese_Survival_Time_Matches_Minute_Unit()
         {
-            // Loader 会把后端原始秒数格式化成 "18分30秒"，需与原生 "7.5min" 同一量纲才可比。
+            // 服务端有时直接给中文时长 "18分30秒"，需与原生 "7.5min" 同一量纲才可比。
             var diff = StatDiffCalculator.FromValues("18分30秒", "10分00秒");
 
             Assert.Equal("+8.5min", diff.Text);

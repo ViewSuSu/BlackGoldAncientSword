@@ -65,8 +65,6 @@
     <system:String x:Key="Stats.CopySuccess">Copied!</system:String>
     <system:String x:Key="Stats.UserNotFound">User not found</system:String>
     <system:String x:Key="Stats.Unknown">Unknown</system:String>
-    <system:String x:Key="Stats.Minute">min</system:String>
-    <system:String x:Key="Stats.Second">s</system:String>
     <system:String x:Key="Stats.KD">K/D</system:String>
     <system:String x:Key="Stats.FirstRate">First Rate</system:String>
     <system:String x:Key="Stats.TopFiveRate">Top 5 Rate</system:String>
@@ -91,6 +89,7 @@
     <system:String x:Key="Stats.Header.ModeType">Match Type</system:String>
     <system:String x:Key="Stats.Header.Kill">Kills</system:String>
     <system:String x:Key="Stats.Header.Damage">Damage</system:String>
+    <!--  Detail stats: both the row caption and the value come verbatim from the backend overview; no caption/unit localization here.  -->
     <system:String x:Key="Stats.Header.RankScore">Tier</system:String>
     <system:String x:Key="Stats.Header.Rating">Rating</system:String>
     <system:String x:Key="Stats.Header.Time">Time</system:String>

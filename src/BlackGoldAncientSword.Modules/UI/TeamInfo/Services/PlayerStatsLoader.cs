@@ -40,26 +40,15 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             foreach (var stat in stats.Stats)
             {
                 if (string.IsNullOrEmpty(stat.Key)) continue;
-                var val = string.IsNullOrEmpty(stat.Value) ? "-" : stat.Value;
 
-                var normalizedKey = NormalizeStatKey(stat.Key);
-
-                var displayVal = normalizedKey.Contains("live_time", System.StringComparison.OrdinalIgnoreCase)
-                    ? FormatSurvivalTime(val)
-                    : val;
-                result.Stats[normalizedKey] = displayVal;
+                // key 与 value 都用后端原文：desc 直接做行标题，value 原样透传，
+                // 前端不做任何换算、兜底、写死取值。Stats 与 Metrics 的 key 同源：
+                // UpdateDiffs 按 metric.Key 查各成员 Stats 字典，成员间 key 空间一致（同一接口）。
+                result.Stats[stat.Key] = stat.Value ?? string.Empty;
 
                 result.Metrics.Add(new PlayerStatMetric(
-                    normalizedKey,
+                    stat.Key,
                     string.IsNullOrEmpty(stat.Name) ? stat.Key : stat.Name));
-
-                switch (normalizedKey)
-                {
-                    case "avg_kill": result.AvgKill = val; break;
-                    case "top5_rate": result.Top5Rate = val; break;
-                    case "avg_damage": result.AvgDamage = val; break;
-                    case "avg_total_live_time": result.SurviveTime = FormatSurvivalTime(val); break;
-                }
             }
 
             if (stats.Grade != null)
@@ -87,46 +76,11 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             return result;
         }
 
-        private static string NormalizeStatKey(string key)
-        {
-            return key switch
-            {
-                "总场次" => "round",
-                "夺冠" => "win",
-                "夺冠率" => "win_rate",
-                "前五" => "top5",
-                "前五率" => "top5_rate",
-                "场均伤害" => "avg_damage",
-                "场均击杀" => "avg_kill",
-                "KD" => "kd",
-                "场均恢复" => "avg_cure",
-                "最高伤害" => "max_damage",
-                "最高恢复" => "max_cure",
-                "最高击杀" => "max_kill",
-                "场均存活时间" => "avg_total_live_time",
-                "伤害/击杀" => "dmg_per_kill",
-                "总对局时间" => "total_time",
-                "场均振刀" => "avg_shock",
-                _ => key,
-            };
-        }
-
         public async Task<(List<UnifiedSeason> Seasons, string? CurrentSeasonKey)> FetchSeasonsAsync(
             PlayerSourceContext ctx, CancellationToken ct)
         {
             var home = await _homeData.GetAsync(ctx.RoleId, ctx.Server, season: null, battleTid: null, ct).ConfigureAwait(false);
             return (UnifiedMapper.MapSeasons(home?.Result?.Seasons), home?.Result?.Season);
-        }
-
-        public static string FormatSurvivalTime(string secondsStr)
-        {
-            if (double.TryParse(secondsStr, out double seconds))
-            {
-                var minutes = (int)(seconds / 60);
-                var remainSeconds = (int)(seconds % 60);
-                return $"{minutes}分{remainSeconds:D2}秒";
-            }
-            return secondsStr;
         }
 
         public string GetRankNameForScore(double score, int gameMode = 0)
@@ -212,10 +166,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
 
         public List<PlayerStatMetric> Metrics { get; } = new();
 
-        public string? AvgKill { get; set; }
-        public string? Top5Rate { get; set; }
-        public string? AvgDamage { get; set; }
-        public string? SurviveTime { get; set; }
         public string RankName { get; set; } = string.Empty;
         public string RankIcon { get; set; } = string.Empty;
         public double RankScore { get; set; }
