@@ -21,6 +21,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
         private readonly IHeyboxSessionStore _sessionStore;
         private readonly IAuthChallengeService _challenge;
         private readonly HeyboxSelfProfileResolver _profileResolver;
+        private readonly IApplicationLifetime _appLifetime;
 
         private CancellationTokenSource? _pollCts;
         private CancellationTokenSource? _browserLoginCts;
@@ -32,7 +33,8 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             IHeyboxSessionState sessionState,
             IHeyboxSessionStore sessionStore,
             IAuthChallengeService challenge,
-            HeyboxSelfProfileResolver profileResolver)
+            HeyboxSelfProfileResolver profileResolver,
+            IApplicationLifetime appLifetime)
         {
             _qr = qr;
             _browserLogin = browserLogin;
@@ -40,6 +42,7 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             _sessionStore = sessionStore;
             _challenge = challenge;
             _profileResolver = profileResolver;
+            _appLifetime = appLifetime;
 
             if (_sessionState.Current is not null)
             {
@@ -121,7 +124,13 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
 
         private void StartBrowserLogin()
         {
-            if (_completed || _browserLoginCts is not null) return;
+            if (_completed) return;
+
+            // 先掐掉上一次"等回调"的等待，再开新一轮。
+            // 上一次等待只在收到回调、用户取消、或等到 5 分钟超时才结束（服务端在
+            // login.xiaoheihe.cn 的回调打回本机的临时端口上）；用户关掉浏览器不登录时它还在挂，
+            // 如果这里因为"_browserLoginCts != null"直接 return，「重新打开登录页」就会点了没反应。
+            CancelBrowserLogin();
 
             _browserLoginCts = new CancellationTokenSource();
             _ = RunBrowserLoginAsync(_browserLoginCts);
@@ -135,7 +144,9 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
                 var session = await _browserLogin.LoginAsync(cts.Token).ConfigureAwait(true);
                 if (session is null)
                 {
-                    if (!cts.IsCancellationRequested)
+                    // 只在"还是当前这一轮"时才写提示：被「重新打开登录页」掐掉的那一轮会走到这里
+                    // （取消 → LoginAsync 返回 null），若不判就会出现旧轮覆盖新轮文案的错乱。
+                    if (!cts.IsCancellationRequested && ReferenceEquals(_browserLoginCts, cts))
                         BrowserStatusText = "还没等到登录完成。可以点「重新打开登录页」再试。";
                     return;
                 }
@@ -146,7 +157,8 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             catch (Exception ex)
             {
                 AppLog.Error(ex, $"{nameof(AuthChallengePageViewModel)}.{nameof(RunBrowserLoginAsync)}");
-                BrowserStatusText = "登录失败：" + ex.Message;
+                if (ReferenceEquals(_browserLoginCts, cts))
+                    BrowserStatusText = "登录失败：" + ex.Message;
             }
             finally
             {
@@ -293,6 +305,24 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
             _pollCts?.Cancel();
             CancelBrowserLogin();
             _challenge.Complete(false);
+        }
+
+        /// <summary>
+        /// 用户在"取消登录将关闭程序"里点了「是」：直接杀进程。
+        /// <para>
+        /// 刻意不走 <see cref="IAuthChallengeService.Complete"/> + <c>Application.Shutdown()</c>：
+        /// 前者要让 <c>App.OnStartup</c> 的登录 gate 先在 UI 线程续接、再回到 Shutdown，
+        /// 一旦续接落在非 UI 线程就会在关窗/清理阶段抛"另一个线程拥有该对象"，
+        /// 弹窗挡在用户面前、程序却退不掉。这里用 <c>Process.Kill</c> 强杀，
+        /// 与关闭提示里的「直接退出」路径一致，子进程交由 JobObject 清理。
+        /// </para>
+        /// </summary>
+        public void NotifyExitConfirmed()
+        {
+            _completed = true;
+            _pollCts?.Cancel();
+            CancelBrowserLogin();
+            _appLifetime.ForceTerminate();
         }
         #endregion
 

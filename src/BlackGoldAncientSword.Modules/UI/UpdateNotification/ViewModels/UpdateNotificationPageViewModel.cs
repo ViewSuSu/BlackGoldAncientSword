@@ -18,6 +18,12 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
         private readonly IUpdateService _updateService;
         private readonly IUpdateGateService _updateGate;
 
+        /// <summary>
+        /// true = 已拉起 Updater 独立进程，主 App 必须保持"锁死等被 kill 重启"。
+        /// 置位后卡片关闭不再释放 updateGate（见 <see cref="OnOverlayClosed"/>）。
+        /// </summary>
+        private bool _onlineUpdateStarted;
+
         public string LatestVersion => _updateService.LatestVersion ?? string.Empty;
 
         public string? DownloadUrl => _updateService.DownloadUrl;
@@ -121,6 +127,8 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
                     // 拉起 Updater 后：移除更新卡片 + 通知主窗口进入"锁死等待重启"状态。
                     // 特意不调 _updateGate.Complete()——App.OnStartup [4] 保持挂起，用户不会走到 [5] 登录 gate
                     // 与 [6] 主页导航，主窗口只剩顶层遮罩，直到 Updater 装完后 kill 本进程重启新版。
+                    // 置位让下面的 OnOverlayClosed 放行这条例外（RemoveAll 也会触发视图 Unloaded）。
+                    _onlineUpdateStarted = true;
                     var region = regionManager.Regions[GlobalConstant.UpdateNotificationRegion];
                     region.RemoveAll();
                     eventAggregator.GetEvent<OnlineUpdatingStartedEvent>().Publish();
@@ -155,6 +163,24 @@ namespace BlackGoldAncientSword.Modules.UI.UpdateNotification.ViewModels
             region.RemoveAll();
             // 唤醒 App.OnStartup 里 await 的 UpdateGate；用户手动"检查更新"复用同一 VM，此时 gate 已 Complete
             // 过（TCS 为 null），Complete() 是幂等 no-op，不会误触发第二次登录 gate。
+            _updateGate.Complete();
+        }
+
+        /// <summary>
+        /// 卡片被关闭时由视图（<c>Unloaded</c>）回调。
+        /// <para>
+        /// 只有"稍后再说"/"打开浏览器"两个按钮走 <see cref="DismissOverlay"/> 会释放 gate；
+        /// 右上角 × 与 Esc 走的是 <c>OverlayHost.Dismiss()</c>，它只清 Region、不碰 gate。
+        /// 少了这一步，App.OnStartup [4] 的 <c>await updateGate.WaitAsync()</c> 就永久挂起：
+        /// 启动既不弹登录扫码（[5] 永远不到），侧栏"登录"点下去也卡在同一个 gate 上毫无反应，
+        /// 同时各页面照常查接口、全部返回"请登录后使用该功能"。
+        /// </para>
+        /// </summary>
+        public void OnOverlayClosed()
+        {
+            // 例外：Updater 已拉起时主 App 必须保持锁死，放行 gate 会让启动管线继续跑（弹登录 / 导航主页），
+            // 与正在覆盖文件的 Updater 抢资源。
+            if (_onlineUpdateStarted) return;
             _updateGate.Complete();
         }
 
