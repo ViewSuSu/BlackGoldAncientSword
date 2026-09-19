@@ -241,7 +241,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 // 候选里没有等级，只有段位；等级空着即可（段位由随后的统计查询回填）。
                 Level: null,
                 Seasons: null,
-                SeasonKey: null);
+                SeasonKey: null,
+                // 搜索进人时不带排数：保持用户当前选的排数不变。
+                TeamSize: null);
 
             await RefreshAllAsync();
         }
@@ -509,28 +511,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
 
-        private static readonly Dictionary<string, string> StatKeyToResourceKey = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["round"] = "Stats.Matches",
-            ["win"] = "Stats.FirstPlace",
-            ["top5"] = "Stats.TopFive",
-            ["avg_damage"] = "Stats.AvgDamage",
-            ["kd"] = "Stats.KD",
-            ["win_rate"] = "Stats.FirstRate",
-            ["top5_rate"] = "Stats.TopFiveRate",
-            ["max_shock_count"] = "Stats.MostParry",
-            ["avg_kill"] = "Stats.AvgKills",
-            ["avg_cure"] = "Stats.AvgHeal",
-            ["avg_assist"] = "Stats.AvgAssists",
-            ["avg_total_live_time"] = "Stats.AvgSurvival",
-            ["max_kill"] = "Stats.BestKills",
-            ["max_cure"] = "Stats.BestHeal",
-            ["max_assist"] = "Stats.BestAssists",
-            ["max_damage"] = "Stats.BestDamage",
-              ["avg_move_distance"] = "Stats.AvgMoveDistance",
-              ["max_move_distance"] = "Stats.MaxMoveDistance",
-        };
-
         private UnifiedSeason? _selectedSeason;
         public UnifiedSeason? SelectedSeason
         {
@@ -546,6 +526,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         // === Collections ===
         public ObservableCollection<UnifiedSeason> Seasons { get; }
+        /// <summary>
+        /// 数据详情：行数与内容完全由后端 <c>overview[]</c> 决定（有几项渲染几格，列数固定 3 列）。
+        /// 为空即后端没给数据，网格自然空白，不做补行也不隐藏整块。
+        /// </summary>
         public ObservableCollection<StatEntryItem> DetailStats { get; }
         public RangeObservableCollection<RecentBattleDisplayItem> RecentBattles { get; }
 
@@ -869,7 +853,16 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetAvatar),
                     navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetLevel),
                     navigationContext.Parameters.GetValue<IReadOnlyList<UnifiedSeason>>(NavigationParameterKeys.TargetSeasons),
-                    navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetSeasonKey));
+                    navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetSeasonKey),
+                    // 卡片当前查的排数：带上后单选切到同一值，"卡片看双排 → 详情也是双排"。
+                    navigationContext.Parameters.GetValue<TeamSize?>(NavigationParameterKeys.TargetTeamSize),
+                    // 卡片已显示的段位展示字段：段位卡直接用，不必等 home/data 回来（也可能不会回来）。
+                    navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetRankIcon),
+                    navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetRankName),
+                    navigationContext.Parameters.GetValue<double>(NavigationParameterKeys.TargetRankScore),
+                    navigationContext.Parameters.GetValue<string>(NavigationParameterKeys.TargetPageRankName),
+                    navigationContext.Parameters.GetValue<int>(NavigationParameterKeys.TargetPageStarCount),
+                    navigationContext.Parameters.GetValue<bool>(NavigationParameterKeys.TargetPageHasStars));
 
             // 基类签名为 void，无法 await——把"确定目标玩家 + 刷新 UI + 拉战绩"整块塞进
             // fire-and-forget async。RefreshAllAsync 内部已有 try/catch 兜底。
@@ -883,7 +876,46 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             string? Avatar,
             string? Level,
             IReadOnlyList<UnifiedSeason>? Seasons,
-            string? SeasonKey);
+            string? SeasonKey,
+            TeamSize? TeamSize,
+            /// <summary>卡片上已经显示的段位展示字段：图标 / 段位名 / 段位分 / 上行名 / 星数 / 是否有星。</summary>
+            string? RankIcon = null,
+            string? RankName = null,
+            double RankScore = 0,
+            string? PageRankName = null,
+            int PageStarCount = 0,
+            bool PageHasStars = false);
+
+        /// <summary>
+        /// 把卡片带过来的段位展示字段填进段位卡。
+        /// <para>
+        /// 段位卡的图标与段位名只有 <c>home/data</c> 的 grade 一个来源（见 <see cref="LoadStatsAsync"/>），
+        /// 而"卡片点详情"这条路并不保证会再拉一次该接口——同一玩家同赛季同排数时命中提供者缓存会直接返回，
+        /// 于是段位图标位置留空。卡片上显示的段位与战绩页本就是同一份数据，直接透传即可。
+        /// </para>
+        /// <para>
+        /// 卡片也是"有什么显示什么"：段位图标没拿到时这里是空串，此时不动 <see cref="RankIcon"/>
+        /// 之外的占位状态——保持未定级占位比显示半张段位卡更合理。
+        /// </para>
+        /// </summary>
+        private void ApplyPrefetchedRank(PrefetchedPlayer prefetched)
+        {
+            if (!string.IsNullOrEmpty(prefetched.RankIcon))
+                RankIcon = prefetched.RankIcon;
+            if (!string.IsNullOrEmpty(prefetched.RankName))
+                RankName = prefetched.RankName;
+            if (prefetched.RankScore > 0)
+            {
+                RankScore = prefetched.RankScore;
+                ShowRankScore = true;
+            }
+            if (!string.IsNullOrEmpty(prefetched.PageRankName))
+                PageRankName = prefetched.PageRankName;
+            if (prefetched.PageStarCount > 0)
+                PageStarCount = prefetched.PageStarCount;
+            if (prefetched.PageHasStars)
+                PageHasStars = true;
+        }
 
         /// <summary>
         /// 确定要查询的玩家并刷新战绩。
@@ -929,7 +961,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
             // 页面上已经在展示这个玩家的数据 → 直接复用，不再请求。切页回来（同一个玩家）零请求，
             // 只有点搜索图标、或者这一局打完（缓存由"对局结束"事件整体失效）才会重新查。
-            if (IsAlreadyShowingTarget(targetPlayer)) return;
+            // 但**卡片带快照的跳转（_prefetchedPlayer != null）不能走这条捷径**：
+            // 队伍页的筛选（赛季/排数）随时可能已经改了，直接复用会把下面的筛选同步整段跳过——
+            // 实测 bug：第一次跳转正常，改完筛选再跳同一个玩家，战绩页"什么都没变化"。
+            // 代价可控：同玩家同筛选时走快照分支全部命中提供者缓存（0 次 HTTP），
+            // 筛选变了才会真正重新拉数据，而这正是想要的语义。
+            if (_prefetchedPlayer is null && IsAlreadyShowingTarget(targetPlayer)) return;
 
             await RefreshAllAsync();
         }
@@ -1226,13 +1263,34 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         AvatarUrl = prefetched.Avatar ?? string.Empty;
                         Level = prefetched.Level ?? string.Empty;
                         IsPlayerInfoLoading = false;
+                        ApplyPrefetchedRank(prefetched);
+
+                        // 排数单选切到卡片当时的排数（双排卡片 → 双排详情）。
+                        // **必须排在 SelectedSeason 赋值之前**：下面改赛季会触发 RefreshStats → LoadStatsAsync，
+                        // 而它读的正是 _selectedTeamSize；顺序反了就会先按旧排数查一次、再把新排数查一次，
+                        // 白白多打一个 home/data。这里只写字段 + 发通知，不走 setter 的防抖，避免再复制一份请求。
+                        if (prefetched.TeamSize is { } prefetchedTeamSize && prefetchedTeamSize != _selectedTeamSize)
+                        {
+                            _selectedTeamSize = prefetchedTeamSize;
+                            RaisePropertyChanged(nameof(SelectedTeamSize));
+                        }
 
                         if (prefetchedSeasons is not { Count: > 0 }) return;
 
+                        // 先把 SelectedSeason 清空再换 Seasons 内容，顺序不能反。
+                        // Seasons 是 ComboBox 的 ItemsSource，Clear 会让 ComboBox 把 SelectedItem 置空并
+                        // 经 TwoWay 回写 SelectedSeason=null；若此时 SelectedSeason 还指着即将被替换掉的旧实例，
+                        // 下面 FirstOrDefault 拿到的 target 与它引用不相等（UnifiedSeason 没有重写 Equals，
+                        // 走的是引用相等），选择状态就落在"新列表里找不到的旧对象"上 —— ComboBox 显示空白。
+                        // 显式清空后由下一段统一赋 target，选择状态与列表内容必然自洽。
+                        _selectedSeason = null;
                         Seasons.Clear();
                         foreach (var season in prefetchedSeasons) Seasons.Add(season);
 
+                        // target 一律取自 Seasons 自身的元素（不是 prefetchedSeasons 里的同值对象）：
+                        // ComboBox.SelectedItem 按 Equals 匹配，必须是列表里那个实例才认。
                         var target = Seasons.FirstOrDefault(s => s.SeasonKey == prefetched.SeasonKey) ?? Seasons[0];
+                        RaisePropertyChanged(nameof(SelectedSeason));
                         if (Equals(SelectedSeason, target)) RefreshStats();
                         else SelectedSeason = target;
                     }).ConfigureAwait(false);
@@ -1355,11 +1413,21 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             {
                 var (seasons, currentSeasonKey) = await _playerStatsLoader.FetchSeasonsAsync(ctx, ct);
                 ct.ThrowIfCancellationRequested();
-                Seasons.Clear();
-                foreach (var s in seasons) Seasons.Add(s);
 
-                if (Seasons.Count > 0)
+                // 赛季集合绑着下拉，必须回 UI 线程改：本方法可能被队伍快照分支从线程池直接调用，
+                // 那时集合变更会撞上「CollectionView 不支持跨线程更改 SourceCollection」，整块数据静默丢失。
+                await _uiDispatcher.InvokeAsync(() =>
                 {
+                    Seasons.Clear();
+                    foreach (var s in seasons) Seasons.Add(s);
+
+                    if (Seasons.Count == 0)
+                    {
+                        // 无赛季则不会触发 LoadStatsAsync，需在此关闭统计区 loading，避免永久转圈。
+                        IsStatsLoading = false;
+                        return;
+                    }
+
                     // 默认选中**服务端回显的当前赛季**，而不是写死第一项：第一项是「全部」（pre-01），
                     // 而服务端在不传 season 时用的是当前赛季——选中项与真实数据对不上。
                     var target = Seasons.FirstOrDefault(s => s.SeasonKey == currentSeasonKey) ?? Seasons[0];
@@ -1371,12 +1439,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         RefreshStats();
                     else
                         SelectedSeason = target;
-                }
-                else
-                {
-                    // 无赛季则不会触发 LoadStatsAsync，需在此关闭统计区 loading，避免永久转圈。
-                    IsStatsLoading = false;
-                }
+                }).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
             catch (NarakaApiException ex)
@@ -1400,20 +1463,27 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             {
                 var battlesResult = await _battleListLoader.FetchBattleListAsync(ctx, ct);
                 ct.ThrowIfCancellationRequested();
-                if (battlesResult != null)
+                if (battlesResult == null) return;
+
+                // 展示后端 matches 单页返回的全部对局（与网页一致，单页约 50 条），不再截断到 10 条。
+                // 行对象先在子线程构造（纯 new，不碰任何绑定集合），再一次性 ReplaceAll（仅一次 Reset
+                // 通知）——逐条 Add 会触发约 50 次列表布局刷新，是战绩页放开全量后 UI 卡顿的主因。
+                var displayItems = battlesResult.Select(BuildBattleDisplayItem).ToList();
+
+                // 必须回 UI 线程替换：本方法会被队伍快照分支从线程池调用，跨线程改 RecentBattles 会抛
+                // 「CollectionView 不支持从调度程序线程以外的线程对其 SourceCollection 进行的更改」，
+                // 异常被下面 catch 吞掉后表现为「卡片跳过来历史对局永远是空的」。
+                await _uiDispatcher.InvokeAsync(() =>
                 {
-                    // 展示后端 matches 单页返回的全部对局（与网页一致，单页约 50 条），不再截断到 10 条。
-                    // 先一次性构造全部行，再用 ReplaceAll 只发一次 Reset 通知——逐条 Add 会触发约 50 次
-                    // 列表布局刷新，是战绩页放开全量后 UI 卡顿的主因。
-                    var displayItems = battlesResult.Select(BuildBattleDisplayItem).ToList();
                     // 缓存全量后走筛选视图（默认无筛选=显示全部），供下拉级联本地过滤复用同一份数据。
                     _allBattles.Clear();
                     _allBattles.AddRange(displayItems);
                     ApplyBattleFilter();
                     RecentBattlesProgress = 100;
-                    // 行已先渲染：成就图标后台分批填充，每批让出 UI 线程，避免一次塞入大量图片卡顿。
-                    _ = ApplyHonorTitlesAsync(battlesResult, displayItems, ct);
-                }
+                }).ConfigureAwait(false);
+
+                // 行已先渲染：成就图标后台分批填充，每批让出 UI 线程，避免一次塞入大量图片卡顿。
+                _ = ApplyHonorTitlesAsync(battlesResult, displayItems, ct);
             }
             catch (OperationCanceledException) { }
             catch (NarakaApiException ex)
@@ -1548,34 +1618,27 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 ApplyRecentRanks(stats);
 
                 DetailStats.Clear();
-                if (stats.Stats != null && stats.Stats.Count > 0)
+                // 后端给几项就渲染几格：行数完全由 overview[] 决定，前端不补行、不占位。
+                // 列数固定 3 列（XAML 的 UniformGrid Columns="3" Rows="0"），最后一行不足 3 项时留空。
+                // 无数据（overview 为空）时集合为空，ItemsControl 自然什么都不渲染——不隐藏整块，
+                // 段位卡会跟着切换成"未定级"占位，不会留下突兀的空白。
+                foreach (var s in stats.Stats ?? new List<UnifiedStatEntry>())
                 {
-                    foreach (var s in stats.Stats)
+                    // 行数、顺序、标题全部由后端 overview[] 的 desc 决定（后端给什么就展示什么），
+                    // 前端不维护任何 key→标题 的映射表，也不做本地化替换：
+                    // 后端下发的 desc 本身就是成品中文标题（"总场次"/"场均伤害"/"夺冠率"…）。
+                    var label = string.IsNullOrEmpty(s.Name) ? s.Key : s.Name;
+                    // 原样透传服务端值：不补 0、不换算单位（含秒数）、不做任何兜底。
+                    var value = s.Value ?? string.Empty;
+
+                    DetailStats.Add(new StatEntryItem
                     {
-                        var label = FormatStatLabel(s.Key, s.Name);
-                        var value = string.IsNullOrEmpty(s.Value) ? "0" : s.Value;
-
-                        // Convert survival time from seconds to mm:ss format
-                        if (s.Key.Contains("live_time", StringComparison.OrdinalIgnoreCase) || s.Name.Contains("生存") || s.Key.Contains("存活时间"))
-                        {
-                            value = FormatSurvivalTime(value);
-                        }
-
-                        DetailStats.Add(new StatEntryItem
-                        {
-                            Label = label,
-                            Value = value,
-                            // overview[] 的 S/A 角标：空串=服务端没给评级，UI 不渲染。
-                            Grade = s.Grade,
-                            HasGrade = !string.IsNullOrEmpty(s.Grade),
-                        });
-                    }
-                }
-                else
-                {
-                    // 未定级/该模式无数据：与网页 core-stats 一致，仍显示固定指标标题、值用 "-" 占位，
-                    // 而非整块空白。
-                    AddPlaceholderStats();
+                        Label = label,
+                        Value = value,
+                        // overview[] 的 S/A 角标：空串=服务端没给评级，UI 不渲染。
+                        Grade = s.Grade,
+                        HasGrade = !string.IsNullOrEmpty(s.Grade),
+                    });
                 }
             }
             catch (OperationCanceledException) { }
@@ -1634,16 +1697,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     $"{L("Stats.RecentAvgRank", "场均排名")} {FormatScoreValue(_recentAvgRank)}";
         }
 
-        private string FormatStatLabel(string? key, string? fallbackName)
-        {
-            if (!string.IsNullOrEmpty(key) && StatKeyToResourceKey.TryGetValue(key, out var resourceKey))
-            {
-                return _localizedText.Get(resourceKey, fallbackName ?? key);
-            }
-            // heyBox 分支 key 直接是中文 desc，作为 label 显示即可
-            return !string.IsNullOrEmpty(fallbackName) ? fallbackName : (key ?? string.Empty);
-        }
-
         /// <summary>
         /// 未定级/该模式无段位：段位卡重置为占位——清空图标、分数，段位名显示"未定级"，隐藏星标与分数行。
         /// 避免切到未定级模式时残留上一次模式的段位（与右侧数据项 "-" 占位同一语义）。
@@ -1667,36 +1720,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             HasRecentRanks = false;
             RecentAvgRankDisplay = string.Empty;
             RecentRankBlocks.Clear();
-        }
-
-        /// <summary>
-        /// 未定级/无数据时的占位指标：与网页 core-stats 一致，显示固定标题（对局数/前五率/K/D/场伤），
-        /// 值统一为 "-"。标题走本地化，与有数据时同一套资源 key。
-        /// </summary>
-        private void AddPlaceholderStats()
-        {
-            var placeholders = new[]
-            {
-                _localizedText.Get("Stats.Matches", "对局数"),
-                _localizedText.Get("Stats.TopFiveRate", "前五率"),
-                _localizedText.Get("Stats.KD", "K/D"),
-                _localizedText.Get("Stats.AvgDamage", "场伤"),
-            };
-            foreach (var label in placeholders)
-                DetailStats.Add(new StatEntryItem { Label = label, Value = "-" });
-        }
-
-        private string FormatSurvivalTime(string secondsStr)
-        {
-            if (double.TryParse(secondsStr, out double seconds))
-            {
-                var minutes = (int)(seconds / 60);
-                var remainSeconds = (int)(seconds % 60);
-                var minUnit = _localizedText.Get("Stats.Minute", "分");
-                var secUnit = _localizedText.Get("Stats.Second", "秒");
-                return $"{minutes}{minUnit}{remainSeconds:D2}{secUnit}";
-            }
-            return secondsStr;
         }
 
         /// <summary>
@@ -1963,6 +1986,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
     public class StatEntryItem
     {
         public string Label { get; set; } = string.Empty;
+        /// <summary>服务端 overview[].value 原值，原样展示，前端不换算不兜底。</summary>
         public string Value { get; set; } = string.Empty;
         /// <summary>服务端下发的指标评级角标（S/A/B/C/D）。空串=没给评级。</summary>
         public string Grade { get; set; } = string.Empty;
