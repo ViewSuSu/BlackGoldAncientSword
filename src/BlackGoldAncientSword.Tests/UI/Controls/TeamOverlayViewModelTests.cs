@@ -63,6 +63,43 @@ namespace BlackGoldAncientSword.Tests.UI.Controls
             Assert.Equal("队友乙", vm.Members[2].UserName);
         }
 
+        /// <summary>
+        /// 回归场景：后台补齐（间隔请求）在弹窗已经显示之后才拿回真名。
+        /// 此时必须能把名字刷进弹窗——屏幕上的成员格显示名要从空变成真名。
+        /// </summary>
+        [Fact]
+        public void UpdateMembers_NameArrivingAfterShow_RefreshesVisibleName()
+        {
+            var vm = new TeamOverlayViewModel();
+            // 首次下发：队友昵称都还没查回来，弹窗已显示但队友格是空的。
+            vm.UpdateMembers(TrioWithUnresolvedTeammates());
+            Assert.Equal(string.Empty, vm.Members[0].UserName);
+            Assert.Equal(string.Empty, vm.Members[2].UserName);
+
+            // 间隔补齐第 1 轮：只拿回左侧队友的名字。
+            vm.UpdateMembers(new List<TeamOverlayMemberItem>
+            {
+                Member("队友甲"),
+                Member("爱的供养丶"),
+                Member(string.Empty)
+            });
+
+            Assert.Equal("队友甲", vm.Members[0].UserName);
+            Assert.Equal(string.Empty, vm.Members[2].UserName);
+
+            // 间隔补齐第 2 轮：右侧队友的名字也回来了。
+            vm.UpdateMembers(new List<TeamOverlayMemberItem>
+            {
+                Member("队友甲"),
+                Member("爱的供养丶"),
+                Member("队友乙")
+            });
+
+            Assert.Equal("队友甲", vm.Members[0].UserName);
+            Assert.Equal("队友乙", vm.Members[2].UserName);
+            Assert.Equal(3, vm.Members.Count);
+        }
+
         [Fact]
         public void UpdateMembers_ShrinkingRoster_RemovesExtraMembers()
         {
