@@ -1006,7 +1006,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             // 不能在此处解绑：原实现首次离开页面后再回来时，本地化资源切换不会再触发统计标签刷新。
             CancelAndDispose(ref _loadAllCts);
             CancelAndDispose(ref _loadStatsCts);
-            ClearImageBindings();
+            // 不在这里清空头像 / 段位图标地址：本页是单例 VM，离开页面的瞬间把地址抹掉，
+            // 而再次进入时 LoadForTargetAndRefreshAsync 对"同一个玩家"走零请求捷径直接 return，
+            // 没有任何代码会把地址填回来——表现就是切页回来头像和段位图标整块空白，
+            // 必须重新点一次搜索才恢复。换人时的清理由 ResetResultBlocksFor / ClearAllData 负责。
             // 候选下拉是独立浮层，页面离开后不会自己消失，必须显式收起。
             Suggestions.Close();
             base.OnNavigatedFromExecute(navigationContext);
@@ -1084,12 +1087,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             try { cts.Cancel(); } catch (ObjectDisposedException) { }
             try { cts.Dispose(); } catch (ObjectDisposedException) { }
             cts = null;
-        }
-
-        private void ClearImageBindings()
-        {
-            AvatarUrl = string.Empty;
-            RankIcon = string.Empty;
         }
 
         private void ClearAllData()
