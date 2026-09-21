@@ -18,6 +18,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <CETCompat>false</CETCompat>
     <Version>1.0.0.0</Version>
     <AssemblyName>BlackGoldAncientSword.Downloader</AssemblyName>
     <RootNamespace>BlackGoldAncientSword.Downloader</RootNamespace>
