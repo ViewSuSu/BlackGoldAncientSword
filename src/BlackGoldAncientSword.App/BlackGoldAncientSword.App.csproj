@@ -14,6 +14,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <NoWarn>$(NoWarn);CS8601;CS8603;CA1416;CS8618</NoWarn>
     <LangVersion>latest</LangVersion>
+    <CETCompat>false</CETCompat>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
