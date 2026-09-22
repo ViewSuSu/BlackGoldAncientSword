@@ -64,6 +64,7 @@
     <system:String x:Key="Stats.CopyUID">复制UID</system:String>
     <system:String x:Key="Stats.CopySuccess">复制成功</system:String>
     <system:String x:Key="Stats.UserNotFound">未查询到用户</system:String>
+    <system:String x:Key="Stats.TryBindRole">试试绑定角色</system:String>
     <system:String x:Key="Stats.Unknown">未知</system:String>
     <system:String x:Key="Stats.KD">K/D</system:String>
     <system:String x:Key="Stats.FirstRate">第一率</system:String>
@@ -343,6 +344,26 @@
     <system:String x:Key="Settings.FontSize.PreviewSection">章节标题</system:String>
     <system:String x:Key="Settings.FontSize.PreviewTitle">页面标题</system:String>
     <system:String x:Key="Settings.FontSize.PreviewDisplay">大数字 12345</system:String>
+
+    <!--  绑定角色弹窗（输入游戏昵称 + 选服务器）  -->
+    <system:String x:Key="BindRole.Title">绑定角色</system:String>
+    <system:String x:Key="BindRole.Checking">正在查询绑定信息…</system:String>
+    <system:String x:Key="BindRole.BoundLabel">当前账号已绑定的角色</system:String>
+    <system:String x:Key="BindRole.ViewStats">查看战绩</system:String>
+    <system:String x:Key="BindRole.Rebind">绑定其他角色</system:String>
+    <system:String x:Key="BindRole.Description">输入游戏昵称绑定查看个人数据</system:String>
+    <system:String x:Key="BindRole.NameLabel">游戏昵称</system:String>
+    <system:String x:Key="BindRole.ServerLabel">服务器</system:String>
+    <system:String x:Key="BindRole.Confirm">绑定角色</system:String>
+    <system:String x:Key="BindRole.Binding">绑定中…</system:String>
+    <system:String x:Key="BindRole.Success">绑定成功</system:String>
+    <system:String x:Key="BindRole.Failed">绑定失败：&#10;1. 英文请区分大小写&#10;2. 队列过长请稍后再试</system:String>
+    <system:String x:Key="BindRole.EmptyName">请先输入游戏昵称</system:String>
+    <system:String x:Key="BindRole.Server.163">国服</system:String>
+    <system:String x:Key="BindRole.Server.164">北美</system:String>
+    <system:String x:Key="BindRole.Server.166">欧服</system:String>
+    <system:String x:Key="BindRole.Server.167">亚服</system:String>
+    <system:String x:Key="BindRole.Server.168">东南亚</system:String>
 </ResourceDictionary>
 
 

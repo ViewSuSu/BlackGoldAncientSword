@@ -64,6 +64,7 @@
     <system:String x:Key="Stats.CopyUID">Copy UID</system:String>
     <system:String x:Key="Stats.CopySuccess">Copied!</system:String>
     <system:String x:Key="Stats.UserNotFound">User not found</system:String>
+    <system:String x:Key="Stats.TryBindRole">Try binding your role</system:String>
     <system:String x:Key="Stats.Unknown">Unknown</system:String>
     <system:String x:Key="Stats.KD">K/D</system:String>
     <system:String x:Key="Stats.FirstRate">First Rate</system:String>
@@ -344,6 +345,25 @@
     <system:String x:Key="Settings.FontSize.PreviewSection">Section heading</system:String>
     <system:String x:Key="Settings.FontSize.PreviewTitle">Page title</system:String>
     <system:String x:Key="Settings.FontSize.PreviewDisplay">Display number 12345</system:String>
+    <!--  Bind role dialog (in-game name + server)  -->
+    <system:String x:Key="BindRole.Title">Bind Role</system:String>
+    <system:String x:Key="BindRole.Checking">Checking binding info…</system:String>
+    <system:String x:Key="BindRole.BoundLabel">Role bound to your account</system:String>
+    <system:String x:Key="BindRole.ViewStats">View Stats</system:String>
+    <system:String x:Key="BindRole.Rebind">Bind Another</system:String>
+    <system:String x:Key="BindRole.Description">Enter your in-game name to bind it and view personal stats</system:String>
+    <system:String x:Key="BindRole.NameLabel">In-game name</system:String>
+    <system:String x:Key="BindRole.ServerLabel">Server</system:String>
+    <system:String x:Key="BindRole.Confirm">Bind</system:String>
+    <system:String x:Key="BindRole.Binding">Binding…</system:String>
+    <system:String x:Key="BindRole.Success">Bound successfully</system:String>
+    <system:String x:Key="BindRole.Failed">Binding failed:&#10;1. Capitalization matters&#10;2. Queue is busy, try again later</system:String>
+    <system:String x:Key="BindRole.EmptyName">Please enter your in-game name</system:String>
+    <system:String x:Key="BindRole.Server.163">China</system:String>
+    <system:String x:Key="BindRole.Server.164">North America</system:String>
+    <system:String x:Key="BindRole.Server.166">Europe</system:String>
+    <system:String x:Key="BindRole.Server.167">Asia</system:String>
+    <system:String x:Key="BindRole.Server.168">Southeast Asia</system:String>
 </ResourceDictionary>
 
 

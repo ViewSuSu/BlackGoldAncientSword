@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Attributes;
 using BlackGoldAncientSword.Framework.Core.Bases.ViewModels;
+using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.Framework.Http.Heybox;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
@@ -131,6 +132,28 @@ namespace BlackGoldAncientSword.App.Shell
                 catch (Exception ex)
                 {
                     AppLog.Error(ex, $"{nameof(UserProfileViewModel)}.{nameof(LogoutCommand)}");
+                }
+            });
+
+        private DelegateCommand? _openBindRoleCommand;
+        /// <summary>
+        /// Popup 内「绑定角色」点击：关 Popup → 弹绑定角色弹窗（与战绩页空态入口同一套弹窗与流程）。
+        /// 顺序同 <see cref="LogoutCommand"/>：先关 Popup 再弹 Overlay，避免 Popup 遮挡浮层。
+        /// </summary>
+        public DelegateCommand OpenBindRoleCommand =>
+            _openBindRoleCommand ??= new DelegateCommand(() =>
+            {
+                IsPopupOpen = false;
+                try
+                {
+                    var moduleManager = containerProvider.Resolve<IModuleManager>();
+                    moduleManager.LoadModule(nameof(PageNames.BindRolePage).Replace("Page", "Module"));
+                    var regionManager = containerProvider.Resolve<IRegionManager>();
+                    regionManager.RequestNavigate(GlobalConstant.BindRoleRegion, PageNames.BindRolePage);
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Error(ex, $"{nameof(UserProfileViewModel)}.{nameof(OpenBindRoleCommand)}", "open bind role overlay failed");
                 }
             });
 

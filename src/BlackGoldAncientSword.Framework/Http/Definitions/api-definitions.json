@@ -382,6 +382,51 @@
           }
         }
       }
+    },
+    {
+      "id": "BindGameId",
+      "method": "GET",
+      "path": "/account/bind_game_id/",
+      "queryParameters": {
+        "game_type": "string",
+        "game_id": "string",
+        "os_type": "string",
+        "server_id": "int"
+      },
+      "responseBody": {
+        "type": "HeyboxBindGameIdResponse",
+        "properties": {
+          "status": { "type": "string" },
+          "msg": { "type": "string" },
+          "result": { "type": "HeyboxBindState" }
+        },
+        "nestedTypes": {
+          "HeyboxBindState": {
+            "type": "HeyboxBindState",
+            "properties": {
+              "state": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "BindGameState",
+      "method": "GET",
+      "path": "/account/bind_game_state/",
+      "queryParameters": {
+        "game_type": "string",
+        "game_id": "string",
+        "os_type": "string"
+      },
+      "responseBody": {
+        "type": "HeyboxBindGameStateResponse",
+        "properties": {
+          "status": { "type": "string" },
+          "msg": { "type": "string" },
+          "result": { "type": "HeyboxBindState" }
+        }
+      }
     }
   ]
 }

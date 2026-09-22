@@ -8,6 +8,7 @@
         public const string TeamInfoPage = nameof(TeamInfoPage);
         public const string SettingsPage = nameof(SettingsPage);
         public const string AnnouncementPage = nameof(AnnouncementPage);
+        public const string BindRolePage = nameof(BindRolePage);
         public const string ClosePromptPage = nameof(ClosePromptPage);
         public const string FeedbackPage = nameof(FeedbackPage);
         public const string UpdateNotificationPage = nameof(UpdateNotificationPage);
