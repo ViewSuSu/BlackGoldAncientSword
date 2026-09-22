@@ -25,6 +25,10 @@
     <SolidColorBrush x:Key="AccentLightBrush"       Color="#E6EEDF" />
     <SolidColorBrush x:Key="AccentSubtleBrush"      Color="#F0F5EA" />
 
+    <!--  可点文字链接（如「试试绑定角色」）：主题整体是灰绿色系，链接单独用蓝色高亮以示可点  -->
+    <SolidColorBrush x:Key="LinkBrush"              Color="#2F6FD0" />
+    <SolidColorBrush x:Key="LinkHoverBrush"         Color="#1E5BB8" />
+
     <!-- 功能色 · 中式配色 -->
     <SolidColorBrush x:Key="SuccessBrush"           Color="#3F8B57" />
     <SolidColorBrush x:Key="DangerBrush"            Color="#B23A3A" />

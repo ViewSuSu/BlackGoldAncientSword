@@ -1,0 +1,158 @@
+<bases:UserControlBase
+    x:Class="BlackGoldAncientSword.Modules.UI.BindRole.Views.BindRolePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:bases="clr-namespace:BlackGoldAncientSword.Framework.Core.Bases.Views;assembly=BlackGoldAncientSword.Framework"
+    xmlns:consts="clr-namespace:BlackGoldAncientSword.Framework.Core.Consts;assembly=BlackGoldAncientSword.Framework"
+    xmlns:ctrls="clr-namespace:BlackGoldAncientSword.Framework.UI.Controls;assembly=BlackGoldAncientSword.Framework"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="clr-namespace:BlackGoldAncientSword.Modules.UI.BindRole.ViewModels"
+    d:DataContext="{d:DesignInstance Type=viewmodels:BindRolePageViewModel}"
+    Background="Transparent"
+    mc:Ignorable="d">
+    <ctrls:OverlayHost
+        CardMaxWidth="420"
+        CardMinWidth="380"
+        CardPadding="16"
+        RegionName="{x:Static consts:GlobalConstant.BindRoleRegion}"
+        Title="{DynamicResource BindRole.Title}">
+        <StackPanel>
+            <!--  === 查询中：正在读账号已绑定的角色  ===  -->
+            <TextBlock
+                Margin="0,12"
+                HorizontalAlignment="Center"
+                FontSize="{DynamicResource FontSize.Metadata}"
+                Foreground="{DynamicResource TextMutedBrush}"
+                Text="{DynamicResource BindRole.Checking}"
+                Visibility="{Binding IsCheckingBoundRole, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+            <!--  === 已绑定视图：账号已有绑定角色 → 直接展示 + 一键看战绩 / 换绑  ===  -->
+            <StackPanel Visibility="{Binding ShowBoundRoleView, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock
+                    Margin="0,0,0,12"
+                    FontSize="{DynamicResource FontSize.Metadata}"
+                    Foreground="{DynamicResource TextMutedBrush}"
+                    Text="{DynamicResource BindRole.BoundLabel}"
+                    TextWrapping="Wrap" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!--  圆形头像：服务端没给 avatar 时留底色空位  -->
+                    <Border
+                        Grid.Column="0"
+                        Width="44"
+                        Height="44"
+                        Background="{DynamicResource SurfaceTertiaryBrush}"
+                        BorderBrush="{DynamicResource BorderLightBrush}"
+                        BorderThickness="1"
+                        ClipToBounds="True"
+                        CornerRadius="22">
+                        <Border.Clip>
+                            <EllipseGeometry Center="22,22" RadiusX="22" RadiusY="22" />
+                        </Border.Clip>
+                        <Image
+                            Width="44"
+                            Height="44"
+                            RenderOptions.BitmapScalingMode="HighQuality"
+                            Source="{Binding BoundRoleAvatar, Mode=OneWay, IsAsync=True, Converter={StaticResource UrlToImageSourceConverter}, ConverterParameter=88}"
+                            Stretch="UniformToFill" />
+                    </Border>
+
+                    <StackPanel
+                        Grid.Column="1"
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="{DynamicResource FontSize.Section}"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextPrimaryBrush}"
+                            Text="{Binding BoundRoleName, Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontSize="{DynamicResource FontSize.Caption}"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            Text="{Binding BoundRoleMeta, Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel
+                    Margin="0,18,0,0"
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal">
+                    <Button
+                        MinWidth="96"
+                        Height="32"
+                        Margin="0,0,8,0"
+                        Command="{Binding RebindCommand}"
+                        Content="{DynamicResource BindRole.Rebind}"
+                        ToolTip="{DynamicResource BindRole.Rebind}" />
+                    <Button
+                        MinWidth="96"
+                        Height="32"
+                        Command="{Binding ViewBoundRoleStatsCommand}"
+                        Content="{DynamicResource BindRole.ViewStats}"
+                        ToolTip="{DynamicResource BindRole.ViewStats}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!--  === 绑定表单：未绑定 / 换绑 / 查询失败  ===  -->
+            <StackPanel Visibility="{Binding ShowBindForm, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <!--  说明：对齐网页端绑定引导文案  -->
+                <TextBlock
+                    Margin="0,0,0,14"
+                    FontSize="{DynamicResource FontSize.Metadata}"
+                    Foreground="{DynamicResource TextMutedBrush}"
+                    Text="{DynamicResource BindRole.Description}"
+                    TextWrapping="Wrap" />
+
+                <TextBlock
+                    Margin="0,0,0,4"
+                    FontSize="{DynamicResource FontSize.Metadata}"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
+                    Text="{DynamicResource BindRole.NameLabel}" />
+                <TextBox Height="30" Text="{Binding GameId, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
+
+                <TextBlock
+                    Margin="0,12,0,4"
+                    FontSize="{DynamicResource FontSize.Metadata}"
+                    Foreground="{DynamicResource TextSecondaryBrush}"
+                    Text="{DynamicResource BindRole.ServerLabel}" />
+                <ComboBox
+                    Height="30"
+                    ItemsSource="{Binding Servers, Mode=OneWay}"
+                    SelectedItem="{Binding SelectedServer, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label, Mode=OneWay}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <!--  失败提示（后端 msg 或默认文案）；无提示时整块隐藏  -->
+                <TextBlock
+                    Margin="0,12,0,0"
+                    FontSize="{DynamicResource FontSize.Caption}"
+                    Foreground="{DynamicResource DangerBrush}"
+                    Text="{Binding StatusText, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    Visibility="{Binding HasStatus, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                <Button
+                    MinWidth="96"
+                    Height="32"
+                    Margin="0,16,0,0"
+                    HorizontalAlignment="Right"
+                    Command="{Binding BindCommand}"
+                    Content="{Binding BindButtonText, Mode=OneWay}"
+                    ToolTip="{Binding BindButtonText, Mode=OneWay}" />
+            </StackPanel>
+        </StackPanel>
+    </ctrls:OverlayHost>
+</bases:UserControlBase>

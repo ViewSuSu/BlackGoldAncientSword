@@ -136,6 +136,7 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
             {
                 Grade = grade,
                 Stats = stats,
+                WaitUpdate = d.WaitUpdate == true,
                 CompositeScore = string.IsNullOrEmpty(scoreInfo?.CompositeScore)
                     ? null
                     : UnifiedValueParser.ParseLooseNumber(scoreInfo!.CompositeScore),

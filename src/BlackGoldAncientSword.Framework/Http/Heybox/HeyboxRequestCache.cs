@@ -38,6 +38,27 @@ namespace BlackGoldAncientSword.Framework.Http.Heybox
             }
         }
 
+        public void InvalidatePrefix(string prefix)
+        {
+            lock (_sync)
+            {
+                var keys = _entries.Keys
+                    .Where(k => k.StartsWith(prefix, StringComparison.Ordinal))
+                    .ToList();
+
+                foreach (var key in keys) _entries.Remove(key);
+            }
+        }
+
+        public void Set<T>(string key, T value)
+        {
+            lock (_sync)
+            {
+                if (_entries.Count >= MaxEntries) TrimUnlocked();
+                _entries[key] = new Entry(DateTimeOffset.UtcNow, Task.FromResult(value));
+            }
+        }
+
         private Task<T> GetOrStart<T>(string key, Func<Task<T>> factory)
         {
             var now = DateTimeOffset.UtcNow;

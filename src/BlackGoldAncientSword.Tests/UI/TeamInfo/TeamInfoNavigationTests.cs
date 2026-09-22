@@ -149,6 +149,7 @@ namespace BlackGoldAncientSword.Tests.UI.TeamInfo
                 clipboard,
                 new NoopTeammateMonitor(),
                 memberLoader,
+                new HeyboxPlayerRefresher(),
                 text,
                 tip);
 

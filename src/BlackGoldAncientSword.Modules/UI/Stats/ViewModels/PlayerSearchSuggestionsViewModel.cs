@@ -34,7 +34,17 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private readonly IUIDispatcher _uiDispatcher;
         private readonly Func<string, int, int, CancellationToken, Task<List<UnifiedSearchResult>>> _fetch;
+
+        /// <summary>查询当前账号是否绑定过角色：true/false = 明确结论，null = 没查成（无从判断）。</summary>
+        private readonly Func<CancellationToken, Task<bool?>> _accountBoundRoleProbe;
+
         private readonly HashSet<string> _seenRoleIds = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>当前账号是否绑定过角色：null = 还没查到；false = 明确未绑定（空态引导据此显示）。</summary>
+        private bool? _accountHasBoundRole;
+
+        /// <summary>本会话是否已发起过绑定状态查询（懒触发一次，避免每次空态都打请求）。</summary>
+        private bool _boundRoleCheckStarted;
 
         private int _generation;
         private string _query = string.Empty;
@@ -50,10 +60,13 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         public PlayerSearchSuggestionsViewModel(
             IUIDispatcher uiDispatcher,
-            Func<string, int, int, CancellationToken, Task<List<UnifiedSearchResult>>> fetch)
+            Func<string, int, int, CancellationToken, Task<List<UnifiedSearchResult>>> fetch,
+            Func<CancellationToken, Task<bool?>>? accountBoundRoleProbe = null)
         {
             _uiDispatcher = uiDispatcher;
             _fetch = fetch;
+            // 不接探测（测试 / 其它宿主）时，绑定状态恒为"未知"——空态不显示绑定引导。
+            _accountBoundRoleProbe = accountBoundRoleProbe ?? (_ => Task.FromResult<bool?>(null));
         }
 
         public RangeObservableCollection<PlayerSearchSuggestionItem> Items { get; } = new();
@@ -67,7 +80,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 if (_isOpen == value) return;
                 _isOpen = value;
                 RaisePropertyChanged(nameof(IsOpen));
-                RaisePropertyChanged(nameof(HasNoResult));
+                NotifyNoResultState();
             }
         }
 
@@ -80,7 +93,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 if (_isLoading == value) return;
                 _isLoading = value;
                 RaisePropertyChanged(nameof(IsLoading));
-                RaisePropertyChanged(nameof(HasNoResult));
+                NotifyNoResultState();
             }
         }
 
@@ -122,6 +135,52 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         /// <summary>当前关键词已经搜过、但一条候选都没有（用于显示"没有匹配的玩家"）。</summary>
         public bool HasNoResult => IsOpen && !IsLoading && Items.Count == 0;
+
+        /// <summary>
+        /// 空态里的「试试绑定角色」引导是否显示：只在**确认当前账号没绑定过角色**时出现。
+        /// 已绑定 → 不显示；还没查成 / 查询失败 → 也不显示（拿不准就不引导）。
+        /// </summary>
+        public bool ShowTryBindLink => HasNoResult && _accountHasBoundRole == false;
+
+        /// <summary>绑定成功时调用：此后空态不再显示绑定引导。</summary>
+        public void MarkAccountBound()
+        {
+            _accountHasBoundRole = true;
+            _boundRoleCheckStarted = true;
+            RaisePropertyChanged(nameof(ShowTryBindLink));
+        }
+
+        /// <summary>统一发布空态相关的属性通知（探测触发不在这里——见空结果落地处与 ShowNotFound）。</summary>
+        private void NotifyNoResultState()
+        {
+            RaisePropertyChanged(nameof(HasNoResult));
+            RaisePropertyChanged(nameof(ShowTryBindLink));
+        }
+
+        private void EnsureAccountBoundRoleChecked()
+        {
+            if (_boundRoleCheckStarted) return;
+            _boundRoleCheckStarted = true;
+            _ = CheckAccountBoundRoleAsync();
+        }
+
+        private async Task CheckAccountBoundRoleAsync()
+        {
+            try
+            {
+                var hasBound = await _accountBoundRoleProbe(CancellationToken.None).ConfigureAwait(false);
+                await _uiDispatcher.InvokeAsync(() =>
+                {
+                    _accountHasBoundRole = hasBound;
+                    RaisePropertyChanged(nameof(ShowTryBindLink));
+                }).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                // 没查成就保持"没查成"（不显示引导）；本会话不再重试——绑定成功的正向路径会直接置为已绑定。
+                AppLog.Error(ex, nameof(PlayerSearchSuggestionsViewModel), "query account bound role state failed");
+            }
+        }
 
         /// <summary>关键词变化后重新取第一页。旧的候选与在飞结果一并作废。</summary>
         public async Task RestartAsync(string? keyword)
@@ -204,13 +263,17 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         {
                             Items.ReplaceAll(ToItems(page));
                             SelectedIndex = Items.Count > 0 ? 0 : -1;
+
+                            // "搜过之后确实没有候选"才是空态出现的时点（开下拉的瞬间 HasNoResult 也会短暂为真，
+                            // 但那是加载态的一帧，不是搜索结果）——绑定状态探测只在这里懒触发。
+                            if (Items.Count == 0) EnsureAccountBoundRoleChecked();
                         }
 
                         _nextOffset = offset + PageSize;
                         HasMore = page.Count >= PageSize;
                         IsLoading = false;
                         IsLoadingMore = false;
-                        RaisePropertyChanged(nameof(HasNoResult));
+                        NotifyNoResultState();
                     }).ConfigureAwait(false);
 
                     var pending = Volatile.Read(ref _pendingKeyword);
@@ -239,6 +302,27 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             IsOpen = false;
             IsLoading = false;
             RaisePropertyChanged(nameof(HasNoResult));
+        }
+
+        /// <summary>
+        /// 手动搜索（回车 / 点搜索）确认的玩家不存在：把下拉以空态形式打开
+        /// （复用 <see cref="HasNoResult"/> 的提示 UI），不发起任何新请求。
+        /// 页面数据不在这里动——调用方保持原样展示。
+        /// </summary>
+        public void ShowNotFound()
+        {
+            var generation = Interlocked.Increment(ref _generation);
+            Volatile.Write(ref _pendingKeyword, null);
+            _ = ApplyAsync(generation, () =>
+            {
+                _query = string.Empty;
+                ResetItems();
+                IsLoading = false;
+                IsOpen = true;
+
+                // 手动搜索确认无结果：这也是"空态出现"，同样触发一次绑定状态探测（懒触发、有守卫）。
+                EnsureAccountBoundRoleChecked();
+            });
         }
 
         private void ResetItems()

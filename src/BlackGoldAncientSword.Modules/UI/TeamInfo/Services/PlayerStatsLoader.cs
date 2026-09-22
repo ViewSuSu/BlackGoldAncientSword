@@ -73,6 +73,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 }
             }
 
+            result.WaitUpdate = stats.WaitUpdate;
+
             return result;
         }
 
@@ -172,6 +174,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         public string PageRankName { get; set; } = string.Empty;
         public int PageStarCount { get; set; }
         public bool PageHasStars { get; set; }
+        public bool WaitUpdate { get; set; }
     }
 
     public readonly record struct PlayerStatMetric(string Key, string Label);
