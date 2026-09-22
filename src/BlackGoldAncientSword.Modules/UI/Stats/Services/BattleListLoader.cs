@@ -25,6 +25,9 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             _cache = cache;
         }
 
+        public void InvalidatePlayer(PlayerSourceContext ctx)
+            => _cache.InvalidatePrefix($"matchlist|{ctx.Server}|{ctx.RoleId}|");
+
         public async Task<List<UnifiedRecentBattleItem>?> FetchBattleListAsync(PlayerSourceContext ctx, CancellationToken ct)
         {
             try

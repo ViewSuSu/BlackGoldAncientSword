@@ -19,16 +19,24 @@ namespace BlackGoldAncientSword.Framework.Http.Heybox
         public Task<HeyboxHomeResponse?> GetAsync(
             string roleId, string server, string? season, string? battleTid, CancellationToken ct)
         {
-            var key = $"home|{roleId}|{server}|{season}|{battleTid}";
-
             return _cache.RunAsync<HeyboxHomeResponse?>(
-                key,
+                Key(roleId, server, season, battleTid),
                 () => LoadAsync(roleId, server, season, battleTid),
                 ct);
         }
 
+        public void Seed(
+            string roleId, string server, string? season, string? battleTid, HeyboxHomeResponse? response)
+            => _cache.Set(Key(roleId, server, season, battleTid), response);
+
         public void Invalidate(string roleId, string server, string? season, string? battleTid)
-            => _cache.Invalidate($"home|{roleId}|{server}|{season}|{battleTid}");
+            => _cache.Invalidate(Key(roleId, server, season, battleTid));
+
+        public void InvalidatePlayer(string roleId)
+            => _cache.InvalidatePrefix($"home|{roleId}|");
+
+        private static string Key(string roleId, string server, string? season, string? battleTid)
+            => $"home|{roleId}|{server}|{season}|{battleTid}";
 
         private static async Task<HeyboxHomeResponse?> LoadAsync(
             string roleId, string server, string? season, string? battleTid)

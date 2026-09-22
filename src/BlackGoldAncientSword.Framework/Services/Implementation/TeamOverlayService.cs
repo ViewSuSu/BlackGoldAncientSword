@@ -24,7 +24,6 @@ namespace BlackGoldAncientSword.Framework.Services.Implementation
             _settingsService = settingsService;
         }
 
-        public Action? RefreshAction { get; set; }
         public event Action? Dismissed;
         public event Action? NavigateToTeamInfoRequested;
 

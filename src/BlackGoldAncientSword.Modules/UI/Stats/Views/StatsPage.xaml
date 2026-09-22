@@ -205,14 +205,38 @@
                                     Text="{DynamicResource Search.SuggestionsLoading}"
                                     Visibility="{Binding Suggestions.IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                                <TextBlock
+                                <!--
+                                    空态（候选搜不到 / 手动搜索无结果）：只在搜索框下拉里提示，
+                                    不覆盖整页——搜索失败不该把当前正在看的数据清掉或者是盖住。
+                                    「试试绑定角色」只在账号确认未绑定过角色时出现（已绑定 / 查不到都不显示）。
+                                -->
+                                <StackPanel
                                     Margin="12"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    FontSize="{DynamicResource FontSize.Caption}"
-                                    Foreground="{DynamicResource TextMutedBrush}"
-                                    Text="{DynamicResource Search.SuggestionsEmpty}"
-                                    Visibility="{Binding Suggestions.HasNoResult, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    Visibility="{Binding Suggestions.HasNoResult, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        FontSize="{DynamicResource FontSize.Caption}"
+                                        Foreground="{DynamicResource TextMutedBrush}"
+                                        Text="{DynamicResource Stats.UserNotFound}" />
+                                    <Button
+                                        Margin="0,8,0,0"
+                                        Padding="0"
+                                        HorizontalAlignment="Center"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Command="{Binding OpenBindRoleCommand}"
+                                        Cursor="Hand"
+                                        ToolTip="{DynamicResource Stats.TryBindRole}"
+                                        Visibility="{Binding Suggestions.ShowTryBindLink, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <TextBlock
+                                            FontSize="{DynamicResource FontSize.Body}"
+                                            Foreground="{DynamicResource LinkBrush}"
+                                            Text="{DynamicResource Stats.TryBindRole}"
+                                            TextDecorations="Underline" />
+                                    </Button>
+                                </StackPanel>
 
                                 <Border
                                     Padding="0,3"
@@ -254,21 +278,6 @@
                     </Button>
                 </StackPanel>
             </Grid>
-
-            <!--  === NOT FOUND OVERLAY ===  只覆盖内容区（保留顶部搜索栏 Row=0 供用户重新输入）  -->
-            <Border
-                Grid.Row="1"
-                Grid.RowSpan="4"
-                Panel.ZIndex="10"
-                Background="{DynamicResource SurfaceSecondaryBrush}"
-                Visibility="{Binding ShowNotFound, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <TextBlock
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    FontSize="{DynamicResource FontSize.Title}"
-                    Foreground="{DynamicResource TextMutedBrush}"
-                    Text="{DynamicResource Stats.UserNotFound}" />
-            </Border>
 
             <!--  === TOP: Player Info + Filters ===  -->
             <Grid Grid.Row="1">

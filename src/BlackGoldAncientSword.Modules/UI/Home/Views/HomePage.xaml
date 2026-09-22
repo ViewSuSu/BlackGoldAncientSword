@@ -25,38 +25,402 @@
             Grid.Row="0"
             Height="4"
             HorizontalAlignment="Stretch"
-            VerticalAlignment="Top" />
+            VerticalAlignment="Top"
+            Visibility="{Binding IsLoading, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!--  ===== 状态提示文字 =====  -->
-        <StackPanel
+        <ScrollViewer
+            x:Name="PageScroll"
             Grid.Row="1"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center">
+            Padding="16,12,16,18"
+            HorizontalScrollBarVisibility="Disabled"
+            VerticalScrollBarVisibility="Auto">
+            <Grid MinHeight="{Binding ViewportHeight, ElementName=PageScroll}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-            <!--  循环等待指示器  -->
-            <Border
-                HorizontalAlignment="Center"
-                Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <hc:CircleProgressBar
-                    Width="64"
-                    Height="64"
-                    ArcThickness="4"
-                    Foreground="{DynamicResource AccentPrimaryBrush}"
-                    IsIndeterminate="True" />
-            </Border>
+                <!--  ===== 状态条：本机游戏进程 / 对局阶段 =====  -->
+                <Border
+                    Grid.Row="0"
+                    Padding="12,8"
+                    Background="{DynamicResource SurfaceSecondaryBrush}"
+                    BorderBrush="{DynamicResource BorderLightBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMd}">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="8" Height="8" VerticalAlignment="Center">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{DynamicResource TextPlaceholderBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsGameRunning, Mode=OneWay}" Value="True">
+                                            <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="{DynamicResource FontSize.Body}"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource TextPrimaryBrush}"
+                            Text="{Binding StatusText, Mode=OneWay}" />
+                        <TextBlock
+                            Margin="12,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="{DynamicResource FontSize.Metadata}"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            Text="{Binding StatusHint, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
 
-            <TextBlock
-                FontSize="{DynamicResource FontSize.Title}"
-                FontWeight="SemiBold"
-                Foreground="{DynamicResource TextSecondaryBrush}"
-                HorizontalAlignment="Center"
-                Text="{Binding StatusText}" />
-            <TextBlock
-                Margin="0,12,0,0"
-                FontSize="{DynamicResource FontSize.Body}"
-                Foreground="{DynamicResource TextMutedBrush}"
-                HorizontalAlignment="Center"
-                Text="{Binding StatusHint}" />
-        </StackPanel>
+                <!--  ===== 游戏看板 =====  -->
+                <Grid Grid.Row="1" Visibility="{Binding HasOverview, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!--  ===== 游戏头卡 =====  -->
+                    <Border
+                        Grid.Row="0"
+                        Margin="0,12,0,0"
+                        Padding="0"
+                        ClipToBounds="True"
+                        Style="{StaticResource CardBorderStyle}">
+                        <StackPanel>
+
+                            <!--  图标 / 名称 / 评分  -->
+                            <Grid Margin="16,12,16,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border
+                                    Grid.Column="0"
+                                    Width="52"
+                                    Height="52"
+                                    BorderBrush="{DynamicResource BorderLightBrush}"
+                                    BorderThickness="1"
+                                    ClipToBounds="True"
+                                    CornerRadius="{StaticResource RadiusMd}">
+                                    <Image Source="{Binding Overview.IconUrl, Mode=OneWay}" Stretch="UniformToFill" />
+                                </Border>
+
+                                <StackPanel
+                                    Grid.Column="1"
+                                    Margin="12,0,12,0"
+                                    VerticalAlignment="Center">
+                                    <TextBlock
+                                        FontSize="{DynamicResource FontSize.Title}"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource TextPrimaryBrush}"
+                                        Text="{Binding Overview.Name, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        Margin="0,2,0,0"
+                                        FontSize="{DynamicResource FontSize.Metadata}"
+                                        Foreground="{DynamicResource TextMutedBrush}"
+                                        Text="{Binding Overview.NameEn, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Margin="0,3,0,0" Orientation="Horizontal">
+                                        <TextBlock
+                                            FontSize="{DynamicResource FontSize.Metadata}"
+                                            Foreground="{DynamicResource TextMutedBrush}"
+                                            Text="{DynamicResource Home.Game.Follow}" />
+                                        <TextBlock
+                                            Margin="4,0,0,0"
+                                            FontSize="{DynamicResource FontSize.Metadata}"
+                                            Foreground="{DynamicResource TextSecondaryBrush}"
+                                            Text="{Binding Overview.FollowText, Mode=OneWay}" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel
+                                    Grid.Column="2"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Right">
+                                    <Border
+                                        Padding="10,3"
+                                        HorizontalAlignment="Right"
+                                        Background="{DynamicResource AccentPrimaryBrush}"
+                                        CornerRadius="{StaticResource RadiusSm}">
+                                        <TextBlock
+                                            FontSize="{DynamicResource FontSize.Section}"
+                                            FontWeight="Bold"
+                                            Foreground="{DynamicResource TextOnAccentBrush}"
+                                            Text="{Binding Overview.Score, Mode=OneWay}" />
+                                    </Border>
+                                    <TextBlock
+                                        Margin="0,4,0,0"
+                                        HorizontalAlignment="Right"
+                                        FontSize="{DynamicResource FontSize.Caption}"
+                                        Foreground="{DynamicResource TextMutedBrush}"
+                                        Text="{Binding ScoreCommentText, Mode=OneWay}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!--  标签  -->
+                            <ItemsControl
+                                Margin="16,10,16,14"
+                                ItemsSource="{Binding Overview.Tags, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Margin="0,0,6,6"
+                                            Padding="8,2"
+                                            Background="{DynamicResource SurfaceTertiaryBrush}"
+                                            BorderBrush="{DynamicResource BorderLightBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="{StaticResource RadiusSm}">
+                                            <TextBlock
+                                                FontSize="{DynamicResource FontSize.Caption}"
+                                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                                Text="{Binding}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!--  ===== 当前在线 / 昨日峰值 =====  -->
+                    <Grid Grid.Row="1" Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border
+                            Grid.Column="0"
+                            Padding="18,14"
+                            Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock
+                                    FontSize="{DynamicResource FontSize.Metadata}"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    Text="{DynamicResource Home.Game.OnlineNow}" />
+                                <TextBlock
+                                    Margin="0,6,0,0"
+                                    FontSize="28"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                    Text="{Binding Overview.OnlineNow, Mode=OneWay}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border
+                            Grid.Column="2"
+                            Padding="18,14"
+                            Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock
+                                    FontSize="{DynamicResource FontSize.Metadata}"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    Text="{DynamicResource Home.Game.OnlinePeak}" />
+                                <TextBlock
+                                    Margin="0,6,0,0"
+                                    FontSize="28"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                    Text="{Binding Overview.OnlinePeak, Mode=OneWay}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!--  ===== 在线趋势 =====  -->
+                    <Border
+                        Grid.Row="2"
+                        Margin="0,12,0,0"
+                        Padding="18,14"
+                        Style="{StaticResource CardBorderStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0">
+                                <TextBlock
+                                    FontSize="{DynamicResource FontSize.Section}"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                    Text="{DynamicResource Home.Game.OnlineTrend}" />
+                                <StackPanel
+                                    HorizontalAlignment="Right"
+                                    Orientation="Horizontal">
+                                    <TextBlock
+                                        FontSize="{DynamicResource FontSize.Caption}"
+                                        Foreground="{DynamicResource TextMutedBrush}"
+                                        Text="{DynamicResource Home.Game.TrendPeak}" />
+                                    <TextBlock
+                                        Margin="4,0,0,0"
+                                        FontSize="{DynamicResource FontSize.Caption}"
+                                        Foreground="{DynamicResource TextSecondaryBrush}"
+                                        Text="{Binding TrendPeakText, Mode=OneWay}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!--  每列等宽铺满整行：柱宽固定，柱距随容器宽度自然拉开  -->
+                            <ItemsControl
+                                Grid.Row="1"
+                                Margin="0,14,0,0"
+                                ItemsSource="{Binding TrendBars, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="1" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+
+                                            <Grid Grid.Row="0">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="{Binding SpacerWeight}" MinHeight="20" />
+                                                    <RowDefinition Height="{Binding BarWeight}" MinHeight="10" />
+                                                </Grid.RowDefinitions>
+
+                                                <TextBlock
+                                                    Grid.Row="0"
+                                                    Margin="0,0,0,4"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Bottom"
+                                                    FontSize="{DynamicResource FontSize.Caption}"
+                                                    Foreground="{DynamicResource TextMutedBrush}"
+                                                    Text="{Binding ValueText}" />
+                                                <Rectangle
+                                                    Grid.Row="1"
+                                                    Width="30"
+                                                    HorizontalAlignment="Center"
+                                                    Fill="{DynamicResource AccentGradientBrush}"
+                                                    RadiusX="3"
+                                                    RadiusY="3"
+                                                    ToolTip="{Binding Tooltip}" />
+                                                <Border
+                                                    Grid.RowSpan="2"
+                                                    Height="1"
+                                                    VerticalAlignment="Bottom"
+                                                    Background="{DynamicResource BorderLightBrush}" />
+                                            </Grid>
+
+                                            <TextBlock
+                                                Grid.Row="1"
+                                                Margin="0,6,0,0"
+                                                HorizontalAlignment="Center"
+                                                FontSize="{DynamicResource FontSize.Caption}"
+                                                Foreground="{DynamicResource TextMutedBrush}"
+                                                Text="{Binding DateText}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Border>
+
+                    <!--  ===== 玩家总数 / 好评率 / 销量 / 平均时长 =====  -->
+                    <Grid Grid.Row="3" Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border
+                            Grid.Column="0"
+                            Padding="14,10"
+                            Style="{StaticResource PanelBorderStyle}">
+                            <StackPanel>
+                                <TextBlock
+                                    FontSize="{DynamicResource FontSize.Caption}"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    Text="{DynamicResource Home.Game.Players}" />
+                                <TextBlock
+                                    Margin="0,4,0,0"
+                                    FontSize="{DynamicResource FontSize.Title}"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                    Text="{Binding Overview.PlayerCount, Mode=OneWay}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border
+                            Grid.Column="2"
+                            Padding="14,10"
+                            Style="{StaticResource PanelBorderStyle}">
+                            <StackPanel>
+                                <TextBlock
+                                    FontSize="{DynamicResource FontSize.Caption}"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    Text="{DynamicResource Home.Game.ApprovalRate}" />
+                                <TextBlock
+                                    Margin="0,4,0,0"
+                                    FontSize="{DynamicResource FontSize.Title}"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                    Text="{Binding Overview.ApprovalRate, Mode=OneWay}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border
+                            Grid.Column="4"
+                            Padding="14,10"
+                            Style="{StaticResource PanelBorderStyle}">
+                            <StackPanel>
+                                <TextBlock
+                                    FontSize="{DynamicResource FontSize.Caption}"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    Text="{DynamicResource Home.Game.SalesRank}" />
+                                <TextBlock
+                                    Margin="0,4,0,0"
+                                    FontSize="{DynamicResource FontSize.Title}"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                    Text="{Binding Overview.SalesRank, Mode=OneWay}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border
+                            Grid.Column="6"
+                            Padding="14,10"
+                            Style="{StaticResource PanelBorderStyle}">
+                            <StackPanel>
+                                <TextBlock
+                                    FontSize="{DynamicResource FontSize.Caption}"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    Text="{DynamicResource Home.Game.PlayTime}" />
+                                <TextBlock
+                                    Margin="0,4,0,0"
+                                    FontSize="{DynamicResource FontSize.Title}"
+                                    FontWeight="SemiBold"
+                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                    Text="{Binding Overview.AvgPlayTime, Mode=OneWay}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </ScrollViewer>
     </Grid>
 </bases:UserControlBase>

@@ -46,5 +46,10 @@ namespace BlackGoldAncientSword.Framework.Core.Consts
         /// 切换只是换个 <c>battle_tid</c> 取同一玩家的另一份数据，不会重复请求资料/赛季。
         /// </summary>
         public const string TargetTeamSize = nameof(TargetTeamSize);
+
+        /// <summary>
+        /// 导航到绑定角色弹窗时预填的游戏昵称（取战绩页搜索框当前内容，省得用户再输一遍）。
+        /// </summary>
+        public const string BindRoleGameId = nameof(BindRoleGameId);
     }
 }

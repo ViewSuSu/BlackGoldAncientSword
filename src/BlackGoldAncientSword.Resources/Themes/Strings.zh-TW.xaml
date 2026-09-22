@@ -62,6 +62,7 @@
     <ns1:String ns2:Key="Stats.CopyUID">複製UID</ns1:String>
     <ns1:String ns2:Key="Stats.CopySuccess">複製成功</ns1:String>
     <ns1:String ns2:Key="Stats.UserNotFound">未查詢到用戶</ns1:String>
+    <ns1:String ns2:Key="Stats.TryBindRole">試試綁定角色</ns1:String>
     <ns1:String ns2:Key="Stats.Unknown">未知</ns1:String>
     <ns1:String ns2:Key="Stats.KD">K/D</ns1:String>
     <ns1:String ns2:Key="Stats.FirstRate">第一率</ns1:String>
@@ -153,7 +154,7 @@
     <ns1:String ns2:Key="Settings.SaveFailed">儲存失敗: {0}</ns1:String>
 
     <ns1:String ns2:Key="Nav.Detail">詳情</ns1:String>
-    <ns1:String ns2:Key="Nav.Home">啟動頁</ns1:String>
+    <ns1:String ns2:Key="Nav.Home">首頁</ns1:String>
     <ns1:String ns2:Key="Nav.Stats">戰績</ns1:String>
     <ns1:String ns2:Key="Nav.CurrentUser">目前用戶</ns1:String>
     <ns1:String ns2:Key="Nav.Search">搜尋</ns1:String>
@@ -178,6 +179,16 @@
     <ns1:String ns2:Key="Home.Status.GameDetected">永劫無間進程已檢測到</ns1:String>
     <ns1:String ns2:Key="Home.Status.HeroSelection">英雄選擇中 (RoomId: {0})</ns1:String>
     <ns1:String ns2:Key="Home.Status.InGame">對局中 (BattleId: {0})</ns1:String>
+    <ns1:String ns2:Key="Home.Game.Follow">關注</ns1:String>
+    <ns1:String ns2:Key="Home.Game.ScoreComments">{0} 人評價</ns1:String>
+    <ns1:String ns2:Key="Home.Game.OnlineNow">當前在線</ns1:String>
+    <ns1:String ns2:Key="Home.Game.OnlinePeak">昨日峰值在線</ns1:String>
+    <ns1:String ns2:Key="Home.Game.OnlineTrend">近 15 天在線趨勢</ns1:String>
+    <ns1:String ns2:Key="Home.Game.TrendPeak">峰值</ns1:String>
+    <ns1:String ns2:Key="Home.Game.Players">玩家總數</ns1:String>
+    <ns1:String ns2:Key="Home.Game.ApprovalRate">好評率</ns1:String>
+    <ns1:String ns2:Key="Home.Game.SalesRank">全球銷量</ns1:String>
+    <ns1:String ns2:Key="Home.Game.PlayTime">平均時長</ns1:String>
     <ns1:String ns2:Key="Announcement.UpdateHistory">更新歷史</ns1:String>
     <ns1:String ns2:Key="Announcement.Notice">公告通知</ns1:String>
         <ns1:String ns2:Key="Announcement.Loading">正在載入更新歷史...</ns1:String>
@@ -335,6 +346,25 @@
     <ns1:String ns2:Key="Settings.FontSize.PreviewSection">章節標題</ns1:String>
     <ns1:String ns2:Key="Settings.FontSize.PreviewTitle">頁面標題</ns1:String>
     <ns1:String ns2:Key="Settings.FontSize.PreviewDisplay">大數字 12345</ns1:String>
+    <!--  綁定角色彈窗（輸入遊戲暱稱 + 選伺服器）  -->
+    <ns1:String ns2:Key="BindRole.Title">綁定角色</ns1:String>
+    <ns1:String ns2:Key="BindRole.Checking">正在查詢綁定資訊…</ns1:String>
+    <ns1:String ns2:Key="BindRole.BoundLabel">當前帳號已綁定的角色</ns1:String>
+    <ns1:String ns2:Key="BindRole.ViewStats">查看戰績</ns1:String>
+    <ns1:String ns2:Key="BindRole.Rebind">綁定其他角色</ns1:String>
+    <ns1:String ns2:Key="BindRole.Description">輸入遊戲暱稱綁定查看個人數據</ns1:String>
+    <ns1:String ns2:Key="BindRole.NameLabel">遊戲暱稱</ns1:String>
+    <ns1:String ns2:Key="BindRole.ServerLabel">伺服器</ns1:String>
+    <ns1:String ns2:Key="BindRole.Confirm">綁定角色</ns1:String>
+    <ns1:String ns2:Key="BindRole.Binding">綁定中…</ns1:String>
+    <ns1:String ns2:Key="BindRole.Success">綁定成功</ns1:String>
+    <ns1:String ns2:Key="BindRole.Failed">綁定失敗：&#10;1. 英文請區分大小寫&#10;2. 隊列過長請稍後再試</ns1:String>
+    <ns1:String ns2:Key="BindRole.EmptyName">請先輸入遊戲暱稱</ns1:String>
+    <ns1:String ns2:Key="BindRole.Server.163">國服</ns1:String>
+    <ns1:String ns2:Key="BindRole.Server.164">北美</ns1:String>
+    <ns1:String ns2:Key="BindRole.Server.166">歐服</ns1:String>
+    <ns1:String ns2:Key="BindRole.Server.167">亞服</ns1:String>
+    <ns1:String ns2:Key="BindRole.Server.168">東南亞</ns1:String>
 </ns0:ResourceDictionary>
 
 

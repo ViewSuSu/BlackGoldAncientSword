@@ -18,8 +18,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
 
         private const string AnonymousPlayerName = "匿名玩家";
 
-        private const string DefaultServer = "163";
-
         private readonly PlayerStatsLoader _statsLoader;
         private readonly HeyboxHomeDataProvider _homeData;
         private readonly HeyboxRequestCache _cache;
@@ -55,7 +53,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 string? searchMsg;
                 if (LooksLikeRoleId(localUidOverride))
                 {
-                    ctx = new PlayerSourceContext(localUidOverride!, ServerFromRoleId(localUidOverride!));
+                    ctx = PlayerSourceContext.FromRoleId(localUidOverride!);
                     searchMsg = null;
                 }
                 else
@@ -78,7 +76,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 // 只查一次就返回，把"补数据"交给调用方在数据上屏之后做（见 NeedsFollowUp）。
                 // 原先这里是个最多 3 轮的重试循环，中间还有 5s + 3s 的 Task.Delay——意味着
                 // 玩家名/统计没拿全时，整张卡要空白转圈 8 秒才显示任何东西，体验很差。
-                var (userInfo, _) = await FetchProfileAsync(ctx, selectedSeasonKey, battleTid, ct).ConfigureAwait(false);
+                var (userInfo, _, waitUpdate) = await FetchProfileAsync(ctx, selectedSeasonKey, battleTid, ct).ConfigureAwait(false);
                 var stats = await _statsLoader.LoadAsync(ctx, selectedSeasonKey, gameMode, ct).ConfigureAwait(false);
 
                 result.UserName = ResolveMemberName(userInfo, userName);
@@ -91,6 +89,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
 
                 result.SourceContextUserInfo = userInfo;
                 result.Stats = stats;
+                result.WaitUpdate = waitUpdate;
                 return result;
             }
             catch (NarakaApiException ex)
@@ -168,14 +167,14 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             var gameMode = GameModeExtensions.FromCategoryAndTeamSize(category, teamSize);
             var battleTid = gameMode.ToHeyBoxBattleTid().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-            _homeData.Invalidate(ctx.RoleId, ctx.Server, selectedSeasonKey, battleTid);
+            _homeData.InvalidatePlayer(ctx.RoleId);
 
-            var (userInfo, _) = await FetchProfileAsync(ctx, selectedSeasonKey, battleTid, ct).ConfigureAwait(false);
+            var (userInfo, _, _) = await FetchProfileAsync(ctx, selectedSeasonKey, battleTid, ct).ConfigureAwait(false);
             var stats = await _statsLoader.LoadAsync(ctx, selectedSeasonKey, gameMode, ct).ConfigureAwait(false);
             return (userInfo, stats);
         }
 
-        private async Task<(UnifiedUserInfo? userInfo, string? msg)> FetchProfileAsync(
+        private async Task<(UnifiedUserInfo? userInfo, string? msg, bool waitUpdate)> FetchProfileAsync(
             PlayerSourceContext ctx, string? seasonKey, string battleTid, CancellationToken ct)
         {
             var home = await _homeData.GetAsync(ctx.RoleId, ctx.Server, seasonKey, battleTid, ct).ConfigureAwait(false);
@@ -184,7 +183,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
                 $"profile响应: uid={ctx.RoleId} home={(home is null ? "NULL" : "ok")} isSuccess={home?.IsSuccess} " +
                 $"result={(home?.Result is null ? "NULL" : "ok")} playerInfo={(home?.Result?.PlayerInfo is null ? "NULL" : "ok")}");
 
-            return (UnifiedMapper.MapPlayerInfo(home?.Result), home?.Msg);
+            return (UnifiedMapper.MapPlayerInfo(home?.Result), home?.Msg, home?.Result?.WaitUpdate == true);
         }
 
         private async Task<(PlayerSourceContext? ctx, string? msg)> ResolveByNameAsync(
@@ -205,7 +204,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
             string? localRoleId, string localName, CancellationToken ct)
         {
             if (LooksLikeRoleId(localRoleId))
-                return new PlayerSourceContext(localRoleId!, ServerFromRoleId(localRoleId!));
+                return PlayerSourceContext.FromRoleId(localRoleId!);
 
             if (string.IsNullOrWhiteSpace(localName)) return null;
 
@@ -215,11 +214,6 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
 
         private static bool LooksLikeRoleId(string? value)
             => !string.IsNullOrWhiteSpace(value) && value.Length == 22 && value.All(char.IsAsciiLetterOrDigit);
-
-        private static string ServerFromRoleId(string roleId)
-            => roleId.Length >= 3 && int.TryParse(roleId.AsSpan(roleId.Length - 3), out _)
-                ? roleId.Substring(roleId.Length - 3)
-                : DefaultServer;
     }
 
     public class MemberLoadResult
@@ -244,5 +238,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.Services
         public UnifiedUserInfo? SourceContextUserInfo { get; set; }
 
         public PlayerStatsLoadResult? Stats { get; set; }
+
+        public bool WaitUpdate { get; set; }
     }
 }

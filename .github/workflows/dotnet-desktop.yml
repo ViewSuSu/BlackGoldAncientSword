@@ -202,10 +202,13 @@ jobs:
 
           $body = "## 本次更新（$rangeLabel）`n`n$changelog"
 
+          # 标题与正文分开输出：发布时间戳由创建 release 前一步生成，这里只出不含时间戳的两段
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "range_label=$rangeLabel"
+
           # 多行内容写入 GITHUB_OUTPUT，使用 heredoc 分隔符
           $delim = "EOF_" + [guid]::NewGuid().ToString('N')
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "release_body<<$delim"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value $body
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "changelog<<$delim"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $changelog
           Add-Content -Path $env:GITHUB_OUTPUT -Value $delim
 
           Write-Host "===== Changelog ($rangeLabel) ====="
@@ -395,6 +398,17 @@ jobs:
           }
 
 
+      - name: Stamp release time
+        id: release_time
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # 发布时间戳取北京时间（UTC+8）；这一步必须紧贴创建 release，中间隔着打包会差出好几分钟
+          $ts = [DateTime]::UtcNow.AddHours(8).ToString('yyyy-MM-dd HH:mm:ss')
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "beijing_time=$ts"
+          Write-Host "Release time: $ts"
+
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -402,7 +416,10 @@ jobs:
           name: Release v${{ steps.version.outputs.new_version }}
           draft: false
           prerelease: false
-          body: ${{ steps.changelog.outputs.release_body }}
+          body: |-
+            ## 本次更新（${{ steps.changelog.outputs.range_label }}）  ${{ steps.release_time.outputs.beijing_time }}
+
+            ${{ steps.changelog.outputs.changelog }}
           files: |
             output/*
         env:

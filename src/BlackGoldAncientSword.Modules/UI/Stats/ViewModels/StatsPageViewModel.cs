@@ -26,6 +26,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         private readonly IClipboardService _clipboard;
         private readonly PlayerStatsLoader _playerStatsLoader;
         private readonly BattleListLoader _battleListLoader;
+        private readonly HeyboxPlayerRefresher _refresher;
         private readonly IUIDispatcher _uiDispatcher;
         private readonly ILocalizedTextProvider _localizedText;
         private readonly HeyboxRequestCache _requestCache;
@@ -46,10 +47,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             IClipboardService clipboard,
             PlayerStatsLoader playerStatsLoader,
             BattleListLoader battleListLoader,
+            HeyboxPlayerRefresher refresher,
             IUIDispatcher uiDispatcher,
             ILocalizedTextProvider localizedText,
             HeyboxRequestCache requestCache,
-            PlayerSearchSuggester searchSuggester)
+            PlayerSearchSuggester searchSuggester,
+            HeyboxRoleBinder roleBinder)
         {
             _playerPrefsService = playerPrefsService;
             _tipMessage = tipMessageService;
@@ -57,18 +60,27 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             _clipboard = clipboard;
             _playerStatsLoader = playerStatsLoader;
             _battleListLoader = battleListLoader;
+            _refresher = refresher;
             _uiDispatcher = uiDispatcher;
             _localizedText = localizedText;
             _requestCache = requestCache;
             _onLanguageChangedHandler = OnLanguageChanged;
             _filterRefreshDebouncer = new TrailingDebouncer(FilterRefreshDebounceMs, RunFilterRefreshAsync);
-            Suggestions = new PlayerSearchSuggestionsViewModel(uiDispatcher, searchSuggester.FetchAsync);
+            Suggestions = new PlayerSearchSuggestionsViewModel(
+                uiDispatcher,
+                searchSuggester.FetchAsync,
+                // 空态「试试绑定角色」的显隐依据：账号是否绑定过角色（三态，拿不准时不显示）。
+                roleBinder.HasBoundRoleAsync);
             _suggestionDebouncer = new TrailingDebouncer(SuggestionDebounceMs, RunSuggestionSearchAsync);
             _localizationService.PropertyChanged += _onLanguageChangedHandler;
             Seasons = new ObservableCollection<UnifiedSeason>();
             DetailStats = new ObservableCollection<StatEntryItem>();
             RecentBattles = new RangeObservableCollection<RecentBattleDisplayItem>();
             RefreshStaticLabels();
+
+            // 绑定角色成功 → 自动重查刚绑定的昵称。订阅放 ctor：本页是单例 VM，只订阅这一次。
+            eventAggregator.GetEvent<RoleBindSucceededEvent>()
+                .Subscribe(OnRoleBindSucceeded, ThreadOption.UIThread);
         }
 
         // === Player Info ===
@@ -298,6 +310,83 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 SetSearchTextSilently(_playerPrefsService.Current.OriginalPlayerName);
                 await RefreshAllAsync();
             });
+
+        // === 绑定角色 ===
+
+        /// <summary>
+        /// 打开绑定角色弹窗（空态「试试绑定角色」入口）。弹窗走 Overlay Region 弹在整窗之上，
+        /// 与公告同一套机制（模糊背景 + 卡片），不占用主内容区导航。
+        /// </summary>
+        private DelegateCommand? _openBindRoleCommand;
+        public DelegateCommand OpenBindRoleCommand =>
+            _openBindRoleCommand ??= new DelegateCommand(() =>
+            {
+                // 下拉是独立顶层 Popup，会浮在弹窗（Overlay）之上——先收起再弹。
+                Suggestions.Close();
+
+                // 按需加载 BindRoleModule（与 OpenBattleDetailCommand 同模式）。
+                try
+                {
+                    var moduleManager = containerProvider.Resolve<IModuleManager>();
+                    moduleManager.LoadModule(nameof(PageNames.BindRolePage).Replace("Page", "Module"));
+                }
+                catch { }
+
+                regionManager.RequestNavigate(
+                    GlobalConstant.BindRoleRegion,
+                    PageNames.BindRolePage,
+                    new NavigationParameters
+                    {
+                        // 把搜索框当前内容带过去预填：用户搜不到的那个昵称多半就是要绑的角色。
+                        { NavigationParameterKeys.BindRoleGameId, SearchText },
+                    });
+            });
+
+        /// <summary>
+        /// 绑定角色成功（弹窗发的事件）：对齐网页端——绑定成功后服务端已按绑定关系给出刚绑定的角色，
+        /// 事件里就带着这份快照，直接走快照渲染（同队伍卡片跳转路径），不按昵称重搜。
+        /// 快照缺失（绑定页查询失败）时才退回按昵称搜索。
+        /// </summary>
+        private void OnRoleBindSucceeded(RoleBindSucceededEventArgs args)
+        {
+            _ = ApplyBoundRoleAsync(args);
+        }
+
+        private async System.Threading.Tasks.Task ApplyBoundRoleAsync(RoleBindSucceededEventArgs args)
+        {
+            // 绑定成功 → 账号此后有绑定角色：空态里的绑定引导不再出现。
+            Suggestions.MarkAccountBound();
+
+            // 搜索缓存里可能留着绑定前的旧结果（含"这个名字搜不到"的空结果），先整体失效再查。
+            _requestCache.Invalidate();
+
+            if (args.BoundRole is { } bound
+                && !string.IsNullOrEmpty(bound.RoleId)
+                && !string.IsNullOrEmpty(bound.Server))
+            {
+                // 回填服务端认到的真名（与输入昵称可能有大小写 / 简繁差异），搜索框回填只影响展示。
+                _playerPrefsService.Current.PlayerName = string.IsNullOrWhiteSpace(bound.Name) ? args.GameId : bound.Name;
+                SetSearchTextSilently(_playerPrefsService.Current.PlayerName);
+                _prefetchedPlayer = new PrefetchedPlayer(
+                    bound.RoleId,
+                    bound.Server,
+                    bound.Avatar,
+                    bound.Level > 0 ? $"LV.{(int)bound.Level}" : null,
+                    // 快照没有赛季列表：退回原路径去取（战绩页会自己拉）。
+                    Seasons: null,
+                    SeasonKey: null,
+                    // 不带排数：保持用户当前选的排数不变（同搜索进人的口径）。
+                    TeamSize: null);
+                await RefreshAllAsync();
+                return;
+            }
+
+            // 兜底：快照拿不到时按绑定用的昵称重搜。
+            if (string.IsNullOrWhiteSpace(args.GameId)) return;
+            _playerPrefsService.Current.PlayerName = args.GameId;
+            SetSearchTextSilently(args.GameId);
+            await RefreshAllAsync();
+        }
 
         private DelegateCommand? _copyUIDCommand;
 
@@ -803,18 +892,6 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             }
         }
 
-        private bool _showNotFound;
-        public bool ShowNotFound
-        {
-            get => _showNotFound;
-            set
-            {
-                if (_showNotFound == value) return;
-                _showNotFound = value;
-                RaisePropertyChanged(nameof(ShowNotFound));
-            }
-        }
-
         private string _roleId = string.Empty;
         private PlayerSourceContext? _sourceContext;
 
@@ -1068,11 +1145,11 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             };
         }
 
-        private async void RefreshStats()
+        private async void RefreshStats(bool backgroundRefetch = false)
         {
             CancelAndDispose(ref _loadStatsCts);
             _loadStatsCts = new CancellationTokenSource();
-            await LoadStatsAsync(_loadStatsCts.Token);
+            await LoadStatsAsync(_loadStatsCts.Token, backgroundRefetch);
         }
 
         private async System.Threading.Tasks.Task RunFilterRefreshAsync(CancellationToken debounceCt)
@@ -1218,11 +1295,18 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
 
         private async System.Threading.Tasks.Task<bool> LoadAllAsync(CancellationToken ct)
         {
-            ShowNotFound = false;
+            // 启动早期登录态还没恢复完，请求会被服务端按未登录拒绝——先等它走完再发首轮请求
+            // （最多等 10 秒，超时照发；恢复失败的情况由正常错误路径处理）。
+            // 「启动后很快点进战绩页」的首轮加载失败就是踩在这里：请求发出时 cookie 还没挂上。
+            for (var i = 0; i < 40 && !AppStartupState.IsLoginRestored; i++)
+                await System.Threading.Tasks.Task.Delay(250, ct).ConfigureAwait(false);
+
             if (!_playerPrefsService.Current.IsLoaded)
             {
-                ShowNotFound = true;
+                // 本地游戏账号信息没读到：清掉无主数据 + 收敛加载态，提示放在搜索框下拉里。
                 ClearAllData();
+                StopAllLoading();
+                Suggestions.ShowNotFound();
                 return false;
             }
 
@@ -1230,6 +1314,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             if (string.IsNullOrEmpty(localName))
             {
                 ClearAllData();
+                StopAllLoading();
                 return false;
             }
 
@@ -1312,9 +1397,10 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 var search = await _playerStatsLoader.SearchLocalPlayerAsync(localRoleId, localName, ct);
                 if (search == null || string.IsNullOrEmpty(search.RoleIdSimple))
                 {
-                    ShowNotFound = true;
-                    ClearAllData();
-                    _tipMessage.ShowError(L("Stats.PlayerNotFound", "未找到该玩家，请检查名称是否正确"));
+                    // 只提示、不动页面：空态（未查询到用户 + 试试绑定角色）显示在搜索框下拉里，
+                    // 当前正在看的数据保持原样——搜错名字不该把已有数据清掉或者是盖住。
+                    StopAllLoading();
+                    Suggestions.ShowNotFound();
                     return false;
                 }
                 _roleId = search.RoleIdSimple;
@@ -1322,17 +1408,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 ResetResultBlocksFor(_roleId);
                 var ctx = _sourceContext;
 
-                // 三块数据（玩家信息 / 赛季 / 对局列表）彼此无依赖：并行发起，且各自完成即绑定自己的 UI，
-                // 不再 WhenAll 干等最慢的一路。原实现等三者全回来才统一绑定，最慢的 battles（实测约 5s）
-                // 把 userInfo（约 1s）也拖成 5s 才显示——用户整页转圈无法操作。拆开后玩家信息一秒即出，
-                // 对局列表区自己转圈，谁快谁先亮。三个 Apply* 各自 try/catch + 关自己的 loading，互不影响。
-                var userInfoApply = ApplyUserInfoAsync(ctx, localName, ct);
-                var seasonsApply = ApplySeasonsAsync(ctx, ct);
-                var battlesApply = ApplyBattlesAsync(ctx, ct);
-
-                // search 已成功即代表"找到玩家"，"搜索成功"提示不必等三块数据全部绑定完。
-                // 等三条续接结束仅为让 RefreshAllAsync 的成功判定在数据落地后返回。
-                await System.Threading.Tasks.Task.WhenAll(userInfoApply, seasonsApply, battlesApply);
+                await ApplyAllBlocksAsync(ctx, localName, ct);
                 return true;
             }
             catch (OperationCanceledException)
@@ -1346,6 +1422,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 // 搜索被后端拒绝（429/401/500 等）——渲染态与"没查到"分支保持一致：清空显示，
                 // 这样 IsLocalUser 会随 UserName 一并变 false，"回到我"按钮才不会误判为"你正在自己页面"。
                 ClearAllData();
+                StopAllLoading();
                 // 只在后端返回了 msg 时才弹；msg 为空按约定静默，不拼前端兜底文案。
                 if (!string.IsNullOrEmpty(ex.Msg))
                     _tipMessage.ShowError(ex.Msg!);
@@ -1356,8 +1433,80 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 // 未知底层异常（网络中断/反序列化失败等），无 msg 可展示，仅记日志。
                 AppLog.Error(ex, "StatsPage", "LoadAllAsync failed");
                 ClearAllData();
+                StopAllLoading();
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 收敛三块加载态。LoadAllAsync 的早退 / 失败路径必须调用——否则页面会一直停在转圈
+        /// （正常路径由各自的 Apply* 方法在自己的 finally 里关闭）。
+        /// </summary>
+        private void StopAllLoading()
+        {
+            IsPlayerInfoLoading = false;
+            IsRecentBattlesLoading = false;
+            IsStatsLoading = false;
+        }
+
+        private System.Threading.Tasks.Task ApplyAllBlocksAsync(
+            PlayerSourceContext ctx, string localName, CancellationToken ct)
+        {
+            // 三块数据（玩家信息 / 赛季 / 对局列表）彼此无依赖：并行发起，且各自完成即绑定自己的 UI，
+            // 不再 WhenAll 干等最慢的一路。原实现等三者全回来才统一绑定，最慢的 battles（实测约 5s）
+            // 把 userInfo（约 1s）也拖成 5s 才显示——用户整页转圈无法操作。拆开后玩家信息一秒即出，
+            // 对局列表区自己转圈，谁快谁先亮。三个 Apply* 各自 try/catch + 关自己的 loading，互不影响。
+            var userInfoApply = ApplyUserInfoAsync(ctx, localName, ct);
+            var seasonsApply = ApplySeasonsAsync(ctx, ct);
+            var battlesApply = ApplyBattlesAsync(ctx, ct);
+
+            // search 已成功即代表"找到玩家"，"搜索成功"提示不必等三块数据全部绑定完。
+            // 等三条续接结束仅为让 RefreshAllAsync 的成功判定在数据落地后返回。
+            return System.Threading.Tasks.Task.WhenAll(userInfoApply, seasonsApply, battlesApply);
+        }
+
+        private const int RefreshSettleDelayMs = 1500;
+
+        private System.Threading.Tasks.Task TrackPageRefresh(PlayerSourceContext ctx, CancellationToken ct)
+        {
+            return System.Threading.Tasks.Task.Run(async () =>
+            {
+                try
+                {
+                    // 起跑前先等一小段：用户连续换目标时（快速点候选、连切赛季模式），
+                    // 只有停留在他最后选中的那个上才会真正刷新，路过的目标在这里被丢弃。
+                    await System.Threading.Tasks.Task.Delay(RefreshSettleDelayMs, ct).ConfigureAwait(false);
+                    if (!IsCurrentTarget(ctx)) return;
+
+                    if (!await _playerStatsLoader.IsWaitingUpdateAsync(ctx, ct).ConfigureAwait(false)) return;
+                    if (!await _refresher.RefreshAsync(ctx.RoleId, ctx.Server, ct).ConfigureAwait(false)) return;
+
+                    // 刷新期间用户又换了目标：这次结果已经不属于当前页面，直接丢弃。
+                    if (!IsCurrentTarget(ctx)) return;
+
+                    _playerStatsLoader.InvalidatePlayer(ctx);
+                    _battleListLoader.InvalidatePlayer(ctx);
+
+                    // 赛季列表不重拉：重建 Seasons 会把用户当前选中的筛选重置掉。
+                    // 统计走 RefreshStats（它负责取消上一轮），避免与用户切筛选的加载并发交错。
+                    var localName = _playerPrefsService.Current.PlayerName;
+                    await ApplyUserInfoAsync(ctx, localName, ct).ConfigureAwait(false);
+                    await ApplyBattlesAsync(ctx, ct).ConfigureAwait(false);
+                    await _uiDispatcher.InvokeAsync(() => RefreshStats(backgroundRefetch: true)).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    AppLog.Error(ex, "StatsPage", $"{nameof(TrackPageRefresh)} failed");
+                }
+            }, ct);
+        }
+
+        private bool IsCurrentTarget(PlayerSourceContext ctx)
+        {
+            var current = _sourceContext;
+            return current is not null
+                && string.Equals(current.RoleId, ctx.RoleId, StringComparison.Ordinal);
         }
 
         /// <summary>玩家信息（昵称/等级/UID/头像）：拉取后立即绑定，与赛季/对局互不阻塞。</summary>
@@ -1368,25 +1517,30 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
             {
                 var userInfo = await _playerStatsLoader.FetchUserInfoAsync(ctx, ct);
                 ct.ThrowIfCancellationRequested();
-                if (userInfo != null)
+
+                // 本方法会被后台刷新任务从线程池调用，绑定属性必须回 UI 线程写（同另两块）。
+                await _uiDispatcher.InvokeAsync(() =>
                 {
-                    UserName = string.IsNullOrEmpty(userInfo.RoleName) ? localName : userInfo.RoleName;
-                    // 官方口径是大写 "LV."。服务端没下发 lv 时解析成 0，此时不显示——
-                    // 显示「LV.0」比不显示更像故障。
-                    Level = userInfo.RoleLevel > 0 ? $"LV.{(int)userInfo.RoleLevel}" : string.Empty;
-                    UID = userInfo.Uid;
-                    AvatarUrl = userInfo.HeadIcon;
-                }
-                else
-                {
-                    // 资料没回来：昵称用本次查询的目标名（搜索阶段已经确认过是这个人），
-                    // 但 UID / 头像 / 等级必须清掉——留着就是上一个玩家的。
-                    UserName = localName;
-                    Level = string.Empty;
-                    UID = string.Empty;
-                    AvatarUrl = string.Empty;
-                }
-                PlayerInfoProgress = 100;
+                    if (userInfo != null)
+                    {
+                        UserName = string.IsNullOrEmpty(userInfo.RoleName) ? localName : userInfo.RoleName;
+                        // 官方口径是大写 "LV."。服务端没下发 lv 时解析成 0，此时不显示——
+                        // 显示「LV.0」比不显示更像故障。
+                        Level = userInfo.RoleLevel > 0 ? $"LV.{(int)userInfo.RoleLevel}" : string.Empty;
+                        UID = userInfo.Uid;
+                        AvatarUrl = userInfo.HeadIcon;
+                    }
+                    else
+                    {
+                        // 资料没回来：昵称用本次查询的目标名（搜索阶段已经确认过是这个人），
+                        // 但 UID / 头像 / 等级必须清掉——留着就是上一个玩家的。
+                        UserName = localName;
+                        Level = string.Empty;
+                        UID = string.Empty;
+                        AvatarUrl = string.Empty;
+                    }
+                    PlayerInfoProgress = 100;
+                }).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
             catch (NarakaApiException ex)
@@ -1550,7 +1704,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
         }
 
 
-       private async System.Threading.Tasks.Task LoadStatsAsync(CancellationToken ct)
+        private async System.Threading.Tasks.Task LoadStatsAsync(CancellationToken ct, bool backgroundRefetch = false)
         {
             if (_sourceContext == null || string.IsNullOrEmpty(_roleId) || SelectedSeason == null)
             {
@@ -1574,7 +1728,7 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                     // stats 为 null 意味着 Loader 层已按静默契约吞掉未知底层异常（无 msg 可展示）；
                     // 若是后端业务错误，NarakaApiException 会冒泡到下面的 catch，那里才是弹 msg 的入口。
                     // 清掉依赖本次响应的块，避免残留上一次模式的数据。
-                    ClearRecentRanks();
+                    if (!backgroundRefetch) ClearRecentRanks();
                     return;
                 }
 
@@ -1583,6 +1737,12 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                 // 还显示三排"蚀月Ⅳ 3600"就是这个 bug）。判定与右侧数据占位分支保持同一口径。
                 var hasRank = stats.Grade != null
                     && (!string.IsNullOrEmpty(stats.Grade.GradeName) || stats.Grade.GradeScore > 0);
+
+                // 后台刷新可能撞上"服务端还在算"的空壳响应：此时保持已有内容不动——
+                // 用户什么都没操作，页面不该自己降级成"未定级 + 空数据详情"。
+                if (backgroundRefetch && !hasRank && (stats.Stats is null || stats.Stats.Count == 0))
+                    return;
+
                 if (hasRank)
                 {
                     var grade = stats.Grade!;
@@ -1636,6 +1796,16 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.ViewModels
                         Grade = s.Grade,
                         HasGrade = !string.IsNullOrEmpty(s.Grade),
                     });
+                }
+
+                // 服务端在这份数据里标了"还需要更新"：后台补一次刷新，界面照常显示已有的。
+                // 所有入口（手输搜索 / 选候选 / 从卡片跳转 / 切赛季切模式）最终都汇到这里，
+                // 所以只在这一处判断，不需要每个入口各接一遍。
+                // backgroundRefetch 为真时不再判断——那是刷新完成后的重拉，否则会自我循环。
+                if (!backgroundRefetch && stats.WaitUpdate)
+                {
+                    var refreshCtx = _sourceContext;
+                    if (refreshCtx is not null) _ = TrackPageRefresh(refreshCtx, ct);
                 }
             }
             catch (OperationCanceledException) { }
