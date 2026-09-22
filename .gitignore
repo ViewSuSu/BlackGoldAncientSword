@@ -39,6 +39,8 @@ GEMINI.md
 .roo/
 .roomodes
 .clinerules
+# Quark Drive sync cache (local-only, never commit)
+.quarkclouddrive/
 # OpenSquilla (local-only, never upload)
 .opensquilla/
 opensquilla-skills/

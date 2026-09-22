@@ -384,6 +384,32 @@
       }
     },
     {
+      "id": "UpdatePlayer",
+      "method": "GET",
+      "path": "/game/yjwj/update",
+      "queryParameters": {
+        "server": "string",
+        "role_id": "string"
+      },
+      "responseBody": {
+        "type": "HeyboxUpdateResponse",
+        "properties": {
+          "status": { "type": "string" },
+          "msg": { "type": "string" },
+          "result": { "type": "HeyboxUpdateResult" }
+        },
+        "nestedTypes": {
+          "HeyboxUpdateResult": {
+            "type": "HeyboxUpdateResult",
+            "properties": {
+              "state": { "type": "string" },
+              "btn_desc": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "BindGameId",
       "method": "GET",
       "path": "/account/bind_game_id/",

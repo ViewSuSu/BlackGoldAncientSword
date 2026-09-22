@@ -105,6 +105,46 @@ namespace BlackGoldAncientSword.Framework.Http.Heybox
         }
 
         /// <summary>
+        /// 当前账号是否绑定过角色（与 <see cref="GetBoundRoleAsync"/> 同一条查询，但保留三态）：
+        /// <c>true</c> = 已绑定；<c>false</c> = 服务端明确未绑定；<c>null</c> = 请求没成功（无从判断）。
+        /// <para>
+        /// 给「引导入口只在未绑定时出现」这类显隐判断用——拿不准时必须与"明确未绑定"区分开，
+        /// 否则网络抖动时会把已绑定账号也判成未绑定。
+        /// </para>
+        /// </summary>
+        public async Task<bool?> HasBoundRoleAsync(CancellationToken ct)
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            linked.CancelAfter(RequestTimeoutMilliseconds);
+
+            try
+            {
+                var response = await NarakaApiClient.GetPlayerHomeAsync(
+                    server: null,
+                    roleId: null,
+                    season: null,
+                    battleTid: null,
+                    ct: linked.Token).ConfigureAwait(false);
+
+                // 响应拿到了（信封 status ok）才敢下结论："有角色信息 / bind_account 非 0" = 已绑定。
+                return ToBoundRoleInfo(response?.Result) is not null;
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                return null;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error(ex, $"{nameof(HeyboxRoleBinder)}.{nameof(HasBoundRoleAsync)}", "query bound role state failed");
+                return null;
+            }
+        }
+
+        /// <summary>
         /// 状态机本体，请求通过委托注入以便离线回归（同 <see cref="HeyboxPlayerRefresher"/> 的模式）。
         /// </summary>
         internal async Task<RoleBindOutcome> BindCoreAsync(

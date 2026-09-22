@@ -3,6 +3,7 @@ using System.Diagnostics;
 using BlackGoldAncientSword.Framework.Core.Consts;
 using BlackGoldAncientSword.Framework.Core.Events;
 using BlackGoldAncientSword.Framework.Http;
+using BlackGoldAncientSword.Framework.Http.Heybox;
 using BlackGoldAncientSword.Framework.Http.Unified;
 using BlackGoldAncientSword.GameMonitor.Models;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
@@ -25,6 +26,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
         private readonly IClipboardService _clipboard;
         private readonly ICcMiniTeammateMonitor _teammateMonitor;
         private readonly TeamMemberLoader _memberLoader;
+        private readonly HeyboxPlayerRefresher _refresher;
         private readonly ILocalizedTextProvider _localizedText;
         private readonly ITipMessageService _tipMessage;
         private bool _isMonitoring;
@@ -69,6 +71,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             IClipboardService clipboard,
             ICcMiniTeammateMonitor teammateMonitor,
             TeamMemberLoader memberLoader,
+            HeyboxPlayerRefresher refresher,
             ILocalizedTextProvider localizedText,
             ITipMessageService tipMessage)
         {
@@ -80,6 +83,7 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
             _clipboard = clipboard;
             _teammateMonitor = teammateMonitor;
             _memberLoader = memberLoader;
+            _refresher = refresher;
             _localizedText = localizedText;
             _tipMessage = tipMessage;
 
@@ -781,6 +785,10 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
                         ct).ConfigureAwait(false);
                     await ApplyMemberStatsAsync(member, stats);
                     DiagLog.Write("TeamVM", $"复用 ctx 只重查 season: uid={member.UID}");
+
+                    // 捷径分支也要认这个信号：切赛季 / 切排数后重查的是同一批成员，
+                    // 服务端说数据还陈着就照样起后台补齐，否则这条最常走的路径永远不刷新。
+                    if (stats?.WaitUpdate == true) TrackMemberFollowUp(member, ct);
                 }
                 else
                 {
@@ -827,7 +835,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
                         // 没拿全的（还是匿名玩家 / 一项统计都没有）留个后台补齐任务，
                         // 数据到了直接更新对应字段——卡片此时已经显示着已有内容，不会转圈。
-                        if (TeamMemberLoader.NeedsFollowUp(loaded.SourceContextUserInfo, loaded.Stats))
+                        if (loaded.WaitUpdate
+                            || TeamMemberLoader.NeedsFollowUp(loaded.SourceContextUserInfo, loaded.Stats))
                             TrackMemberFollowUp(member, ct);
                     }
                 }
@@ -955,6 +964,8 @@ namespace BlackGoldAncientSword.Modules.UI.TeamInfo.ViewModels
 
                         var ctx = member.SourceContext;
                         if (ctx is null) return;
+
+                        await _refresher.RefreshAsync(ctx.RoleId, ctx.Server, ct).ConfigureAwait(false);
 
                         var (userInfo, stats) = await _memberLoader.RefetchProfileAndStatsAsync(
                             ctx,

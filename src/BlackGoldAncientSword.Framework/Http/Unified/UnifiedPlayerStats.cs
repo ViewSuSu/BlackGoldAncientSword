@@ -25,6 +25,8 @@ namespace BlackGoldAncientSword.Framework.Http.Unified
         public IReadOnlyList<UnifiedHeroEntry> Heroes { get; init; } = Array.Empty<UnifiedHeroEntry>();
 
         public IReadOnlyList<UnifiedWeaponEntry> Weapons { get; init; } = Array.Empty<UnifiedWeaponEntry>();
+
+        public bool WaitUpdate { get; init; }
     }
 
     public sealed class UnifiedGradeInfo

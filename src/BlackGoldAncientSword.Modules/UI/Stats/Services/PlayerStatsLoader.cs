@@ -107,6 +107,15 @@ namespace BlackGoldAncientSword.Modules.UI.Stats.Services
             return UnifiedMapper.MapPlayerInfo(home?.Result);
         }
 
+        public async Task<bool> IsWaitingUpdateAsync(PlayerSourceContext ctx, CancellationToken ct)
+        {
+            var home = await _homeData.GetAsync(ctx.RoleId, ctx.Server, season: null, battleTid: null, ct).ConfigureAwait(false);
+            return home?.Result?.WaitUpdate == true;
+        }
+
+        public void InvalidatePlayer(PlayerSourceContext ctx)
+            => _homeData.InvalidatePlayer(ctx.RoleId);
+
         public async Task<(List<UnifiedSeason> Seasons, string? CurrentSeasonKey)> FetchSeasonsAsync(
             PlayerSourceContext ctx, CancellationToken ct)
         {
