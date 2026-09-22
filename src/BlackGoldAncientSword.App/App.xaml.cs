@@ -10,6 +10,7 @@ using BlackGoldAncientSword.Framework.Core.Infrastructure;
 using BlackGoldAncientSword.GameMonitor.Services.Abstractions;
 using BlackGoldAncientSword.Framework.Http;
 using BlackGoldAncientSword.Framework.Http.Heybox;
+using BlackGoldAncientSword.Framework.Http.Unified;
 using BlackGoldAncientSword.Framework.Services;
 using BlackGoldAncientSword.Framework.Services.Abstractions;
 using BlackGoldAncientSword.GameMonitor;
@@ -76,10 +77,12 @@ namespace BlackGoldAncientSword.App
             // [1] 数据访问层 INIT。任何构造失败都不能中断 App 启动，只是让客户端保持未登录态。
             IAuthChallengeService? challengeService = null;
             IHeyboxSessionState? sessionStateForGate = null;
+            var sessionRejected = false;
             try
             {
                 var sessionState = Container.Resolve<IHeyboxSessionState>();
                 var sessionStore = Container.Resolve<IHeyboxSessionStore>();
+                var sessionRestorer = Container.Resolve<IHeyboxSessionRestorer>();
                 var challenge = Container.Resolve<IAuthChallengeService>();
                 challengeService = challenge;
                 sessionStateForGate = sessionState;
@@ -92,37 +95,38 @@ namespace BlackGoldAncientSword.App
                     },
                 });
 
-                var restored = sessionStore.Load();
-                var restoredAlreadyChecked = false;
+                // 恢复本机登录态。候选按优先级排：Debug 下先试"本机调试凭证"（环境变量或仓库内的
+                // 本地文件），它无效再退回本机存档那份；Release 只有存档一份。
+                // 每份候选走的是同一条校验，两种配置没有第二套判定。
+                var local = await ResolveLocalPlayerContextAsync().ConfigureAwait(false);
+
+                var candidates = new List<HeyboxSession?>();
 #if DEBUG
-                // Debug 下：本机开发用的会话优先（固定用测试账号调试），取不到时才沿用本地存档里登录后的会话。
-                var debugSession = await LoadDebugSessionAsync();
-                restored = debugSession ?? restored;
-                restoredAlreadyChecked = debugSession != null;
-
-                // 用了本机调试凭证才单独校验一次（失效就回登录页），避免和下面存档校验重复打接口。
-                if (debugSession != null && !await IsSessionAliveAsync().ConfigureAwait(false))
-                {
-                    AppLog.Info(nameof(App), "debug session rejected by server, falling back to login challenge");
-                    restored = null;
-                }
+                candidates.Add(await LoadDebugSessionAsync());
 #endif
-                // 本地存档恢复的登录态也要校验（Debug / Release 都做）：服务端返回的
-                // token/pkey 可能已过期或被踢，不校验的话启动照样当已登录，要等查战绩时
-                // 接口回 status:login 才暴露，且不会自动重新登录。代价是启动多打一个接口。
-                if (restored != null && !restoredAlreadyChecked)
+                candidates.Add(sessionStore.Load());
+
+                foreach (var candidate in candidates)
                 {
-                    var alive = await IsSessionAliveAsync().ConfigureAwait(false);
-                    if (!alive)
+                    if (candidate is null) continue;
+
+                    // 顺序不能反：先交给请求层，再拿它取一次数据做校验——校验走的是同一条请求链，
+                    // 没交出去时发出的是不带登录态的请求，必然被判失效。校验只看这次真实取数成不成功、
+                    // 不另设有效期；失败也只撤内存里的登录态、不删本地这份（下次登录会覆盖它）。
+                    // 取到的这份正是本地玩家的数据，直接进缓存：战绩页按同一个（角色, 服务器）取数
+                    // 就会命中它，不再重复请求。
+                    if (await sessionRestorer
+                        .TryRestoreAsync(candidate, local?.RoleId ?? string.Empty, local?.Server ?? string.Empty)
+                        .ConfigureAwait(false))
                     {
-                        AppLog.Info(nameof(App), "stored heybox session rejected by server, clearing local store");
-                        sessionStore.Clear();
-                        restored = null;
+                        break;
                     }
+
+                    sessionRejected = true;
                 }
 
-                if (restored != null)
-                    sessionState.Set(HeyboxLoginState.FromSession(restored));
+                if (sessionRejected)
+                    AppLog.Info(nameof(App), "heybox session rejected by server, falling back to login challenge");
             }
             catch (Exception ex)
             {
@@ -220,7 +224,9 @@ namespace BlackGoldAncientSword.App
             // [5] 登录 gate：本地无有效 token 才弹扫码。登录失败 / 用户取消 → Shutdown。
             if (challengeService != null && sessionStateForGate?.Current is null)
             {
-                AppLog.Info(nameof(App), "no heybox session, showing login challenge");
+                AppLog.Info(nameof(App), sessionRejected
+                    ? "no heybox session, showing login challenge (local session rejected earlier)"
+                    : "no heybox session, showing login challenge");
                 bool loggedIn = false;
                 try
                 {
@@ -293,23 +299,22 @@ namespace BlackGoldAncientSword.App
         }
 
         /// <summary>
-        /// 本地登录态是否还活着：打一次玩家主页接口，被服务端判定为 login/relogin 就当失效。
-        /// 没有本地角色 ID 或请求异常时不拦截（按"活着"处理），避免误伤正常登录用户。
+        /// 本机当前玩家身份（角色 + 服务器）；读取失败时返回 null，由调用方按"不拦截"处理，
+        /// 避免误伤正常登录的用户。
         /// </summary>
-        private async Task<bool> IsSessionAliveAsync()
+        private async Task<PlayerSourceContext?> ResolveLocalPlayerContextAsync()
         {
             try
             {
                 var prefs = Container.Resolve<IPlayerPrefsService>();
                 if (!prefs.Current.IsLoaded) await prefs.LoadAsync().ConfigureAwait(false);
 
-                return await HeyboxSessionProbe
-                    .IsSessionAliveAsync(prefs.Current.PlayerId)
-                    .ConfigureAwait(false);
+                var roleId = prefs.Current.PlayerId;
+                return string.IsNullOrWhiteSpace(roleId) ? null : PlayerSourceContext.FromRoleId(roleId);
             }
             catch (Exception)
             {
-                return true;
+                return null;
             }
         }
 

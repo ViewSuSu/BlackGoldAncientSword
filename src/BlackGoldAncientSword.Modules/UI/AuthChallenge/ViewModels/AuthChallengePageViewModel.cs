@@ -279,13 +279,15 @@ namespace BlackGoldAncientSword.Modules.UI.AuthChallenge.ViewModels
                 AppLog.Info($"{nameof(AuthChallengePageViewModel)}.{nameof(OnLoginSucceededAsync)}", "heybox qr login succeeded");
                 QrStatusText = "登录成功，正在读取账号信息…";
 
+                // 拿到凭证就立刻落盘，昵称头像只是锦上添花：先解析再落盘的话，
+                // 解析这一次请求期间用户关掉程序，这次登录就白登了。
                 _sessionState.Set(HeyboxLoginState.FromSession(session));
+                _sessionStore.Save(session);
 
                 var (nickname, avatar) = await _profileResolver
                     .ResolveAsync(CancellationToken.None).ConfigureAwait(true);
                 var loginState = new HeyboxLoginState(session, nickname, avatar);
                 _sessionState.Set(loginState);
-                _sessionStore.Save(session);
 
                 _completed = true;
                 _challenge.Complete(true);
