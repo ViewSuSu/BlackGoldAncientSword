@@ -427,6 +427,107 @@
           "result": { "type": "HeyboxBindState" }
         }
       }
+    },
+    {
+      "id": "GetGameDetail",
+      "method": "GET",
+      "path": "/game/get_game_detail/",
+      "queryParameters": {
+        "steam_appid": "string"
+      },
+      "responseBody": {
+        "type": "HeyboxGameDetailResponse",
+        "properties": {
+          "status": { "type": "string" },
+          "msg": { "type": "string" },
+          "result": { "type": "HeyboxGameDetail" }
+        },
+        "nestedTypes": {
+          "HeyboxGameDetail": {
+            "type": "HeyboxGameDetail",
+            "properties": {
+              "appid": { "type": "int" },
+              "name": { "type": "string" },
+              "name_en": { "type": "string" },
+              "is_free": { "type": "bool" },
+              "score": { "type": "string" },
+              "follow_num": { "type": "int" },
+              "follow_num_str": { "type": "string" },
+              "image": { "type": "string" },
+              "appicon": { "type": "string" },
+              "user_num": { "type": "HeyboxGameUserNum" },
+              "screenshots": { "type": "List<HeyboxGameScreenshot>" },
+              "common_tags": { "type": "List<HeyboxGameTag>" },
+              "comment_stats": { "type": "HeyboxGameCommentStats" }
+            },
+            "nestedTypes": {
+              "HeyboxGameCommentStats": {
+                "type": "HeyboxGameCommentStats",
+                "properties": {
+                  "score_comment": { "type": "int" }
+                }
+              },
+              "HeyboxGameScreenshot": {
+                "type": "HeyboxGameScreenshot",
+                "properties": {
+                  "type": { "type": "string" },
+                  "thumbnail": { "type": "string" },
+                  "url": { "type": "string" }
+                }
+              },
+              "HeyboxGameTag": {
+                "type": "HeyboxGameTag",
+                "properties": {
+                  "desc": { "type": "string" },
+                  "desc_list": { "type": "List<string>" }
+                }
+              },
+              "HeyboxGameUserNum": {
+                "type": "HeyboxGameUserNum",
+                "properties": {
+                  "game_data": { "type": "List<HeyboxGameDataItem>" }
+                },
+                "nestedTypes": {
+                  "HeyboxGameDataItem": {
+                    "type": "HeyboxGameDataItem",
+                    "properties": {
+                      "desc": { "type": "string" },
+                      "value": { "type": "string" },
+                      "rank": { "type": "string" },
+                      "peak_values": { "type": "List<HeyboxGamePeakValue>" },
+                      "hb_rich_text": { "type": "HeyboxRichText" }
+                    },
+                    "nestedTypes": {
+                      "HeyboxGamePeakValue": {
+                        "type": "HeyboxGamePeakValue",
+                        "properties": {
+                          "peak_value": { "type": "string" },
+                          "time": { "type": "long" }
+                        }
+                      },
+                      "HeyboxRichText": {
+                        "type": "HeyboxRichText",
+                        "properties": {
+                          "attrs": { "type": "List<HeyboxRichTextAttr>" }
+                        },
+                        "nestedTypes": {
+                          "HeyboxRichTextAttr": {
+                            "type": "HeyboxRichTextAttr",
+                            "properties": {
+                              "type": { "type": "string" },
+                              "text": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

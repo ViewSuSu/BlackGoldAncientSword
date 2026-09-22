@@ -94,6 +94,7 @@ namespace BlackGoldAncientSword.App
                         InnerHandler = new HttpClientHandler { UseCookies = false }
                     },
                 });
+                AppStartupState.MarkPipelineReady();
 
                 // 恢复本机登录态。候选按优先级排：Debug 下先试"本机调试凭证"（环境变量或仓库内的
                 // 本地文件），它无效再退回本机存档那份；Release 只有存档一份。
@@ -132,6 +133,11 @@ namespace BlackGoldAncientSword.App
             {
                 AppLog.Error(ex, nameof(App), "Heybox pipeline init failed");
             }
+
+            // [1] 结束：登录态恢复已走完（成功、被拒、异常都算）。启动后很快进入的页面
+            // （战绩页等）会等这个标志再发首轮请求——见 AppStartupState.IsLoginRestored。
+            // 必须无条件执行：漏标会让那些页面白等超时。
+            AppStartupState.MarkLoginRestored();
 
             // [2] Settings 加载。失败留默认值 + 日志。
             BlackGoldAncientSword.Framework.Services.Abstractions.ISettingsService? settings = null;

@@ -156,7 +156,7 @@
     <system:String x:Key="Settings.SaveFailed">保存失败: {0}</system:String>
 
     <system:String x:Key="Nav.Detail">详情</system:String>
-    <system:String x:Key="Nav.Home">启动页</system:String>
+    <system:String x:Key="Nav.Home">首页</system:String>
     <system:String x:Key="Nav.Stats">战绩</system:String>
     <system:String x:Key="Nav.CurrentUser">当前用户</system:String>
     <system:String x:Key="Nav.Search">搜索</system:String>
@@ -181,6 +181,16 @@
     <system:String x:Key="Home.Status.GameDetected">永劫无间进程已检测到</system:String>
     <system:String x:Key="Home.Status.HeroSelection">英雄选择中 (RoomId: {0})</system:String>
     <system:String x:Key="Home.Status.InGame">对局中 (BattleId: {0})</system:String>
+    <system:String x:Key="Home.Game.Follow">关注</system:String>
+    <system:String x:Key="Home.Game.ScoreComments">{0} 人评价</system:String>
+    <system:String x:Key="Home.Game.OnlineNow">当前在线</system:String>
+    <system:String x:Key="Home.Game.OnlinePeak">昨日峰值在线</system:String>
+    <system:String x:Key="Home.Game.OnlineTrend">近 15 天在线趋势</system:String>
+    <system:String x:Key="Home.Game.TrendPeak">峰值</system:String>
+    <system:String x:Key="Home.Game.Players">玩家总数</system:String>
+    <system:String x:Key="Home.Game.ApprovalRate">好评率</system:String>
+    <system:String x:Key="Home.Game.SalesRank">全球销量</system:String>
+    <system:String x:Key="Home.Game.PlayTime">平均时长</system:String>
     <system:String x:Key="Announcement.UpdateHistory">更新历史</system:String>
     <system:String x:Key="Announcement.Notice">公告通知</system:String>
         <system:String x:Key="Announcement.Loading">正在加载更新历史...</system:String>

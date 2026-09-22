@@ -156,7 +156,7 @@
     <system:String x:Key="Settings.SaveFailed">Save failed: {0}</system:String>
 
     <system:String x:Key="Nav.Detail">Detail</system:String>
-    <system:String x:Key="Nav.Home">Launch</system:String>
+    <system:String x:Key="Nav.Home">Home</system:String>
     <system:String x:Key="Nav.Stats">Stats</system:String>
     <system:String x:Key="Nav.CurrentUser">Current User</system:String>
     <system:String x:Key="Nav.Search">Search</system:String>
@@ -181,6 +181,16 @@
     <system:String x:Key="Home.Status.GameDetected">Naraka Bladepoint process detected</system:String>
     <system:String x:Key="Home.Status.HeroSelection">Hero Selection (RoomId: {0})</system:String>
     <system:String x:Key="Home.Status.InGame">In Game (BattleId: {0})</system:String>
+    <system:String x:Key="Home.Game.Follow">Follows</system:String>
+    <system:String x:Key="Home.Game.ScoreComments">{0} reviews</system:String>
+    <system:String x:Key="Home.Game.OnlineNow">Online Now</system:String>
+    <system:String x:Key="Home.Game.OnlinePeak">Peak (Yesterday)</system:String>
+    <system:String x:Key="Home.Game.OnlineTrend">15-Day Online Trend</system:String>
+    <system:String x:Key="Home.Game.TrendPeak">Peak</system:String>
+    <system:String x:Key="Home.Game.Players">Players</system:String>
+    <system:String x:Key="Home.Game.ApprovalRate">Approval Rate</system:String>
+    <system:String x:Key="Home.Game.SalesRank">Global Sales</system:String>
+    <system:String x:Key="Home.Game.PlayTime">Avg. Play Time</system:String>
     <system:String x:Key="Announcement.UpdateHistory">Update History</system:String>
     <system:String x:Key="Announcement.Notice">Announcement</system:String>
         <system:String x:Key="Announcement.Loading">Loading update history...</system:String>
