@@ -40,7 +40,18 @@
         <Border
             Background="{DynamicResource SurfaceGradientBrush}"
             ClipToBounds="True"
-            CornerRadius="10" Effect="{DynamicResource ShadowElevatedEffect}">
+            Effect="{DynamicResource ShadowElevatedEffect}">
+            <!--  最大化时窗口贴合屏幕边缘，圆角处会透出后面的桌面，改成直角  -->
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="10" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                            <Setter Property="CornerRadius" Value="0" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="30" />

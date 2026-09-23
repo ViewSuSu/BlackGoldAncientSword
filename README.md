@@ -51,7 +51,7 @@
 
 ## 队伍信息 —— 智能识别
 
-进入游戏英雄选择界面后，助手会自动从 CCMini 语音日志中解析队友 UID，将队友的赛季战绩数据并排展示，方便快速评估队伍实力。
+进入游戏英雄选择界面后，助手会自动识别队伍成员，将队友的赛季战绩数据并排展示，方便快速评估队伍实力。
 
 - 自动识别队友（无需手动输入）
 - 支持三排 / 双排队伍
@@ -69,7 +69,7 @@
   <small><u>队伍信息识别 2</u></small>
 </p>
 
-> 队伍数据由语音日志自动识别并展示，无需手动输入；赛季 / 排数 / 模式筛选变更后自动重新查询。
+> 队伍数据自动识别并展示，无需手动输入；赛季 / 排数 / 模式筛选变更后自动重新查询。
 
 ---
 
@@ -126,7 +126,7 @@
 
 **Q：我会因为使用黑金古刀而被封号吗 😨？**
 
-本程序仅读取游戏日志文件（Player.log / CCMini 语音日志），不对游戏文件、内存进行任何修改或注入，因此极大概率不会被封号，但并不保证一定不会封号。
+本程序仅读取游戏日志文件（Player.log），不对游戏文件、内存进行任何修改或注入，因此极大概率不会被封号，但并不保证一定不会封号。
 
 **Q：为什么战绩查询不到 / 数据更新有延迟？**
 
@@ -158,7 +158,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 
 本程序的目的是通过为游戏玩家提供游戏外辅助功能（战绩查询、队伍信息识别等），从而给玩家提供更好的游戏体验。我们不鼓励不支持任何违反 24 Entertainment 及网易规定或任何可能导致游戏环境不公平的行为。
 
-本程序通过读取游戏日志文件（Player.log / CCMini 语音日志）来实现功能，其代码与行为均不含任何侵入性手段，因此在理论上并不会做出任何破坏客户端以及游戏完整性的行为，包括但不限于客户端文件内容的修改或游戏进程内存的读写等。
+本程序通过读取游戏日志文件（Player.log）来实现功能，其代码与行为均不含任何侵入性手段，因此在理论上并不会做出任何破坏客户端以及游戏完整性的行为，包括但不限于客户端文件内容的修改或游戏进程内存的读写等。
 
 我们尽力保证本程序软件本体以及使用时游戏客户端的稳定性，但尽管如此，在具体的游戏环境以及官方服务更新的过程中（如反作弊系统或其他保护手段的更新），使用本程序可能会对您的游戏体验产生负面影响，如游戏闪退、账号封禁等。
 
@@ -228,8 +228,8 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
        │                │
        ▼                ▼
 ┌──────────────┐ ┌──────────────────┐
-│ CCMini 语音  │ │ 战绩 / 队友      │
-│ 日志队友识别 │ │ 数据查询         │
+│ 游戏日志解析 │ │ 战绩 / 队友      │
+│ 与队友识别   │ │ 数据查询         │
 └──────────────┘ └──────────────────┘
 ```
 
@@ -242,7 +242,7 @@ BlackGoldAncientSword（黑金古刀）未经 24 Entertainment 或网易认可�
 | **离线下载器** | `BlackGoldAncientSword.Downloader` | WinExe | 独立单文件 exe，从 Gitee release 顺序流式下载分卷安装包 → 拉起 Setup.exe → 自身退出。零 API 依赖（走 302 + CDN） |
 | **UI 模块** | `BlackGoldAncientSword.Modules` | ClassLib | 12 个 Prism `IModule` 页面（含登录 Overlay / 更新日志），按需加载 |
 | **核心框架** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM 基类、Prism 基础设施、服务抽象与实现、数据访问层 |
-| **游戏监控** | `BlackGoldAncientSword.GameMonitor` | ClassLib | 进程检测、Player.log 解析、CCMini 语音日志队友识别、战局状态机 |
+| **游戏监控** | `BlackGoldAncientSword.GameMonitor` | ClassLib | 进程检测、Player.log 解析、队友识别、战局状态机 |
 | **资源** | `BlackGoldAncientSword.Resources` | ClassLib | 多语言 XAML 资源字典、图标、图片 |
 | **源码生成** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | 编译期代码生成（强类型客户端与测试） |
 | **测试** | `BlackGoldAncientSword.Tests` | xUnit | 游戏监控、数据访问、设置、更新流程测试 |
@@ -341,7 +341,7 @@ src/
 │   │   ├── SearchModule.cs                 # 搜索历史
 │   │   ├── SettingsModule.cs               # 设置
 │   │   ├── StatsModule.cs                  # 战绩查询（搜索命令带 1s 点击闸门）
-│   │   ├── TeamInfoModule.cs               # 队伍信息（语音日志识别 + 对比）
+│   │   ├── TeamInfoModule.cs               # 队伍信息（队友识别 + 数据对比）
 │   │   ├── UpdateLogModule.cs              # 更新记录
 │   │   └── UpdateNotificationModule.cs     # 新版本提示 / 启动更新器 / 拉取 release notes
 │   └── UI/                                 # 各模块的 ViewModels + Views
@@ -352,13 +352,12 @@ src/
 │       └── UpdateNotification/ViewModels/  # 拉起 BlackGoldAncientSword.Update.exe / 通过 IReleaseNotesFetcher 展示 release notes
 │
 ├── BlackGoldAncientSword.GameMonitor/      # 游戏监控
-│   ├── Models/                             # BattleEventArgs、CcMiniTeammatesEventArgs、PlayerPrefsData
+│   ├── Models/                             # BattleEventArgs、PlayerPrefsData
 │   ├── Services/
-│   │   ├── Abstractions/                   # IGameLogMonitor / IGameStatusMonitor / IPlayerPrefsService / ICcMiniTeammateMonitor
+│   │   ├── Abstractions/                   # IGameLogMonitor / IGameStatusMonitor / IPlayerPrefsService
 │   │   └── Implementation/
 │   │       ├── GameLogMonitor.cs           # facade（编排生命周期与事件分发）
 │   │       ├── GameStatusMonitor.cs        # 游戏状态状态机
-│   │       ├── CcMiniTeammateMonitor.cs    # 解析 CCMini 语音日志 set-uid-vol 识别队友 UID
 │   │       ├── PlayerPrefsService.cs       # 本地用户偏好
 │   │       └── Internal/
 │   │           ├── BattleStateMachine.cs   # 战局状态机
@@ -411,7 +410,7 @@ src/
 
 三个 `*Gate*` / `AuthChallenge` 接口的实现放在 `App/Services/` 而非 `Framework/Services/Implementation/`，因为它们需要 `IRegionManager` / UI Dispatcher 等只有主程序才有的运行时依赖。
 
-`GameMonitor` 暴露自身的接口（`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService` / `ICcMiniTeammateMonitor`），通过 `GameMonitorAutoRegister.cs` 注册到 DI 容器。
+`GameMonitor` 暴露自身的接口（`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService`），通过 `GameMonitorAutoRegister.cs` 注册到 DI 容器。
 
 ---
 
@@ -466,18 +465,11 @@ public static class PageNames
 
 `GameStatusMonitor` 维护游戏状态机，通知各页面当前处于哪个阶段（`HeroSelection` / `InGame` / `BattleEnded`）。`HomePageViewModel` 额外使用 `Process.GetProcessesByName("NarakaBladepoint")` 检测进程是否存在，作为辅助判断。
 
-### 4. CCMini 语音日志队友识别（队伍信息）
+### 4. 队伍信息（TeamInfo）
 
-队伍识别**不依赖截屏 / OCR**，而是解析 CCMini 语音日志：永劫无间每次启动会新建 `ccmini\ccmini_new\logs\m*.log` 语音日志，进入对局（英雄选择阶段）连上队伍语音频道后，会立即写入若干行 `set-uid-vol`（为每个队友设置单独音量），其中的 `uid` 即队友角色 ID，且该记录实时落盘、无需等游戏结束。
+`GameStatusMonitor` 检测到进入英雄选择后，`TeamInfoPageViewModel` 开始识别队伍成员；数量达到期望阈值（三排 2 名 / 双排 1 名队友）后触发就绪事件，`TeamMemberLoader` 随即查询每名成员（及本地用户）的战绩，按本地用户居中排列并排展示，含与本地玩家的差值 diff。
 
-识别流程：
-
-1. `GameStatusMonitor` 检测到 `HeroSelection` 状态
-2. `TeamInfoPageViewModel` 启动 `ICcMiniTeammateMonitor`
-3. `CcMiniTeammateMonitor` 定位 CCMini 日志目录（优先注册表解析 Steam / 网易客户端路径，回退进程 exe 推导，取"最近活跃"客户端）→ 跟踪最新 `m*.log` → 增量读取并解析 `set-uid-vol` 的 uid → 排除本地用户、去重，按最近活跃排序
-4. 数量达到期望阈值（三排 2 名 / 双排 1 名队友）后触发 `TeammatesReady` 事件
-5. `TeamMemberLoader` 用 UID 精确命中查询每个队友（及本地用户）的战绩，按本地用户居中排列并排展示，含与本地玩家的差值 diff
-6. 进入对局后持续监听 `set-uid-vol` 增量，队友退出 / 换人时实时更新卡片；本局结束才停止
+进入对局后持续跟踪成员变化，队友退出 / 换人时实时更新卡片，本局结束才停止。
 
 ### 5. 数据访问层
 

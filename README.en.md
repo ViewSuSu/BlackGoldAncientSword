@@ -51,7 +51,7 @@ Filter by season, mode category (Ranked / Casual / Immortal), and team size (Tri
 
 ## Team Info — Smart Recognition
 
-When entering hero selection, the app automatically parses teammate UIDs from the CCMini voice log and displays teammates' season stats side-by-side for quick assessment.
+When entering hero selection, the app automatically recognizes your team and displays teammates' season stats side-by-side for quick assessment.
 
 - Automatic teammate recognition (no manual input)
 - Supports Trio / Duo teams
@@ -69,7 +69,7 @@ When entering hero selection, the app automatically parses teammate UIDs from th
   <small><u>Team Info Recognition 2</u></small>
 </p>
 
-> Team data is auto-recognized and displayed from the voice log with no manual input; changing the season / team-size / mode filters re-queries automatically.
+> Team data is auto-recognized and displayed with no manual input; changing the season / team-size / mode filters re-queries automatically.
 
 ---
 
@@ -124,7 +124,7 @@ Minimize to system tray during gameplay. Right-click the tray icon to restore or
 
 **Q: Will I get banned for using BlackGoldAncientSword? 😨**
 
-This app only reads game log files (Player.log / CCMini voice log). It does not modify or inject into game files or memory in any way. You are very unlikely to be banned, though no guarantee can be made.
+This app only reads game log files (Player.log). It does not modify or inject into game files or memory in any way. You are very unlikely to be banned, though no guarantee can be made.
 
 **Q: Why can't I query stats / why is data delayed?**
 
@@ -156,7 +156,7 @@ This program is open-sourced at [ViewSuSu/BlackGoldAncientSword](https://github.
 
 The purpose of this program is to provide out-of-game auxiliary features (stats querying, teammate recognition, etc.) that enhance the player experience. We do not encourage or support any behavior that violates 24 Entertainment or NetEase policies or that may lead to an unfair gaming environment.
 
-This program achieves its functionality by reading the game log files (Player.log / CCMini voice log). Its code and behavior contain no intrusive measures whatsoever; it does not modify client files or read/write game process memory, and should not compromise the integrity of the game client in any way.
+This program achieves its functionality by reading the game log files (Player.log). Its code and behavior contain no intrusive measures whatsoever; it does not modify client files or read/write game process memory, and should not compromise the integrity of the game client in any way.
 
 We strive to ensure the stability of both the program and the game client during use. However, changes to the game environment or official services (such as anti-cheat system updates) may negatively impact your gaming experience, including client crashes or account bans.
 
@@ -226,8 +226,8 @@ Before using this program, please ensure you have read, understood, and agreed t
        │                │
        ▼                ▼
 ┌──────────────┐ ┌──────────────────┐
-│ CCMini voice│ │ Stats / teammate │
-│ teammate UID │ │ data queries     │
+│ Local logs & │ │ Stats / teammate │
+│ teammates    │ │ data queries     │
 └──────────────┘ └──────────────────┘
 ```
 
@@ -240,7 +240,7 @@ Before using this program, please ensure you have read, understood, and agreed t
 | **Offline Downloader** | `BlackGoldAncientSword.Downloader` | WinExe | Standalone single-file exe. Streams split installer from Gitee release → launches Setup.exe → self-exits. Zero API deps (uses 302 + CDN) |
 | **UI Modules** | `BlackGoldAncientSword.Modules` | ClassLib | 12 Prism `IModule` pages (including sign-in overlay / update log), on-demand loading |
 | **Core Framework** | `BlackGoldAncientSword.Framework` | ClassLib | MVVM base, Prism infra, service abstractions/implementations, data-access layer |
-| **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | ClassLib | Process detection, Player.log parsing, CCMini voice-log teammate recognition, battle state machine |
+| **Game Monitor** | `BlackGoldAncientSword.GameMonitor` | ClassLib | Process detection, Player.log parsing, teammate recognition, battle state machine |
 | **Resources** | `BlackGoldAncientSword.Resources` | ClassLib | Multi-language XAML resource dictionaries, icons, images |
 | **Source Gen** | `BlackGoldAncientSword.Framework.SourceGenerator` | Roslyn Analyzer | Compile-time code generation (strongly-typed clients and tests) |
 | **Tests** | `BlackGoldAncientSword.Tests` | xUnit | Game monitor, data access, settings, update tests |
@@ -339,7 +339,7 @@ src/
 │   │   ├── SearchModule.cs                 # Search history
 │   │   ├── SettingsModule.cs               # Settings
 │   │   ├── StatsModule.cs                  # Player stats (search command behind a 1s click gate)
-│   │   ├── TeamInfoModule.cs               # Team info (voice-log recognition + comparison)
+│   │   ├── TeamInfoModule.cs               # Team info (teammate recognition + comparison)
 │   │   ├── UpdateLogModule.cs              # Update log
 │   │   └── UpdateNotificationModule.cs     # New version prompt / launch Updater / release notes fetch
 │   └── UI/                                 # ViewModels + Views per module
@@ -350,13 +350,12 @@ src/
 │       └── UpdateNotification/ViewModels/  # Launches BlackGoldAncientSword.Update.exe / shows release notes via IReleaseNotesFetcher
 │
 ├── BlackGoldAncientSword.GameMonitor/      # Game monitoring
-│   ├── Models/                             # BattleEventArgs, CcMiniTeammatesEventArgs, PlayerPrefsData
+│   ├── Models/                             # BattleEventArgs, PlayerPrefsData
 │   ├── Services/
-│   │   ├── Abstractions/                   # IGameLogMonitor / IGameStatusMonitor / IPlayerPrefsService / ICcMiniTeammateMonitor
+│   │   ├── Abstractions/                   # IGameLogMonitor / IGameStatusMonitor / IPlayerPrefsService
 │   │   └── Implementation/
 │   │       ├── GameLogMonitor.cs           # Façade (orchestrates lifetime + event dispatch)
 │   │       ├── GameStatusMonitor.cs        # Game state machine
-│   │       ├── CcMiniTeammateMonitor.cs    # Parses CCMini voice-log set-uid-vol to recognize teammate UIDs
 │   │       ├── PlayerPrefsService.cs       # Local user preferences
 │   │       └── Internal/
 │   │           ├── BattleStateMachine.cs   # Battle state machine
@@ -409,7 +408,7 @@ src/
 
 The three `*Gate*` / `AuthChallenge` interfaces are implemented under `App/Services/` (not `Framework/Services/Implementation/`) because they need `IRegionManager` / UI Dispatcher — runtime dependencies that only live in the main app.
 
-`GameMonitor` exposes its own interfaces (`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService` / `ICcMiniTeammateMonitor`), registered into the DI container via `GameMonitorAutoRegister.cs`.
+`GameMonitor` exposes its own interfaces (`IGameLogMonitor` / `IGameStatusMonitor` / `IPlayerPrefsService`), registered into the DI container via `GameMonitorAutoRegister.cs`.
 
 ---
 
@@ -464,18 +463,11 @@ The outer `GameLogMonitor` is just a façade that orchestrates lifetime and even
 
 `GameStatusMonitor` maintains a state machine, notifying pages of the current phase (`HeroSelection` / `InGame` / `BattleEnded`). `HomePageViewModel` additionally uses `Process.GetProcessesByName("NarakaBladepoint")` as a secondary check.
 
-### 4. CCMini Voice-Log Teammate Recognition (Team Info)
+### 4. Team Info
 
-Teammate recognition is **not based on screen capture / OCR**. It parses the CCMini voice log instead: NARAKA creates a fresh `ccmini\ccmini_new\logs\m*.log` voice log on each launch. Once the team voice channel connects (during hero selection), the game writes several `set-uid-vol` lines (one per teammate, setting individual volume), each carrying the teammate's UID. These records land on disk in real time — no need to wait for the match to end.
+Once `GameStatusMonitor` detects hero selection, `TeamInfoPageViewModel` starts recognizing the team. When the expected count is reached (2 teammates = Trio / 1 = Duo) it raises a ready event, and `TeamMemberLoader` queries each member's stats (including the local user), arranged with the local user centered and side-by-side with diff vs. the local player.
 
-Recognition flow:
-
-1. `GameStatusMonitor` detects the `HeroSelection` state
-2. `TeamInfoPageViewModel` starts `ICcMiniTeammateMonitor`
-3. `CcMiniTeammateMonitor` locates the CCMini log directory (registry-based Steam / NetEase client paths first, falling back to process-exe inference, picking the most-recently-active client) → tracks the latest `m*.log` → incrementally reads and parses `set-uid-vol` UIDs → excludes the local user, dedupes, and sorts by recency
-4. When the expected count is reached (2 teammates = Trio / 1 = Duo), it raises the `TeammatesReady` event
-5. `TeamMemberLoader` queries each teammate (and the local user) by exact UID, arranged with the local user centered, side-by-side with diff vs. the local player
-6. After the match starts it keeps watching `set-uid-vol` increments so teammates leaving / swapping update the cards live; it stops only when the battle ends
+After the match starts it keeps tracking membership, so teammates leaving / swapping update the cards live; it stops only when the battle ends.
 
 ### 5. Data-Access Layer
 

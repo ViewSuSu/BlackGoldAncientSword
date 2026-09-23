@@ -19,6 +19,7 @@ namespace BlackGoldAncientSword.App.Shell
 {
     public partial class MainWindow
     {
+        private const int WM_GETMINMAXINFO = 0x0024;
         private const int WM_NCHITTEST = 0x0084;
         private const int WM_NCLBUTTONDBLCLK = 0x00A3;
         private const int WM_DPICHANGED = 0x02E0;
@@ -142,6 +143,16 @@ namespace BlackGoldAncientSword.App.Shell
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 
         {
+            // 无边框窗口默认最大化会溢出屏幕（底部状态栏被任务栏盖住），钳到显示器工作区。
+            if (msg == WM_GETMINMAXINFO)
+            {
+                if (WindowMaximizeArea.TryClampMaximizeBounds(hwnd, lParam))
+                {
+                    handled = true;
+                    return IntPtr.Zero;
+                }
+            }
+
             // 双击标题栏切换最大化/还原
             if (msg == WM_NCLBUTTONDBLCLK && wParam.ToInt32() == HTCAPTION)
             {
