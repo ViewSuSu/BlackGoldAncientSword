@@ -455,6 +455,24 @@
       }
     },
     {
+      "id": "UnbindGameId",
+      "method": "GET",
+      "path": "/account/unbind_game_id/",
+      "queryParameters": {
+        "game_type": "string",
+        "game_id": "string",
+        "os_type": "string"
+      },
+      "responseBody": {
+        "type": "HeyboxUnbindGameIdResponse",
+        "properties": {
+          "status": { "type": "string" },
+          "msg": { "type": "string" },
+          "result": { "type": "HeyboxBindState" }
+        }
+      }
+    },
+    {
       "id": "GetGameDetail",
       "method": "GET",
       "path": "/game/get_game_detail/",
